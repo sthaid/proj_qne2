@@ -1,0 +1,17 @@
+
+#
+# steps to create SDL2.tar.gz
+#
+
+# clone SDL repo, and checkout SDL2 branch
+git clone -b SDL2 https://github.com/libsdl-org/SDL SDL2
+
+# remove the .git dir
+rm -rf SDL2/.git
+
+# create SDL2.tar.gz
+tar -cvzf SDL2.tar.gz SDL2
+
+# remove SDL2 directory
+rm -rf SDL2
+

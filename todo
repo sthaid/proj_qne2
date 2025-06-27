@@ -1,0 +1,145 @@
+==================
+todo
+==================
+
+just build one flavor
+
+make git repo for qne_sdl2
+- make SDL2 version
+
+make git repo for qne_sdl3
+- make SDL3 version
+
+cleanup homedir
+
+qne app
+- add auto start service when phone boots
+- add fuse support, connect to fuse svc running on my ubunut pc
+
+==============
+fuse
+==============
+
+references
+1- https://github.com/libfuse/libfuse
+   git clone https://github.com/libfuse/libfuse
+2- https://libfuse.github.io
+
+devel pkg
+- sudo apt install libfuse3-dev
+- pkg-config fuse3 --cflags --libs
+    -I/usr/include/fuse3 -lfuse3 -lpthread
+- https://libfuse.github.io/doxygen/
+
+what fuse patckages are installed
+- dpkg -l | grep fuse
+
+building test program
+- gcc -Wall t1.c `pkg-config fuse3 --cflags --libs` -o t1
+- gcc -Wall t2.c `pkg-config fuse3 --cflags --libs` -o t2
+
+================
+c interpreter
+================
+
+https://github.com/jpoirier/picoc
+git clone https://github.com/jpoirier/picoc
+
+================
+sdl3
+===============
+
+references:
+- https://wiki.libsdl.org/SDL2/Android
+- https://github.com/libsdl-org/SDL/blob/main/docs/README-android.md
+
+Android:
+- Using the SDL3 Android Archive (.aar)
+
+build on linux
+- https://github.com/libsdl-org/SDL/blob/main/docs/INTRO-cmake.md
+- git clone https://github.com/libsdl-org/SDL
+
+build example code
+- gcc -I vendored/SDL/include -o clear clear.c  build/libSDL3.so
+- LD_LIBRARY_PATH=build clear
+
+misc:  SDL2
+- sudo apt install libsdl2-dev
+- $pkg-config --libs --cflags sdl2             # example for sdl2
+    -D_REENTRANT -I/usr/include/SDL2 -lSDL2
+
+==========================
+android
+==========================
+
+Enable Developer Mode on your device
+- Settings > About Phone > Softwae Information:
+  - Tap Build Number 7 times
+- Settings > Developer Options:
+  - Turn on Developer Options using the slider at the top;
+    note that it may already be turned on
+  - Enable USB Debugging
+- Plug in USB Cable, and when asked to Allow USB Debugging, select OK.
+
+references:
+- build SDL3 for Android
+  - https://wiki.libsdl.org/SDL3/Android
+- how to build a simple app
+   https://github.com/libsdl-org/SDL/blob/main/docs/README-android.md 
+- sdkmanager - use this instead of AndoidStudio
+   https://developer.android.com/tools/sdkmanager
+
+steps
+- install cmdline-tools, instructions -
+    https://developer.android.com/tools/sdkmanager
+- instal minimal java
+    sudo apt install openjdk-17-jdk ant android-sdk-platform-tools-common
+    java -version   # should be openjdk version "17.0.15" 2025-04-15
+- install android sdk packages
+    cd ~/android_sdk/cmdline-tools/latest/bin
+    ./sdkmanager --install "platforms;android-30" 
+    ./sdkmanager --install "build-tools;30.0.2"
+    ./sdkmanager --install "ndk;21.3.6528147"
+- add to bash_profile
+    # env vars
+    if [ "$ENV_INITIALIZED" = "" ]; then
+      export EDITOR=vi
+      export GIT_EXTERNAL_DIFF=~/bin/git_external_diff
+
+      export ANDROID_HOME=~/android_sdk
+      export ANDROID_NDK_HOME=$ANDROID_HOME/ndk/21.3.6528147
+      export PATH=$PATH:$ANDROID_HOME/ndk/21.3.6528147
+      export PATH=$PATH:$ANDROID_HOME/build-tools
+      export PATH=$PATH:$ANDROID_HOME/cmdline-tools/latest/bin
+
+      ENV_INITIALIZED=true
+    fi
+- install adb debugger
+    sudo apt install android-tools-adb android-tools-fastboot
+    adb version    # test
+    adb shell      # test, need to accept on phone
+
+xxxxxxxxxxxx
+- adb ?
+
+Notes from : https://github.com/libsdl-org/SDL/blob/main/docs/README-android.md 
+- Android SDK (version 35 or later)    https://developer.android.com/sdk/index.html
+- Android NDK r15c or later            https://developer.android.com/tools/sdk/ndk/index.html
+- Minimum API level supported by SDL: 21 (Android 5.0)
+
+obsolete notes regarding android-studio
+- https://developer.android.com/studio/install
+   - sudo apt-get install libc6:i386 libncurses5:i386 libstdc++6:i386 lib32z1 libbz2-1.0:i386
+   - download studio tar file:  android-studio-2025.1.1.13-linux.tar.gz
+   - tar -xvf Downloads/android-studio-2025.1.1.13-linux.tar.gz 
+   - cd android-studio/bin
+   - ./studio.sh
+- https://developer.android.com/tools/sdk/ndk/index.html
+   - https://developer.android.com/studio/projects/install-ndk
+   - studio -> New Project -> No Activity? -> Next -> Name=Test1 -> Finish
+   - Menu -> Tools -> SDK Manager -> SDK Tools -> Check the following
+       NDK Side by Side
+       Android SDK Command Line Tools
+       CMake
+     Ok

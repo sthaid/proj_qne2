@@ -1,0 +1,15 @@
+#!/bin/bash
+
+#
+# Notes:
+# - to list the keystore contents:
+#     keytool -list -v -keystore qne2.keystore
+#
+
+if [ -e qne2.keystore ]; then
+  echo "*** ERROR qne2.keystore exists ***"
+  exit 1
+fi
+
+keytool -genkey -v -keystore qne2.keystore -keyalg RSA -keysize 2048 -validity 10000 -alias qne2
+
