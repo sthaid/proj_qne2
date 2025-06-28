@@ -1,0 +1,9 @@
+#!/bin/bash
+
+phone_ip_addr=192.168.1.243 
+port=1234
+
+nc $phone_ip_addr $port -N << EOF
+password=none cmd=file_ls
+EOF
+

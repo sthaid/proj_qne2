@@ -208,10 +208,44 @@ static void process_client_req(int sockfd)
         fclose(fp);
     } else if (strcmp(cmd, "file_rm") == 0) {
         // remove internel storage file
+        char filename[100];
+        int  ret;
+
+        if (arg1[0] == '\0') {
+            sprintf(err_str, "file_rm, filename not provied\n");
+            goto error;
+        }
+
+        sprintf(filename, "%s/%s", internal_storage_path, arg1);
+        ret = unlink(filename);
+        if (ret != 0) {
+            sprintf(err_str, "file_rm, unlink failed, %s", strerror(errno));
+            goto error;
+        }
     } else if (strcmp(cmd, "file_ls") == 0) {
         // list files in internal storage
+        DIR *dir = opendir(internal_storage_path);
+        struct dirent * dirent;
+
+        if (dir == NULL) {
+            sprintf(err_str, "file_ls, failed to opendir %s\n", internal_storage_path);  // xxx backslash n?
+            goto error;
+        }
+
+        while ((dirent = readdir(dir)) != NULL) {
+            if (strcmp(dirent->d_name, ".") == 0 ||
+                strcmp(dirent->d_name, "..") == 0)
+            {
+                continue;
+            }
+
+            fprintf(sockfp, "%s\n", dirent->d_name);
+        }
+
+        closedir(dir);
     } else {
-        // invalid command
+        sprintf(err_str, "invalid cmd '%s'", cmd);
+        goto error;
     }
 
     fprintf(sockfp, "OKAY\n");
@@ -226,6 +260,7 @@ error:
 
 // ----------------- SUPPORT ---------------------------
 
+// xxx not needed
 static void list_internal_storage_files(void)
 {
     DIR *dir = opendir(internal_storage_path);
