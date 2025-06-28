@@ -2,25 +2,22 @@
 todo
 ==================
 
-connect adb using tcp
+SDL_AndroidGetInternalStoragePath
 
 how to upload asset files,
 - entropy program
 - or scp from / to the device
 
 redo dir struct
-try printing something in sdl
 try running a picoc
-
-just build one flavor
 
 make git repo for qne_sdl2
 - make SDL2 version
 
+--- later ---
+
 make git repo for qne_sdl3
 - make SDL3 version
-
-cleanup homedir
 
 qne app
 - add auto start service when phone boots
