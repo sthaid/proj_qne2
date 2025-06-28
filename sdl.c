@@ -3,25 +3,15 @@
 #include <SDL.h>
 #include <SDL_ttf.h>
 
-//typedef struct {
-//    TTF_Font * font;
-//    int32_t    char_width;
-//    int32_t    char_height;
-//} sdl_font_t;
-
 static SDL_Window     * sdl_window;
 static SDL_Renderer   * sdl_renderer;
-
 static int32_t          sdl_win_width;
 static int32_t          sdl_win_height;
 
-//static sdl_font_t       sdl_font[MAX_FONT_PTSIZE];
-//static char           * sdl_font_path;
-
-static TTF_Font * font[MAX_FONT_PTSIZE];
-
-static SDL_Color text_fg_color = {COLOR_WHITE};
-static SDL_Color text_bg_color = {COLOR_BLACK};
+static TTF_Font       * font[MAX_FONT_PTSIZE];
+static SDL_Color        text_fg_color;
+static SDL_Color        text_bg_color;
+static int32_t          text_ptsize;
 
 // --------------------------------------------------------
 
@@ -34,6 +24,11 @@ int32_t sdl_init(int *w, int *h)
     for (i = 0; i < num; i++) {
         INFO("   %s\n",  SDL_GetVideoDriver(i));
     }
+
+    // xxx
+    sdl_set_text_fg_color(COLOR_WHITE);
+    sdl_set_text_bg_color(COLOR_BLACK);
+    sdl_set_text_ptsize(100);
 
     // initialize Simple DirectMedia Layer  (SDL)
     if (SDL_Init(SDL_INIT_VIDEO|SDL_INIT_AUDIO) < 0) {  // xxx audio?
@@ -68,7 +63,6 @@ int32_t sdl_init(int *w, int *h)
     return 0;
 }
 
-
 void sdl_exit(void)
 {
     int32_t i;
@@ -87,9 +81,9 @@ void sdl_exit(void)
 
 // --------------------------------------------------------
 
-void sdl_display_init(int r, int g, int b, int a)
+void sdl_display_init(uint32_t color)
 {
-    sdl_set_render_draw_color(r, g, b, a);
+    sdl_set_render_draw_color(color);
 
     SDL_RenderClear(sdl_renderer);
 }
@@ -101,39 +95,75 @@ void sdl_display_present(void)
 
 // -----------------  COLORS  -----------------------------
 
-void sdl_set_render_draw_color(int r, int g, int b, int a)
+uint32_t sdl_create_color(int r, int g, int b, int a)
 {
-    SDL_SetRenderDrawColor(sdl_renderer, r, g, b, a);
+    return (r << 0) | (g << 8) | (b << 16) | (a << 24);
 }
 
-void sdl_set_text_fg_color(int r, int g, int b, int a)
+uint32_t sdl_scale_color(uint32_t color, double inten)
 {
-    text_fg_color = (SDL_Color){r, g, b, a};
+    uint32_t r = (color >> 0) & 0xff;
+    uint32_t g = (color >> 8) & 0xff;
+    uint32_t b = (color >> 16) & 0xff;
+    uint32_t a = (color >> 24) & 0xff;
+
+    if (inten < 0) inten = 0;
+    if (inten > 1) inten = 1;
+
+    r *= inten;
+    g *= inten;
+    b *= inten;
+
+    return (r << 0) | (g << 8) | (b << 16) | (a << 24);
 }
-    
-void sdl_set_text_bg_color(int r, int g, int b, int a)
+
+
+void sdl_set_render_draw_color(uint32_t color)
 {
-    text_bg_color = (SDL_Color){r, g, b, a};
+    uint32_t r = (color >> 0) & 0xff;
+    uint32_t g = (color >> 8) & 0xff;
+    uint32_t b = (color >> 16) & 0xff;
+    uint32_t a = (color >> 24) & 0xff;
+
+    SDL_SetRenderDrawColor(sdl_renderer, r, g, b, a);
 }
 
 // -----------------  RENDER TEXT  ------------------------
 
-void sdl_render_string(int32_t x, int32_t y, int32_t font_ptsize, char * str)
+void sdl_set_text_ptsize(int32_t ptsize)
+{
+    if (ptsize < 50) ptsize = 50;
+    if (ptsize >= MAX_FONT_PTSIZE) ptsize = MAX_FONT_PTSIZE-1;
+
+    text_ptsize = ptsize;
+}
+
+void sdl_set_text_fg_color(uint32_t color)
+{
+    text_fg_color = *(SDL_Color*)&color;
+}
+
+void sdl_set_text_bg_color(uint32_t color)
+{
+    text_bg_color = *(SDL_Color*)&color;
+}
+
+void sdl_render_text(int32_t x, int32_t y, char * str)
 {
     SDL_Surface    * surface;
     SDL_Texture    * texture;
     SDL_Rect         pos;
 
     // xxx
-    if (font[font_ptsize] == NULL) {
-        font[font_ptsize] = TTF_OpenFont("/system/fonts/DroidSansMono.ttf", font_ptsize);
-        if (font[font_ptsize] == NULL) {
-            FATAL("TTF_OpenFont failed, font_ptsize=%d\n", font_ptsize);
+    if (font[text_ptsize] == NULL) {
+        font[text_ptsize] = TTF_OpenFont("/system/fonts/DroidSansMono.ttf", text_ptsize);
+        if (font[text_ptsize] == NULL) {
+            FATAL("TTF_OpenFont failed, text_ptsize=%d\n", text_ptsize);
         }
     }
 
     // render the string to a surface
-    surface = TTF_RenderText_Shaded(font[font_ptsize], str, text_fg_color, text_bg_color);
+    surface = TTF_RenderText_Shaded(font[text_ptsize], str, text_fg_color, text_bg_color);
     if (surface == NULL) {
         FATAL("TTF_RenderText_Shaded returned NULL\n");
     }
@@ -153,7 +183,7 @@ void sdl_render_string(int32_t x, int32_t y, int32_t font_ptsize, char * str)
     SDL_DestroyTexture(texture);
 }
 
-void sdl_render_printf(int32_t x, int32_t y, int32_t font_ptsize, char * fmt, ...)
+void sdl_render_printf(int32_t x, int32_t y, char * fmt, ...)
 {
     char str[1000];
     va_list ap;
@@ -162,5 +192,5 @@ void sdl_render_printf(int32_t x, int32_t y, int32_t font_ptsize, char * fmt, ..
     vsnprintf(str, sizeof(str), fmt, ap);
     va_end(ap);
 
-    sdl_render_string(x, y, font_ptsize, str);
+    sdl_render_text(x, y, str);
 }
