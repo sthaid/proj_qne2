@@ -2,6 +2,12 @@
 todo
 ==================
 
+connect adb using tcp
+
+how to upload asset files,
+- entropy program
+- or scp from / to the device
+
 redo dir struct
 try printing something in sdl
 try running a picoc
@@ -86,6 +92,12 @@ Enable Developer Mode on your device
   - Enable USB Debugging
 - Plug in USB Cable, and when asked to Allow USB Debugging, select OK.
 
+Enable Developer Mode on your device, using tcp
+- with usb cable connected
+- adb tcpip 5555
+- disconnect usb cable
+- adb connect 192.168.1.243:5555
+
 references:
 - build SDL3 for Android
   - https://wiki.libsdl.org/SDL3/Android
@@ -124,13 +136,11 @@ steps
     adb version    # test
     adb shell      # test, need to accept on phone
 
-xxxxxxxxxxxx
-- adb ?
-
 Notes from : https://github.com/libsdl-org/SDL/blob/main/docs/README-android.md 
-- Android SDK (version 35 or later)    https://developer.android.com/sdk/index.html
-- Android NDK r15c or later            https://developer.android.com/tools/sdk/ndk/index.html
-- Minimum API level supported by SDL: 21 (Android 5.0)
+- Regarding SDL3 ...
+  - Android SDK (version 35 or later)    https://developer.android.com/sdk/index.html
+  - Android NDK r15c or later            https://developer.android.com/tools/sdk/ndk/index.html
+  - Minimum API level supported by SDL: 21 (Android 5.0)
 
 obsolete notes regarding android-studio
 - https://developer.android.com/studio/install
