@@ -8,11 +8,7 @@ BUILD=$SDL_DIR/build/$PACKAGE_NAME
 
 # if SDL_DIR exists it must be removed
 if [ -d $SDL_DIR ]; then
-  read -p "$SDL_DIR exists, remove and proceed with setyp (y/n)? " yn
-  if [ "$yn" != y ]; then
-    echo ABORT
-    exit 1
-  fi
+  echo "Removing $SDL_DIR"
   rm -rf $SDL_DIR
 fi
 
@@ -40,6 +36,9 @@ echo "Creating symbolic links to source code"
 cd $BUILD/app/jni/src
 rm stub.c
 ln -s ../../../../../../../main.c .
+ln -s ../../../../../../../sdl.c .
+ln -s ../../../../../../../utils.c .
+ln -s ../../../../../../../common.h .
 echo
 
 # create assets dir, and create symbolic links to assets
