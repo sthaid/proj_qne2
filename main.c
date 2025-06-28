@@ -48,6 +48,8 @@ int SDL_main(int argc, char **argv)
 
 // ----------------- SERVER ----------------------------
 
+#define DEFAULT_PORT 1234
+
 // variables
 const char *internal_storage_path;
 
@@ -62,15 +64,15 @@ void *server_thread(void *cx)
     struct sockaddr_in server_address;
     int                listen_sockfd;
     int                ret;
-    unsigned short     port = 1234; //xxx use define, and/or make adjustable
+    unsigned short     port = DEFAULT_PORT; //xxx make adjustable
 
     INFO("SERVER_THREAD STARTING\n");
 
-    // xxx
+    // get the path to internal storage for this app
     internal_storage_path = SDL_AndroidGetInternalStoragePath();
     INFO("internal_storage_path = %s\n", internal_storage_path);
 
-    // xxx
+    // debug print the list of internal storage files
     list_internal_storage_files();
 
     // create listen socket
@@ -79,11 +81,11 @@ void *server_thread(void *cx)
         ERROR("socket, %s\n", strerror(errno));
     }
 
-    // set socket options  xxx what is this for
+    // set socket options
     int reuseaddr = 1;
     ret = setsockopt(listen_sockfd, SOL_SOCKET, SO_REUSEADDR, (const char*)&reuseaddr, sizeof(reuseaddr));
     if (ret == -1) {
-        ERROR("setsockopt SO_REUSEADDR, %s", strerror(errno));
+        ERROR("setsockopt SO_REUSEADDR, %s\n", strerror(errno));
     }
 
     // bind socket to any ip addr, for specified port
@@ -95,13 +97,13 @@ void *server_thread(void *cx)
                (struct sockaddr *)&server_address,
                sizeof(server_address));
     if (ret == -1) {
-        ERROR("bind");  // xxx newlines
+        ERROR("bind, %s\n", strerror(errno));
     }
 
     // listen 
     ret = listen(listen_sockfd, 5);
     if (ret == -1) {
-        ERROR("listen");
+        ERROR("listen, %s\n", strerror(errno));
     }
 
     // accept and process connections
@@ -125,10 +127,10 @@ void *server_thread(void *cx)
         sock_addr_to_str(peer_addr_str, sizeof(peer_addr_str), (struct sockaddr *)&peer_address);
         INFO("accepted connection from %s\n", peer_addr_str);
 
-        // xxx
+        // process the client request
         process_client_req(sockfd);
 
-        // xxx
+        // done with this connection
         close(sockfd);
         INFO("done\n");
     }
@@ -137,7 +139,6 @@ void *server_thread(void *cx)
     return NULL;
 }
 
-// xxx check sockfp, and other checks
 static void process_client_req(int sockfd)
 {
     FILE *sockfp=NULL;
@@ -172,14 +173,14 @@ static void process_client_req(int sockfd)
         char  filename[100], s[1000];
 
         if (arg1[0] == '\0') {
-            sprintf(err_str, "file_put, filename not provied\n");
+            sprintf(err_str, "file_put, filename not provied");
             goto error;
         }
 
         sprintf(filename, "%s/%s", internal_storage_path, arg1);
         fp = fopen(filename, "w");
         if (fp == NULL) {
-            sprintf(err_str, "failed to open %s for writing, %s\n", filename, strerror(errno));
+            sprintf(err_str, "failed to open %s for writing, %s", filename, strerror(errno));
             goto error;
         }
         while (fgets(s, sizeof(s), sockfp) != NULL) {
@@ -192,14 +193,14 @@ static void process_client_req(int sockfd)
         char  filename[100], s[1000];
 
         if (arg1[0] == '\0') {
-            sprintf(err_str, "file_get, filename not provied\n");
+            sprintf(err_str, "file_get, filename not provied");
             goto error;
         }
 
         sprintf(filename, "%s/%s", internal_storage_path, arg1);
         fp = fopen(filename, "r");
         if (fp == NULL) {
-            sprintf(err_str, "failed to open %s for reading, %s\n", filename, strerror(errno));
+            sprintf(err_str, "failed to open %s for reading, %s", filename, strerror(errno));
             goto error;
         }
         while (fgets(s, sizeof(s), fp) != NULL) {
@@ -212,7 +213,7 @@ static void process_client_req(int sockfd)
         int  ret;
 
         if (arg1[0] == '\0') {
-            sprintf(err_str, "file_rm, filename not provied\n");
+            sprintf(err_str, "file_rm, filename not provied");
             goto error;
         }
 
@@ -228,7 +229,7 @@ static void process_client_req(int sockfd)
         struct dirent * dirent;
 
         if (dir == NULL) {
-            sprintf(err_str, "file_ls, failed to opendir %s\n", internal_storage_path);  // xxx backslash n?
+            sprintf(err_str, "file_ls, failed to opendir %s", internal_storage_path);
             goto error;
         }
 
@@ -260,7 +261,6 @@ error:
 
 // ----------------- SUPPORT ---------------------------
 
-// xxx not needed
 static void list_internal_storage_files(void)
 {
     DIR *dir = opendir(internal_storage_path);
@@ -272,6 +272,12 @@ static void list_internal_storage_files(void)
     }
 
     while ((dirent = readdir(dir)) != NULL) {
+        if (strcmp(dirent->d_name, ".") == 0 ||
+            strcmp(dirent->d_name, "..") == 0)
+        {
+            continue;
+        }
+
         INFO("%s\n", dirent->d_name);  // xxx other fields too
     }
 
