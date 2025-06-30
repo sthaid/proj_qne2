@@ -14,7 +14,7 @@ do_logcat_cmd()
     nc $phone_ip_addr $port -N << EOF
 qne $password $cmd
 EOF
-    sleep 5
+    sleep 2
   done
 }
 
