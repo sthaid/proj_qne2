@@ -10,6 +10,6 @@ if [ "$filename" = "" ]; then
 fi
 
 nc $phone_ip_addr $port -N << EOF
-password=none cmd=file_rm arg1=$filename
+password=none cmd=file_del arg1=$filename
 EOF
 
