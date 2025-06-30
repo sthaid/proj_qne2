@@ -21,6 +21,9 @@ void logmsg(char *lvl, const char *func, char *fmt, ...)
         len--;
     }
 
+    printf("XXXXXXX LOG %s - %s - %s\n", lvl, func, msg);
+    return;
+
     // log the message
     if (strcmp(lvl, "INFO") == 0) {
         SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,
