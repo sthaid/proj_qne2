@@ -1,0 +1,46 @@
+#!/bin/bash
+
+phone_ip_addr=192.168.1.243 
+port=1234
+password=none
+
+cmd=$1
+arg1=$2
+arg2=$3
+
+# verify supplied cmd is supported
+if [ "$cmd" != put -a \
+     "$cmd" != get -a \
+     "$cmd" != rm  -a \
+     "$cmd" != ls  -a \
+     "$cmd" != logcat ]
+then
+  echo "USAGE:"
+  echo "  put <filename>"
+  echo "  get <filename>"
+  echo "  rm <filename>"
+  echo "  ls"
+  echo "  logcat"
+  exit 1
+fi
+
+# verify filename is provided, for put, get, and rm cmds
+if [ \( "$cmd" = put -o "$cmd" = get -o "$cmd" = rm \) -a "$arg1" = "" ]; then
+  echo "ERROR: filename expected"
+  exit 1
+fi
+
+# put cmd
+if [ "$cmd" = put ]; then
+nc $phone_ip_addr $port -N << EOF
+qne $password $cmd $arg1 $arg2
+$(cat $filename)
+EOF
+exit 0
+fi
+
+# all other cmds
+nc $phone_ip_addr $port -N << EOF
+qne $password $cmd $arg1 $arg2
+EOF
+
