@@ -1,7 +1,6 @@
-#include <common.h>
-
-#include <SDL.h>
-#include <SDL_ttf.h>
+#include <std_hdrs.h>
+#include <sdl.h>
+#include <utils.h>
 
 static SDL_Window     * sdl_window;
 static SDL_Renderer   * sdl_renderer;

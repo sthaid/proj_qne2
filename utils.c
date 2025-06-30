@@ -1,14 +1,20 @@
-#include <common.h>
-#include <SDL.h>
+#include <std_hdrs.h>
+#include <utils.h>
 
-// -------------------------------------------
+//#define USE_ANDROID_LOG
+
+#ifdef USE_ANDROID_LOG
+#include <SDL.h>
+#endif
+
+// ----------------- LOGGING -----------------
 
 void logmsg(char *lvl, const char *func, char *fmt, ...)
 {
     va_list ap;
     char    msg[1000];
-    int     len;
     char    time_str[MAX_TIME_STR];
+    int     len;
 
     // construct msg
     va_start(ap, fmt);
@@ -21,39 +27,39 @@ void logmsg(char *lvl, const char *func, char *fmt, ...)
         len--;
     }
 
-    printf("XXXXXXX LOG %s - %s - %s\n", lvl, func, msg);
-    return;
-
-    // log the message
+#ifndef USE_ANDROID_LOG
+    // print the message, stdout has been redirected to the log file, in main.c;
+    // use './qne logcat' to monitor the log
+    time2str(time_str, get_real_time_us(), false, true, true),
+    printf("%s %s %s: %s\n", time_str, lvl, func, msg);
+#else
+    // log the message, to the Android log;
+    // use 'adb -s SDL/APP' to monitor the Android log
     if (strcmp(lvl, "INFO") == 0) {
         SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,
-                    "%s %s %s: %s\n",
-                    time2str(time_str, get_real_time_us(), false, true, true),
+                    "%s %s: %s\n",
                     lvl, func, msg);
     } else if (strcmp(lvl, "WARN") == 0) {
         SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION,
-                    "%s %s %s: %s\n",
-                    time2str(time_str, get_real_time_us(), false, true, true),
+                    "%s %s: %s\n",
                     lvl, func, msg);
     } else if (strcmp(lvl, "FATAL") == 0) {
         SDL_LogCritical(SDL_LOG_CATEGORY_APPLICATION,
-                        "%s %s %s: %s\n",
-                        time2str(time_str, get_real_time_us(), false, true, true),
+                        "%s %s: %s\n",
                         lvl, func, msg);
     } else if (strcmp(lvl, "DEBUG") == 0) {
         SDL_LogDebug(SDL_LOG_CATEGORY_APPLICATION,
-                     "%s %s %s: %s\n",
-                     time2str(time_str, get_real_time_us(), false, true, true),
+                     "%s %s: %s\n",
                      lvl, func, msg);
     } else {
         SDL_LogError(SDL_LOG_CATEGORY_APPLICATION,
-                     "%s %s %s: %s\n",
-                     time2str(time_str, get_real_time_us(), false, true, true),
+                     "%s %s: %s\n",
                      lvl, func, msg);
     }
+#endif
 }
 
-// -------------------------------------------
+// ----------------- TIME --------------------
 
 uint64_t microsec_timer(void)
 {
@@ -87,17 +93,17 @@ char * time2str(char * str, int64_t us, bool gmt, bool display_ms, bool display_
     }
 
     if (display_date) {
-        cnt = sprintf(s, "%2.2d/%2.2d/%2.2d ",
+        cnt = sprintf(s, "%02d/%02d/%02d ",
                          tm.tm_mon+1, tm.tm_mday, tm.tm_year%100);
         s += cnt;
     }
 
-    cnt = sprintf(s, "%2.2d:%2.2d:%2.2d",
+    cnt = sprintf(s, "%02d:%02d:%02d",
                      tm.tm_hour, tm.tm_min, tm.tm_sec);
     s += cnt;
 
     if (display_ms) {
-        cnt = sprintf(s, ".%3.3"PRId64, (us % 1000000) / 1000);
+        cnt = sprintf(s, ".%03d", (int)((us % 1000000) / 1000));
         s += cnt;
     }
 
@@ -107,5 +113,4 @@ char * time2str(char * str, int64_t us, bool gmt, bool display_ms, bool display_
 
     return str;
 }
-
 

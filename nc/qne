@@ -1,12 +1,31 @@
 #!/bin/bash
 
+do_put_cmd()
+{
+  nc $phone_ip_addr $port -N << EOF
+qne $password $cmd $filename
+$(cat $filename)
+EOF
+}
+
+do_logcat_cmd()
+{
+  while true; do
+    nc $phone_ip_addr $port -N << EOF
+qne $password $cmd
+EOF
+    sleep 5
+  done
+}
+
+#  -----------------  MAIN-----------------------------------
+
 phone_ip_addr=192.168.1.243 
 port=1234
 password=none
 
 cmd=$1
-arg1=$2
-arg2=$3
+filename=$2
 
 # verify supplied cmd is supported
 if [ "$cmd" != put -a \
@@ -25,22 +44,25 @@ then
 fi
 
 # verify filename is provided, for put, get, and rm cmds
-if [ \( "$cmd" = put -o "$cmd" = get -o "$cmd" = rm \) -a "$arg1" = "" ]; then
+if [ \( "$cmd" = put -o "$cmd" = get -o "$cmd" = rm \) -a "$filename" = "" ]; then
   echo "ERROR: filename expected"
   exit 1
 fi
 
 # put cmd
 if [ "$cmd" = put ]; then
-nc $phone_ip_addr $port -N << EOF
-qne $password $cmd $arg1 $arg2
-$(cat $filename)
-EOF
-exit 0
+  do_put_cmd
+  exit 0
+fi
+
+# logcat cmd
+if [ "$cmd" = logcat ]; then
+  do_logcat_cmd
+  exit 0
 fi
 
 # all other cmds
 nc $phone_ip_addr $port -N << EOF
-qne $password $cmd $arg1 $arg2
+qne $password $cmd $filename
 EOF
 
