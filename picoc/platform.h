@@ -14,6 +14,8 @@
 #include <math.h>
 #include <stdbool.h>
 
+#define UNIX_HOST
+
 /* host platform includes */
 #ifdef UNIX_HOST
 # include <stdint.h>
@@ -30,7 +32,7 @@
  #define DEBUGGER
  #define USE_READLINE (defined by default for UNIX_HOST)
  */
-#define USE_READLINE
+//#define USE_READLINE
 
 #if defined(WIN32) /*(predefined on MSVC)*/
 #undef USE_READLINE
