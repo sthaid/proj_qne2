@@ -2,17 +2,34 @@
 #include <sdl.h>
 #include <utils.h>
 
-static SDL_Window     * sdl_window;
+// xxx landscape
+
+typedef struct {
+    TTF_Font *font;
+    int32_t   char_width;
+    int32_t   char_height;
+} sdl_font_t;  // xxx rename
+
+typedef struct {
+    sdl_rect_t loc;
+    int event_id;
+} event_t;
+
+
+static SDL_Window     * sdl_window;  // xxx rename
 static SDL_Renderer   * sdl_renderer;
 static int32_t          sdl_win_width;
 static int32_t          sdl_win_height;
 
-static TTF_Font       * font[MAX_FONT_PTSIZE];
+static sdl_font_t       font[MAX_FONT_PTSIZE];
 static SDL_Color        text_fg_color;
 static SDL_Color        text_bg_color;
 static int32_t          text_ptsize;
 
-// --------------------------------------------------------
+static event_t          event_tbl[100];
+static int              max_event;
+
+// ----------------- INIT / EXIT --------------------------
 
 int32_t sdl_init(int *w, int *h)
 {
@@ -67,8 +84,8 @@ void sdl_exit(void)
     int32_t i;
 
     for (i = 0; i < MAX_FONT_PTSIZE; i++) {
-        if (font[i] != NULL) {
-            TTF_CloseFont(font[i]);
+        if (font[i].font != NULL) {
+            TTF_CloseFont(font[i].font);
         }
     }
     TTF_Quit();
@@ -78,10 +95,12 @@ void sdl_exit(void)
     SDL_Quit();
 }
 
-// --------------------------------------------------------
+// ----------------- DISPLAY INIT / PRESENT ---------------
 
 void sdl_display_init(uint32_t color)
 {
+    max_event = 0;
+
     sdl_set_render_draw_color(color);
 
     SDL_RenderClear(sdl_renderer);
@@ -116,7 +135,6 @@ uint32_t sdl_scale_color(uint32_t color, double inten)
     return (r << 0) | (g << 8) | (b << 16) | (a << 24);
 }
 
-
 void sdl_set_render_draw_color(uint32_t color)
 {
     uint32_t r = (color >> 0) & 0xff;
@@ -127,7 +145,9 @@ void sdl_set_render_draw_color(uint32_t color)
     SDL_SetRenderDrawColor(sdl_renderer, r, g, b, a);
 }
 
-// -----------------  RENDER TEXT  ------------------------
+// -----------------  PRINT TEXT  -------------------------
+
+static void font_init(void);
 
 void sdl_set_text_ptsize(int32_t ptsize)
 {
@@ -147,22 +167,19 @@ void sdl_set_text_bg_color(uint32_t color)
     text_bg_color = *(SDL_Color*)&color;
 }
 
-void sdl_render_text(int32_t x, int32_t y, char * str)
+// xxx return the rect
+sdl_rect_t sdl_render_text(int32_t x, int32_t y, char * str) // xxx name
 {
     SDL_Surface    * surface;
     SDL_Texture    * texture;
     SDL_Rect         pos;
+    sdl_rect_t       pos2;
 
     // xxx
-    if (font[text_ptsize] == NULL) {
-        font[text_ptsize] = TTF_OpenFont("/system/fonts/DroidSansMono.ttf", text_ptsize);
-        if (font[text_ptsize] == NULL) {
-            FATAL("TTF_OpenFont failed, text_ptsize=%d\n", text_ptsize);
-        }
-    }
+    font_init();
 
     // render the string to a surface
-    surface = TTF_RenderText_Shaded(font[text_ptsize], str, text_fg_color, text_bg_color);
+    surface = TTF_RenderText_Shaded(font[text_ptsize].font, str, text_fg_color, text_bg_color);
     if (surface == NULL) {
         FATAL("TTF_RenderText_Shaded returned NULL\n");
     }
@@ -180,9 +197,17 @@ void sdl_render_text(int32_t x, int32_t y, char * str)
     // clean up
     SDL_FreeSurface(surface);
     SDL_DestroyTexture(texture);
+
+    // xxx
+    pos2.x = pos.x;
+    pos2.y = pos.y;
+    pos2.w = pos.w;
+    pos2.h = pos.h;
+    return pos2;  // xxx check this
 }
 
-void sdl_render_printf(int32_t x, int32_t y, char * fmt, ...)
+// xxx return the rect
+sdl_rect_t sdl_render_printf(int32_t x, int32_t y, char * fmt, ...)
 {
     char str[1000];
     va_list ap;
@@ -191,5 +216,150 @@ void sdl_render_printf(int32_t x, int32_t y, char * fmt, ...)
     vsnprintf(str, sizeof(str), fmt, ap);
     va_end(ap);
 
-    sdl_render_text(x, y, str);
+    return sdl_render_text(x, y, str);
 }
+
+void sdl_get_char_size(int *char_width, int *char_height)
+{
+    font_init();
+    *char_width = font[text_ptsize].char_width;
+    *char_height = font[text_ptsize].char_height;
+}
+
+static void font_init(void)
+{
+    if (font[text_ptsize].font == NULL) {
+        font[text_ptsize].font = TTF_OpenFont("/system/fonts/DroidSansMono.ttf", text_ptsize);
+        if (font[text_ptsize].font == NULL) {
+            FATAL("TTF_OpenFont failed, text_ptsize=%d\n", text_ptsize);  // xxx use of FATAL
+        }
+
+        TTF_SizeText(font[text_ptsize].font, "X", &font[text_ptsize].char_width, &font[text_ptsize].char_height);
+        INFO("text_ptsize=%d char_width=%d char_height=%d\n",
+              text_ptsize, font[text_ptsize].char_width, font[text_ptsize].char_height);
+    }
+}
+
+// -----------------  XXX EVENTS   ------------------------
+
+void sdl_register_event(sdl_rect_t loc, int event_id)
+{
+    event_tbl[max_event].loc = loc;
+    event_tbl[max_event].event_id  = event_id; 
+    max_event++;
+}
+
+int sdl_get_event(void)
+{
+    SDL_Event ev;
+    int event_id = 0;
+    int i;
+
+    #define AT_POS(X,Y,pos) (((X) >= (pos).x) && \
+                             ((X) < (pos).x + (pos).w) && \
+                             ((Y) >= (pos).y) && \
+                             ((Y) < (pos).y + (pos).h))
+
+    while (true) {
+        // get the next event, break out of loop if no event
+        if (SDL_PollEvent(&ev) == 0) {
+            break;
+        }
+
+        switch (ev.type) {
+        case SDL_MOUSEBUTTONDOWN:
+        case SDL_MOUSEBUTTONUP: {
+           INFO("MOUSEBUTTON button=%s state=%s x=%d y=%d\n",
+                   (ev.button.button == SDL_BUTTON_LEFT   ? "LEFT" :
+                    ev.button.button == SDL_BUTTON_MIDDLE ? "MIDDLE" :
+                    ev.button.button == SDL_BUTTON_RIGHT  ? "RIGHT" : "???"),
+                   (ev.button.state == SDL_PRESSED  ? "PRESSED" :
+                    ev.button.state == SDL_RELEASED ? "RELEASED" : "???"),
+                   ev.button.x,
+                   ev.button.y);
+
+            if (ev.button.state == SDL_RELEASED) {
+                for (i = 0; i < max_event; i++) {
+                    if (AT_POS(ev.button.x, ev.button.y, event_tbl[i].loc)) {
+                        break;
+                    }
+                }
+                if (i < max_event) {
+                    event_id = event_tbl[i].event_id;
+                }
+            }
+            break; }
+        case SDL_MOUSEMOTION: {
+#if 0
+            INFO("MOUSEMOTION state=%s x=%d y=%d xrel=%d yrel=%d\n",
+                   (ev.motion.state == SDL_PRESSED  ? "PRESSED" :
+                    ev.motion.state == SDL_RELEASED ? "RELEASED" : "???"),
+                   ev.motion.x,
+                   ev.motion.y,
+                   ev.motion.xrel,
+                   ev.motion.yrel);
+#endif
+            break; }
+        case SDL_FINGERDOWN:
+        case SDL_FINGERUP:
+        case SDL_FINGERMOTION: {
+            break; }
+        default: {
+            INFO("event_type %d - not supported\n", ev.type);
+            break; }
+        }
+
+        if (event_id != 0) {
+            break;
+        }
+    }
+
+//  if (event_id != 0) {
+//      INFO("returning event_id %d\n", event_id);
+//  }
+    return event_id;
+}
+
+
+#if 0
+typedef struct SDL_TouchFingerEvent
+{
+    Uint32 type;        /**< SDL_FINGERMOTION or SDL_FINGERDOWN or SDL_FINGERUP */
+    Uint32 timestamp;   /**< In milliseconds, populated using SDL_GetTicks() */
+    SDL_TouchID touchId; /**< The touch device id */
+    SDL_FingerID fingerId;
+    float x;            /**< Normalized in the range 0...1 */
+    float y;            /**< Normalized in the range 0...1 */
+    float dx;           /**< Normalized in the range -1...1 */
+    float dy;           /**< Normalized in the range -1...1 */
+    float pressure;     /**< Normalized in the range 0...1 */
+    Uint32 windowID;    /**< The window underneath the finger, if any */
+} SDL_TouchFingerEvent;
+
+typedef struct SDL_MouseButtonEvent
+{
+    Uint32 type;        /**< SDL_MOUSEBUTTONDOWN or SDL_MOUSEBUTTONUP */
+    Uint32 timestamp;   /**< In milliseconds, populated using SDL_GetTicks() */
+    Uint32 windowID;    /**< The window with mouse focus, if any */
+    Uint32 which;       /**< The mouse instance id, or SDL_TOUCH_MOUSEID */
+    Uint8 button;       /**< The mouse button index */
+    Uint8 state;        /**< SDL_PRESSED or SDL_RELEASED */
+    Uint8 clicks;       /**< 1 for single-click, 2 for double-click, etc. */
+    Uint8 padding1;
+    Sint32 x;           /**< X coordinate, relative to window */
+    Sint32 y;           /**< Y coordinate, relative to window */
+} SDL_MouseButtonEvent;
+
+typedef struct SDL_MouseMotionEvent
+{
+    Uint32 type;        /**< SDL_MOUSEMOTION */
+    Uint32 timestamp;   /**< In milliseconds, populated using SDL_GetTicks() */
+    Uint32 windowID;    /**< The window with mouse focus, if any */
+    Uint32 which;       /**< The mouse instance id, or SDL_TOUCH_MOUSEID */
+    Uint32 state;       /**< The current button state */
+    Sint32 x;           /**< X coordinate, relative to window */
+    Sint32 y;           /**< Y coordinate, relative to window */
+    Sint32 xrel;        /**< The relative motion in the X direction */
+    Sint32 yrel;        /**< The relative motion in the Y direction */
+} SDL_MouseMotionEvent;
+#endif

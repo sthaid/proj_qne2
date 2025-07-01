@@ -10,6 +10,7 @@ bool        log_cat_is_running;
 bool        server_thread_running;
 
 // prototypes
+static void sdl_test(void);
 void run_prog(bool bg);
 void *server_thread(void *cx);
 
@@ -25,7 +26,6 @@ static void get_file_info(char *pathname, int *size, char *mtime);
 
 int SDL_main(int argc, char **argv)
 {
-    int  w, h;
     FILE *fp;
     pthread_t tid;
 
@@ -44,33 +44,17 @@ int SDL_main(int argc, char **argv)
     INFO("internal_storage_path = %s\n", internal_storage_path);
     list_internal_storage_files();
 
+    printf("sizeof(long) = %zd\n", sizeof(long));
+    printf("sizeof(long long) = %zd\n", sizeof(long long));
+
     // create server thread
     pthread_create(&tid, NULL, server_thread, NULL);
     while (server_thread_running == false) {
         usleep(10000);
     }
 
-#if 0
-    // xxx sdl test
-    uint32_t color;
-    double inten;
-
-    // xxx sdl
-    sdl_init(&w, &h);
-
-    for (inten = .01; inten <= 1; inten += .01) {
-        color = sdl_scale_color(COLOR_BLUE, inten);
-        sdl_display_init(color);
-
-        sdl_render_printf(0, 0, "%d %d", w, h);
-        sdl_render_printf(0, h/2, "Q-%f", inten);
-
-        sdl_display_present();
-        usleep(100000);  // 100 ms
-    }
-
-    // sdl_exit
-#endif
+    // xxx
+    sdl_test();
 
 #if 0
     // run 2 instances of test picoc program
@@ -84,6 +68,61 @@ int SDL_main(int argc, char **argv)
     // end program
     INFO("TERMINATING\n");
     return 0;
+}
+
+// -----------------  SDL TEST ---------------------------------------
+
+static void sdl_test(void)
+{
+    // xxx sdl test
+    uint32_t color;
+    double inten;
+    int char_width, char_height;
+    sdl_rect_t loc;
+    int  w, h;
+    bool event_processed;
+
+    // xxx sdl
+    sdl_init(&w, &h);
+    INFO("window size %d %d\n", w, h);
+
+    sdl_get_char_size(&char_width, &char_height);  // xxx also return ptsize
+    INFO("char_width/height = %d %d\n", char_width, char_height);
+
+    color = sdl_scale_color(COLOR_BLUE, 0.25);
+
+    while (true) {
+        sdl_display_init(color);
+
+        loc = sdl_render_printf(0,200, "%s", "HELLO");
+        //INFO("loc = %d %d %d %d\n", loc.x, loc.y, loc.w, loc.h);
+        sdl_register_event(loc, 1);
+
+        sdl_display_present();
+
+        // xxx simplify
+        event_processed = false;
+        while (true) {
+            int event_id = sdl_get_event();
+            if (event_id == 0) {
+                break;
+            }
+
+            INFO("processing event %d\n", event_id);
+            event_processed = true;
+            if (event_id == 1) {
+                run_prog(false);
+            }
+        }
+
+        if (event_processed) {
+            usleep(1000);
+        } else {
+            usleep(1000000);
+        }
+    }
+
+    sdl_exit();
 }
 
 // ----------------- SERVER ----------------------------

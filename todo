@@ -2,30 +2,31 @@
 todo
 ==================
 
-version.c
+sdl
+- add sdl event support
 
-tail the log file
-rename file_rm to file_del
-file_cat
-rename these cmds ?
-file_ls, display size and attrib
-file_logcat
-just one script called qne
+creaet main menu, 
 
-gcc -o hello hello.c
+toc file
+- prog name,  prog file list
 
+add sdl routines to picoc
 
-SDL_AndroidGetInternalStoragePath
+find ndk routines for
+- compass
+- level
+- flashlight
+- lat/long
 
-how to upload asset files,
-- entropy program
-- or scp from / to the device
+---------------
 
-redo dir struct
-try running a picoc
+version.c, put this in startup line, include build data time and git commit
 
-make git repo for qne_sdl2
-- make SDL2 version
+updae the Android direcoty generator
+
+rename android-project dir to just android
+
+gcc -o hello hello.c, doesn't build, perhaps a gcc switch
 
 --- later ---
 
@@ -35,28 +36,6 @@ make git repo for qne_sdl3
 qne app
 - add auto start service when phone boots
 - add fuse support, connect to fuse svc running on my ubunut pc
-
-==============
-fuse
-==============
-
-references
-1- https://github.com/libfuse/libfuse
-   git clone https://github.com/libfuse/libfuse
-2- https://libfuse.github.io
-
-devel pkg
-- sudo apt install libfuse3-dev
-- pkg-config fuse3 --cflags --libs
-    -I/usr/include/fuse3 -lfuse3 -lpthread
-- https://libfuse.github.io/doxygen/
-
-what fuse patckages are installed
-- dpkg -l | grep fuse
-
-building test program
-- gcc -Wall t1.c `pkg-config fuse3 --cflags --libs` -o t1
-- gcc -Wall t2.c `pkg-config fuse3 --cflags --libs` -o t2
 
 ================
 c interpreter
@@ -167,3 +146,32 @@ obsolete notes regarding android-studio
        Android SDK Command Line Tools
        CMake
      Ok
+
+========================================
+========================================
+============  BACKUP INFO  =============
+========================================
+========================================
+
+
+==============
+fuse
+==============
+
+references
+1- https://github.com/libfuse/libfuse
+   git clone https://github.com/libfuse/libfuse
+2- https://libfuse.github.io
+
+devel pkg
+- sudo apt install libfuse3-dev
+- pkg-config fuse3 --cflags --libs
+    -I/usr/include/fuse3 -lfuse3 -lpthread
+- https://libfuse.github.io/doxygen/
+
+what fuse patckages are installed
+- dpkg -l | grep fuse
+
+building test program
+- gcc -Wall t1.c `pkg-config fuse3 --cflags --libs` -o t1
+- gcc -Wall t2.c `pkg-config fuse3 --cflags --libs` -o t2
