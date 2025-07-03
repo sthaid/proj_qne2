@@ -117,6 +117,8 @@ app/src/main/res
 todo
 ==================
 
+git ls-files --others --exclude-standard
+
 build scripts
 - rename to android-build
 - assets dir

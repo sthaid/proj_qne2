@@ -1,3 +1,4 @@
 #!/bin/bash
 
 rm -rf SDL2
+rm -f setup_files/*.orig
