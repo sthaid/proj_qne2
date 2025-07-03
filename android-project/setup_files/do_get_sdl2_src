@@ -1,0 +1,14 @@
+#!/bin/bash
+
+# remove existing files
+rm -f SDL2.tar.gz SDL2_ttf-2.0.15.tar.gz
+
+# create SDL2.tar.gz
+git clone -b SDL2 https://github.com/libsdl-org/SDL SDL2
+rm -rf SDL2/.git
+tar -czf SDL2.tar.gz SDL2
+rm -rf SDL2
+
+# get SDL2_ttf-2.0.15.tar.gz
+wget https://www.libsdl.org/projects/SDL_ttf/release/SDL2_ttf-2.0.15.tar.gz
+

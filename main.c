@@ -2,6 +2,8 @@
 #include <sdl.h>
 #include <utils.h>
 
+#include <android/sensor.h>
+
 // variables
 const char *internal_storage_path;
 char        log_file_pathname[100];
@@ -23,6 +25,25 @@ static int get_file_size(char *pathname);
 static void get_file_info(char *pathname, int *size, char *mtime);
 
 // -----------------  MAIN  ------------------------------------------
+
+void sensor_test(void)
+{
+#if 0
+    INFO("SENSOR TEST ...\n");
+
+    #define PACKAGE_NAME "org.sthaid.qne2"
+
+
+    // Get the sensor manager
+    ASensorManager* sensor_manager = ASensorManager_getInstanceForPackage(PACKAGE_NAME);
+
+    // Create a sensor event queue
+    //ASensorEventQueue* queue = ASensorManager_createEventQueue(sensor_manager, looper, LOOPER_ID_USER, get_sensor_events, sensor_data)
+
+    // Find the magnetic field sensor
+    const ASensor* magneticSensor = ASensorManager_getDefaultSensor(sensor_manager, ASENSOR_TYPE_MAGNETIC_FIELD);
+#endif
+}
 
 int SDL_main(int argc, char **argv)
 {
@@ -53,8 +74,12 @@ int SDL_main(int argc, char **argv)
         usleep(10000);
     }
 
+    sensor_test();
+
+#if 0
     // xxx
     sdl_test();
+#endif
 
 #if 0
     // run 2 instances of test picoc program

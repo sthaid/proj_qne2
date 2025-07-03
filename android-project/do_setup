@@ -1,14 +1,27 @@
 #!/bin/bash
 
+update_build_file()
+{
+  src=$1
+  dest=$2
+
+  echo "- updating $src to $dest"
+  cp $BUILD/$dest $TOP/setup_files/${src}.orig
+  cp $TOP/setup_files/${src} $BUILD/$dest 
+}
+
+# ######### MAIN ##########
+
 # set directory variables
 PACKAGE_NAME=org.sthaid.qne2
 TOP=`pwd`
 SDL_DIR=$TOP/SDL2
 BUILD=$SDL_DIR/build/$PACKAGE_NAME
+RES_PATH=$BUILD/app/src/main/res
 
 # if SDL_DIR exists it must be removed
 if [ -d $SDL_DIR ]; then
-  echo "Removing $SDL_DIR"
+  echo "Remove existing $SDL_DIR"
   rm -rf $SDL_DIR
 fi
 
@@ -24,11 +37,16 @@ $SDL_DIR/build-scripts/androidbuild.sh $PACKAGE_NAME stub.c
 rm stub.c
 echo
 
-# add additional subdirs (with source code and Android.mk), for the 
-# additional libraries that are needed, which is SDL2_ttf-2.0.15
+# extract SDL2_ttf source code to build dir
 echo "Extractng SDL2_ttf-2.0.15.tar.gz"
 cd $BUILD/app/jni
 tar -xf $TOP/setup_files/SDL2_ttf-2.0.15.tar.gz
+echo
+
+# update some build files in $BUILD
+echo "Updating files in $BUILD"
+update_build_file app_jni_src_Android.mk app/jni/src/Android.mk
+update_build_file app_src_main_res_values_strings.xml app/src/main/res/values/strings.xml
 echo
 
 # add symbolic links to the source code
@@ -37,8 +55,11 @@ cd $BUILD/app/jni/src
 rm stub.c
 ln -s ../../../../../../../main.c .
 ln -s ../../../../../../../sdl.c .
+ln -s ../../../../../../../sdl.h .
+ln -s ../../../../../../../std_hdrs.h .
 ln -s ../../../../../../../utils.c .
-ln -s ../../../../../../../common.h .
+ln -s ../../../../../../../utils.h .
+ln -s ../../../../../../../picoc/ .
 echo
 
 # create assets dir, and create symbolic links to assets
@@ -46,18 +67,12 @@ echo "Creating assets directory"
 cd $BUILD/app/src/main
 mkdir assets
 cd assets
-ln -s ../../../../../../../../qne2.book .
-
-# patch android build files
-echo "Applying patches to template build directory"
-cd $SDL_DIR
-patch -p1 < $TOP/setup_files/setup.patch
+#ln -s xxx .
 echo
 
 # create the launcher icon
 echo "Creating launcher icons"
 cd $TOP/setup_files
-RES_PATH=$BUILD/app/src/main/res
 gcc -Wall -g `sdl2-config --cflags` -o create_ic_launcher create_ic_launcher.c -lSDL2 -lSDL2_ttf -lpng
 ./create_ic_launcher  $RES_PATH/mipmap-mdpi/ic_launcher.png      48
 ./create_ic_launcher  $RES_PATH/mipmap-hdpi/ic_launcher.png      72

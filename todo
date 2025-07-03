@@ -1,6 +1,137 @@
+https://developer.android.com/ndk/reference/group/sensor
+
+
+https://stackoverflow.com/questions/4200119/access-android-sensors-via-ndk
+sample code using android ndk to access sensors
+
+
+
+
+
+
+xxxxxxxxxxxxxxxx
+
+
+"android ndk example to get compass reading"
+
+#include <android/sensor.h>
+
+// ... (Get the sensor manager and event queue)
+
+// Find the magnetic field sensor
+ASensor* magneticSensor = ASensorManager_getDefaultSensor(sensor_manager, ASENSOR_TYPE_MAGNETIC_FIELD);
+
+// Enable the sensor
+ASensorEventQueue_enableSensor(queue, magneticSensor);
+
+// Read sensor data in a loop
+while (true) {
+    ASensorEvent event;
+    int eventsRead = ASensorEventQueue_getEvents(queue, &event, 1);
+
+    if (eventsRead > 0) {
+        // Process magnetic field data (event.data[0], event.data[1], event.data[2])
+        // You'll need to implement your own sensor fusion logic
+        // to calculate the compass heading from accelerometer and magnetometer data.
+        // There is no dedicated ASENSOR_TYPE_COMPASS or ASENSOR_TYPE_ORIENTATION in the NDK directly for the compass heading.
+    }
+}
+
+// Disable and destroy the sensor and event queue
+ASensorEventQueue_disableSensor(queue, magneticSensor);
+ASensorManager_destroyEventQueue(sensor_manager, queue);
+
+==================
+APP DIR
+==================
+
+aliases: 
+alias app_top='~/proj/proj_qne2/android-project/SDL2/build/org.sthaid.qne2'
+alias app='~/proj/proj_qne2/android-project/SDL2/build/org.sthaid.qne2/app'
+alias app_jni='~/proj/proj_qne2/android-project/SDL2/build/org.sthaid.qne2/app/jni'
+alias app_jni_src='~/proj/proj_qne2/android-project/SDL2/build/org.sthaid.qne2/app/jni/src'
+alias app_src_main='~/proj/proj_qne2/android-project/SDL2/build/org.sthaid.qne2/app/src/main'
+
+--------
+top = SDL2/build/org.sthaid.qne2
+--------
+./gradle/wrapper/gradle-wrapper.jar
+./gradle/wrapper/gradle-wrapper.properties
+./gradlew.bat
+./build.gradle
+./gradlew
+./gradle.properties
+./settings.gradle
+
+-------
+app
+-------
+./app/build.gradle
+./app/proguard-rules.pro
+
+-------
+app/jni
+-------
+./app/jni/Android.mk
+./app/jni/Application.mk
+./app/jni/SDL/Android.mk
+./app/jni/CMakeLists.txt
+
+./app/jni/src/Android.mk       : source files
+./app/jni/src/stub.c
+./app/jni/src/CMakeLists.txt
+
+--------
+app/src/main/
+--------
+./app/src/main/AndroidManifest.xml
+
+--------
+app/src/main/java
+--------
+./app/src/main/java/org/libsdl/app/SDLActivity.java
+./app/src/main/java/org/libsdl/app/SDLAudioManager.java
+./app/src/main/java/org/libsdl/app/HIDDeviceUSB.java
+./app/src/main/java/org/libsdl/app/HIDDeviceManager.java
+./app/src/main/java/org/libsdl/app/HIDDevice.java
+./app/src/main/java/org/libsdl/app/SDL.java
+./app/src/main/java/org/libsdl/app/SDLSurface.java
+./app/src/main/java/org/libsdl/app/HIDDeviceBLESteamController.java
+./app/src/main/java/org/libsdl/app/SDLControllerManager.java
+./app/src/main/java/org/sthaid/qne2/Qne2Activity.java
+
+--------
+app/src/main/res
+--------
+./app/src/main/res/mipmap-mdpi/ic_launcher.png
+./app/src/main/res/mipmap-hdpi/ic_launcher.png
+./app/src/main/res/mipmap-xhdpi/ic_launcher.png
+./app/src/main/res/values/strings.xml                : game string
+./app/src/main/res/values/colors.xml
+./app/src/main/res/values/styles.xml
+./app/src/main/res/mipmap-xxhdpi/ic_launcher.png
+./app/src/main/res/mipmap-xxxhdpi/ic_launcher.png
+
+
 ==================
 todo
 ==================
+
+build scripts
+- rename to android-build
+- assets dir
+- script steps to get SDL2 and SDL2_ttf
+- dont patch, just copy, and save orig
+menu
+run_prog
+mkdir
+destroy and recreate the repo
+
+
+https://developer.android.com/ndk/samples
+
+https://github.com/android/ndk-samples/tree/main
+git clone https://github.com/android/ndk-samples
 
 sdl
 - add sdl event support
@@ -106,6 +237,7 @@ steps
     ./sdkmanager --install "platforms;android-30" 
     ./sdkmanager --install "build-tools;30.0.2"
     ./sdkmanager --install "ndk;21.3.6528147"
+    ./sdkmanager --install "ndk;26.3.11579264"
 - add to bash_profile
     # env vars
     if [ "$ENV_INITIALIZED" = "" ]; then
