@@ -177,6 +177,11 @@ c interpreter
 https://github.com/jpoirier/picoc
 git clone https://github.com/jpoirier/picoc
 
+cd picoc
+git diff 865ae807ff6384ec0cded86f84cec9d8c118956f HEAD .
+
+
+
 ================
 sdl3
 ===============

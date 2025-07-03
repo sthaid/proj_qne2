@@ -20,7 +20,7 @@ LOCAL_SRC_FILES :=  \
   picoc/include.c \
   picoc/lex.c \
   picoc/parse.c \
-  picoc/picoc.c \
+  picoc/picoc_android.c \
   picoc/platform.c \
   picoc/table.c \
   picoc/type.c \
