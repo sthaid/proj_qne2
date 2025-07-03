@@ -47,6 +47,7 @@ echo
 echo "Updating files in $BUILD"
 update_build_file app_jni_src_Android.mk app/jni/src/Android.mk
 update_build_file app_src_main_res_values_strings.xml app/src/main/res/values/strings.xml
+update_build_file app_src_main_AndroidManifest.xml app/src/main/AndroidManifest.xml
 echo
 
 # add symbolic links to the source code

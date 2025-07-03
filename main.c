@@ -74,10 +74,11 @@ int SDL_main(int argc, char **argv)
         usleep(10000);
     }
 
-    sensor_test();
-
 #if 0
-    // xxx
+    sensor_test();
+#endif
+
+#if 1
     sdl_test();
 #endif
 
