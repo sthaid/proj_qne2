@@ -14,7 +14,9 @@
 #include <math.h>
 #include <stdbool.h>
 
+#ifndef UNIX_HOST
 #define UNIX_HOST
+#endif
 
 /* host platform includes */
 #ifdef UNIX_HOST
