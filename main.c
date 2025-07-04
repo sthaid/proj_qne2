@@ -87,10 +87,13 @@ static void controller(void)
     sdl_init(&w, &h);
     INFO("window size %d %d\n", w, h);
 
+    sdl_display_init(COLOR_BLACK);  // xxx move to sdl_init
+    sdl_display_present();
+
     while (true) {
         // display menu
         display_menu(w, h);
-        display_menu(w, h);  // xxx why 2 needed
+        //display_menu(w, h);  // xxx why 2 needed
 
         // wait for event
         id = sdl_get_event(true);
@@ -103,8 +106,11 @@ static void controller(void)
             printf("GOT EXIT CMD\n");
             break;
         } else {
+            sdl_display_init(COLOR_RED);
             printf("GOT RUN_PROG %s\n", menu[id].args);
             run_prog(false);  // fg
+            sdl_display_present();
+            sleep(2);
         }
     }
 
@@ -118,7 +124,7 @@ static void display_menu(int w, int h)
 
     // xxx reset other stuff here too, fontsz, color
     // xxx move this to caller
-    sdl_display_init(COLOR_BLACK);
+    sdl_display_init(COLOR_PURPLE);
 
     int id, x, xx, y, yy;
     sdl_rect_t loc;
