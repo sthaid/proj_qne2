@@ -40,5 +40,5 @@ uint32_t sdl_scale_color(uint32_t color, double inten);
 void sdl_set_render_draw_color(uint32_t color);
 
 void sdl_register_event(sdl_rect_t loc, int event_id);
-int sdl_get_event(void);
+int sdl_get_event(bool wait);
 

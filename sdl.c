@@ -83,6 +83,8 @@ void sdl_exit(void)
 {
     int32_t i;
 
+    INFO("sdl exitting\n");
+
     for (i = 0; i < MAX_FONT_PTSIZE; i++) {
         if (font[i].font != NULL) {
             TTF_CloseFont(font[i].font);
@@ -93,6 +95,8 @@ void sdl_exit(void)
     SDL_DestroyRenderer(sdl_renderer);
     SDL_DestroyWindow(sdl_window);
     SDL_Quit();
+
+    INFO("done\n");
 }
 
 // ----------------- DISPLAY INIT / PRESENT ---------------
@@ -242,6 +246,8 @@ static void font_init(void)
 
 // -----------------  XXX EVENTS   ------------------------
 
+static int process_sdl_event(SDL_Event *ev);
+
 void sdl_register_event(sdl_rect_t loc, int event_id)
 {
     event_tbl[max_event].loc = loc;
@@ -249,77 +255,92 @@ void sdl_register_event(sdl_rect_t loc, int event_id)
     max_event++;
 }
 
-int sdl_get_event(void)
+int sdl_get_event(bool wait)
 {
     SDL_Event ev;
-    int event_id = 0;
-    int i;
+    int event_id = -1;
+    int ret;
 
+try_again:
+    // get event
+    ret = SDL_PollEvent(&ev);
+
+    // if no sdl event then, depending on 'wait' arg, either
+    // sleep 100ms and try again, or return -1
+    if (ret == 0) {
+        if (wait) {
+            usleep(100000);
+            goto try_again;
+        } else {
+            return -1;
+        }
+    }
+
+    // process the sdl_event; this may or may not return an event_id
+    event_id = process_sdl_event(&ev);
+    if (event_id == -1) {
+        goto try_again;
+    }
+
+    // got an event_id, return it
+    return event_id;
+}
+
+static int process_sdl_event(SDL_Event *ev)
+{
     #define AT_POS(X,Y,pos) (((X) >= (pos).x) && \
                              ((X) < (pos).x + (pos).w) && \
                              ((Y) >= (pos).y) && \
                              ((Y) < (pos).y + (pos).h))
 
-    while (true) {
-        // get the next event, break out of loop if no event
-        if (SDL_PollEvent(&ev) == 0) {
-            break;
-        }
+    int event_id = -1;
+    int i;
 
-        switch (ev.type) {
-        case SDL_MOUSEBUTTONDOWN:
-        case SDL_MOUSEBUTTONUP: {
-           INFO("MOUSEBUTTON button=%s state=%s x=%d y=%d\n",
-                   (ev.button.button == SDL_BUTTON_LEFT   ? "LEFT" :
-                    ev.button.button == SDL_BUTTON_MIDDLE ? "MIDDLE" :
-                    ev.button.button == SDL_BUTTON_RIGHT  ? "RIGHT" : "???"),
-                   (ev.button.state == SDL_PRESSED  ? "PRESSED" :
-                    ev.button.state == SDL_RELEASED ? "RELEASED" : "???"),
-                   ev.button.x,
-                   ev.button.y);
+    switch (ev->type) {
+    case SDL_MOUSEBUTTONDOWN:
+    case SDL_MOUSEBUTTONUP: {
+       INFO("MOUSEBUTTON button=%s state=%s x=%d y=%d\n",
+               (ev->button.button == SDL_BUTTON_LEFT   ? "LEFT" :
+                ev->button.button == SDL_BUTTON_MIDDLE ? "MIDDLE" :
+                ev->button.button == SDL_BUTTON_RIGHT  ? "RIGHT" : "???"),
+               (ev->button.state == SDL_PRESSED  ? "PRESSED" :
+                ev->button.state == SDL_RELEASED ? "RELEASED" : "???"),
+               ev->button.x,
+               ev->button.y);
 
-            if (ev.button.state == SDL_RELEASED) {
-                for (i = 0; i < max_event; i++) {
-                    if (AT_POS(ev.button.x, ev.button.y, event_tbl[i].loc)) {
-                        break;
-                    }
-                }
-                if (i < max_event) {
-                    event_id = event_tbl[i].event_id;
+        if (ev->button.state == SDL_RELEASED) {
+            for (i = 0; i < max_event; i++) {
+                if (AT_POS(ev->button.x, ev->button.y, event_tbl[i].loc)) {
+                    break;
                 }
             }
-            break; }
-        case SDL_MOUSEMOTION: {
+            if (i < max_event) {
+                event_id = event_tbl[i].event_id;
+            }
+        }
+        break; }
+    case SDL_MOUSEMOTION: {
 #if 0
-            INFO("MOUSEMOTION state=%s x=%d y=%d xrel=%d yrel=%d\n",
-                   (ev.motion.state == SDL_PRESSED  ? "PRESSED" :
-                    ev.motion.state == SDL_RELEASED ? "RELEASED" : "???"),
-                   ev.motion.x,
-                   ev.motion.y,
-                   ev.motion.xrel,
-                   ev.motion.yrel);
+        INFO("MOUSEMOTION state=%s x=%d y=%d xrel=%d yrel=%d\n",
+               (ev->motion.state == SDL_PRESSED  ? "PRESSED" :
+                ev->motion.state == SDL_RELEASED ? "RELEASED" : "???"),
+               ev->motion.x,
+               ev->motion.y,
+               ev->motion.xrel,
+               ev->motion.yrel);
 #endif
-            break; }
-        case SDL_FINGERDOWN:
-        case SDL_FINGERUP:
-        case SDL_FINGERMOTION: {
-            break; }
-        default: {
-            INFO("event_type %d - not supported\n", ev.type);
-            break; }
-        }
-
-        if (event_id != 0) {
-            break;
-        }
+        break; }
+    case SDL_FINGERDOWN:  // xxx should these be used instead of mouse
+    case SDL_FINGERUP:
+    case SDL_FINGERMOTION: {
+        break; }
+    default: {
+        INFO("event_type %d - not supported\n", ev->type);
+        break; }
     }
 
-//  if (event_id != 0) {
-//      INFO("returning event_id %d\n", event_id);
-//  }
     return event_id;
 }
-
 
 #if 0
 typedef struct SDL_TouchFingerEvent

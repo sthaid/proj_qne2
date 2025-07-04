@@ -39,6 +39,8 @@ int main(int argc, char **argv)
     printf("sizeof(123UL)     = %zd\n", sizeof(123UL));
     printf("sizeof(123)       = %zd\n", sizeof(123));
 
+    return 0;
+
     rect = proc();
     printf("%d %d %d %d\n",
        rect.x, rect.y, rect.w, rect.h);

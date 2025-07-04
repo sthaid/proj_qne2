@@ -11,39 +11,22 @@ int         log_cat_size;
 bool        log_cat_is_running;
 bool        server_thread_running;
 
-// prototypes
+// prototypes xxx
+static void controller(void);
 static void sdl_test(void);
+static void *server_thread(void *cx);
 void run_prog(bool bg);
-void *server_thread(void *cx);
 
 // support routine prototypes
 static void list_internal_storage_files(void);
 static char * sock_addr_to_str(char * s, int slen, struct sockaddr * addr);
 static void remove_trailing_crlf(char *s);
+static void remove_trailing_newline(char *s);
 static bool is_socket_connected(int socket_fd);
 static int get_file_size(char *pathname);
 static void get_file_info(char *pathname, int *size, char *mtime);
 
 // -----------------  MAIN  ------------------------------------------
-
-void sensor_test(void)
-{
-#if 0
-    INFO("SENSOR TEST ...\n");
-
-    #define PACKAGE_NAME "org.sthaid.qne2"
-
-
-    // Get the sensor manager
-    ASensorManager* sensor_manager = ASensorManager_getInstanceForPackage(PACKAGE_NAME);
-
-    // Create a sensor event queue
-    //ASensorEventQueue* queue = ASensorManager_createEventQueue(sensor_manager, looper, LOOPER_ID_USER, get_sensor_events, sensor_data)
-
-    // Find the magnetic field sensor
-    const ASensor* magneticSensor = ASensorManager_getDefaultSensor(sensor_manager, ASENSOR_TYPE_MAGNETIC_FIELD);
-#endif
-}
 
 int SDL_main(int argc, char **argv)
 {
@@ -74,26 +57,178 @@ int SDL_main(int argc, char **argv)
         usleep(10000);
     }
 
-#if 0
-    sensor_test();
-#endif
-
-#if 1
-    sdl_test();
-#endif
-
-#if 0
-    // run 2 instances of test picoc program
-    run_prog(true);    // bg
-    run_prog(false);   // fg
-#endif
-
     // xxx
-    while (true) pause();
+    controller();
 
     // end program
+    // xxx kill the server thread ?
     INFO("TERMINATING\n");
     return 0;
+}
+
+// -----------------  CONTROLLER  ------------------------------------
+
+#define MAX_MENU 18
+
+typedef struct {
+    char name[16];
+    char *args;
+} menu_t;
+
+static menu_t menu[MAX_MENU];
+
+static void display_menu(int w, int h);
+static void read_menu(void);
+
+static void controller(void)
+{
+    int w, h, id;
+
+    sdl_init(&w, &h);
+    INFO("window size %d %d\n", w, h);
+
+    while (true) {
+        // display menu
+        display_menu(w, h);
+        display_menu(w, h);  // xxx why 2 needed
+
+        // wait for event
+        id = sdl_get_event(true);
+
+        // process event
+        printf("proc event %d\n", id);
+        if (id < 0 || id >= MAX_MENU) {
+            ERROR("unexpected event  id %d\n", id);
+        } else if (strcmp(menu[id].name, "end") == 0) {
+            printf("GOT EXIT CMD\n");
+            break;
+        } else {
+            printf("GOT RUN_PROG %s\n", menu[id].args);
+            run_prog(false);  // fg
+        }
+    }
+
+    sdl_exit();
+}
+
+static void display_menu(int w, int h)
+{
+    // xxx
+    read_menu();
+
+    // xxx reset other stuff here too, fontsz, color
+    // xxx move this to caller
+    sdl_display_init(COLOR_BLACK);
+
+    int id, x, xx, y, yy;
+    sdl_rect_t loc;
+
+    for (id = 0; id < MAX_MENU; id++) {
+        if (menu[id].name[0] == '\0') {
+            continue;
+        }
+
+        // xxx cleanup
+
+        x = id % 3;
+        xx = (w/3)/2 + x * (w/3);
+
+        y = id / 3;
+        yy = (h/6)/2 + y * (h/6);
+
+        //printf("w,h %d %d\n", w, h);
+        //printf("id=%d x,y=%d %d xx,yy=%d %d name=%s\n", id, x, y, xx, yy, menu[id].name);
+        printf("RENDER TEXT %d %d %s\n", xx, yy, menu[id].name);
+        loc = sdl_render_text(xx, yy, menu[id].name);
+        printf("id=%d loc=x,w %d,%d  y,h %d %d\n", id, 
+             loc.x, loc.w, loc.y, loc.h);
+
+        sdl_register_event(loc, id);
+    }
+    
+    sdl_display_present(); //xxx also move
+}
+
+static void read_menu(void)
+{
+    FILE *fp;
+    char s[1000], name[32], *args;
+    int cnt, id, n, ret;
+    struct stat statbuf;
+
+    static long menu_mtime;
+    static char menu_path[100];
+
+    // construct menu_path, if not already done so
+    if (menu_path[0] == '\0') {
+        sprintf(menu_path, "%s/menu", internal_storage_path);
+    }
+
+    // if menu file has not changed then return
+    ret = stat(menu_path, &statbuf);
+    if (ret != 0) {
+        ERROR("stat %s failed, %s\n", menu_path, strerror(errno));
+        return;
+    }
+    if (statbuf.st_mtime == menu_mtime) {
+        return;  // menu file has not changed
+    }
+    menu_mtime = statbuf.st_mtime;
+
+    // free and clear menu
+    for (id = 0; id < MAX_MENU; id++) {
+        free(menu[id].args);
+    }
+    memset(menu, 0, sizeof(menu));
+
+    // open menu file
+    fp = fopen(menu_path, "r");
+    if (fp == NULL) {
+        ERROR("failed to open %s, %s\n", menu_path, strerror(errno));
+        return;
+    }
+
+    // read lines from menu file, and populate menu struct
+    while (fgets(s, sizeof(s), fp) != NULL) {
+        remove_trailing_newline(s);
+
+        // allow blank or comment lines
+        if (s[0] == '\0' || s[0] == '#') {
+            continue;
+        }
+
+        // extract id, name, and args:
+        // example:
+        //   s = "5 test : test_main.c test2.c"
+        // scanf result:
+        //   id   = 5
+        //   name = test
+        //   args = test_main.c test2.c
+        name[0] = '\0';
+        id = n = 0;
+        cnt = sscanf(s, "%d %s : %n", &id, name, &n);
+        if (cnt < 2) {
+            ERROR("invalid line in menu file, '%s'\n", s);
+            continue;
+        }
+        args = (n > 0 ? s+n : NULL);
+
+        // save name and args in menu struct
+        strcpy(menu[id].name, name);
+        if (args != NULL) {
+            menu[id].args = strdup(args);
+        }
+    }
+
+    fclose(fp);
+
+    // debug print the new menu
+    INFO("menu is now ...\n");
+    for (id = 0; id < MAX_MENU; id++) {
+        if (menu[id].name[0] != '\0') {
+            INFO("%4d %8s : %s\n", id, menu[id].name, menu[id].args);
+        }
+    }
 }
 
 // -----------------  SDL TEST ---------------------------------------
@@ -129,10 +264,7 @@ static void sdl_test(void)
         // xxx simplify
         event_processed = false;
         while (true) {
-            int event_id = sdl_get_event();
-            if (event_id == 0) {
-                break;
-            }
+            int event_id = sdl_get_event(true);
 
             INFO("processing event %d\n", event_id);
             event_processed = true;
@@ -149,6 +281,27 @@ static void sdl_test(void)
     }
 
     sdl_exit();
+}
+
+// -----------------  SENSOR  ---------------------------
+
+void sensor_test(void)
+{
+#if 0
+    INFO("SENSOR TEST ...\n");
+
+    #define PACKAGE_NAME "org.sthaid.qne2"
+
+
+    // Get the sensor manager
+    ASensorManager* sensor_manager = ASensorManager_getInstanceForPackage(PACKAGE_NAME);
+
+    // Create a sensor event queue
+    //ASensorEventQueue* queue = ASensorManager_createEventQueue(sensor_manager, looper, LOOPER_ID_USER, get_sensor_events, sensor_data)
+
+    // Find the magnetic field sensor
+    const ASensor* magneticSensor = ASensorManager_getDefaultSensor(sensor_manager, ASENSOR_TYPE_MAGNETIC_FIELD);
+#endif
 }
 
 // ----------------- SERVER ----------------------------
@@ -169,7 +322,7 @@ typedef struct {
 // prototypes
 static void *process_client_req(void *cx);
 
-void *server_thread(void *cx)
+static void *server_thread(void *cx)
 {
     struct sockaddr_in server_address;
     int                listen_sockfd, ret;
@@ -523,7 +676,7 @@ static char * sock_addr_to_str(char * s, int slen, struct sockaddr * addr)
     return s;
 }
 
-static void remove_trailing_crlf(char *s)
+static void remove_trailing_crlf(char *s)  // xxx is this needed
 {
     int len = strlen(s);
 
@@ -537,6 +690,15 @@ static void remove_trailing_crlf(char *s)
     if (len > 0 && (s[len-1] == '\n' || s[len-1] == '\r')) {
         s[len-1] = '\0';
         len--;
+    }
+}
+
+static void remove_trailing_newline(char *s)
+{
+    int len = strlen(s);
+
+    if (len > 0) {
+        s[len-1] = '\0';
     }
 }
 
