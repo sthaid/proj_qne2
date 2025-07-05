@@ -28,8 +28,18 @@ static int          text_ptsize;
 static event_t          event_tbl[100];
 static int              max_event;
 
-const int COLOR_YELLOW  =  ( 255  |  255<<8 |    0<<16 |  255<<24 );
-
+//                              R         G         B         A
+const int COLOR_PURPLE     = ( 127  |    0<<8 |  255<<16 |  255<<24 );
+const int COLOR_BLUE       = ( 0    |    0<<8 |  255<<16 |  255<<24 );
+const int COLOR_LIGHT_BLUE = ( 0    |  255<<8 |  255<<16 |  255<<24 );
+const int COLOR_GREEN      = ( 0    |  255<<8 |    0<<16 |  255<<24 );
+const int COLOR_YELLOW     = ( 255  |  255<<8 |    0<<16 |  255<<24 );
+const int COLOR_ORANGE     = ( 255  |  128<<8 |    0<<16 |  255<<24 );
+const int COLOR_PINK       = ( 255  |  105<<8 |  180<<16 |  255<<24 );
+const int COLOR_RED        = ( 255  |    0<<8 |    0<<16 |  255<<24 );
+const int COLOR_GRAY       = ( 224  |  224<<8 |  224<<16 |  255<<24 );
+const int COLOR_WHITE      = ( 255  |  255<<8 |  255<<16 |  255<<24 );
+const int COLOR_BLACK      = ( 0    |    0<<8 |    0<<16 |  255<<24 );
 
 // ----------------- INIT / EXIT --------------------------
 
