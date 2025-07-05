@@ -193,7 +193,7 @@ struct sdl_rect *sdl_render_text(int x, int y, char * str) // xxx name
     SDL_Surface    * surface;
     SDL_Texture    * texture;
     SDL_Rect         pos;
-    static struct sdl_rect       pos2;
+    static struct sdl_rect pos2;
 
     // xxx
     font_init();

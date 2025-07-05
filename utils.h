@@ -23,7 +23,17 @@ void logmsg(char * lvl, const char * func, char * fmt, ...) __attribute__ ((form
 // -----------------  TIME  ------------------
 
 #define MAX_TIME_STR 50
-
 uint64_t microsec_timer(void);
 uint64_t get_real_time_us(void);
 char * time2str(char * str, int64_t us, bool gmt, bool display_ms, bool display_date);
+
+// -----------------  NETWORKING  ------------
+
+char * sock_addr_to_str(char * s, int slen, struct sockaddr * addr);
+bool is_socket_connected(int socket_fd) ;
+
+// ----------------- MISC  -------------------
+
+void get_file_info(char *pathname, size_t *size, time_t *mtime);
+void remove_trailing_newline(char *s);
+

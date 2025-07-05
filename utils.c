@@ -29,7 +29,7 @@ void logmsg(char *lvl, const char *func, char *fmt, ...)
 
 #ifndef USE_ANDROID_LOG
     // print the message, stdout has been redirected to the log file, in main.c;
-    // use './qne logcat' to monitor the log
+    // use './qne logcat' to monitor the log xxx
     time2str(time_str, get_real_time_us(), false, true, true),
     printf("%s %s %s: %s\n", time_str, lvl, func, msg);
 #else
@@ -112,5 +112,68 @@ char * time2str(char * str, int64_t us, bool gmt, bool display_ms, bool display_
     }
 
     return str;
+}
+
+// ----------------- NETWORKING --------------
+
+char * sock_addr_to_str(char * s, int slen, struct sockaddr * addr)
+{
+    char addr_str[100];
+    int port2;
+
+    if (addr->sa_family == AF_INET) {
+        inet_ntop(AF_INET,
+                  &((struct sockaddr_in*)addr)->sin_addr,
+                  addr_str, sizeof(addr_str));
+        port2 = ((struct sockaddr_in*)addr)->sin_port;
+    } else if (addr->sa_family == AF_INET6) {
+        inet_ntop(AF_INET6,
+                  &((struct sockaddr_in6*)addr)->sin6_addr,
+                 addr_str, sizeof(addr_str));
+        port2 = ((struct sockaddr_in6*)addr)->sin6_port;
+    } else {
+        snprintf(s,slen,"Invalid AddrFamily %d", addr->sa_family);
+        return s;
+    }
+
+    snprintf(s,slen,"%s:%d",addr_str,ntohs(port2));
+    return s;
+}
+
+bool is_socket_connected(int socket_fd)
+{
+    int error = 0;
+    int ret;
+    socklen_t len = sizeof(error);
+
+    ret = getsockopt(socket_fd, SOL_SOCKET, SO_ERROR, &error, &len);
+
+    return ret == 0 && error == 0;
+}
+
+// ----------------- MISC --------------------
+
+void get_file_info(char *pathname, size_t *size, time_t *mtime)
+{
+    int ret;
+    struct stat statbuf;
+
+    if (lstat(pathname, &statbuf) != 0) {
+        if (size) *size = 0;
+        if (mtime) *mtime = 0;
+        return;
+    }
+
+    if (size) *size = statbuf.st_size;
+    if (mtime) *mtime = statbuf.st_mtime;
+}
+
+void remove_trailing_newline(char *s)
+{
+    int len = strlen(s);
+
+    if (len > 0) {
+        s[len-1] = '\0';
+    }
 }
 

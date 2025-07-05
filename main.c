@@ -7,23 +7,14 @@
 // variables
 const char *internal_storage_path;
 char        log_file_pathname[100];
-int         log_cat_size;
+size_t      log_cat_size;
 bool        log_cat_is_running;
 bool        server_thread_running;
 
-// prototypes xxx
+// prototypes 
 static void controller(void);
 static void *server_thread(void *cx);  // xxx new name
 void run_prog(bool bg);  // xxx new name, and args
-
-// support routine prototypes  xxx utils
-static void list_internal_storage_files(void);
-static char * sock_addr_to_str(char * s, int slen, struct sockaddr * addr);
-static void remove_trailing_crlf(char *s);
-static void remove_trailing_newline(char *s); //xxx  
-static bool is_socket_connected(int socket_fd);
-static int get_file_size(char *pathname);
-static void get_file_info(char *pathname, int *size, char *mtime);
 
 // -----------------  MAIN  ------------------------------------------
 
@@ -35,7 +26,7 @@ int SDL_main(int argc, char **argv)
     // init logging
     internal_storage_path = SDL_AndroidGetInternalStoragePath();
     sprintf(log_file_pathname, "%s/%s", internal_storage_path, "log");
-    log_cat_size = get_file_size(log_file_pathname);
+    get_file_info(log_file_pathname, &log_cat_size, NULL);
 
     freopen(log_file_pathname, "a", stdout);
     freopen(log_file_pathname, "a", stderr);
@@ -44,10 +35,7 @@ int SDL_main(int argc, char **argv)
 
     // print startup messages
     INFO("=====================================================\n");  // xxx include version
-    INFO("sizeof(long) = %zd\n", sizeof(long));
-    INFO("sizeof(long long) = %zd\n", sizeof(long long));
     INFO("internal_storage_path = %s\n", internal_storage_path);
-    list_internal_storage_files();
 
     // xxx
     printf("sizoef(char)      = %zd\n", sizeof(char));
@@ -65,6 +53,9 @@ int SDL_main(int argc, char **argv)
     while (server_thread_running == false) {
         usleep(10000);
     }
+
+    // xxx test
+    system("/bin/tar");
 
     // xxx comment
     controller();
@@ -461,20 +452,25 @@ static void *process_client_req(void *cx)
 
             // get file info
             char *name = dirent->d_name;
-            int size;
-            char mtime[100];
+            size_t size;
+            time_t mtime;
+            char mtime_str[100];
             char pathname[200];
+
             sprintf(pathname, "%s/%s", internal_storage_path, name);
-            get_file_info(pathname, &size, mtime);
+            get_file_info(pathname, &size, &mtime);
+            ctime_r(&mtime, mtime_str);
+            remove_trailing_newline(mtime_str);
 
             // print info to sockfp
-            fprintf(sockfp, "%8d %s %s\n", size, mtime, name);
+            fprintf(sockfp, "%8zd %s %s\n", size, mtime_str, name);
         }
 
         closedir(dir);
     } else if (strcmp(cmd, "logcat") == 0) {
-        int  fd, size, xfer_len;
+        int  fd, xfer_len;
         char buff[10000];
+        size_t size;
 
         // if logcat is already running then return error
         if (log_cat_is_running) {
@@ -495,7 +491,7 @@ static void *process_client_req(void *cx)
         // copy additions to logfile to the sockfp
         while (true) {
             // get size of logfile
-            size = get_file_size(log_file_pathname);
+            get_file_info(log_file_pathname, &size, NULL);
             if (size < 0) {
                 sprintf(err_str, "logcat: failed to get size of %s, %s", log_file_pathname, strerror(errno));
                 close(fd);
@@ -559,133 +555,6 @@ error:
     free(req);
     return NULL;
 }
-
-// ----------------- SUPPORT ---------------------------
-
-static void list_internal_storage_files(void)
-{
-    DIR *dir = opendir(internal_storage_path);
-    struct dirent * dirent;
-
-    if (dir == NULL) {
-        ERROR("opendir failed, %s\n", strerror(errno));
-        return;
-    }
-
-    while ((dirent = readdir(dir)) != NULL) {
-        if (strcmp(dirent->d_name, ".") == 0 ||
-            strcmp(dirent->d_name, "..") == 0)
-        {
-            continue;
-        }
-
-        // get file info
-        char *name = dirent->d_name;
-        int size;
-        char mtime[100];
-        char pathname[200];
-        sprintf(pathname, "%s/%s", internal_storage_path, name);
-        get_file_info(pathname, &size, mtime);
-
-        // print info to sockfp
-        INFO("%8d %s %s\n", size, mtime, name);
-    }
-
-    closedir(dir);
-}
-
-static char * sock_addr_to_str(char * s, int slen, struct sockaddr * addr)
-{
-    char addr_str[100];
-    int port2;
-
-    if (addr->sa_family == AF_INET) {
-        inet_ntop(AF_INET,
-                  &((struct sockaddr_in*)addr)->sin_addr,
-                  addr_str, sizeof(addr_str));
-        port2 = ((struct sockaddr_in*)addr)->sin_port;
-    } else if (addr->sa_family == AF_INET6) {
-        inet_ntop(AF_INET6,
-                  &((struct sockaddr_in6*)addr)->sin6_addr,
-                 addr_str, sizeof(addr_str));
-        port2 = ((struct sockaddr_in6*)addr)->sin6_port;
-    } else {
-        snprintf(s,slen,"Invalid AddrFamily %d", addr->sa_family);
-        return s;
-    }
-
-    snprintf(s,slen,"%s:%d",addr_str,ntohs(port2));
-    return s;
-}
-
-static void remove_trailing_crlf(char *s)  // xxx is this needed
-{
-    int len = strlen(s);
-
-    if (len > 0 && (s[len-1] == '\n' || s[len-1] == '\r')) {
-        s[len-1] = '\0';
-        len--;
-    } else {
-        return;
-    }
-
-    if (len > 0 && (s[len-1] == '\n' || s[len-1] == '\r')) {
-        s[len-1] = '\0';
-        len--;
-    }
-}
-
-static void remove_trailing_newline(char *s)
-{
-    int len = strlen(s);
-
-    if (len > 0) {
-        s[len-1] = '\0';
-    }
-}
-
-static bool is_socket_connected(int socket_fd)
-{
-    int error = 0;
-    int ret;
-    socklen_t len = sizeof(error);
-
-    ret = getsockopt(socket_fd, SOL_SOCKET, SO_ERROR, &error, &len);
-
-    return ret == 0 && error == 0;
-}
-
-static int get_file_size(char *pathname)
-{
-    int ret;
-    struct stat statbuf;
-
-    ret = lstat(pathname, &statbuf);
-    if (ret < 0) {
-        return -1;
-    }
-    return statbuf.st_size;
-}
-
-static void get_file_info(char *pathname, int *size, char *mtime)
-{
-    int ret;
-    struct stat statbuf;
-
-    *size = 0;
-    mtime[0] = '\0';
-
-    ret = lstat(pathname, &statbuf);
-    if (ret < 0) {
-        return;
-    }
-
-    *size = statbuf.st_size;
-    ctime_r(&statbuf.st_mtime, mtime);
-
-    remove_trailing_crlf(mtime);
-}
-
 
 // xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 // xxxxxxxxxxxxxxxxx  BACKUP  xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
@@ -763,5 +632,39 @@ void sensor_test(void)
     const ASensor* magneticSensor = ASensorManager_getDefaultSensor(sensor_manager, ASENSOR_TYPE_MAGNETIC_FIELD);
 #endif
 }
+
+static void list_internal_storage_files(void)
+{
+    DIR *dir = opendir(internal_storage_path);
+    struct dirent * dirent;
+
+    if (dir == NULL) {
+        ERROR("opendir failed, %s\n", strerror(errno));
+        return;
+    }
+
+    while ((dirent = readdir(dir)) != NULL) {
+        if (strcmp(dirent->d_name, ".") == 0 ||
+            strcmp(dirent->d_name, "..") == 0)
+        {
+            continue;
+        }
+
+        // get file info
+        char *name = dirent->d_name;
+        int size;
+        char mtime[100];
+        char pathname[200];
+        sprintf(pathname, "%s/%s", internal_storage_path, name);
+        get_file_info(pathname, &size, mtime);
+
+        // print info to sockfp
+        INFO("%8d %s %s\n", size, mtime, name);
+    }
+
+    closedir(dir);
+}
+
+
 
 #endif
