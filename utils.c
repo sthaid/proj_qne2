@@ -81,7 +81,7 @@ char * time2str(char * str, int64_t us, bool gmt, bool display_ms, bool display_
 {
     struct tm tm;
     time_t secs;
-    int32_t cnt;
+    int cnt;
     char * s = str;
 
     secs = us / 1000000;

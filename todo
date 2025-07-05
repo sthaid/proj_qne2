@@ -1,3 +1,14 @@
+reversi
+tic tack toe
+blackjack
+pong
+compass
+lat/long
+
+-----
+
+limit use of int32_t
+
 clean this up
 flashlight app
 menu code

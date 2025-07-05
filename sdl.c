@@ -6,32 +6,34 @@
 
 typedef struct {
     TTF_Font *font;
-    int32_t   char_width;
-    int32_t   char_height;
+    int   char_width;
+    int   char_height;
 } sdl_font_t;  // xxx rename
 
 typedef struct {
-    sdl_rect_t loc;
+    struct sdl_rect loc;
     int event_id;
 } event_t;
 
-
 static SDL_Window     * sdl_window;  // xxx rename
 static SDL_Renderer   * sdl_renderer;
-static int32_t          sdl_win_width;
-static int32_t          sdl_win_height;
+static int          sdl_win_width;
+static int          sdl_win_height;
 
 static sdl_font_t       font[MAX_FONT_PTSIZE];
 static SDL_Color        text_fg_color;
 static SDL_Color        text_bg_color;
-static int32_t          text_ptsize;
+static int          text_ptsize;
 
 static event_t          event_tbl[100];
 static int              max_event;
 
+const int COLOR_YELLOW  =  ( 255  |  255<<8 |    0<<16 |  255<<24 );
+
+
 // ----------------- INIT / EXIT --------------------------
 
-int32_t sdl_init(int *w, int *h)
+int sdl_init(int *w, int *h)
 {
     // display available and current video drivers
     int num, i;
@@ -74,6 +76,10 @@ int32_t sdl_init(int *w, int *h)
     // SDL Text Input is not being used 
     SDL_StopTextInput();
 
+    // xxx
+    sdl_display_init(COLOR_BLACK);
+    sdl_display_present();
+
     // return success
     INFO("success\n");
     return 0;
@@ -81,7 +87,7 @@ int32_t sdl_init(int *w, int *h)
 
 void sdl_exit(void)
 {
-    int32_t i;
+    int i;
 
     INFO("sdl exitting\n");
 
@@ -101,7 +107,7 @@ void sdl_exit(void)
 
 // ----------------- DISPLAY INIT / PRESENT ---------------
 
-void sdl_display_init(uint32_t color)
+void sdl_display_init(int color)
 {
     max_event = 0;
 
@@ -117,17 +123,17 @@ void sdl_display_present(void)
 
 // -----------------  COLORS  -----------------------------
 
-uint32_t sdl_create_color(int r, int g, int b, int a)
+int sdl_create_color(int r, int g, int b, int a)
 {
     return (r << 0) | (g << 8) | (b << 16) | (a << 24);
 }
 
-uint32_t sdl_scale_color(uint32_t color, double inten)
+int sdl_scale_color(int color, double inten)
 {
-    uint32_t r = (color >> 0) & 0xff;
-    uint32_t g = (color >> 8) & 0xff;
-    uint32_t b = (color >> 16) & 0xff;
-    uint32_t a = (color >> 24) & 0xff;
+    int r = (color >> 0) & 0xff;
+    int g = (color >> 8) & 0xff;
+    int b = (color >> 16) & 0xff;
+    int a = (color >> 24) & 0xff;
 
     if (inten < 0) inten = 0;
     if (inten > 1) inten = 1;
@@ -139,12 +145,12 @@ uint32_t sdl_scale_color(uint32_t color, double inten)
     return (r << 0) | (g << 8) | (b << 16) | (a << 24);
 }
 
-void sdl_set_render_draw_color(uint32_t color)
+void sdl_set_render_draw_color(int color)
 {
-    uint32_t r = (color >> 0) & 0xff;
-    uint32_t g = (color >> 8) & 0xff;
-    uint32_t b = (color >> 16) & 0xff;
-    uint32_t a = (color >> 24) & 0xff;
+    int r = (color >> 0) & 0xff;
+    int g = (color >> 8) & 0xff;
+    int b = (color >> 16) & 0xff;
+    int a = (color >> 24) & 0xff;
 
     SDL_SetRenderDrawColor(sdl_renderer, r, g, b, a);
 }
@@ -153,7 +159,7 @@ void sdl_set_render_draw_color(uint32_t color)
 
 static void font_init(void);
 
-void sdl_set_text_ptsize(int32_t ptsize)
+void sdl_set_text_ptsize(int ptsize)
 {
     if (ptsize < 50) ptsize = 50;
     if (ptsize >= MAX_FONT_PTSIZE) ptsize = MAX_FONT_PTSIZE-1;
@@ -161,23 +167,23 @@ void sdl_set_text_ptsize(int32_t ptsize)
     text_ptsize = ptsize;
 }
 
-void sdl_set_text_fg_color(uint32_t color)
+void sdl_set_text_fg_color(int color)
 {
     text_fg_color = *(SDL_Color*)&color;
 }
 
-void sdl_set_text_bg_color(uint32_t color)
+void sdl_set_text_bg_color(int color)
 {
     text_bg_color = *(SDL_Color*)&color;
 }
 
 // xxx return the rect
-sdl_rect_t sdl_render_text(int32_t x, int32_t y, char * str) // xxx name
+struct sdl_rect *sdl_render_text(int x, int y, char * str) // xxx name
 {
     SDL_Surface    * surface;
     SDL_Texture    * texture;
     SDL_Rect         pos;
-    sdl_rect_t       pos2;
+    static struct sdl_rect       pos2;
 
     // xxx
     font_init();
@@ -207,11 +213,10 @@ sdl_rect_t sdl_render_text(int32_t x, int32_t y, char * str) // xxx name
     pos2.y = pos.y;
     pos2.w = pos.w;
     pos2.h = pos.h;
-    return pos2;  // xxx check this
+    return &pos2;  // xxx check this
 }
 
-// xxx return the rect
-sdl_rect_t sdl_render_printf(int32_t x, int32_t y, char * fmt, ...)
+struct sdl_rect *sdl_render_printf(int x, int y, char * fmt, ...)
 {
     char str[1000];
     va_list ap;
@@ -248,9 +253,9 @@ static void font_init(void)
 
 static int process_sdl_event(SDL_Event *ev);
 
-void sdl_register_event(sdl_rect_t loc, int event_id)
+void sdl_register_event(struct sdl_rect *loc, int event_id)
 {
-    event_tbl[max_event].loc = loc;
+    event_tbl[max_event].loc = *loc;
     event_tbl[max_event].event_id  = event_id; 
     max_event++;
 }

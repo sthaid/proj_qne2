@@ -13,15 +13,14 @@ bool        server_thread_running;
 
 // prototypes xxx
 static void controller(void);
-static void sdl_test(void);
-static void *server_thread(void *cx);
-void run_prog(bool bg);
+static void *server_thread(void *cx);  // xxx new name
+void run_prog(bool bg);  // xxx new name, and args
 
-// support routine prototypes
+// support routine prototypes  xxx utils
 static void list_internal_storage_files(void);
 static char * sock_addr_to_str(char * s, int slen, struct sockaddr * addr);
 static void remove_trailing_crlf(char *s);
-static void remove_trailing_newline(char *s);
+static void remove_trailing_newline(char *s); //xxx  
 static bool is_socket_connected(int socket_fd);
 static int get_file_size(char *pathname);
 static void get_file_info(char *pathname, int *size, char *mtime);
@@ -45,11 +44,21 @@ int SDL_main(int argc, char **argv)
 
     // print startup messages
     INFO("=====================================================\n");  // xxx include version
+    INFO("sizeof(long) = %zd\n", sizeof(long));
+    INFO("sizeof(long long) = %zd\n", sizeof(long long));
     INFO("internal_storage_path = %s\n", internal_storage_path);
     list_internal_storage_files();
 
-    printf("sizeof(long) = %zd\n", sizeof(long));
-    printf("sizeof(long long) = %zd\n", sizeof(long long));
+    // xxx
+    printf("sizoef(char)      = %zd\n", sizeof(char));
+    printf("sizoef(short)     = %zd\n", sizeof(short));
+    printf("sizoef(int)       = %zd\n", sizeof(int));
+    printf("sizoef(long)      = %zd\n", sizeof(long));
+    printf("sizoef(size_t)    = %zd\n", sizeof(size_t));
+    printf("sizoef(off_t)     = %zd\n", sizeof(off_t));
+    printf("sizoef(time_t)    = %zd\n", sizeof(time_t));
+    printf("sizeof(123)       = %zd\n", sizeof(123));
+    printf("sizeof(123UL)     = %zd\n", sizeof(123UL));
 
     // create server thread
     pthread_create(&tid, NULL, server_thread, NULL);
@@ -57,7 +66,7 @@ int SDL_main(int argc, char **argv)
         usleep(10000);
     }
 
-    // xxx
+    // xxx comment
     controller();
 
     // end program
@@ -85,29 +94,30 @@ static void controller(void)
     int w, h, id;
 
     sdl_init(&w, &h);
-    INFO("window size %d %d\n", w, h);
-
-    sdl_display_init(COLOR_BLACK);  // xxx move to sdl_init
-    sdl_display_present();
 
     while (true) {
+        // xxx reset other stuff here too, fontsz, color
+        sdl_display_init(COLOR_PURPLE);
+
         // display menu
         display_menu(w, h);
-        //display_menu(w, h);  // xxx why 2 needed
+
+        // update the display
+        sdl_display_present();
 
         // wait for event
         id = sdl_get_event(true);
 
         // process event
-        printf("proc event %d\n", id);
+        INFO("proc event %d\n", id);
         if (id < 0 || id >= MAX_MENU) {
             ERROR("unexpected event  id %d\n", id);
         } else if (strcmp(menu[id].name, "end") == 0) {
-            printf("GOT EXIT CMD\n");
+            INFO("GOT EXIT CMD\n");
             break;
         } else {
             sdl_display_init(COLOR_RED);
-            printf("GOT RUN_PROG %s\n", menu[id].args);
+            INFO("GOT RUN_PROG %s\n", menu[id].args);
             run_prog(false);  // fg
             sdl_display_present();
             sleep(2);
@@ -119,23 +129,21 @@ static void controller(void)
 
 static void display_menu(int w, int h)
 {
+    int id, x, xx, y, yy;
+    struct sdl_rect *loc;
+
     // xxx
     read_menu();
 
-    // xxx reset other stuff here too, fontsz, color
-    // xxx move this to caller
-    sdl_display_init(COLOR_PURPLE);
-
-    int id, x, xx, y, yy;
-    sdl_rect_t loc;
-
+    // xxx comment
     for (id = 0; id < MAX_MENU; id++) {
         if (menu[id].name[0] == '\0') {
             continue;
         }
 
-        // xxx cleanup
+        // xxx add shape, maybe circle, or rounded off square
 
+        // xxx cleanup
         x = id % 3;
         xx = (w/3)/2 + x * (w/3);
 
@@ -144,15 +152,13 @@ static void display_menu(int w, int h)
 
         //printf("w,h %d %d\n", w, h);
         //printf("id=%d x,y=%d %d xx,yy=%d %d name=%s\n", id, x, y, xx, yy, menu[id].name);
-        printf("RENDER TEXT %d %d %s\n", xx, yy, menu[id].name);
+        //printf("RENDER TEXT %d %d %s\n", xx, yy, menu[id].name);
         loc = sdl_render_text(xx, yy, menu[id].name);
-        printf("id=%d loc=x,w %d,%d  y,h %d %d\n", id, 
-             loc.x, loc.w, loc.y, loc.h);
+        //printf("id=%d loc=x,w %d,%d  y,h %d %d\n", id, 
+             //loc.x, loc.w, loc.y, loc.h);
 
         sdl_register_event(loc, id);
     }
-    
-    sdl_display_present(); //xxx also move
 }
 
 static void read_menu(void)
@@ -226,6 +232,7 @@ static void read_menu(void)
         }
     }
 
+    // close menu file
     fclose(fp);
 
     // debug print the new menu
@@ -237,80 +244,9 @@ static void read_menu(void)
     }
 }
 
-// -----------------  SDL TEST ---------------------------------------
-
-static void sdl_test(void)
-{
-    // xxx sdl test
-    uint32_t color;
-    double inten;
-    int char_width, char_height;
-    sdl_rect_t loc;
-    int  w, h;
-    bool event_processed;
-
-    // xxx sdl
-    sdl_init(&w, &h);
-    INFO("window size %d %d\n", w, h);
-
-    sdl_get_char_size(&char_width, &char_height);  // xxx also return ptsize
-    INFO("char_width/height = %d %d\n", char_width, char_height);
-
-    color = sdl_scale_color(COLOR_BLUE, 0.25);
-
-    while (true) {
-        sdl_display_init(color);
-
-        loc = sdl_render_printf(0,200, "%s", "HELLO");
-        //INFO("loc = %d %d %d %d\n", loc.x, loc.y, loc.w, loc.h);
-        sdl_register_event(loc, 1);
-
-        sdl_display_present();
-
-        // xxx simplify
-        event_processed = false;
-        while (true) {
-            int event_id = sdl_get_event(true);
-
-            INFO("processing event %d\n", event_id);
-            event_processed = true;
-            if (event_id == 1) {
-                run_prog(false);
-            }
-        }
-
-        if (event_processed) {
-            usleep(1000);
-        } else {
-            usleep(1000000);
-        }
-    }
-
-    sdl_exit();
-}
-
-// -----------------  SENSOR  ---------------------------
-
-void sensor_test(void)
-{
-#if 0
-    INFO("SENSOR TEST ...\n");
-
-    #define PACKAGE_NAME "org.sthaid.qne2"
-
-
-    // Get the sensor manager
-    ASensorManager* sensor_manager = ASensorManager_getInstanceForPackage(PACKAGE_NAME);
-
-    // Create a sensor event queue
-    //ASensorEventQueue* queue = ASensorManager_createEventQueue(sensor_manager, looper, LOOPER_ID_USER, get_sensor_events, sensor_data)
-
-    // Find the magnetic field sensor
-    const ASensor* magneticSensor = ASensorManager_getDefaultSensor(sensor_manager, ASENSOR_TYPE_MAGNETIC_FIELD);
-#endif
-}
-
 // ----------------- SERVER ----------------------------
+
+// xxx redo this, and use tar
 
 // defines
 #define DEFAULT_SERVER_PORT 1234
@@ -749,3 +685,83 @@ static void get_file_info(char *pathname, int *size, char *mtime)
 
     remove_trailing_crlf(mtime);
 }
+
+
+// xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+// xxxxxxxxxxxxxxxxx  BACKUP  xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+// xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+#if 0
+// -----------------  SDL TEST ---------------------------------------
+
+static void sdl_test(void)
+{
+    // xxx sdl test
+    int color;
+    double inten;
+    int char_width, char_height;
+    struct sdl_rect *loc;
+    int  w, h;
+    bool event_processed;
+
+    // xxx sdl
+    sdl_init(&w, &h);
+    INFO("window size %d %d\n", w, h);
+
+    sdl_get_char_size(&char_width, &char_height);  // xxx also return ptsize
+    INFO("char_width/height = %d %d\n", char_width, char_height);
+
+    color = sdl_scale_color(COLOR_BLUE, 0.25);
+
+    while (true) {
+        sdl_display_init(color);
+
+        loc = sdl_render_printf(0,200, "%s", "HELLO");
+        //INFO("loc = %d %d %d %d\n", loc.x, loc.y, loc.w, loc.h);
+        sdl_register_event(loc, 1);
+
+        sdl_display_present();
+
+        // xxx simplify
+        event_processed = false;
+        while (true) {
+            int event_id = sdl_get_event(true);
+
+            INFO("processing event %d\n", event_id);
+            event_processed = true;
+            if (event_id == 1) {
+                run_prog(false);
+            }
+        }
+
+        if (event_processed) {
+            usleep(1000);
+        } else {
+            usleep(1000000);
+        }
+    }
+
+    sdl_exit();
+}
+
+// -----------------  SENSOR  ---------------------------
+
+void sensor_test(void)
+{
+#if 0
+    INFO("SENSOR TEST ...\n");
+
+    #define PACKAGE_NAME "org.sthaid.qne2"
+
+
+    // Get the sensor manager
+    ASensorManager* sensor_manager = ASensorManager_getInstanceForPackage(PACKAGE_NAME);
+
+    // Create a sensor event queue
+    //ASensorEventQueue* queue = ASensorManager_createEventQueue(sensor_manager, looper, LOOPER_ID_USER, get_sensor_events, sensor_data)
+
+    // Find the magnetic field sensor
+    const ASensor* magneticSensor = ASensorManager_getDefaultSensor(sensor_manager, ASENSOR_TYPE_MAGNETIC_FIELD);
+#endif
+}
+
+#endif
