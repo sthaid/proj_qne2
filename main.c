@@ -232,7 +232,7 @@ static void read_menu(void)
 
 #define PORTNUM 1234
 
-static void *process_req(int sockfd);
+static void process_req(int sockfd);
 
 static void *server_thread(void *cx)
 {
@@ -295,7 +295,7 @@ static void *server_thread(void *cx)
             continue;
         }
         sock_addr_to_str(peer_addr_str, sizeof(peer_addr_str), (struct sockaddr *)&peer_addr);
-        INFO("accepted connection from %s, sockfd=%d\n", peer_addr_str, sockfd);
+        //INFO("accepted connection from %s, sockfd=%d\n", peer_addr_str, sockfd);
         
         // xxx comment
         if (fork() == 0) {
@@ -309,7 +309,7 @@ static void *server_thread(void *cx)
     return NULL;
 }
 
-static void *process_req(int sockfd)
+static void process_req(int sockfd)
 {
     char *argv[20];
     char cmd[1000], cmd2[1000], *p;
@@ -331,7 +331,14 @@ static void *process_req(int sockfd)
         *p++ = ch;
     }
     *p = '\0';
-    INFO("cmd '%s'\n", cmd);
+    //INFO("cmd '%s'\n", cmd);
+
+    // some cmds are handled here, without using /bin/sh
+    if (strcmp(cmd, "log_mark") == 0) {
+        INFO("---------- log_mark ----------\n");
+        close(sockfd);
+        return;
+    }
 
     // execute the cmd
     close(0);
