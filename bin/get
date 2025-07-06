@@ -1,0 +1,32 @@
+#!/bin/bash
+
+src_path=$1
+dest_path=$2
+
+if [ "$src_path" = "" ]; then
+  echo "ERROR: file src_path expected"
+  exit 1
+fi
+
+if [ "$dest_path" = "" ]; then
+  dest_path=$(basename $src_path)
+fi
+
+echo "copying file from android $src_path to $dest_path"
+
+./cmd "cat $src_path" > $dest_path
+
+if [ ! -f $dest_path ]; then
+  echo "ERROR: failed to create dest file $dest_path"
+  exit 1
+fi
+
+lines=$(cat $dest_path | wc -l)
+if [ "$lines" = 1 ]; then
+  grep "No such file or directory" $dest_path > /dev/null
+  if [ $? -eq 0 ]; then
+    echo "ERROR: No such file or directory"
+    rm $dest_path
+    exit 1
+  fi
+fi

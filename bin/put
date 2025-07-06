@@ -1,0 +1,24 @@
+#!/bin/bash
+
+src_path=$1
+dest_path=$2
+
+if [ "$src_path" = "" ]; then
+  echo "ERROR: file src_path expected"
+  exit 1
+fi
+
+if [ ! -f "$src_path" ]; then
+  echo "ERROR: src file $src_path, does not exist"
+  exit 1
+fi
+
+if [ "$dest_path" = "" ]; then
+  dest_path=$(basename $src_path)
+fi
+
+echo "copying file from $src_path to android $dest_path"
+
+./cmd -w 500000 "cat > $dest_path" << EOF_EOF_EOF
+$(cat $src_path)
+EOF_EOF_EOF
