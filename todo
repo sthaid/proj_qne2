@@ -1,3 +1,7 @@
+cleanup the bin dir, maybe call it apps, and have a bin subidr for tools
+- make a fiels subidr 
+- put files at top level in the get_tar
+
 reset cmd
 - make tar file and put in resources
 bin dir
