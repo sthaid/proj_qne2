@@ -10,11 +10,11 @@ while true; do
   # get src_path and dest_path;
   # - src_path is relative to android internal storage path
   # - dest_path is on PC
-  src_path=$1
-  if [ "$src_path" = "" ]; then
+  if [ "$1" = "" ]; then
     break
   fi
-  dest_path=$src_path
+  src_path=$1
+  dest_path=files/$src_path
 
   # ensure dest_dir is writeable
   dest_dir=$(dirname $dest_path)

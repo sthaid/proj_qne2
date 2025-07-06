@@ -8,13 +8,13 @@ fi
 
 while true; do
   # get src_path and dest_path;
-  # - src_path is relative to android internal storage path
-  # - dest_path is on PC
-  src_path=$1
-  if [ "$src_path" = "" ]; then
+  # - src_path is on this PC
+  # - dest_path is on android and relative to internal storage path
+  if [ "$1" = "" ]; then
     break
   fi
-  dest_path=$src_path
+  src_path=files/$1
+  dest_path=$1
 
   # ensure src_path exits
   if [ ! -f "$src_path" ]; then
