@@ -104,7 +104,9 @@ int main(int argc, char **argv)
         }
     }
 
-    // xxx
+    // if terminate delay is enabled then attempt to read
+    // more output from android; this is useful to collect
+    // completion status 
     while (term_delay_us > 0) {
         // read from sockfd and write to stdout
         ret2 = read(sockfd, buff, sizeof(buff));

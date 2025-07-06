@@ -1,3 +1,24 @@
+these all need to get ip addr and password
+
+-rwxr-xr-x 1 haid haid   44 Jul  5 16:50 adbc          ok
+-rwxrwxr-x 1 haid haid  17K Jul  6 15:41 cmd          ok
+-rw-rw-r-- 1 haid haid 3.5K Jul  6 11:03 cmd.c          ok
+-rwxr-xr-x 1 haid haid   31 Jul  6 09:11 log_cat          ok
+-rwxr-xr-x 1 haid haid   40 Jul  6 11:13 log_clear          ok
+-rwxr-xr-x 1 haid haid   26 Jul  6 11:21 log_mark          ok
+-rwxr-xr-x 1 haid haid   26 Jul  6 09:16 ls_files          ok
+-rw-rw-r-- 1 haid haid   35 Jul  6 08:42 Makefile          ok
+
+-rwxr-xr-x 1 haid haid  601 Jul  6 10:23 get
+-rwxr-xr-x 1 haid haid  429 Jul  6 11:00 get_tar
+-rwxr-xr-x 1 haid haid  421 Jul  6 10:39 put
+
+-------
+
+bashrc_haid vs profile, have env vars
+
+--------
+
 add more sdl stuff, and port reversi
 
 cleanup the bin dir, maybe call it apps, and have a bin subidr for tools
