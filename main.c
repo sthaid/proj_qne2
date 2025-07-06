@@ -333,7 +333,7 @@ static void *process_req(int sockfd)
     *p = '\0';
     INFO("cmd '%s'\n", cmd);
 
-    // xxx
+    // execute the cmd
     close(0);
     close(1);
     close(2);
@@ -350,12 +350,8 @@ static void *process_req(int sockfd)
 
     execv("/bin/sh", argv);
 
-done:
-    INFO("done\n");
-    shutdown(sockfd, SHUT_RDWR);
-    close(sockfd);
-
-    return NULL;
+    // not reached
+    exit(1);
 }
 
 // xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
