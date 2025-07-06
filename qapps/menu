@@ -1,2 +1,2 @@
-0  hello : hello.c bye.c
+0  hello : hello/hello.c
 17 end   : args not used
