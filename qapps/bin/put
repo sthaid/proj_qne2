@@ -1,24 +1,33 @@
 #!/bin/bash
 
-src_path=$1
-dest_path=$2
-
-if [ "$src_path" = "" ]; then
-  echo "ERROR: file src_path expected"
+if [ "$1" = "" ]; then
+  echo "USAGE: put <relative_path> ..."
+  echo "example: put menu hello/hello.c"
   exit 1
 fi
 
-if [ ! -f "$src_path" ]; then
-  echo "ERROR: src file $src_path, does not exist"
-  exit 1
-fi
+while true; do
+  # get src_path and dest_path;
+  # - src_path is relative to android internal storage path
+  # - dest_path is on PC
+  src_path=$1
+  if [ "$src_path" = "" ]; then
+    break
+  fi
+  dest_path=$src_path
 
-if [ "$dest_path" = "" ]; then
-  dest_path=$(basename $src_path)
-fi
-
-echo "copying file from $src_path to android $dest_path"
-
-./cmd -w 500000 "cat > $dest_path" << EOF_EOF_EOF
+  # ensure src_path exits
+  if [ ! -f "$src_path" ]; then
+    echo "ERROR: src file $src_path, does not exist"
+    exit 1
+  fi
+  
+  # copy file to android
+  echo "copying file from $src_path to android $dest_path"
+  cmd -w 500000 "cat > $dest_path" << EOF_EOF_EOF
 $(cat $src_path)
 EOF_EOF_EOF
+
+  # next file
+  shift
+done

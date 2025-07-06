@@ -1,32 +1,58 @@
 #!/bin/bash
 
-src_path=$1
-dest_path=$2
-
-if [ "$src_path" = "" ]; then
-  echo "ERROR: file src_path expected"
+if [ "$1" = "" ]; then
+  echo "USAGE: get <relative_path> ..."
+  echo "example: get menu hello/hello.c"
   exit 1
 fi
 
-if [ "$dest_path" = "" ]; then
-  dest_path=$(basename $src_path)
-fi
+while true; do
+  # get src_path and dest_path;
+  # - src_path is relative to android internal storage path
+  # - dest_path is on PC
+  src_path=$1
+  if [ "$src_path" = "" ]; then
+    break
+  fi
+  dest_path=$src_path
 
-echo "copying file from android $src_path to $dest_path"
-
-./cmd "cat $src_path" > $dest_path
-
-if [ ! -f $dest_path ]; then
-  echo "ERROR: failed to create dest file $dest_path"
-  exit 1
-fi
-
-lines=$(cat $dest_path | wc -l)
-if [ "$lines" = 1 ]; then
-  grep "No such file or directory" $dest_path > /dev/null
-  if [ $? -eq 0 ]; then
-    echo "ERROR: No such file or directory"
-    rm $dest_path
+  # ensure dest_dir is writeable
+  dest_dir=$(dirname $dest_path)
+  if [ ! -w "$dest_dir" ]; then
+    echo "ERROR: dest dir $dest_dir is not writeable"
     exit 1
   fi
-fi
+
+  # remove dest_path
+  if [ -e "$dest_path" ]; then
+    rm -f $dest_path
+    if [ $? -ne 0 ]; then
+      echo "ERROR failed to remove $dest_path"
+      exit 1
+    fi
+  fi
+  
+  # copy file from android
+  echo "copying file from android $src_path to $dest_path"
+  cmd "cat $src_path" > $dest_path
+  
+  # if dest_path file does not exist then error
+  if [ ! -f $dest_path ]; then
+    echo "ERROR: failed to create dest path $dest_path"
+    exit 1
+  fi
+  
+  # if dest_path contents are an error indication, then error
+  lines=$(cat $dest_path | wc -l)
+  if [ "$lines" = 1 ]; then
+    grep "No such file or directory" $dest_path > /dev/null
+    if [ $? -eq 0 ]; then
+      echo "ERROR: android file $src_path does not exist"
+      rm $dest_path
+      exit 1
+    fi
+  fi
+
+  # do next file
+  shift
+done
