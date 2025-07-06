@@ -6,14 +6,13 @@
 
 // variables
 const char *internal_storage_path;
-char        log_file_pathname[100];
-size_t      log_cat_size;
-bool        log_cat_is_running;
+//size_t      log_cat_size;  //xxx 
+//bool        log_cat_is_running;  //xxx 
 bool        server_thread_running;
 
 // prototypes 
 static void controller(void);
-static void *server_thread(void *cx);  // xxx new name
+static void *server_thread(void *cx);
 void run_prog(bool bg);  // xxx new name, and args
 
 // -----------------  MAIN  ------------------------------------------
@@ -22,11 +21,12 @@ int SDL_main(int argc, char **argv)
 {
     FILE *fp;
     pthread_t tid;
+    char log_file_pathname[100];
 
     // init logging
     internal_storage_path = SDL_AndroidGetInternalStoragePath();
     sprintf(log_file_pathname, "%s/%s", internal_storage_path, "log");
-    get_file_info(log_file_pathname, &log_cat_size, NULL);
+    //get_file_info(log_file_pathname, &log_cat_size, NULL);
 
     freopen(log_file_pathname, "a", stdout);
     freopen(log_file_pathname, "a", stderr);
@@ -36,26 +36,19 @@ int SDL_main(int argc, char **argv)
     // print startup messages
     INFO("=====================================================\n");  // xxx include version
     INFO("internal_storage_path = %s\n", internal_storage_path);
-
-    // xxx
-    printf("sizoef(char)      = %zd\n", sizeof(char));
-    printf("sizoef(short)     = %zd\n", sizeof(short));
-    printf("sizoef(int)       = %zd\n", sizeof(int));
-    printf("sizoef(long)      = %zd\n", sizeof(long));
-    printf("sizoef(size_t)    = %zd\n", sizeof(size_t));
-    printf("sizoef(off_t)     = %zd\n", sizeof(off_t));
-    printf("sizoef(time_t)    = %zd\n", sizeof(time_t));
-    printf("sizeof(123)       = %zd\n", sizeof(123));
-    printf("sizeof(123UL)     = %zd\n", sizeof(123UL));
+    INFO("sizoef(char)      = %zd\n", sizeof(char));
+    INFO("sizoef(short)     = %zd\n", sizeof(short));
+    INFO("sizoef(int)       = %zd\n", sizeof(int));
+    INFO("sizoef(long)      = %zd\n", sizeof(long));
+    INFO("sizoef(size_t)    = %zd\n", sizeof(size_t));
+    INFO("sizoef(off_t)     = %zd\n", sizeof(off_t));
+    INFO("sizoef(time_t)    = %zd\n", sizeof(time_t));
 
     // create server thread
     pthread_create(&tid, NULL, server_thread, NULL);
     while (server_thread_running == false) {
         usleep(10000);
     }
-
-    // xxx test
-    system("/bin/tar");
 
     // xxx comment
     controller();
@@ -237,6 +230,245 @@ static void read_menu(void)
 
 // ----------------- SERVER ----------------------------
 
+#define PORTNUM 1234
+
+static void *process_req(int sockfd);
+
+static void *server_thread(void *cx)
+{
+    struct sockaddr_in server_address;
+    int                listen_sockfd, ret;
+
+    INFO("SERVER_THREAD STARTING\n");
+
+    // create listen socket
+    listen_sockfd = socket(AF_INET, SOCK_STREAM, 0);
+    if (listen_sockfd == -1) {
+        ERROR("socket, %s\n", strerror(errno));
+        return NULL;
+    }
+
+    // set socket options
+    int reuseaddr = 1;
+    ret = setsockopt(listen_sockfd, SOL_SOCKET, SO_REUSEADDR, (const char*)&reuseaddr, sizeof(reuseaddr));
+    if (ret == -1) {
+        ERROR("setsockopt SO_REUSEADDR, %s\n", strerror(errno));
+        return NULL;
+    }
+
+    // bind socket to any ip addr, for specified port
+    memset(&server_address, 0, sizeof(server_address));
+    server_address.sin_family      = AF_INET;
+    server_address.sin_addr.s_addr = INADDR_ANY;
+    server_address.sin_port        = htons(PORTNUM);
+    ret = bind(listen_sockfd,
+               (struct sockaddr *)&server_address,
+               sizeof(server_address));
+    if (ret == -1) {
+        ERROR("bind, %s\n", strerror(errno));
+        return NULL;
+    }
+
+    // listen 
+    ret = listen(listen_sockfd, 5);
+    if (ret == -1) {
+        ERROR("listen, %s\n", strerror(errno));
+        return NULL;
+    }
+
+    // accept and process connections
+    INFO("accepting connections\n");
+    server_thread_running = true;
+    while (1) {
+        int                sockfd;
+        struct sockaddr_in peer_addr;
+        socklen_t          peer_addr_len;
+        char               peer_addr_str[200];
+        int                ret;
+
+        // accept connection
+        peer_addr_len = sizeof(peer_addr);
+        sockfd = accept(listen_sockfd, (struct sockaddr *) &peer_addr, &peer_addr_len);
+        if (sockfd == -1) {
+            ERROR("accept, %s\n", strerror(errno));
+            sleep(1);
+            continue;
+        }
+        sock_addr_to_str(peer_addr_str, sizeof(peer_addr_str), (struct sockaddr *)&peer_addr);
+        INFO("accepted connection from %s, sockfd=%d\n", peer_addr_str, sockfd);
+        
+        // xxx comment
+        if (fork() == 0) {
+            process_req(sockfd);
+        } else {
+            close(sockfd);
+        }
+    }
+
+    INFO("SERVER_THREAD TERMINATING\n");
+    return NULL;
+}
+
+static void *process_req(int sockfd)
+{
+    char *argv[20];
+    char cmd[1000], cmd2[1000], *p;
+
+    // read first line from sockfd, this contains the cmd that will be executed below
+    p = cmd;
+    while (true) {
+        char ch;
+        int ret;
+        ret = read(sockfd, &ch, 1);
+        if (ret != 1) {
+            ERROR("failed to read ch from sockfd %d, %s\n", sockfd, strerror(errno));
+            close(sockfd);
+            exit(1);
+        }
+        if (ch == '\n') {
+            break;
+        }
+        *p++ = ch;
+    }
+    *p = '\0';
+    INFO("cmd '%s'\n", cmd);
+
+    // xxx
+    close(0);
+    close(1);
+    close(2);
+
+    dup2(sockfd, 0);
+    dup2(sockfd, 1);
+    dup2(sockfd, 2);
+
+    sprintf(cmd2, "cd %s; %s", internal_storage_path, cmd);
+    argv[0] = "/bin/sh";
+    argv[1] = "-c";
+    argv[2] = cmd2;
+    argv[3] = NULL;
+
+    execv("/bin/sh", argv);
+
+done:
+    INFO("done\n");
+    shutdown(sockfd, SHUT_RDWR);
+    close(sockfd);
+
+    return NULL;
+}
+
+// xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+// xxxxxxxxxxxxxxxxx  BACKUP  xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+// xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+#if 0
+// -----------------  SDL TEST ---------------------------------------
+
+static void sdl_test(void)
+{
+    // xxx sdl test
+    int color;
+    double inten;
+    int char_width, char_height;
+    struct sdl_rect *loc;
+    int  w, h;
+    bool event_processed;
+
+    // xxx sdl
+    sdl_init(&w, &h);
+    INFO("window size %d %d\n", w, h);
+
+    sdl_get_char_size(&char_width, &char_height);  // xxx also return ptsize
+    INFO("char_width/height = %d %d\n", char_width, char_height);
+
+    color = sdl_scale_color(COLOR_BLUE, 0.25);
+
+    while (true) {
+        sdl_display_init(color);
+
+        loc = sdl_render_printf(0,200, "%s", "HELLO");
+        //INFO("loc = %d %d %d %d\n", loc.x, loc.y, loc.w, loc.h);
+        sdl_register_event(loc, 1);
+
+        sdl_display_present();
+
+        // xxx simplify
+        event_processed = false;
+        while (true) {
+            int event_id = sdl_get_event(true);
+
+            INFO("processing event %d\n", event_id);
+            event_processed = true;
+            if (event_id == 1) {
+                run_prog(false);
+            }
+        }
+
+        if (event_processed) {
+            usleep(1000);
+        } else {
+            usleep(1000000);
+        }
+    }
+
+    sdl_exit();
+}
+
+// -----------------  SENSOR  ---------------------------
+
+void sensor_test(void)
+{
+#if 0
+    INFO("SENSOR TEST ...\n");
+
+    #define PACKAGE_NAME "org.sthaid.qne2"
+
+
+    // Get the sensor manager
+    ASensorManager* sensor_manager = ASensorManager_getInstanceForPackage(PACKAGE_NAME);
+
+    // Create a sensor event queue
+    //ASensorEventQueue* queue = ASensorManager_createEventQueue(sensor_manager, looper, LOOPER_ID_USER, get_sensor_events, sensor_data)
+
+    // Find the magnetic field sensor
+    const ASensor* magneticSensor = ASensorManager_getDefaultSensor(sensor_manager, ASENSOR_TYPE_MAGNETIC_FIELD);
+#endif
+}
+
+static void list_internal_storage_files(void)
+{
+    DIR *dir = opendir(internal_storage_path);
+    struct dirent * dirent;
+
+    if (dir == NULL) {
+        ERROR("opendir failed, %s\n", strerror(errno));
+        return;
+    }
+
+    while ((dirent = readdir(dir)) != NULL) {
+        if (strcmp(dirent->d_name, ".") == 0 ||
+            strcmp(dirent->d_name, "..") == 0)
+        {
+            continue;
+        }
+
+        // get file info
+        char *name = dirent->d_name;
+        int size;
+        char mtime[100];
+        char pathname[200];
+        sprintf(pathname, "%s/%s", internal_storage_path, name);
+        get_file_info(pathname, &size, mtime);
+
+        // print info to sockfp
+        INFO("%8d %s %s\n", size, mtime, name);
+    }
+
+    closedir(dir);
+}
+#endif
+
+#if 0
 // xxx redo this, and use tar
 
 // defines
@@ -253,7 +485,7 @@ typedef struct {
 } server_req_t;
 
 // prototypes
-static void *process_client_req(void *cx);
+static void *process_req(void *cx);
 
 static void *server_thread(void *cx)
 {
@@ -307,12 +539,12 @@ static void *server_thread(void *cx)
     while (1) {
         int                sockfd;
         FILE              *sockfp;
-        socklen_t          peer_address_len;
-        struct sockaddr_in peer_address;
+        socklen_t          peer_addr_len;
+        struct sockaddr_in peer_addr;
 
         // accept connection
-        peer_address_len = sizeof(peer_address);
-        sockfd = accept(listen_sockfd, (struct sockaddr *) &peer_address, &peer_address_len);
+        peer_addr_len = sizeof(peer_addr);
+        sockfd = accept(listen_sockfd, (struct sockaddr *) &peer_addr, &peer_addr_len);
         if (sockfd == -1) {
             ERROR("accept, %s\n", strerror(errno));
             sleep(1);
@@ -330,7 +562,7 @@ static void *server_thread(void *cx)
 
         // read first line from client, which must contain, at least, password, and cmd
         req = calloc(1, sizeof(server_req_t));
-        sock_addr_to_str(req->peer_addr_str, sizeof(req->peer_addr_str), (struct sockaddr *)&peer_address);
+        sock_addr_to_str(req->peer_addr_str, sizeof(req->peer_addr_str), (struct sockaddr *)&peer_addr);
         fgets(s, sizeof(s), sockfp);
         cnt = sscanf(s, "qne %s %s %s", req->password, req->cmd, req->filename);
         if (cnt < 2) {
@@ -358,9 +590,9 @@ static void *server_thread(void *cx)
         req->sockfd = sockfd;
         if (strcmp(req->cmd, "logcat") == 0) {
             pthread_t tid;
-            pthread_create(&tid, NULL, process_client_req, req);
+            pthread_create(&tid, NULL, process_req, req);
         } else {
-            process_client_req(req);
+            process_req(req);
         }
     }
 
@@ -368,7 +600,7 @@ static void *server_thread(void *cx)
     return NULL;
 }
 
-static void *process_client_req(void *cx)
+static void *process_req(void *cx)
 {
     // extract fields from server_req_t arg
     server_req_t *req    = (server_req_t*)cx;
@@ -555,116 +787,5 @@ error:
     free(req);
     return NULL;
 }
-
-// xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-// xxxxxxxxxxxxxxxxx  BACKUP  xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-// xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-#if 0
-// -----------------  SDL TEST ---------------------------------------
-
-static void sdl_test(void)
-{
-    // xxx sdl test
-    int color;
-    double inten;
-    int char_width, char_height;
-    struct sdl_rect *loc;
-    int  w, h;
-    bool event_processed;
-
-    // xxx sdl
-    sdl_init(&w, &h);
-    INFO("window size %d %d\n", w, h);
-
-    sdl_get_char_size(&char_width, &char_height);  // xxx also return ptsize
-    INFO("char_width/height = %d %d\n", char_width, char_height);
-
-    color = sdl_scale_color(COLOR_BLUE, 0.25);
-
-    while (true) {
-        sdl_display_init(color);
-
-        loc = sdl_render_printf(0,200, "%s", "HELLO");
-        //INFO("loc = %d %d %d %d\n", loc.x, loc.y, loc.w, loc.h);
-        sdl_register_event(loc, 1);
-
-        sdl_display_present();
-
-        // xxx simplify
-        event_processed = false;
-        while (true) {
-            int event_id = sdl_get_event(true);
-
-            INFO("processing event %d\n", event_id);
-            event_processed = true;
-            if (event_id == 1) {
-                run_prog(false);
-            }
-        }
-
-        if (event_processed) {
-            usleep(1000);
-        } else {
-            usleep(1000000);
-        }
-    }
-
-    sdl_exit();
-}
-
-// -----------------  SENSOR  ---------------------------
-
-void sensor_test(void)
-{
-#if 0
-    INFO("SENSOR TEST ...\n");
-
-    #define PACKAGE_NAME "org.sthaid.qne2"
-
-
-    // Get the sensor manager
-    ASensorManager* sensor_manager = ASensorManager_getInstanceForPackage(PACKAGE_NAME);
-
-    // Create a sensor event queue
-    //ASensorEventQueue* queue = ASensorManager_createEventQueue(sensor_manager, looper, LOOPER_ID_USER, get_sensor_events, sensor_data)
-
-    // Find the magnetic field sensor
-    const ASensor* magneticSensor = ASensorManager_getDefaultSensor(sensor_manager, ASENSOR_TYPE_MAGNETIC_FIELD);
-#endif
-}
-
-static void list_internal_storage_files(void)
-{
-    DIR *dir = opendir(internal_storage_path);
-    struct dirent * dirent;
-
-    if (dir == NULL) {
-        ERROR("opendir failed, %s\n", strerror(errno));
-        return;
-    }
-
-    while ((dirent = readdir(dir)) != NULL) {
-        if (strcmp(dirent->d_name, ".") == 0 ||
-            strcmp(dirent->d_name, "..") == 0)
-        {
-            continue;
-        }
-
-        // get file info
-        char *name = dirent->d_name;
-        int size;
-        char mtime[100];
-        char pathname[200];
-        sprintf(pathname, "%s/%s", internal_storage_path, name);
-        get_file_info(pathname, &size, mtime);
-
-        // print info to sockfp
-        INFO("%8d %s %s\n", size, mtime, name);
-    }
-
-    closedir(dir);
-}
-
-
 
 #endif
