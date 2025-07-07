@@ -1,2 +1,2 @@
-cmd: cmd.c
-	gcc -o cmd -Wall cmd.c
+android_exec: android_exec.c
+	gcc -o android_exec -Wall android_exec.c

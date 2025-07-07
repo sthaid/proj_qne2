@@ -1,8 +1,8 @@
 #!/bin/bash
 
 rm -rf files
-cmd "tar --exclude log -cf ../xfer.tar ."
-cmd "cat ../xfer.tar" > /tmp/xfer.tar
+android_exec "tar --exclude log -cf ../xfer.tar ."
+android_exec "cat ../xfer.tar" > /tmp/xfer.tar
 mkdir files
 cd files
 tar -xvf /tmp/xfer.tar
