@@ -11,6 +11,11 @@ int main(int argc, char **argv)
 {
     time_t t;
     struct sdl_rect *loc;
+    int i;
+
+    for (i = 0; i < argc; i++) {
+        printf("argv[%d] = '%s'\n", i, argv[i]);
+    }
 
     printf("sizoef(char)      = %zd\n", sizeof(char));
     printf("sizoef(short)     = %zd\n", sizeof(short));
@@ -43,6 +48,6 @@ int main(int argc, char **argv)
     printf("sleep 3\n");
     sleep(3);
 
-    printf("return\n");
-    return 0;
+    printf("return 77\n");
+    return 77;
 }
