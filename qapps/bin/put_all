@@ -1,5 +1,9 @@
 #!/bin/bash
 
+# cd to qapps dir
+top=$(git rev-parse --show-toplevel)
+cd $top/qapps
+
 # create tarfile with contents to xfer to android
 cd files
 tar -cf /tmp/xfer.tar .

@@ -1,5 +1,9 @@
 #!/bin/bash
 
+# cd to qapps dir
+top=$(git rev-parse --show-toplevel)
+cd $top/qapps
+
 rm -rf files
 android_exec "tar --exclude log -cf ../xfer.tar ."
 android_exec "cat ../xfer.tar" > /tmp/xfer.tar

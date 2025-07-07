@@ -6,6 +6,10 @@ if [ "$1" = "" ]; then
   exit 1
 fi
 
+# cd to qapps dir
+top=$(git rev-parse --show-toplevel)
+cd $top/qapps
+
 while true; do
   # get src_path and dest_path;
   # - src_path is on this PC
