@@ -40,5 +40,5 @@ int sdl_scale_color(int color, double inten);
 void sdl_set_render_draw_color(int color);
 
 void sdl_register_event(struct sdl_rect *loc, int event_id);
-int sdl_get_event(bool wait);
+int sdl_get_event(long timeout_us);
 

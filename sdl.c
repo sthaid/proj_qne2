@@ -270,11 +270,15 @@ void sdl_register_event(struct sdl_rect *loc, int event_id)
     max_event++;
 }
 
-int sdl_get_event(bool wait)
+// -1: wait forever   k
+//  0: don't wait     k
+//  usecs: timeout
+int sdl_get_event(long timeout_us)
 {
     SDL_Event ev;
     int event_id = -1;
     int ret;
+    long waited = 0;
 
 try_again:
     // get event
@@ -282,11 +286,18 @@ try_again:
 
     // if no sdl event then, depending on 'wait' arg, either
     // sleep 100ms and try again, or return -1
+    // xxx update comment
     if (ret == 0) {
-        if (wait) {
+        if (timeout_us == 0) {
+            // dont wait
+            return -1;
+        } else if (timeout_us < 0 || waited < timeout_us) {
+            // either wait forever or time waited is less than timeout_us
             usleep(100000);
+            waited += 100000;
             goto try_again;
         } else {
+            // time waited exceeds timeout_us
             return -1;
         }
     }
