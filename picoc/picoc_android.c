@@ -1,44 +1,100 @@
+#include <libgen.h>
+#include <pthread.h>
+
 #include "picoc.h"
 
-#define PICOC_STACK_SIZE (128000*4)
+#define PICOC_STACK_SIZE (128000*4)  // xxx check this
 
-#include "picoc.h"
-#include "pthread.h"
+static int picoc_helper(char *args);
+static void *picoc_thread(void *cx);
 
-void *run_prog_helper(void *cx)
+// ----------------- API: RUN PICOC PROG -------------
+
+int picoc_fg(char *args)
 {
-    Picoc pc;
-    int StackSize = getenv("STACKSIZE") ? atoi(getenv("STACKSIZE")) : PICOC_STACK_SIZE;
-
-    PicocInitialize(&pc, StackSize);
-
-    if (PicocPlatformSetExitPoint(&pc)) {
-        printf("EXIT jmp\n");
-        PicocCleanup(&pc);
-        //return pc.PicocExitValue;
-        return NULL;
-    }
-
-    PicocPlatformScanFile(&pc, "/data/data/org.sthaid.qne2/files/hello.c");
-
-    char *argv[10];
-    argv[0] = "hello";
-    PicocCallMain(&pc, 1, argv);
-
-    printf("EXIT normal\n");
-    PicocCleanup(&pc);
-
-    //return pc.PicocExitValue;
-    return NULL;
+    return picoc_helper(args);
 }
 
-void run_prog(bool bg)
+void picoc_bg(char *args)
 {
     pthread_t tid;
 
-    if (!bg) {
-        run_prog_helper(NULL);
-    } else {
-        pthread_create(&tid, NULL, run_prog_helper, NULL);
-    }
+    pthread_create(&tid, NULL, picoc_thread, args); //xxx detached
 }
+
+// ----------------- SUPPORT -------------------------
+
+static void *picoc_thread(void *cx)
+{
+    char *args = (char*)cx;
+    int rc;
+
+    rc = picoc_helper(args);
+
+    return (void*)(long)rc;
+}
+
+static int picoc_helper(char *args)
+{
+    Picoc pc;
+    char  args_copy[10000];  // xxx malloc
+    char  progname_buff[100], *progname;
+    char *argv[20];
+    char *s;
+    int   argc = 0;
+    bool  processing_argv_args = false;
+    bool  first = true;
+
+    // init pc
+    PicocInitialize(&pc, PICOC_STACK_SIZE);
+
+    // setjmp for error condition
+    if (PicocPlatformSetExitPoint(&pc)) {
+        printf("EXIT jmp, %d\n", pc.PicocExitValue);
+        PicocCleanup(&pc);
+        return pc.PicocExitValue;
+    }
+
+    // tokenize args
+    strcpy(args_copy, args);
+    while (true) {
+        s = strtok(first ? args_copy : NULL, " ");
+        first = false;
+        if (s == NULL) {
+            break;
+        }
+
+        if (strcmp(s, "-") == 0) {
+            processing_argv_args = true;
+            continue;
+        }
+
+        if (!processing_argv_args) {
+            printf("scanning %s\n", s);
+            PicocPlatformScanFile(&pc, s);
+            if (argc == 0) {
+                char *tmp;
+                strcpy(progname_buff, s);
+                progname = basename(progname_buff);
+                tmp = strstr(progname, ".c");
+                if (tmp) {
+                    *tmp = '\0';
+                }
+                printf("adding argv[%d] = %s\n", argc, progname);
+                argv[argc++] = progname;
+            }
+        } else {
+            printf("adding argv[%d] = %s\n", argc, s);
+            argv[argc++] = s;
+        }
+    }
+    
+    // run program
+    PicocCallMain(&pc, argc, argv);
+
+    // cleanup and return
+    printf("EXIT normal, %d\n", pc.PicocExitValue);
+    PicocCleanup(&pc);
+    return pc.PicocExitValue;
+}
+    
