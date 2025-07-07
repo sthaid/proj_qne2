@@ -9,11 +9,14 @@ const char *internal_storage_path;
 //size_t      log_cat_size;  //xxx 
 //bool        log_cat_is_running;  //xxx 
 bool        server_thread_running;
+char log_file_pathname[100];
 
 // prototypes 
 static void controller(void);
 static void *server_thread(void *cx);
-void run_prog(bool bg);  // xxx new name, and args
+
+void picoc_bg(char *args);
+int picoc_fg(char *args);
 
 // -----------------  MAIN  ------------------------------------------
 
@@ -21,7 +24,6 @@ int SDL_main(int argc, char **argv)
 {
     FILE *fp;
     pthread_t tid;
-    char log_file_pathname[100];
 
     // init logging
     internal_storage_path = SDL_AndroidGetInternalStoragePath();
@@ -43,6 +45,9 @@ int SDL_main(int argc, char **argv)
     INFO("sizoef(size_t)    = %zd\n", sizeof(size_t));
     INFO("sizoef(off_t)     = %zd\n", sizeof(off_t));
     INFO("sizoef(time_t)    = %zd\n", sizeof(time_t));
+
+    // xxx
+    chdir(internal_storage_path);
 
     // create server thread
     pthread_create(&tid, NULL, server_thread, NULL);
@@ -75,7 +80,7 @@ static void read_menu(void);
 
 static void controller(void)
 {
-    int w, h, id;
+    int w, h, event_id, rc;
 
     sdl_init(&w, &h);
 
@@ -90,21 +95,25 @@ static void controller(void)
         sdl_display_present();
 
         // wait for event
-        id = sdl_get_event(true);
+        event_id = sdl_get_event(1000000);
+        if (event_id == -1) {
+            continue;
+        }
 
         // process event
-        INFO("proc event %d\n", id);
-        if (id < 0 || id >= MAX_MENU) {
-            ERROR("unexpected event  id %d\n", id);
-        } else if (strcmp(menu[id].name, "end") == 0) {
+        INFO("proc event_id %d\n", event_id);
+        if (event_id < 0 || event_id >= MAX_MENU) {
+            ERROR("unexpected event_id %d\n", event_id);
+        } else if (strcmp(menu[event_id].name, "end") == 0) {
             INFO("GOT EXIT CMD\n");
             break;
         } else {
-            sdl_display_init(COLOR_RED);
-            INFO("GOT RUN_PROG %s\n", menu[id].args);
-            run_prog(false);  // fg
-            sdl_display_present();
-            sleep(2);
+            //sdl_display_init(COLOR_RED);
+            INFO("running %s\n", menu[event_id].name);
+            rc = picoc_fg(menu[event_id].args);
+            INFO("done %s, rc=%d\n", menu[event_id].name, rc);
+            //sdl_display_present();
+            //sleep(2);
         }
     }
 
@@ -296,6 +305,25 @@ static void *server_thread(void *cx)
         }
         sock_addr_to_str(peer_addr_str, sizeof(peer_addr_str), (struct sockaddr *)&peer_addr);
         //INFO("accepted connection from %s, sockfd=%d\n", peer_addr_str, sockfd);
+
+#if 0
+xxxxxxxxxx
+        // some cmds are handled here, without using /bin/sh
+        if (strcmp(cmd, "log_mark") == 0) {
+            INFO("---------- log_mark ----------\n");
+            close(sockfd);
+            return;
+        }
+        if (strcmp(cmd, "log_clear") == 0) {
+            freopen(log_file_pathname, "w", stdout);
+            freopen(log_file_pathname, "w", stderr);
+            setlinebuf(stdout);
+            setlinebuf(stderr);
+            INFO("---------- log_clear ----------\n");
+            close(sockfd);
+            return;
+        }
+#endif
         
         // xxx comment
         if (fork() == 0) {
@@ -332,13 +360,6 @@ static void process_req(int sockfd)
     }
     *p = '\0';
     //INFO("cmd '%s'\n", cmd);
-
-    // some cmds are handled here, without using /bin/sh
-    if (strcmp(cmd, "log_mark") == 0) {
-        INFO("---------- log_mark ----------\n");
-        close(sockfd);
-        return;
-    }
 
     // execute the cmd
     close(0);
