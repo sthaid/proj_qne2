@@ -1,0 +1,14 @@
+#!/bin/bash
+
+# create tarfile with contents to xfer to android
+cd files
+tar -cf /tmp/xfer.tar .
+
+# copy the tarfile to android
+cat /tmp/xfer.tar | cmd -w 500000 "cat > ../xfer.tar"
+rm -f /tmp/xfer.tar
+
+# on android, remove contents of files, and recreate
+cmd "rm -rf *"
+cmd "tar -xvf ../xfer.tar"
+cmd "rm ../xfer.tar"

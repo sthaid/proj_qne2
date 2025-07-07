@@ -1,0 +1,10 @@
+#!/bin/bash
+
+rm -rf files
+cmd "tar --exclude log -cf ../xfer.tar ."
+cmd "cat ../xfer.tar" > /tmp/xfer.tar
+mkdir files
+cd files
+tar -xvf /tmp/xfer.tar
+rm /tmp/xfer.tar
+
