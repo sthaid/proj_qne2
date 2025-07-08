@@ -38,6 +38,7 @@ int SDL_main(int argc, char **argv)
     // print startup messages
     INFO("=====================================================\n");  // xxx include version
     INFO("internal_storage_path = %s\n", internal_storage_path);
+#if 0
     INFO("sizoef(char)      = %zd\n", sizeof(char));
     INFO("sizoef(short)     = %zd\n", sizeof(short));
     INFO("sizoef(int)       = %zd\n", sizeof(int));
@@ -45,6 +46,7 @@ int SDL_main(int argc, char **argv)
     INFO("sizoef(size_t)    = %zd\n", sizeof(size_t));
     INFO("sizoef(off_t)     = %zd\n", sizeof(off_t));
     INFO("sizoef(time_t)    = %zd\n", sizeof(time_t));
+#endif
 
     // xxx
     chdir(internal_storage_path);
@@ -241,12 +243,14 @@ static void read_menu(void)
 
 #define PORTNUM 1234
 
-static void process_req(int sockfd);
+static void *process_req_thread(void *cx);
+static void process_req_using_android_sh(int sockfd, char *cmd);
 
 static void *server_thread(void *cx)
 {
     struct sockaddr_in server_address;
     int                listen_sockfd, ret;
+    pthread_t          tid;
 
     INFO("SERVER_THREAD STARTING\n");
 
@@ -306,43 +310,21 @@ static void *server_thread(void *cx)
         sock_addr_to_str(peer_addr_str, sizeof(peer_addr_str), (struct sockaddr *)&peer_addr);
         //INFO("accepted connection from %s, sockfd=%d\n", peer_addr_str, sockfd);
 
-#if 0
-xxxxxxxxxx
-        // some cmds are handled here, without using /bin/sh
-        if (strcmp(cmd, "log_mark") == 0) {
-            INFO("---------- log_mark ----------\n");
-            close(sockfd);
-            return;
-        }
-        if (strcmp(cmd, "log_clear") == 0) {
-            freopen(log_file_pathname, "w", stdout);
-            freopen(log_file_pathname, "w", stderr);
-            setlinebuf(stdout);
-            setlinebuf(stderr);
-            INFO("---------- log_clear ----------\n");
-            close(sockfd);
-            return;
-        }
-#endif
-        
-        // xxx comment
-        if (fork() == 0) {
-            process_req(sockfd);
-        } else {
-            close(sockfd);
-        }
+        // create thread to process the client request
+        pthread_create(&tid, NULL, process_req_thread, (void*)(long)sockfd);
     }
 
     INFO("SERVER_THREAD TERMINATING\n");
     return NULL;
 }
 
-static void process_req(int sockfd)
+static void *process_req_thread(void *cx)
 {
-    char *argv[20];
-    char cmd[1000], cmd2[1000], *p;
+    int sockfd = (int)(long)cx;
 
-    // read first line from sockfd, this contains the cmd that will be executed below
+    char cmd[1000], *p;
+
+    // read first line from sockfd, this contains the cmd to execute
     p = cmd;
     while (true) {
         char ch;
@@ -360,6 +342,35 @@ static void process_req(int sockfd)
     }
     *p = '\0';
     //INFO("cmd '%s'\n", cmd);
+
+    // some cmds are handled here, without using android /bin/sh
+    if (strcmp(cmd, "log_mark") == 0) {
+        INFO("---------- log_mark ----------\n");
+        goto done;
+    }
+    if (strcmp(cmd, "log_clear") == 0) {
+        freopen(log_file_pathname, "w", stdout);
+        freopen(log_file_pathname, "w", stderr);
+        setlinebuf(stdout);
+        setlinebuf(stderr);
+        INFO("---------- log_clear ----------\n");
+        goto done;
+    }
+        
+    // xxx comment
+    if (fork() == 0) {
+        process_req_using_android_sh(sockfd, cmd);
+    }
+
+done:
+    close(sockfd);
+    return NULL;
+}
+
+static void process_req_using_android_sh(int sockfd, char *cmd)
+{
+    char *argv[10];
+    char cmd2[1000];
 
     // execute the cmd
     close(0);

@@ -1,3 +1,41 @@
+
+ERROR: connect, Connection refused
+ERROR: connect, Connection refused
+FORTIFY: pthread_mutex_lock called on a destroyed mutex (0x71bdc03598)
+FORTIFY: pthread_mutex_lock called on a destroyed mutex (0x71bdc03598)
+FORTIFY: pthread_mutex_lock called on a destroyed mutex (0x719a7a8b18)
+
+
+xxxxxxxxx
+
+picoc
+sizoef(char)      = 1
+sizoef(short)     = 2
+sizoef(int)       = 4
+sizoef(long)      = 8
+sizoef(size_t)    = 4
+sizoef(off_t)     = 4
+sizoef(time_t)    = 4
+sizeof(123)       = 8
+sizeof(123UL)     = 8
+sizeof sdl_rect   = 8
+
+Q app
+07/06/25 21:02:17.494 INFO SDL_main: sizoef(char)      = 1
+07/06/25 21:02:17.494 INFO SDL_main: sizoef(short)     = 2
+07/06/25 21:02:17.494 INFO SDL_main: sizoef(int)       = 4
+07/06/25 21:02:17.494 INFO SDL_main: sizoef(long)      = 8
+07/06/25 21:02:17.494 INFO SDL_main: sizoef(size_t)    = 8
+07/06/25 21:02:17.494 INFO SDL_main: sizoef(off_t)     = 8
+07/06/25 21:02:17.494 INFO SDL_main: sizoef(time_t)    = 8
+
+
+-------------
+
+cleanup this file
+update the run_prog routine
+
+-------------------
 cmds should cd to topdir
 these all need to get ip addr and password
 
