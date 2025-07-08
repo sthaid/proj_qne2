@@ -1,3 +1,4 @@
 #!/bin/bash
 
-android_exec "echo CLEAR LOG > log"
+# android_exec "echo CLEAR LOG > log"
+android_exec "log_clear"

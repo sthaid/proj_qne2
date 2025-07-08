@@ -4,11 +4,11 @@
 top=$(git rev-parse --show-toplevel)
 cd $top/qapps
 
-rm -rf files
-android_exec "tar --exclude log -cf ../xfer.tar ."
-android_exec "cat ../xfer.tar" > /tmp/xfer.tar
-mkdir files
-cd files
+# remove and recreate files dir
+android_exec "tar --exclude log -cf -  ." > /tmp/xfer.tar
+rm -rf files; mkdir files; cd files
 tar -xvf /tmp/xfer.tar
 rm /tmp/xfer.tar
 
+# success
+exit 0
