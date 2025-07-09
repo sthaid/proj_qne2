@@ -1,5 +1,11 @@
 #include <common.h>
 
+int cpu_get_move(board_t *b)
+{
+    return MOVE_PASS;
+}
+
+#if 0
 //
 // defines
 //
@@ -507,3 +513,4 @@ static int64_t heuristic(const board_t *b, bool maximizing_player, bool game_ove
     // for the maximizing player
     return (maximizing_player ? value : -value);
 }
+#endif

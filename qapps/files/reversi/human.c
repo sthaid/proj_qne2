@@ -2,7 +2,7 @@
 
 // -----------------  HUMAN PLAYER - GET_MOVE -------------------------------
 
-int human_get_move(const board_t *b, char *eval_str)
+int human_get_move(board_t *b)
 {
     // return values, these are all from a registered event 
     // having been selected

@@ -1,9 +1,12 @@
-CFLAGS = -Wall -g -O2 -I. -I../../.. -I/usr/include/SDL2
+SRCS = reversi.c human.c cpu.c
+TARGET = reversi
 
-reversi:
-	gcc $(CFLAGS) main.c human.c  # cpu.c
+CFLAGS = -Wall -g -I. -I../../.. $(shell sdl2-config --cflags)
+
+$(TARGET):
+	gcc -o $@ $(CFLAGS) $(SRCS) ../../../sdl.c ../../../utils.c -lSDL2 -lSDL2_ttf
 
 clean:
-	rm reversi
+	rm $(TARGET)
 
-.PHONY: reversi
+.PHONY: $(TARGET)

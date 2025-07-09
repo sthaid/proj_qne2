@@ -17,6 +17,8 @@
 #include <signal.h>
 #include <sys/stat.h>
 
+#include <sdl.h>
+
 #define INFO printf
 #define FATAL printf  //xxx
 
@@ -32,7 +34,9 @@
 #define MOVE_GAME_OVER  -2
 //#define MOVE_NONE       -9
 
-#if 0
+#define OTHER_COLOR(c) ((c) == WHITE ? BLACK : WHITE)
+
+// xxx can these be in reversi.c
 #define MOVE_TO_RC(m,r,c) \
     do { \
         (r) = (m) / 10; \
@@ -43,11 +47,6 @@
     do { \
         (m) = ((r) * 10) + (c); \
     } while (0)
-
-#define OTHER_COLOR(c) ((c) == WHITE ? BLACK : \
-                        (c) == BLACK ? WHITE : \
-                                       ({FATAL("OTHER_COLOR c=%d\n", c);0;}))
-#endif
 
 //
 // typedefs
@@ -75,11 +74,11 @@ typedef struct {
 //
 
 // main.c 
-void get_possible_moves(const board_t *b, possible_moves_t *pm);
+void get_possible_moves(board_t *b, possible_moves_t *pm);
 // human.c
-int human_get_move(const board_t *b);
+int human_get_move(board_t *b);
 // cpu.c
-int cpu_get_move(const board_t *b);
+int cpu_get_move(board_t *b);
 
 //
 // inline procedures

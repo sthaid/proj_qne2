@@ -1,7 +1,5 @@
 #include <common.h>
 
-#include <sdl.h>
-
 //
 // defines
 //
@@ -19,7 +17,7 @@
 //
 
 typedef struct {
-    int (*get_move)(const board_t *b);
+    int (*get_move)(board_t *b);
     char  name[100];
 } player_t;
 
@@ -29,6 +27,7 @@ typedef struct {
 
 static void game_init(board_t *b);
 static void apply_move(board_t *b, int move);
+static bool is_game_over(board_t *b);
 static void update_display(board_t *b);
 
 // -----------------  MAIN  ------------------------------------
@@ -41,10 +40,12 @@ int main()
     player_t  *player_white;
     board_t   board;
 
-    int event_id;
+    int event_id, move;
 
     // init
-    sdl_init(&w, &h);
+#ifndef PICOC_VERSION
+    sdl_init(&w, &h);  //xxx set w,h regarless
+#endif
     game_state = GAME_STATE_READY;
     player_black = &(player_t){human_get_move, "HUMAN"};
     player_white = &(player_t){cpu_get_move, "CPU1"};
@@ -54,7 +55,7 @@ int main()
     while (true) {
         if (game_state == GAME_STATE_READY) {
             game_init(&board);
-            update_display();
+            update_display(&board);
             event_id = sdl_get_event(-1);
             if (event_id == EVID_GAME_START) {
                 game_state = GAME_STATE_ACTIVE;
@@ -69,14 +70,14 @@ int main()
             }
 
             player_t *player = (board.whose_turn == BLACK ? player_black : player_white);
-            update_display();
+            update_display(&board);
             move = player->get_move(&board);
             apply_move(&board, move);
             continue;
         }
 
         if (game_state == GAME_STATE_OVER) {
-            update_display();
+            update_display(&board);
             event_id = sdl_get_event(-1);
             if (event_id == EVID_GAME_RESET) {
                 game_state = GAME_STATE_READY;
@@ -210,9 +211,33 @@ void get_possible_moves(board_t *b, possible_moves_t *pm)
     }
 }
 
+static bool is_game_over(board_t *b)
+{
+    return false;
+}
+
 // -----------------  DISPLAY  ------------------------------------
+
+sdl_create_filled_circle_texture
+sdl_create_filled_circle_texture
+sdl_render_fill_rect
+sdl_font_char_height  and width
+
+static void xxx(void)
+{
+        piece_circle_radius  = rint(.4*sq_wh);
+        piece_black_circle   = sdl_create_filled_circle_texture(piece_circle_radius, SDL_BLACK);
+        piece_white_circle   = sdl_create_filled_circle_texture(piece_circle_radius, SDL_WHITE);
+
+        prompt_circle_radius = rint(.08*sq_wh);
+        prompt_black_circle  = sdl_create_filled_circle_texture(prompt_circle_radius, SDL_BLACK);
+        prompt_white_circle  = sdl_create_filled_circle_texture(prompt_circle_radius, SDL_WHITE);
+}
 
 static void update_display(board_t *b)
 {
+    sdl_display_init(COLOR_BLACK);
+
+    sdl_display_present();
 }
 
