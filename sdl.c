@@ -65,7 +65,12 @@ int sdl_init(int *w, int *h)
     }
 
     // create SDL Window and Renderer
-    if (SDL_CreateWindowAndRenderer(0, 0, SDL_WINDOW_FULLSCREEN, &sdl_window, &sdl_renderer) != 0) {
+#ifdef ANDROID
+#define SDL_FLAGS  SDL_WINDOW_FULLSCREEN
+#else
+#define SDL_FLAGS  SDL_WINDOW_FULLSCREEN_DESKTOP
+#endif
+    if (SDL_CreateWindowAndRenderer(0, 0, SDL_FLAGS, &sdl_window, &sdl_renderer) != 0) {
         ERROR("SDL_CreateWindowAndRenderer failed\n");
         return -1;
     }
@@ -248,7 +253,14 @@ void sdl_get_char_size(int *char_width, int *char_height)
 static void font_init(void)
 {
     if (font[text_ptsize].font == NULL) {
-        font[text_ptsize].font = TTF_OpenFont("/system/fonts/DroidSansMono.ttf", text_ptsize);
+// xxx search for the font, without using ifdef ANDROID
+#ifdef ANDROID
+        font[text_ptsize].font = TTF_OpenFont("/system/fonts/DroidSansMono.ttf", 
+                                              text_ptsize);
+#else
+        font[text_ptsize].font = TTF_OpenFont("/usr/share/fonts/truetype/freefont/FreeMonoBold.ttf",
+                                              text_ptsize);
+#endif
         if (font[text_ptsize].font == NULL) {
             FATAL("TTF_OpenFont failed, text_ptsize=%d\n", text_ptsize);  // xxx use of FATAL
         }

@@ -155,7 +155,6 @@ bool is_socket_connected(int socket_fd)
 
 void get_file_info(char *pathname, size_t *size, time_t *mtime)
 {
-    int ret;
     struct stat statbuf;
 
     if (lstat(pathname, &statbuf) != 0) {

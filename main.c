@@ -90,13 +90,13 @@ static void controller(void)
         // xxx reset other stuff here too, fontsz, color
         sdl_display_init(COLOR_PURPLE);
 
-        // display menu
+        // display menu, and register for sdl events
         display_menu(w, h);
 
         // update the display
         sdl_display_present();
 
-        // wait for event
+        // wait for an event, xxx timeout
         event_id = sdl_get_event(1000000);
         if (event_id == -1) {
             continue;
