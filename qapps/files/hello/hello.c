@@ -9,9 +9,13 @@
 
 int main(int argc, char **argv)
 {
-    time_t t;
     struct sdl_rect *loc;
     int i;
+    int w, h;
+
+#ifdef PICOC_VERSION
+    printf("PICOC_VERSION = %s\n", PICOC_VERSION);
+#endif
 
     for (i = 0; i < argc; i++) {
         printf("argv[%d] = '%s'\n", i, argv[i]);
@@ -27,9 +31,11 @@ int main(int argc, char **argv)
     printf("sizeof(123)       = %zd\n", sizeof(123));
     printf("sizeof(123UL)     = %zd\n", sizeof(123UL));
 
-    // xxx del 
-    printf("sizeof sdl_rect   = %zd\n", sizeof(struct sdl_rect));
-    printf("COLOR_YELLOW = 0x%x\n", COLOR_YELLOW);
+#ifndef PICOC_VERSION
+    printf("calling sdl_init\n");
+    sdl_init(&w, &h);
+    printf("w,h = %d %d\n", w,h);
+#endif
 
     printf("calling display init\n");
     sdl_display_init(COLOR_YELLOW);
