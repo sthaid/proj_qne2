@@ -9,7 +9,7 @@
 
 int main(int argc, char **argv)
 {
-    struct sdl_rect *loc;
+    sdl_rect_t *loc;
     int i;
     int w, h;
 

@@ -4,6 +4,8 @@
 
 // xxx landscape
 
+#define BYTES_PER_PIXEL  4
+
 typedef struct {
     TTF_Font *font;
     int   char_width;
@@ -11,7 +13,7 @@ typedef struct {
 } sdl_font_t;  // xxx rename
 
 typedef struct {
-    struct sdl_rect loc;
+    sdl_rect_t loc;
     int event_id;
 } event_t;
 
@@ -193,12 +195,12 @@ void sdl_set_text_bg_color(int color)
 }
 
 // xxx return the rect
-struct sdl_rect *sdl_render_text(int x, int y, char * str) // xxx name
+sdl_rect_t *sdl_render_text(int x, int y, char * str) // xxx name
 {
     SDL_Surface    * surface;
     SDL_Texture    * texture;
     SDL_Rect         pos;
-    static struct sdl_rect pos2;
+    static sdl_rect_t pos2;
 
     // xxx
     font_init();
@@ -231,7 +233,7 @@ struct sdl_rect *sdl_render_text(int x, int y, char * str) // xxx name
     return &pos2;  // xxx check this
 }
 
-struct sdl_rect *sdl_render_printf(int x, int y, char * fmt, ...)
+sdl_rect_t *sdl_render_printf(int x, int y, char * fmt, ...)
 {
     char str[1000];
     va_list ap;
@@ -275,7 +277,7 @@ static void font_init(void)
 
 static int process_sdl_event(SDL_Event *ev);
 
-void sdl_register_event(struct sdl_rect *loc, int event_id)
+void sdl_register_event(sdl_rect_t *loc, int event_id)
 {
     event_tbl[max_event].loc = *loc;
     event_tbl[max_event].event_id  = event_id; 
@@ -422,3 +424,467 @@ typedef struct SDL_MouseMotionEvent
     Sint32 yrel;        /**< The relative motion in the Y direction */
 } SDL_MouseMotionEvent;
 #endif
+
+
+
+// xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+
+// render rectangle, lines, circles, points
+void sdl_render_rect(sdl_rect_t *loc, int line_width, int color)  // xxx should color be an arg
+{
+    SDL_Rect rect = *(SDL_Rect*)loc;
+    int i;
+
+    sdl_set_render_draw_color(color);
+
+    for (i = 0; i < line_width; i++) {
+        SDL_RenderDrawRect(sdl_renderer, &rect);
+        if (rect.w < 2 || rect.h < 2) {
+            break;
+        }
+        rect.x += 1;
+        rect.y += 1;
+        rect.w -= 2;
+        rect.h -= 2;
+    }
+}
+
+void sdl_render_fill_rect(sdl_rect_t *loc, int color)
+{
+    SDL_Rect rect = *(SDL_Rect*)loc;
+
+    sdl_set_render_draw_color(color);
+    SDL_RenderFillRect(sdl_renderer, &rect);
+}
+
+void sdl_render_line(int x1, int y1, int x2, int y2, int color)
+{
+    sdl_point_t points[2] = { {x1,y1}, {x2,y2} };
+    sdl_render_lines(points, 2, color);
+}
+
+void sdl_render_lines(sdl_point_t *points, int count, int color)
+{
+    SDL_Point * sdl_points = (SDL_Point*)points;
+
+    if (count <= 1) {
+        return;
+    }
+
+    sdl_set_render_draw_color(color);
+
+    SDL_RenderDrawLines(sdl_renderer, sdl_points, count);
+}
+
+void sdl_render_circle(int x_center, int y_center, int radius,
+            int line_width, int color)
+{
+    int count = 0, i, angle, x, y;
+    SDL_Point points[370];
+
+    static int sin_table[370];
+    static int cos_table[370];
+    static bool first_call = true;
+
+    // on first call make table of sin and cos indexed by degrees
+    if (first_call) {
+        for (angle = 0; angle < 362; angle++) {
+            sin_table[angle] = sin(angle*(2*M_PI/360)) * (1<<18);
+            cos_table[angle] = cos(angle*(2*M_PI/360)) * (1<<18);
+        }
+        first_call = false;
+    }
+
+    // set the color
+    sdl_set_render_draw_color(color);
+
+    // loop over line_width
+    for (i = 0; i < line_width; i++) {
+        // draw circle
+        for (angle = 0; angle < 362; angle++) {
+            x = x_center + (((int64_t)radius * sin_table[angle]) >> 18);
+            y = y_center + (((int64_t)radius * cos_table[angle]) >> 18);
+            points[count].x = x;
+            points[count].y = y;
+            count++;
+        }
+        SDL_RenderDrawLines(sdl_renderer, points, count);
+
+        // reduce radius by 1
+        radius--;
+        if (radius < 0) {
+            break;
+        }
+    }
+
+}
+
+void sdl_render_point(int x, int y, int color, int point_size)
+{
+    sdl_point_t point = {x,y};
+
+    sdl_render_points(&point, 1, color, point_size);
+}
+
+void sdl_render_points(sdl_point_t *points, int count, int color, int point_size)
+{
+    #define MAX_SDL_POINTS 1000
+
+    static struct point_extend_s {
+        int max;
+        struct point_extend_offset_s {
+            int x;
+            int y;
+        } offset[300];
+    } point_extend[10] = {
+    { 1, {
+        {0,0}, 
+            } },
+    { 5, {
+        {-1,0}, 
+        {0,-1}, {0,0}, {0,1}, 
+        {1,0}, 
+            } },
+    { 21, {
+        {-2,-1}, {-2,0}, {-2,1}, 
+        {-1,-2}, {-1,-1}, {-1,0}, {-1,1}, {-1,2}, 
+        {0,-2}, {0,-1}, {0,0}, {0,1}, {0,2}, 
+        {1,-2}, {1,-1}, {1,0}, {1,1}, {1,2}, 
+        {2,-1}, {2,0}, {2,1}, 
+            } },
+    { 37, {
+        {-3,-1}, {-3,0}, {-3,1}, 
+        {-2,-2}, {-2,-1}, {-2,0}, {-2,1}, {-2,2}, 
+        {-1,-3}, {-1,-2}, {-1,-1}, {-1,0}, {-1,1}, {-1,2}, {-1,3}, 
+        {0,-3}, {0,-2}, {0,-1}, {0,0}, {0,1}, {0,2}, {0,3}, 
+        {1,-3}, {1,-2}, {1,-1}, {1,0}, {1,1}, {1,2}, {1,3}, 
+        {2,-2}, {2,-1}, {2,0}, {2,1}, {2,2}, 
+        {3,-1}, {3,0}, {3,1}, 
+            } },
+    { 61, {
+        {-4,-1}, {-4,0}, {-4,1}, 
+        {-3,-3}, {-3,-2}, {-3,-1}, {-3,0}, {-3,1}, {-3,2}, {-3,3}, 
+        {-2,-3}, {-2,-2}, {-2,-1}, {-2,0}, {-2,1}, {-2,2}, {-2,3}, 
+        {-1,-4}, {-1,-3}, {-1,-2}, {-1,-1}, {-1,0}, {-1,1}, {-1,2}, {-1,3}, {-1,4}, 
+        {0,-4}, {0,-3}, {0,-2}, {0,-1}, {0,0}, {0,1}, {0,2}, {0,3}, {0,4}, 
+        {1,-4}, {1,-3}, {1,-2}, {1,-1}, {1,0}, {1,1}, {1,2}, {1,3}, {1,4}, 
+        {2,-3}, {2,-2}, {2,-1}, {2,0}, {2,1}, {2,2}, {2,3}, 
+        {3,-3}, {3,-2}, {3,-1}, {3,0}, {3,1}, {3,2}, {3,3}, 
+        {4,-1}, {4,0}, {4,1}, 
+            } },
+    { 89, {
+        {-5,-1}, {-5,0}, {-5,1}, 
+        {-4,-3}, {-4,-2}, {-4,-1}, {-4,0}, {-4,1}, {-4,2}, {-4,3}, 
+        {-3,-4}, {-3,-3}, {-3,-2}, {-3,-1}, {-3,0}, {-3,1}, {-3,2}, {-3,3}, {-3,4}, 
+        {-2,-4}, {-2,-3}, {-2,-2}, {-2,-1}, {-2,0}, {-2,1}, {-2,2}, {-2,3}, {-2,4}, 
+        {-1,-5}, {-1,-4}, {-1,-3}, {-1,-2}, {-1,-1}, {-1,0}, {-1,1}, {-1,2}, {-1,3}, {-1,4}, {-1,5}, 
+        {0,-5}, {0,-4}, {0,-3}, {0,-2}, {0,-1}, {0,0}, {0,1}, {0,2}, {0,3}, {0,4}, {0,5}, 
+        {1,-5}, {1,-4}, {1,-3}, {1,-2}, {1,-1}, {1,0}, {1,1}, {1,2}, {1,3}, {1,4}, {1,5}, 
+        {2,-4}, {2,-3}, {2,-2}, {2,-1}, {2,0}, {2,1}, {2,2}, {2,3}, {2,4}, 
+        {3,-4}, {3,-3}, {3,-2}, {3,-1}, {3,0}, {3,1}, {3,2}, {3,3}, {3,4}, 
+        {4,-3}, {4,-2}, {4,-1}, {4,0}, {4,1}, {4,2}, {4,3}, 
+        {5,-1}, {5,0}, {5,1}, 
+            } },
+    { 121, {
+        {-6,-1}, {-6,0}, {-6,1}, 
+        {-5,-3}, {-5,-2}, {-5,-1}, {-5,0}, {-5,1}, {-5,2}, {-5,3}, 
+        {-4,-4}, {-4,-3}, {-4,-2}, {-4,-1}, {-4,0}, {-4,1}, {-4,2}, {-4,3}, {-4,4}, 
+        {-3,-5}, {-3,-4}, {-3,-3}, {-3,-2}, {-3,-1}, {-3,0}, {-3,1}, {-3,2}, {-3,3}, {-3,4}, {-3,5}, 
+        {-2,-5}, {-2,-4}, {-2,-3}, {-2,-2}, {-2,-1}, {-2,0}, {-2,1}, {-2,2}, {-2,3}, {-2,4}, {-2,5}, 
+        {-1,-6}, {-1,-5}, {-1,-4}, {-1,-3}, {-1,-2}, {-1,-1}, {-1,0}, {-1,1}, {-1,2}, {-1,3}, {-1,4}, {-1,5}, {-1,6}, 
+        {0,-6}, {0,-5}, {0,-4}, {0,-3}, {0,-2}, {0,-1}, {0,0}, {0,1}, {0,2}, {0,3}, {0,4}, {0,5}, {0,6}, 
+        {1,-6}, {1,-5}, {1,-4}, {1,-3}, {1,-2}, {1,-1}, {1,0}, {1,1}, {1,2}, {1,3}, {1,4}, {1,5}, {1,6}, 
+        {2,-5}, {2,-4}, {2,-3}, {2,-2}, {2,-1}, {2,0}, {2,1}, {2,2}, {2,3}, {2,4}, {2,5}, 
+        {3,-5}, {3,-4}, {3,-3}, {3,-2}, {3,-1}, {3,0}, {3,1}, {3,2}, {3,3}, {3,4}, {3,5}, 
+        {4,-4}, {4,-3}, {4,-2}, {4,-1}, {4,0}, {4,1}, {4,2}, {4,3}, {4,4}, 
+        {5,-3}, {5,-2}, {5,-1}, {5,0}, {5,1}, {5,2}, {5,3}, 
+        {6,-1}, {6,0}, {6,1}, 
+            } },
+    { 177, {
+        {-7,-2}, {-7,-1}, {-7,0}, {-7,1}, {-7,2}, 
+        {-6,-4}, {-6,-3}, {-6,-2}, {-6,-1}, {-6,0}, {-6,1}, {-6,2}, {-6,3}, {-6,4}, 
+        {-5,-5}, {-5,-4}, {-5,-3}, {-5,-2}, {-5,-1}, {-5,0}, {-5,1}, {-5,2}, {-5,3}, {-5,4}, {-5,5}, 
+        {-4,-6}, {-4,-5}, {-4,-4}, {-4,-3}, {-4,-2}, {-4,-1}, {-4,0}, {-4,1}, {-4,2}, {-4,3}, {-4,4}, {-4,5}, {-4,6}, 
+        {-3,-6}, {-3,-5}, {-3,-4}, {-3,-3}, {-3,-2}, {-3,-1}, {-3,0}, {-3,1}, {-3,2}, {-3,3}, {-3,4}, {-3,5}, {-3,6}, 
+        {-2,-7}, {-2,-6}, {-2,-5}, {-2,-4}, {-2,-3}, {-2,-2}, {-2,-1}, {-2,0}, {-2,1}, {-2,2}, {-2,3}, {-2,4}, {-2,5}, {-2,6}, {-2,7}, 
+        {-1,-7}, {-1,-6}, {-1,-5}, {-1,-4}, {-1,-3}, {-1,-2}, {-1,-1}, {-1,0}, {-1,1}, {-1,2}, {-1,3}, {-1,4}, {-1,5}, {-1,6}, {-1,7}, 
+        {0,-7}, {0,-6}, {0,-5}, {0,-4}, {0,-3}, {0,-2}, {0,-1}, {0,0}, {0,1}, {0,2}, {0,3}, {0,4}, {0,5}, {0,6}, {0,7}, 
+        {1,-7}, {1,-6}, {1,-5}, {1,-4}, {1,-3}, {1,-2}, {1,-1}, {1,0}, {1,1}, {1,2}, {1,3}, {1,4}, {1,5}, {1,6}, {1,7}, 
+        {2,-7}, {2,-6}, {2,-5}, {2,-4}, {2,-3}, {2,-2}, {2,-1}, {2,0}, {2,1}, {2,2}, {2,3}, {2,4}, {2,5}, {2,6}, {2,7}, 
+        {3,-6}, {3,-5}, {3,-4}, {3,-3}, {3,-2}, {3,-1}, {3,0}, {3,1}, {3,2}, {3,3}, {3,4}, {3,5}, {3,6}, 
+        {4,-6}, {4,-5}, {4,-4}, {4,-3}, {4,-2}, {4,-1}, {4,0}, {4,1}, {4,2}, {4,3}, {4,4}, {4,5}, {4,6}, 
+        {5,-5}, {5,-4}, {5,-3}, {5,-2}, {5,-1}, {5,0}, {5,1}, {5,2}, {5,3}, {5,4}, {5,5}, 
+        {6,-4}, {6,-3}, {6,-2}, {6,-1}, {6,0}, {6,1}, {6,2}, {6,3}, {6,4}, 
+        {7,-2}, {7,-1}, {7,0}, {7,1}, {7,2}, 
+            } },
+    { 221, {
+        {-8,-2}, {-8,-1}, {-8,0}, {-8,1}, {-8,2}, 
+        {-7,-4}, {-7,-3}, {-7,-2}, {-7,-1}, {-7,0}, {-7,1}, {-7,2}, {-7,3}, {-7,4}, 
+        {-6,-5}, {-6,-4}, {-6,-3}, {-6,-2}, {-6,-1}, {-6,0}, {-6,1}, {-6,2}, {-6,3}, {-6,4}, {-6,5}, 
+        {-5,-6}, {-5,-5}, {-5,-4}, {-5,-3}, {-5,-2}, {-5,-1}, {-5,0}, {-5,1}, {-5,2}, {-5,3}, {-5,4}, {-5,5}, {-5,6}, 
+        {-4,-7}, {-4,-6}, {-4,-5}, {-4,-4}, {-4,-3}, {-4,-2}, {-4,-1}, {-4,0}, {-4,1}, {-4,2}, {-4,3}, {-4,4}, {-4,5}, {-4,6}, {-4,7}, 
+        {-3,-7}, {-3,-6}, {-3,-5}, {-3,-4}, {-3,-3}, {-3,-2}, {-3,-1}, {-3,0}, {-3,1}, {-3,2}, {-3,3}, {-3,4}, {-3,5}, {-3,6}, {-3,7}, 
+        {-2,-8}, {-2,-7}, {-2,-6}, {-2,-5}, {-2,-4}, {-2,-3}, {-2,-2}, {-2,-1}, {-2,0}, {-2,1}, {-2,2}, {-2,3}, {-2,4}, {-2,5}, {-2,6}, {-2,7}, {-2,8}, 
+        {-1,-8}, {-1,-7}, {-1,-6}, {-1,-5}, {-1,-4}, {-1,-3}, {-1,-2}, {-1,-1}, {-1,0}, {-1,1}, {-1,2}, {-1,3}, {-1,4}, {-1,5}, {-1,6}, {-1,7}, {-1,8}, 
+        {0,-8}, {0,-7}, {0,-6}, {0,-5}, {0,-4}, {0,-3}, {0,-2}, {0,-1}, {0,0}, {0,1}, {0,2}, {0,3}, {0,4}, {0,5}, {0,6}, {0,7}, {0,8}, 
+        {1,-8}, {1,-7}, {1,-6}, {1,-5}, {1,-4}, {1,-3}, {1,-2}, {1,-1}, {1,0}, {1,1}, {1,2}, {1,3}, {1,4}, {1,5}, {1,6}, {1,7}, {1,8}, 
+        {2,-8}, {2,-7}, {2,-6}, {2,-5}, {2,-4}, {2,-3}, {2,-2}, {2,-1}, {2,0}, {2,1}, {2,2}, {2,3}, {2,4}, {2,5}, {2,6}, {2,7}, {2,8}, 
+        {3,-7}, {3,-6}, {3,-5}, {3,-4}, {3,-3}, {3,-2}, {3,-1}, {3,0}, {3,1}, {3,2}, {3,3}, {3,4}, {3,5}, {3,6}, {3,7}, 
+        {4,-7}, {4,-6}, {4,-5}, {4,-4}, {4,-3}, {4,-2}, {4,-1}, {4,0}, {4,1}, {4,2}, {4,3}, {4,4}, {4,5}, {4,6}, {4,7}, 
+        {5,-6}, {5,-5}, {5,-4}, {5,-3}, {5,-2}, {5,-1}, {5,0}, {5,1}, {5,2}, {5,3}, {5,4}, {5,5}, {5,6}, 
+        {6,-5}, {6,-4}, {6,-3}, {6,-2}, {6,-1}, {6,0}, {6,1}, {6,2}, {6,3}, {6,4}, {6,5}, 
+        {7,-4}, {7,-3}, {7,-2}, {7,-1}, {7,0}, {7,1}, {7,2}, {7,3}, {7,4}, 
+        {8,-2}, {8,-1}, {8,0}, {8,1}, {8,2}, 
+            } },
+    { 277, {
+        {-9,-2}, {-9,-1}, {-9,0}, {-9,1}, {-9,2}, 
+        {-8,-4}, {-8,-3}, {-8,-2}, {-8,-1}, {-8,0}, {-8,1}, {-8,2}, {-8,3}, {-8,4}, 
+        {-7,-6}, {-7,-5}, {-7,-4}, {-7,-3}, {-7,-2}, {-7,-1}, {-7,0}, {-7,1}, {-7,2}, {-7,3}, {-7,4}, {-7,5}, {-7,6}, 
+        {-6,-7}, {-6,-6}, {-6,-5}, {-6,-4}, {-6,-3}, {-6,-2}, {-6,-1}, {-6,0}, {-6,1}, {-6,2}, {-6,3}, {-6,4}, {-6,5}, {-6,6}, {-6,7}, 
+        {-5,-7}, {-5,-6}, {-5,-5}, {-5,-4}, {-5,-3}, {-5,-2}, {-5,-1}, {-5,0}, {-5,1}, {-5,2}, {-5,3}, {-5,4}, {-5,5}, {-5,6}, {-5,7}, 
+        {-4,-8}, {-4,-7}, {-4,-6}, {-4,-5}, {-4,-4}, {-4,-3}, {-4,-2}, {-4,-1}, {-4,0}, {-4,1}, {-4,2}, {-4,3}, {-4,4}, {-4,5}, {-4,6}, {-4,7}, {-4,8}, 
+        {-3,-8}, {-3,-7}, {-3,-6}, {-3,-5}, {-3,-4}, {-3,-3}, {-3,-2}, {-3,-1}, {-3,0}, {-3,1}, {-3,2}, {-3,3}, {-3,4}, {-3,5}, {-3,6}, {-3,7}, {-3,8}, 
+        {-2,-9}, {-2,-8}, {-2,-7}, {-2,-6}, {-2,-5}, {-2,-4}, {-2,-3}, {-2,-2}, {-2,-1}, {-2,0}, {-2,1}, {-2,2}, {-2,3}, {-2,4}, {-2,5}, {-2,6}, {-2,7}, {-2,8}, {-2,9}, 
+        {-1,-9}, {-1,-8}, {-1,-7}, {-1,-6}, {-1,-5}, {-1,-4}, {-1,-3}, {-1,-2}, {-1,-1}, {-1,0}, {-1,1}, {-1,2}, {-1,3}, {-1,4}, {-1,5}, {-1,6}, {-1,7}, {-1,8}, {-1,9}, 
+        {0,-9}, {0,-8}, {0,-7}, {0,-6}, {0,-5}, {0,-4}, {0,-3}, {0,-2}, {0,-1}, {0,0}, {0,1}, {0,2}, {0,3}, {0,4}, {0,5}, {0,6}, {0,7}, {0,8}, {0,9}, 
+        {1,-9}, {1,-8}, {1,-7}, {1,-6}, {1,-5}, {1,-4}, {1,-3}, {1,-2}, {1,-1}, {1,0}, {1,1}, {1,2}, {1,3}, {1,4}, {1,5}, {1,6}, {1,7}, {1,8}, {1,9}, 
+        {2,-9}, {2,-8}, {2,-7}, {2,-6}, {2,-5}, {2,-4}, {2,-3}, {2,-2}, {2,-1}, {2,0}, {2,1}, {2,2}, {2,3}, {2,4}, {2,5}, {2,6}, {2,7}, {2,8}, {2,9}, 
+        {3,-8}, {3,-7}, {3,-6}, {3,-5}, {3,-4}, {3,-3}, {3,-2}, {3,-1}, {3,0}, {3,1}, {3,2}, {3,3}, {3,4}, {3,5}, {3,6}, {3,7}, {3,8}, 
+        {4,-8}, {4,-7}, {4,-6}, {4,-5}, {4,-4}, {4,-3}, {4,-2}, {4,-1}, {4,0}, {4,1}, {4,2}, {4,3}, {4,4}, {4,5}, {4,6}, {4,7}, {4,8}, 
+        {5,-7}, {5,-6}, {5,-5}, {5,-4}, {5,-3}, {5,-2}, {5,-1}, {5,0}, {5,1}, {5,2}, {5,3}, {5,4}, {5,5}, {5,6}, {5,7}, 
+        {6,-7}, {6,-6}, {6,-5}, {6,-4}, {6,-3}, {6,-2}, {6,-1}, {6,0}, {6,1}, {6,2}, {6,3}, {6,4}, {6,5}, {6,6}, {6,7}, 
+        {7,-6}, {7,-5}, {7,-4}, {7,-3}, {7,-2}, {7,-1}, {7,0}, {7,1}, {7,2}, {7,3}, {7,4}, {7,5}, {7,6}, 
+        {8,-4}, {8,-3}, {8,-2}, {8,-1}, {8,0}, {8,1}, {8,2}, {8,3}, {8,4}, 
+        {9,-2}, {9,-1}, {9,0}, {9,1}, {9,2}, 
+            } },
+                };
+
+    int i, j, x, y;
+    SDL_Point sdl_points[MAX_SDL_POINTS];
+    int sdl_points_count = 0;
+    struct point_extend_s * pe = &point_extend[point_size];
+    struct point_extend_offset_s * peo = pe->offset;
+
+    if (count < 0) {
+        return;
+    }
+    if (point_size < 0 || point_size > 9) {
+        return;
+    }
+
+    sdl_set_render_draw_color(color);
+
+    for (i = 0; i < count; i++) {
+        for (j = 0; j < pe->max; j++) {
+            x = points[i].x + peo[j].x;
+            y = points[i].y + peo[j].y;
+            sdl_points[sdl_points_count].x = x;
+            sdl_points[sdl_points_count].y = y;
+            sdl_points_count++;
+
+            if (sdl_points_count == MAX_SDL_POINTS) {
+                SDL_RenderDrawPoints(sdl_renderer, sdl_points, sdl_points_count);
+                sdl_points_count = 0;
+            }
+        }
+    }
+
+    if (sdl_points_count > 0) {
+        SDL_RenderDrawPoints(sdl_renderer, sdl_points, sdl_points_count);
+        sdl_points_count = 0;
+    }
+}
+//xxx int32
+
+// -----------------  RENDER USING TEXTURES  ---------------------------- 
+
+sdl_texture_t sdl_create_texture(int w, int h)
+{
+    SDL_Texture * texture;
+
+    texture = SDL_CreateTexture(sdl_renderer,
+                                SDL_PIXELFORMAT_ABGR8888,
+                                SDL_TEXTUREACCESS_STREAMING,
+                                w, h);
+    if (texture == NULL) {
+        ERROR("failed to allocate texture, %s\n", SDL_GetError());
+        return NULL;
+    }
+
+    return (sdl_texture_t)texture;
+}
+
+sdl_texture_t sdl_create_texture_from_display_pixels(sdl_rect_t *loc)
+{
+    sdl_texture_t texture;
+    int ret;
+    uint8_t * pixels;
+    SDL_Rect rect = *(SDL_Rect*)loc;
+
+    // allocate memory for the pixels
+    pixels = calloc(1, rect.h * rect.w * BYTES_PER_PIXEL);
+    if (pixels == NULL) {
+        ERROR("allocate pixels failed\n");
+        return NULL;
+    }
+
+    // read the pixels
+    ret = SDL_RenderReadPixels(sdl_renderer, 
+                               &rect,  
+                               SDL_PIXELFORMAT_ABGR8888, 
+                               pixels, 
+                               rect.w * BYTES_PER_PIXEL);
+    if (ret < 0) {
+        ERROR("SDL_RenderReadPixels, %s\n", SDL_GetError());
+        free(pixels);
+        return NULL;
+    }
+
+    // create the texture
+    texture = sdl_create_texture(loc->w, loc->h);
+    if (texture == NULL) {
+        ERROR("failed to allocate texture\n");
+        free(pixels);
+        return NULL;
+    }
+
+    // update the texture with the pixels
+    SDL_UpdateTexture(texture, NULL, pixels, loc->w * BYTES_PER_PIXEL);
+
+    // free pixels
+    free(pixels);
+
+    // return the texture
+    return texture;
+}
+
+sdl_texture_t sdl_create_filled_circle_texture(int radius, int color)
+{
+    int width = 2 * radius + 1;
+    int x = radius;
+    int y = 0;
+    int radiusError = 1-x;
+    int pixels[width][width];
+    SDL_Texture * texture;
+
+    #define DRAWLINE(Y, XS, XE, V) \
+        do { \
+            int i; \
+            for (i = XS; i <= XE; i++) { \
+                pixels[Y][i] = (V); \
+            } \
+        } while (0)
+
+    // initialize pixels
+    memset(pixels,0,sizeof(pixels));
+    while(x >= y) {
+        DRAWLINE(y+radius, -x+radius, x+radius, color);
+        DRAWLINE(x+radius, -y+radius, y+radius, color);
+        DRAWLINE(-y+radius, -x+radius, x+radius, color);
+        DRAWLINE(-x+radius, -y+radius, y+radius, color);
+        y++;
+        if (radiusError<0) {
+            radiusError += 2 * y + 1;
+        } else {
+            x--;
+            radiusError += 2 * (y - x) + 1;
+        }
+    }
+
+    // create the texture and copy the pixels to the texture
+    texture = sdl_create_texture(width, width);
+    if (texture == NULL) {
+        ERROR("failed to allocate texture\n");
+        return NULL;
+    }
+    SDL_SetTextureBlendMode(texture, SDL_BLENDMODE_BLEND);
+    SDL_UpdateTexture(texture, NULL, pixels, width*BYTES_PER_PIXEL);
+
+    // return texture
+    return (sdl_texture_t)texture;
+}
+
+sdl_texture_t sdl_create_text_texture(int fg_color_arg, int bg_color_arg, int font_ptsize, char * str)
+{
+    SDL_Surface * surface;
+    SDL_Texture * texture;
+    SDL_Color fg_color = *(SDL_Color*)&fg_color_arg;
+    SDL_Color bg_color = *(SDL_Color*)&bg_color_arg;
+
+    if (str[0] == '\0') {
+        return NULL;
+    }
+
+    // if the font has not been initialized then do so
+    sdl_set_text_ptsize(font_ptsize);
+
+    // render the text to a surface,
+    // create a texture from the surface
+    // free the surface
+    surface = TTF_RenderText_Shaded(font[text_ptsize].font, str, fg_color, bg_color);
+    if (surface == NULL) {
+        ERROR("failed to allocate surface\n");
+        return NULL;
+    }
+    texture = SDL_CreateTextureFromSurface(sdl_renderer, surface);
+    if (texture == NULL) {
+        ERROR("failed to allocate texture\n");
+        SDL_FreeSurface(surface);
+        return NULL;
+    }
+    SDL_FreeSurface(surface);
+
+    // return the texture which contains the text
+    return (sdl_texture_t)texture;
+}
+
+void sdl_destroy_texture(sdl_texture_t texture)
+{
+    if (texture) {
+        SDL_DestroyTexture((SDL_Texture *)texture);
+    }
+}
+
+void sdl_query_texture(sdl_texture_t texture, int * width, int * height)
+{
+    if (texture == NULL) {
+        *width = 0;
+        *height = 0;
+        return;
+    }
+
+    SDL_QueryTexture((SDL_Texture *)texture, NULL, NULL, width, height);
+}
+
+void sdl_update_texture(sdl_texture_t texture, uint8_t * pixels, int pitch)
+{
+    SDL_UpdateTexture((SDL_Texture*)texture,
+                      NULL,                   // update entire texture
+                      pixels,                 // pixels
+                      pitch);                 // pitch  
+}
+
+void sdl_render_texture(int x, int y, sdl_texture_t texture_arg)
+{
+    SDL_Texture *texture = (SDL_Texture *)texture_arg;
+    SDL_Rect dest;
+    int w,h;
+
+    sdl_query_texture(texture, &w, &h);
+    dest.x = x;
+    dest.y = y;
+    dest.w = w;
+    dest.h = h;
+
+    SDL_RenderCopy(sdl_renderer, texture, NULL, &dest);
+    // xxx add scaled routine
+}
+
+void sdl_render_scaled_texture(sdl_rect_t *dest_arg, sdl_texture_t texture_arg)
+{
+    SDL_Texture *texture = (SDL_Texture *)texture_arg;
+    SDL_Rect *dest = (SDL_Rect*)dest_arg;
+
+    SDL_RenderCopy(sdl_renderer, texture, NULL, dest);
+}
+

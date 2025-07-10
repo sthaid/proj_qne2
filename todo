@@ -1,3 +1,9 @@
+move adb_connect
+renmae the qapps/bin/*
+shutdown the app?
+
+xxxxxx
+
 
 ERROR: connect, Connection refused
 ERROR: connect, Connection refused
