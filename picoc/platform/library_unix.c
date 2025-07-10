@@ -29,12 +29,15 @@ void Sdl_display_present (struct ParseState *Parser, struct Value *ReturnValue,
 void Sdl_render_text (struct ParseState *Parser, struct Value *ReturnValue,
 	struct Value **Param, int NumArgs)
 {
-    int               x   = Param[0]->Val->Integer;
-    int               y   = Param[1]->Val->Integer;
-    char            * str = Param[2]->Val->Identifier;
-    struct sdl_rect * loc;
+    int               x        = Param[0]->Val->Integer;
+    int               y        = Param[1]->Val->Integer;
+    int               ptsize   = Param[2]->Val->Integer;
+    int               fg_color = Param[3]->Val->Integer;
+    int               bg_color = Param[4]->Val->Integer;
+    char            * str      = Param[5]->Val->Identifier;
+    sdl_rect_t * loc;
 
-    loc = sdl_render_text(x, y, str);
+    loc = sdl_render_text(x, y, ptsize, fg_color, bg_color, str);
 
     ReturnValue->Val->Pointer = loc;
 }
@@ -42,29 +45,73 @@ void Sdl_render_text (struct ParseState *Parser, struct Value *ReturnValue,
 void Sdl_render_printf (struct ParseState *Parser, struct Value *ReturnValue,
 	struct Value **Param, int NumArgs)
 {
-    int               x   =  Param[0]->Val->Integer;
-    int               y   =  Param[1]->Val->Integer;
-    char            * fmt = Param[2]->Val->Identifier;
+    int               x        = Param[0]->Val->Integer;
+    int               y        = Param[1]->Val->Integer;
+    int               ptsize   = Param[2]->Val->Integer;
+    int               fg_color = Param[3]->Val->Integer;
+    int               bg_color = Param[4]->Val->Integer;
+    char            * fmt      = Param[5]->Val->Identifier;
     struct StdVararg  PrintfArgs;
     char              str[200] = "";
-    struct sdl_rect * loc;
+    sdl_rect_t      * loc;
 
-    PrintfArgs.Param = Param + 2;
-    PrintfArgs.NumArgs = NumArgs - 3;
+    PrintfArgs.Param = Param + 5;
+    PrintfArgs.NumArgs = NumArgs - 6;
     StdioBasePrintf(Parser, NULL, str, sizeof(str), fmt, &PrintfArgs);
 
-    loc = sdl_render_text(x, y, str);
+    loc = sdl_render_text(x, y, ptsize, fg_color, bg_color, str);
 
     ReturnValue->Val->Pointer = loc;
 }
 
+void Sdl_init (struct ParseState *Parser, struct Value *ReturnValue,
+	struct Value **Param, int NumArgs)
+{
+    int * w = (int*)Param[0]->Val->Identifier;
+    int * h = (int*)Param[1]->Val->Identifier;
+    int ret;
+
+    ret = sdl_init(w, h);
+
+    ReturnValue->Val->Integer = ret;
+}
+
+void Sdl_exit (struct ParseState *Parser, struct Value *ReturnValue,
+	struct Value **Param, int NumArgs)
+{
+    sdl_exit();
+}
+
+void Sdl_render_circle (struct ParseState *Parser, struct Value *ReturnValue,
+	struct Value **Param, int NumArgs)
+{
+    int x_center        = Param[0]->Val->Integer;
+    int y_center        = Param[1]->Val->Integer;
+    int radius          = Param[2]->Val->Integer;
+    int line_width      = Param[3]->Val->Integer;
+    int color           = Param[4]->Val->Integer;
+
+    sdl_render_circle(x_center, y_center, radius, line_width, color);
+}
+
 // -----------------  SDL PLATFORM REGISTRATION -------------------------
 
+const char xxx[] = "\
+typedef struct {short x; short y; short w; short h;} sdl_rect_t; \
+";
+
 struct LibraryFunction SdlFunctions[] = {
+    { Sdl_init,            "int sdl_init(int *w, int *h);" },
+    { Sdl_exit,            "void sdl_exit(void);" },
+
     { Sdl_display_init,    "void sdl_display_init(int color);" },
     { Sdl_display_present, "void sdl_display_present(void);" },
-    { Sdl_render_text,     "struct sdl_rect *sdl_render_text(int x, int y, char * str);" },
-    { Sdl_render_printf,   "struct sdl_rect *sdl_render_printf(int x, int y, char * fmt, ...) ;" },
+
+    { Sdl_render_text,     "sdl_rect_t *sdl_render_text(int x, int y, int ptsize, int fg_color, int bg_color, char * str);" },
+    { Sdl_render_printf,   "sdl_rect_t *sdl_render_printf(int x, int y, int ptsize, int fg_color, int bg_color, char * fmt, ...) ;" },
+
+    { Sdl_render_circle,  "void sdl_render_circle(int x_center, int y_center, int radius, int line_width, int color);" },
+
     { NULL, NULL } };
 
 void PlatformLibraryInit(Picoc *pc)
@@ -95,6 +142,8 @@ void PlatformLibraryInit(Picoc *pc)
         "sdl.h", 
         NULL,  // SetupFunction not used
         SdlFunctions, 
-        "struct sdl_rect {short x; short y; short w; short h;};"
+        xxx
                     );
 }
+
+

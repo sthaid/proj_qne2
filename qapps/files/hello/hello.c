@@ -13,6 +13,10 @@ int main(int argc, char **argv)
     int i;
     int w, h;
 
+    // xxx also call sdl_exit
+    sdl_init(&w, &h);
+    printf("w,h = %d %d\n", w,h);
+
 #ifdef PICOC_VERSION
     printf("PICOC_VERSION = %s\n", PICOC_VERSION);
 #endif
@@ -50,7 +54,6 @@ int main(int argc, char **argv)
     printf("%d %d %d %d\n", loc->x, loc->y, loc->w, loc->h);
 
     sdl_render_circle(1000, 500, 100, 10, COLOR_PURPLE);
-
 
     printf("calling display present\n");
     sdl_display_present();

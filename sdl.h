@@ -34,7 +34,7 @@ typedef void * sdl_texture_t;
 // prototypes
 //
 
-int sdl_init(int *w, int *h);
+int sdl_init(int *w, int *h);  // xxx why ret int
 void sdl_exit(void);
 
 void sdl_display_init(int color);
