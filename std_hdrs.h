@@ -20,6 +20,4 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 
-#include <sdl.h>
-#include <utils.h>
 

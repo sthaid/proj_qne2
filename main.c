@@ -1,4 +1,7 @@
-#include <hdrs.h>
+#include <std_hdrs.h>
+
+#include <sdl.h>
+#include <utils.h>
 
 //#include <android/sensor.h>
 

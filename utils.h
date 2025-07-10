@@ -23,9 +23,9 @@ void logmsg(char * lvl, const char * func, char * fmt, ...) __attribute__ ((form
 // -----------------  TIME  ------------------
 
 #define MAX_TIME_STR 50
-uint64_t microsec_timer(void);
-uint64_t get_real_time_us(void);
-char * time2str(char * str, int64_t us, bool gmt, bool display_ms, bool display_date);
+unsigned long microsec_timer(void);
+unsigned long get_real_time_us(void);
+char * time2str(char * str, unsigned long us, bool gmt, bool display_ms, bool display_date);
 
 // -----------------  NETWORKING  ------------
 

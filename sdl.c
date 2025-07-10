@@ -1,6 +1,29 @@
-#include <hdrs.h>
+#include <std_hdrs.h>
+
+#include <sdl.h>
 
 // xxx landscape
+
+//
+// logging
+//
+
+#define INFO(fmt, args...) \
+    do { \
+        logmsg("INFO", __func__, fmt, ## args); \
+    } while (0)
+#define ERROR(fmt, args...) \
+    do { \
+        logmsg("ERROR", __func__, fmt, ## args); \
+    } while (0)
+#define FATAL(fmt, args...) \
+    do { \
+        logmsg("FATAL", __func__, fmt, ## args); \
+        exit(1); \
+    } while (0)
+
+static void logmsg(char *lvl, const char *func, char *fmt, ...) 
+    __attribute__ ((format (printf, 3, 4)));
 
 //
 // colors
@@ -438,17 +461,18 @@ void sdl_render_circle(int x_center, int y_center, int radius,
     for (i = 0; i < line_width; i++) {
         // draw circle
         for (angle = 0; angle < 362; angle++) {
-            x = x_center + (((int64_t)radius * sin_table[angle]) >> 18);
+            x = x_center + (((int64_t)radius * sin_table[angle]) >> 18);  //xxx int64   >> 18
             y = y_center + (((int64_t)radius * cos_table[angle]) >> 18);
             points[count].x = x;
             points[count].y = y;
             count++;
         }
         SDL_RenderDrawLines(renderer, points, count);
+        count = 0;
 
-        // reduce radius by 1
+        // reduce radius by 1  xxx 0.5
         radius--;
-        if (radius < 0) {
+        if (radius <= 0) {
             break;
         }
     }
@@ -820,4 +844,83 @@ void sdl_render_scaled_texture(sdl_rect_t *dest_arg, sdl_texture_t texture_arg)
 
     SDL_RenderCopy(renderer, texture, NULL, dest);
 }
+
+// -----------------  LOGGING  --------------------------------------
+
+#define MAX_TIME_STR 50
+
+static unsigned long get_real_time_us(void);
+static char * time2str(char * str, int64_t us, bool gmt, bool display_ms, bool display_date);
+
+// xxx setlinebug
+
+static void logmsg(char *lvl, const char *func, char *fmt, ...)
+{
+    va_list ap;
+    char    msg[1000];
+    char    time_str[MAX_TIME_STR]; 
+    int     len;
+
+    // construct msg
+    va_start(ap, fmt);
+    len = vsnprintf(msg, sizeof(msg), fmt, ap);  
+    va_end(ap);
+
+    // remove terminating newline
+    if (len > 0 && msg[len-1] == '\n') {
+        msg[len-1] = '\0';
+        len--;
+    }
+
+    // print the message, stdout has been redirected to the log file, in main.c;
+    // use './qne logcat' to monitor the log xxx
+    time2str(time_str, get_real_time_us(), false, true, true),
+    fprintf(stderr, "%s %s %s: %s\n", time_str, lvl, func, msg);  //xxx use stderr for logging in utils.c too
+}
+
+static unsigned long get_real_time_us(void)
+{
+    struct timespec ts;
+
+    clock_gettime(CLOCK_REALTIME,&ts);
+    return ((unsigned long)ts.tv_sec * 1000000) + ((unsigned long)ts.tv_nsec / 1000);
+}
+
+static char * time2str(char * str, int64_t us, bool gmt, bool display_ms, bool display_date)
+{
+    struct tm tm;
+    time_t secs;
+    int cnt;
+    char * s = str;
+
+    secs = us / 1000000;
+
+    if (gmt) {
+        gmtime_r(&secs, &tm);
+    } else {
+        localtime_r(&secs, &tm);
+    }
+
+    if (display_date) {
+        cnt = sprintf(s, "%02d/%02d/%02d ",
+                         tm.tm_mon+1, tm.tm_mday, tm.tm_year%100);
+        s += cnt;
+    }
+
+    cnt = sprintf(s, "%02d:%02d:%02d",
+                     tm.tm_hour, tm.tm_min, tm.tm_sec);
+    s += cnt;
+
+    if (display_ms) {
+        cnt = sprintf(s, ".%03d", (int)((us % 1000000) / 1000));
+        s += cnt;
+    }
+
+    if (gmt) {
+        strcpy(s, " GMT");
+    }
+
+    return str;
+}
+
 
