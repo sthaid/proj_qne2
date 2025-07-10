@@ -10,6 +10,7 @@
 #include <errno.h>
 #include <dirent.h>
 #include <fcntl.h>
+#include <math.h>
 #include <pthread.h>
 
 #include <sys/types.h>
@@ -18,3 +19,7 @@
 
 #include <netinet/in.h>
 #include <arpa/inet.h>
+
+#include <sdl.h>
+#include <utils.h>
+

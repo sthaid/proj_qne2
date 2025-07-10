@@ -1,8 +1,6 @@
-#include <std_hdrs.h>
-#include <utils.h>
+#include <hdrs.h>
 
 //#define USE_ANDROID_LOG
-
 #ifdef USE_ANDROID_LOG
 #include <SDL.h>
 #endif

@@ -1,8 +1,6 @@
-#include <std_hdrs.h>
-#include <sdl.h>
-#include <utils.h>
+#include <hdrs.h>
 
-#include <android/sensor.h>
+//#include <android/sensor.h>
 
 // variables
 const char *internal_storage_path;

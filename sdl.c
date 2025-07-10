@@ -1,37 +1,14 @@
-#include <std_hdrs.h>
-#include <sdl.h>
-#include <utils.h>
+#include <hdrs.h>
 
 // xxx landscape
 
+//
+// colors
+//
+
 #define BYTES_PER_PIXEL  4
 
-typedef struct {
-    TTF_Font *font;
-    int   char_width;
-    int   char_height;
-} sdl_font_t;  // xxx rename
-
-typedef struct {
-    sdl_rect_t loc;
-    int event_id;
-} event_t;
-
-static SDL_Window     * sdl_window;  // xxx rename
-static SDL_Renderer   * sdl_renderer;
-static int          sdl_win_width;
-static int          sdl_win_height;
-
-static sdl_font_t       font[MAX_FONT_PTSIZE];
-static SDL_Color        text_fg_color;
-static SDL_Color        text_bg_color;
-static int          text_ptsize;
-
-static event_t          event_tbl[100];
-static int              max_event;
-
-//                              R         G         B         A
-const int COLOR_PURPLE     = ( 127  |    0<<8 |  255<<16 |  255<<24 );
+const int COLOR_PURPLE     = ( 127  |    0<<8 |  255<<16 |  255<<24 );  // r,g,b,a
 const int COLOR_BLUE       = ( 0    |    0<<8 |  255<<16 |  255<<24 );
 const int COLOR_LIGHT_BLUE = ( 0    |  255<<8 |  255<<16 |  255<<24 );
 const int COLOR_GREEN      = ( 0    |  255<<8 |    0<<16 |  255<<24 );
@@ -42,6 +19,43 @@ const int COLOR_RED        = ( 255  |    0<<8 |    0<<16 |  255<<24 );
 const int COLOR_GRAY       = ( 224  |  224<<8 |  224<<16 |  255<<24 );
 const int COLOR_WHITE      = ( 255  |  255<<8 |  255<<16 |  255<<24 );
 const int COLOR_BLACK      = ( 0    |    0<<8 |    0<<16 |  255<<24 );
+
+//
+// typedefs
+//
+
+typedef struct {
+    TTF_Font *font;
+    int       char_width;
+    int       char_height;
+} font_t;
+
+typedef struct {
+    sdl_rect_t loc;
+    int        event_id;
+} event_t;
+
+//
+// variables
+//
+
+static SDL_Window     * window;
+static SDL_Renderer   * renderer;
+static int              win_width;
+static int              win_height;
+
+static font_t           font[MAX_FONT_PTSIZE];
+
+static event_t          event_tbl[100];
+static int              max_event;
+
+//
+// prototypes
+//
+
+static int process_sdl_event(SDL_Event *ev);
+static void set_render_draw_color(int color);
+static void font_init(int ptsize);
 
 // ----------------- INIT / EXIT --------------------------
 
@@ -55,11 +69,6 @@ int sdl_init(int *w, int *h)
         INFO("   %s\n",  SDL_GetVideoDriver(i));
     }
 
-    // xxx
-    sdl_set_text_fg_color(COLOR_WHITE);
-    sdl_set_text_bg_color(COLOR_BLACK);
-    sdl_set_text_ptsize(100);
-
     // initialize Simple DirectMedia Layer  (SDL)
     if (SDL_Init(SDL_INIT_VIDEO|SDL_INIT_AUDIO) < 0) {  // xxx audio?
         ERROR("SDL_Init failed\n");
@@ -67,22 +76,23 @@ int sdl_init(int *w, int *h)
     }
 
     // create SDL Window and Renderer
+    // xxx mimic android screen on linux
 #ifdef ANDROID
 #define SDL_FLAGS  SDL_WINDOW_FULLSCREEN
 #else
 #define SDL_FLAGS  SDL_WINDOW_FULLSCREEN_DESKTOP
 #endif
-    if (SDL_CreateWindowAndRenderer(0, 0, SDL_FLAGS, &sdl_window, &sdl_renderer) != 0) {
+    if (SDL_CreateWindowAndRenderer(0, 0, SDL_FLAGS, &window, &renderer) != 0) {
         ERROR("SDL_CreateWindowAndRenderer failed\n");
         return -1;
     }
 
     // get the actual window size, which will be returned to caller and
-    // also saved in vars sdl_win_width/height
-    SDL_GetWindowSize(sdl_window, &sdl_win_width, &sdl_win_height);
-    *w = sdl_win_width;
-    *h = sdl_win_height;
-    INFO("sdl_win_width=%d sdl_win_height=%d\n", sdl_win_width, sdl_win_height);
+    // also saved in vars win_width/height
+    SDL_GetWindowSize(window, &win_width, &win_height);
+    *w = win_width;
+    *h = win_height;
+    INFO("win_width=%d win_height=%d\n", win_width, win_height);
 
     // initialize True Type Font
     if (TTF_Init() < 0) {
@@ -115,8 +125,8 @@ void sdl_exit(void)
     }
     TTF_Quit();
 
-    SDL_DestroyRenderer(sdl_renderer);
-    SDL_DestroyWindow(sdl_window);
+    SDL_DestroyRenderer(renderer);
+    SDL_DestroyWindow(window);
     SDL_Quit();
 
     INFO("done\n");
@@ -128,154 +138,16 @@ void sdl_display_init(int color)
 {
     max_event = 0;
 
-    sdl_set_render_draw_color(color);
-
-    SDL_RenderClear(sdl_renderer);
+    set_render_draw_color(color);
+    SDL_RenderClear(renderer);
 }
 
 void sdl_display_present(void)
 {
-    SDL_RenderPresent(sdl_renderer);
+    SDL_RenderPresent(renderer);
 }
 
-// -----------------  COLORS  -----------------------------
-
-int sdl_create_color(int r, int g, int b, int a)
-{
-    return (r << 0) | (g << 8) | (b << 16) | (a << 24);
-}
-
-int sdl_scale_color(int color, double inten)
-{
-    int r = (color >> 0) & 0xff;
-    int g = (color >> 8) & 0xff;
-    int b = (color >> 16) & 0xff;
-    int a = (color >> 24) & 0xff;
-
-    if (inten < 0) inten = 0;
-    if (inten > 1) inten = 1;
-
-    r *= inten;
-    g *= inten;
-    b *= inten;
-
-    return (r << 0) | (g << 8) | (b << 16) | (a << 24);
-}
-
-void sdl_set_render_draw_color(int color)
-{
-    int r = (color >> 0) & 0xff;
-    int g = (color >> 8) & 0xff;
-    int b = (color >> 16) & 0xff;
-    int a = (color >> 24) & 0xff;
-
-    SDL_SetRenderDrawColor(sdl_renderer, r, g, b, a);
-}
-
-// -----------------  PRINT TEXT  -------------------------
-
-static void font_init(void);
-
-void sdl_set_text_ptsize(int ptsize)
-{
-    if (ptsize < 50) ptsize = 50;
-    if (ptsize >= MAX_FONT_PTSIZE) ptsize = MAX_FONT_PTSIZE-1;
-
-    text_ptsize = ptsize;
-}
-
-void sdl_set_text_fg_color(int color)
-{
-    text_fg_color = *(SDL_Color*)&color;
-}
-
-void sdl_set_text_bg_color(int color)
-{
-    text_bg_color = *(SDL_Color*)&color;
-}
-
-// xxx return the rect
-sdl_rect_t *sdl_render_text(int x, int y, char * str) // xxx name
-{
-    SDL_Surface    * surface;
-    SDL_Texture    * texture;
-    SDL_Rect         pos;
-    static sdl_rect_t pos2;
-
-    // xxx
-    font_init();
-
-    // render the string to a surface
-    surface = TTF_RenderText_Shaded(font[text_ptsize].font, str, text_fg_color, text_bg_color);
-    if (surface == NULL) {
-        FATAL("TTF_RenderText_Shaded returned NULL\n");
-    }
-
-    // determine the display location
-    pos.x = x;
-    pos.y = y;
-    pos.w = surface->w;
-    pos.h = surface->h;
-
-    // create texture from the surface, and render the texture
-    texture = SDL_CreateTextureFromSurface(sdl_renderer, surface);
-    SDL_RenderCopy(sdl_renderer, texture, NULL, &pos);
-
-    // clean up
-    SDL_FreeSurface(surface);
-    SDL_DestroyTexture(texture);
-
-    // xxx
-    pos2.x = pos.x;
-    pos2.y = pos.y;
-    pos2.w = pos.w;
-    pos2.h = pos.h;
-    return &pos2;  // xxx check this
-}
-
-sdl_rect_t *sdl_render_printf(int x, int y, char * fmt, ...)
-{
-    char str[1000];
-    va_list ap;
-
-    va_start(ap, fmt);
-    vsnprintf(str, sizeof(str), fmt, ap);
-    va_end(ap);
-
-    return sdl_render_text(x, y, str);
-}
-
-void sdl_get_char_size(int *char_width, int *char_height)
-{
-    font_init();
-    *char_width = font[text_ptsize].char_width;
-    *char_height = font[text_ptsize].char_height;
-}
-
-static void font_init(void)
-{
-    if (font[text_ptsize].font == NULL) {
-// xxx search for the font, without using ifdef ANDROID
-#ifdef ANDROID
-        font[text_ptsize].font = TTF_OpenFont("/system/fonts/DroidSansMono.ttf", 
-                                              text_ptsize);
-#else
-        font[text_ptsize].font = TTF_OpenFont("/usr/share/fonts/truetype/freefont/FreeMonoBold.ttf",
-                                              text_ptsize);
-#endif
-        if (font[text_ptsize].font == NULL) {
-            FATAL("TTF_OpenFont failed, text_ptsize=%d\n", text_ptsize);  // xxx use of FATAL
-        }
-
-        TTF_SizeText(font[text_ptsize].font, "X", &font[text_ptsize].char_width, &font[text_ptsize].char_height);
-        INFO("text_ptsize=%d char_width=%d char_height=%d\n",
-              text_ptsize, font[text_ptsize].char_width, font[text_ptsize].char_height);
-    }
-}
-
-// -----------------  XXX EVENTS   ------------------------
-
-static int process_sdl_event(SDL_Event *ev);
+// -----------------  EVENTS  -----------------------------
 
 void sdl_register_event(sdl_rect_t *loc, int event_id)
 {
@@ -284,8 +156,9 @@ void sdl_register_event(sdl_rect_t *loc, int event_id)
     max_event++;
 }
 
-// -1: wait forever   k
-//  0: don't wait     k
+// xxx comment
+// -1: wait forever
+//  0: don't wait
 //  usecs: timeout
 int sdl_get_event(long timeout_us)
 {
@@ -382,63 +255,126 @@ static int process_sdl_event(SDL_Event *ev)
     return event_id;
 }
 
-#if 0
-typedef struct SDL_TouchFingerEvent
-{
-    Uint32 type;        /**< SDL_FINGERMOTION or SDL_FINGERDOWN or SDL_FINGERUP */
-    Uint32 timestamp;   /**< In milliseconds, populated using SDL_GetTicks() */
-    SDL_TouchID touchId; /**< The touch device id */
-    SDL_FingerID fingerId;
-    float x;            /**< Normalized in the range 0...1 */
-    float y;            /**< Normalized in the range 0...1 */
-    float dx;           /**< Normalized in the range -1...1 */
-    float dy;           /**< Normalized in the range -1...1 */
-    float pressure;     /**< Normalized in the range 0...1 */
-    Uint32 windowID;    /**< The window underneath the finger, if any */
-} SDL_TouchFingerEvent;
+// -----------------  COLORS  -----------------------------
 
-typedef struct SDL_MouseButtonEvent
+int sdl_create_color(int r, int g, int b, int a)
 {
-    Uint32 type;        /**< SDL_MOUSEBUTTONDOWN or SDL_MOUSEBUTTONUP */
-    Uint32 timestamp;   /**< In milliseconds, populated using SDL_GetTicks() */
-    Uint32 windowID;    /**< The window with mouse focus, if any */
-    Uint32 which;       /**< The mouse instance id, or SDL_TOUCH_MOUSEID */
-    Uint8 button;       /**< The mouse button index */
-    Uint8 state;        /**< SDL_PRESSED or SDL_RELEASED */
-    Uint8 clicks;       /**< 1 for single-click, 2 for double-click, etc. */
-    Uint8 padding1;
-    Sint32 x;           /**< X coordinate, relative to window */
-    Sint32 y;           /**< Y coordinate, relative to window */
-} SDL_MouseButtonEvent;
+    return (r << 0) | (g << 8) | (b << 16) | (a << 24);
+}
 
-typedef struct SDL_MouseMotionEvent
+int sdl_scale_color(int color, double inten)
 {
-    Uint32 type;        /**< SDL_MOUSEMOTION */
-    Uint32 timestamp;   /**< In milliseconds, populated using SDL_GetTicks() */
-    Uint32 windowID;    /**< The window with mouse focus, if any */
-    Uint32 which;       /**< The mouse instance id, or SDL_TOUCH_MOUSEID */
-    Uint32 state;       /**< The current button state */
-    Sint32 x;           /**< X coordinate, relative to window */
-    Sint32 y;           /**< Y coordinate, relative to window */
-    Sint32 xrel;        /**< The relative motion in the X direction */
-    Sint32 yrel;        /**< The relative motion in the Y direction */
-} SDL_MouseMotionEvent;
+    int r = (color >> 0) & 0xff;
+    int g = (color >> 8) & 0xff;
+    int b = (color >> 16) & 0xff;
+    int a = (color >> 24) & 0xff;
+
+    if (inten < 0) inten = 0;
+    if (inten > 1) inten = 1;
+
+    r *= inten;
+    g *= inten;
+    b *= inten;
+
+    return (r << 0) | (g << 8) | (b << 16) | (a << 24);
+}
+
+static void set_render_draw_color(int color)
+{
+    int r = (color >> 0) & 0xff;
+    int g = (color >> 8) & 0xff;
+    int b = (color >> 16) & 0xff;
+    int a = (color >> 24) & 0xff;
+
+    SDL_SetRenderDrawColor(renderer, r, g, b, a);
+}
+
+// -----------------  TEXT  -------------------------------
+
+sdl_rect_t *sdl_render_text(int x, int y, int ptsize, int fg_color, int bg_color, char * str)
+{
+    SDL_Surface    * surface;
+    SDL_Texture    * texture;
+    static SDL_Rect  pos;
+
+    // xxx
+    font_init(ptsize);
+
+    // render the string to a surface
+    surface = TTF_RenderText_Shaded(font[ptsize].font, str, *(SDL_Color*)&fg_color, *(SDL_Color*)&bg_color);
+    if (surface == NULL) {
+        FATAL("TTF_RenderText_Shaded returned NULL\n");
+    }
+
+    // determine the display location
+    pos.x = x;
+    pos.y = y;
+    pos.w = surface->w;
+    pos.h = surface->h;
+
+    // create texture from the surface, and render the texture
+    texture = SDL_CreateTextureFromSurface(renderer, surface);
+    SDL_RenderCopy(renderer, texture, NULL, &pos);
+
+    // clean up
+    SDL_FreeSurface(surface);
+    SDL_DestroyTexture(texture);
+
+    // return the display location where the text was rendered
+    return (sdl_rect_t*)&pos;
+}
+
+sdl_rect_t *sdl_render_printf(int x, int y, int ptsize, int fg_color, int bg_color, char * fmt, ...)
+{
+    char str[1000];
+    va_list ap;
+
+    va_start(ap, fmt);
+    vsnprintf(str, sizeof(str), fmt, ap);
+    va_end(ap);
+
+    return sdl_render_text(x, y, ptsize, fg_color, bg_color, str);
+}
+
+void sdl_get_char_size(int ptsize, int *char_width, int *char_height)
+{
+    font_init(ptsize);
+    *char_width = font[ptsize].char_width;
+    *char_height = font[ptsize].char_height;
+}
+
+static void font_init(int ptsize)
+{
+    if (font[ptsize].font == NULL) {
+// xxx search for the font, without using ifdef ANDROID
+#ifdef ANDROID
+        font[ptsize].font = TTF_OpenFont("/system/fonts/DroidSansMono.ttf", 
+                                              ptsize);
+#else
+        font[ptsize].font = TTF_OpenFont("/usr/share/fonts/truetype/freefont/FreeMonoBold.ttf",
+                                              ptsize);
 #endif
+        if (font[ptsize].font == NULL) {
+            FATAL("TTF_OpenFont failed, ptsize=%d\n", ptsize);  // xxx use of FATAL
+        }
 
+        TTF_SizeText(font[ptsize].font, "X", &font[ptsize].char_width, &font[ptsize].char_height);
+        INFO("ptsize=%d char_width=%d char_height=%d\n",
+              ptsize, font[ptsize].char_width, font[ptsize].char_height);
+    }
+}
 
+// -----------------  RECTANGLES, LINES, CIRCLES, POINTS  --------------------
 
-// xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-
-// render rectangle, lines, circles, points
-void sdl_render_rect(sdl_rect_t *loc, int line_width, int color)  // xxx should color be an arg
+void sdl_render_rect(sdl_rect_t *loc, int line_width, int color)
 {
     SDL_Rect rect = *(SDL_Rect*)loc;
     int i;
 
-    sdl_set_render_draw_color(color);
+    set_render_draw_color(color);
 
     for (i = 0; i < line_width; i++) {
-        SDL_RenderDrawRect(sdl_renderer, &rect);
+        SDL_RenderDrawRect(renderer, &rect);
         if (rect.w < 2 || rect.h < 2) {
             break;
         }
@@ -453,8 +389,8 @@ void sdl_render_fill_rect(sdl_rect_t *loc, int color)
 {
     SDL_Rect rect = *(SDL_Rect*)loc;
 
-    sdl_set_render_draw_color(color);
-    SDL_RenderFillRect(sdl_renderer, &rect);
+    set_render_draw_color(color);
+    SDL_RenderFillRect(renderer, &rect);
 }
 
 void sdl_render_line(int x1, int y1, int x2, int y2, int color)
@@ -471,9 +407,9 @@ void sdl_render_lines(sdl_point_t *points, int count, int color)
         return;
     }
 
-    sdl_set_render_draw_color(color);
+    set_render_draw_color(color);
 
-    SDL_RenderDrawLines(sdl_renderer, sdl_points, count);
+    SDL_RenderDrawLines(renderer, sdl_points, count);
 }
 
 void sdl_render_circle(int x_center, int y_center, int radius,
@@ -496,7 +432,7 @@ void sdl_render_circle(int x_center, int y_center, int radius,
     }
 
     // set the color
-    sdl_set_render_draw_color(color);
+    set_render_draw_color(color);
 
     // loop over line_width
     for (i = 0; i < line_width; i++) {
@@ -508,7 +444,7 @@ void sdl_render_circle(int x_center, int y_center, int radius,
             points[count].y = y;
             count++;
         }
-        SDL_RenderDrawLines(sdl_renderer, points, count);
+        SDL_RenderDrawLines(renderer, points, count);
 
         // reduce radius by 1
         radius--;
@@ -516,7 +452,6 @@ void sdl_render_circle(int x_center, int y_center, int radius,
             break;
         }
     }
-
 }
 
 void sdl_render_point(int x, int y, int color, int point_size)
@@ -672,7 +607,7 @@ void sdl_render_points(sdl_point_t *points, int count, int color, int point_size
         return;
     }
 
-    sdl_set_render_draw_color(color);
+    set_render_draw_color(color);
 
     for (i = 0; i < count; i++) {
         for (j = 0; j < pe->max; j++) {
@@ -683,26 +618,25 @@ void sdl_render_points(sdl_point_t *points, int count, int color, int point_size
             sdl_points_count++;
 
             if (sdl_points_count == MAX_SDL_POINTS) {
-                SDL_RenderDrawPoints(sdl_renderer, sdl_points, sdl_points_count);
+                SDL_RenderDrawPoints(renderer, sdl_points, sdl_points_count);
                 sdl_points_count = 0;
             }
         }
     }
 
     if (sdl_points_count > 0) {
-        SDL_RenderDrawPoints(sdl_renderer, sdl_points, sdl_points_count);
+        SDL_RenderDrawPoints(renderer, sdl_points, sdl_points_count);
         sdl_points_count = 0;
     }
 }
-//xxx int32
 
-// -----------------  RENDER USING TEXTURES  ---------------------------- 
+// -----------------  TEXTURES  ----------------------------------------- 
 
 sdl_texture_t sdl_create_texture(int w, int h)
 {
     SDL_Texture * texture;
 
-    texture = SDL_CreateTexture(sdl_renderer,
+    texture = SDL_CreateTexture(renderer,
                                 SDL_PIXELFORMAT_ABGR8888,
                                 SDL_TEXTUREACCESS_STREAMING,
                                 w, h);
@@ -729,7 +663,7 @@ sdl_texture_t sdl_create_texture_from_display_pixels(sdl_rect_t *loc)
     }
 
     // read the pixels
-    ret = SDL_RenderReadPixels(sdl_renderer, 
+    ret = SDL_RenderReadPixels(renderer, 
                                &rect,  
                                SDL_PIXELFORMAT_ABGR8888, 
                                pixels, 
@@ -804,7 +738,7 @@ sdl_texture_t sdl_create_filled_circle_texture(int radius, int color)
     return (sdl_texture_t)texture;
 }
 
-sdl_texture_t sdl_create_text_texture(int fg_color_arg, int bg_color_arg, int font_ptsize, char * str)
+sdl_texture_t sdl_create_text_texture(int ptsize, int fg_color_arg, int bg_color_arg, char * str)
 {
     SDL_Surface * surface;
     SDL_Texture * texture;
@@ -816,17 +750,17 @@ sdl_texture_t sdl_create_text_texture(int fg_color_arg, int bg_color_arg, int fo
     }
 
     // if the font has not been initialized then do so
-    sdl_set_text_ptsize(font_ptsize);
+    font_init(ptsize);
 
     // render the text to a surface,
     // create a texture from the surface
     // free the surface
-    surface = TTF_RenderText_Shaded(font[text_ptsize].font, str, fg_color, bg_color);
+    surface = TTF_RenderText_Shaded(font[ptsize].font, str, fg_color, bg_color);
     if (surface == NULL) {
         ERROR("failed to allocate surface\n");
         return NULL;
     }
-    texture = SDL_CreateTextureFromSurface(sdl_renderer, surface);
+    texture = SDL_CreateTextureFromSurface(renderer, surface);
     if (texture == NULL) {
         ERROR("failed to allocate texture\n");
         SDL_FreeSurface(surface);
@@ -876,8 +810,7 @@ void sdl_render_texture(int x, int y, sdl_texture_t texture_arg)
     dest.w = w;
     dest.h = h;
 
-    SDL_RenderCopy(sdl_renderer, texture, NULL, &dest);
-    // xxx add scaled routine
+    SDL_RenderCopy(renderer, texture, NULL, &dest);
 }
 
 void sdl_render_scaled_texture(sdl_rect_t *dest_arg, sdl_texture_t texture_arg)
@@ -885,6 +818,6 @@ void sdl_render_scaled_texture(sdl_rect_t *dest_arg, sdl_texture_t texture_arg)
     SDL_Texture *texture = (SDL_Texture *)texture_arg;
     SDL_Rect *dest = (SDL_Rect*)dest_arg;
 
-    SDL_RenderCopy(sdl_renderer, texture, NULL, dest);
+    SDL_RenderCopy(renderer, texture, NULL, dest);
 }
 

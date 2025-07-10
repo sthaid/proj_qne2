@@ -32,6 +32,7 @@ int main(int argc, char **argv)
     printf("sizeof(123UL)     = %zd\n", sizeof(123UL));
 
 #ifndef PICOC_VERSION
+    // xxx find better way
     printf("calling sdl_init\n");
     sdl_init(&w, &h);
     printf("w,h = %d %d\n", w,h);
@@ -41,11 +42,11 @@ int main(int argc, char **argv)
     sdl_display_init(COLOR_YELLOW);
 
     printf("calling sdl_render_text\n");
-    loc = sdl_render_text(100, 200, "hello world");
+    loc = sdl_render_text(100, 200, 50, COLOR_WHITE, COLOR_BLACK, "hello world");
     printf("%d %d %d %d\n", loc->x, loc->y, loc->w, loc->h);
 
     printf("calling sdl_render_printf\n");
-    loc = sdl_render_printf(100, 400, "%s %d %d", "hello", 1, 2);
+    loc = sdl_render_printf(100, 400, 50, COLOR_WHITE, COLOR_BLACK, "%s %d %d", "hello", 1, 2);
     printf("%d %d %d %d\n", loc->x, loc->y, loc->w, loc->h);
 
     printf("calling display present\n");
