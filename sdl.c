@@ -16,14 +16,21 @@
     do { \
         logmsg("ERROR", __func__, fmt, ## args); \
     } while (0)
-#define FATAL(fmt, args...) \
-    do { \
-        logmsg("FATAL", __func__, fmt, ## args); \
-        exit(1); \
-    } while (0)
 
 static void logmsg(char *lvl, const char *func, char *fmt, ...) 
     __attribute__ ((format (printf, 3, 4)));
+
+//
+// font defines
+// 
+
+#ifdef ANDROID
+    #define FONT_FILE_PATH  "/system/fonts/DroidSansMono.ttf"
+#else
+    #define FONT_FILE_PATH "/usr/share/fonts/truetype/freefont/FreeMonoBold.ttf"
+#endif
+
+#define MAX_FONT_PTSIZE 200
 
 //
 // colors
@@ -78,7 +85,7 @@ static int              max_event;
 
 static int process_sdl_event(SDL_Event *ev);
 static void set_render_draw_color(int color);
-static void font_init(int ptsize);
+static int font_init(int ptsize);
 
 // ----------------- INIT / EXIT --------------------------
 
@@ -99,16 +106,17 @@ int sdl_init(int *w, int *h)
     }
 
     // create SDL Window and Renderer
-    // xxx mimic android screen on linux
 #ifdef ANDROID
-#define SDL_FLAGS  SDL_WINDOW_FULLSCREEN
-#else
-#define SDL_FLAGS  SDL_WINDOW_FULLSCREEN_DESKTOP
-#endif
-    if (SDL_CreateWindowAndRenderer(0, 0, SDL_FLAGS, &window, &renderer) != 0) {
+    if (SDL_CreateWindowAndRenderer(0, 0, SDL_WINDOW_FULLSCREEN, &window, &renderer) != 0) {
         ERROR("SDL_CreateWindowAndRenderer failed\n");
         return -1;
     }
+#else
+    if (SDL_CreateWindowAndRenderer(500, 900, 0, &window, &renderer) != 0) {
+        ERROR("SDL_CreateWindowAndRenderer failed\n");
+        return -1;
+    }
+#endif
 
     // get the actual window size, which will be returned to caller and
     // also saved in vars win_width/height
@@ -126,7 +134,7 @@ int sdl_init(int *w, int *h)
     // SDL Text Input is not being used 
     SDL_StopTextInput();
 
-    // xxx
+    // this is needed so that the first actual display present works
     sdl_display_init(COLOR_BLACK);
     sdl_display_present();
 
@@ -174,15 +182,20 @@ void sdl_display_present(void)
 
 void sdl_register_event(sdl_rect_t *loc, int event_id)
 {
+    if (loc == NULL || loc->w == 0 || loc->h == 0) {
+        ERROR("invalid loc, event_id=%d\n", event_id);
+        return;
+    }
+
     event_tbl[max_event].loc = *loc;
     event_tbl[max_event].event_id  = event_id; 
     max_event++;
 }
 
-// xxx comment
-// -1: wait forever
-//  0: don't wait
-//  usecs: timeout
+// arg timeout_us:
+//   -1:     wait forever
+//    0:     don't wait
+//    usecs: timeout
 int sdl_get_event(long timeout_us)
 {
     SDL_Event ev;
@@ -194,9 +207,7 @@ try_again:
     // get event
     ret = SDL_PollEvent(&ev);
 
-    // if no sdl event then, depending on 'wait' arg, either
-    // sleep 100ms and try again, or return -1
-    // xxx update comment
+    // no event available, either return error or try again to get event
     if (ret == 0) {
         if (timeout_us == 0) {
             // dont wait
@@ -318,15 +329,23 @@ sdl_rect_t *sdl_render_text(int x, int y, int ptsize, int fg_color, int bg_color
 {
     SDL_Surface    * surface;
     SDL_Texture    * texture;
+    int              rc;
     static SDL_Rect  pos;
 
-    // xxx
-    font_init(ptsize);
+    // if the font has not been initialized then do so
+    rc = font_init(ptsize);
+    if (rc != 0) {
+        ERROR("font_init failed for ptsize %d\n", ptsize);
+        memset(&pos, 0, sizeof(pos));
+        return (sdl_rect_t*)&pos;
+    }
 
     // render the string to a surface
     surface = TTF_RenderText_Shaded(font[ptsize].font, str, *(SDL_Color*)&fg_color, *(SDL_Color*)&bg_color);
     if (surface == NULL) {
-        FATAL("TTF_RenderText_Shaded returned NULL\n");
+        ERROR("TTF_RenderText_Shaded returned NULL\n");
+        memset(&pos, 0, sizeof(pos));
+        return (sdl_rect_t*)&pos;
     }
 
     // determine the display location
@@ -361,30 +380,40 @@ sdl_rect_t *sdl_render_printf(int x, int y, int ptsize, int fg_color, int bg_col
 
 void sdl_get_char_size(int ptsize, int *char_width, int *char_height)
 {
-    font_init(ptsize);
+    int rc;
+
+    rc = font_init(ptsize);
+    if (rc != 0) {
+        ERROR("font_init failed for ptsize %d\n", ptsize);
+        *char_width = 0;
+        *char_height = 0;
+        return;
+    }
+
     *char_width = font[ptsize].char_width;
     *char_height = font[ptsize].char_height;
 }
 
-static void font_init(int ptsize)
+static int font_init(int ptsize)
 {
+    if (ptsize < 10 || ptsize >= MAX_FONT_PTSIZE) {
+        ERROR("invalid ptsize %d\n", ptsize);
+        return -1;
+    }
+
     if (font[ptsize].font == NULL) {
-// xxx search for the font, without using ifdef ANDROID
-#ifdef ANDROID
-        font[ptsize].font = TTF_OpenFont("/system/fonts/DroidSansMono.ttf", 
-                                              ptsize);
-#else
-        font[ptsize].font = TTF_OpenFont("/usr/share/fonts/truetype/freefont/FreeMonoBold.ttf",
-                                              ptsize);
-#endif
+        font[ptsize].font = TTF_OpenFont(FONT_FILE_PATH, ptsize);
         if (font[ptsize].font == NULL) {
-            FATAL("TTF_OpenFont failed, ptsize=%d\n", ptsize);  // xxx use of FATAL
+            ERROR("TTF_OpenFont failed, ptsize=%d\n", ptsize);
+            return -1;
         }
 
         TTF_SizeText(font[ptsize].font, "X", &font[ptsize].char_width, &font[ptsize].char_height);
         INFO("ptsize=%d char_width=%d char_height=%d\n",
               ptsize, font[ptsize].char_width, font[ptsize].char_height);
     }
+
+    return 0;
 }
 
 // -----------------  RENDER RECTANGLES, LINES, CIRCLES, POINTS  --------------------
@@ -448,8 +477,8 @@ void sdl_render_circle(int x_center, int y_center, int radius,
     // on first call make table of sin and cos indexed by degrees
     if (first_call) {
         for (angle = 0; angle < 362; angle++) {
-            sin_table[angle] = sin(angle*(2*M_PI/360)) * (1<<18);
-            cos_table[angle] = cos(angle*(2*M_PI/360)) * (1<<18);
+            sin_table[angle] = sin(angle*(2*M_PI/360)) * (1<<10);
+            cos_table[angle] = cos(angle*(2*M_PI/360)) * (1<<10);
         }
         first_call = false;
     }
@@ -461,8 +490,8 @@ void sdl_render_circle(int x_center, int y_center, int radius,
     for (i = 0; i < line_width; i++) {
         // draw circle
         for (angle = 0; angle < 362; angle++) {
-            x = x_center + (((int64_t)radius * sin_table[angle]) >> 18);  //xxx int64   >> 18
-            y = y_center + (((int64_t)radius * cos_table[angle]) >> 18);
+            x = x_center + ((radius * sin_table[angle]) >> 10);
+            y = y_center + ((radius * cos_table[angle]) >> 10);
             points[count].x = x;
             points[count].y = y;
             count++;
@@ -470,7 +499,7 @@ void sdl_render_circle(int x_center, int y_center, int radius,
         SDL_RenderDrawLines(renderer, points, count);
         count = 0;
 
-        // reduce radius by 1  xxx 0.5
+        // reduce radius by 1
         radius--;
         if (radius <= 0) {
             break;
@@ -767,13 +796,18 @@ sdl_texture_t *sdl_create_text_texture(int ptsize, int fg_color_arg, int bg_colo
     SDL_Texture * texture;
     SDL_Color fg_color = *(SDL_Color*)&fg_color_arg;
     SDL_Color bg_color = *(SDL_Color*)&bg_color_arg;
+    int rc;
 
     if (str[0] == '\0') {
         return NULL;
     }
 
     // if the font has not been initialized then do so
-    font_init(ptsize);
+    rc = font_init(ptsize);
+    if (rc != 0) {
+        ERROR("font_init failed for ptsize %d\n", ptsize);
+        return NULL;
+    }
 
     // render the text to a surface,
     // create a texture from the surface
@@ -797,9 +831,11 @@ sdl_texture_t *sdl_create_text_texture(int ptsize, int fg_color_arg, int bg_colo
 
 void sdl_destroy_texture(sdl_texture_t *texture)
 {
-    if (texture) {
-        SDL_DestroyTexture((SDL_Texture *)texture);
+    if (texture == NULL) {
+        return;
     }
+
+    SDL_DestroyTexture((SDL_Texture *)texture);
 }
 
 void sdl_query_texture(sdl_texture_t *texture, int * width, int * height)
@@ -815,6 +851,10 @@ void sdl_query_texture(sdl_texture_t *texture, int * width, int * height)
 
 void sdl_update_texture(sdl_texture_t *texture, char * pixels, int pitch)
 {
+    if (texture == NULL) {
+        return;
+    }
+
     SDL_UpdateTexture((SDL_Texture*)texture,
                       NULL,                   // update entire texture
                       pixels,                 // pixels
@@ -825,6 +865,10 @@ void sdl_render_texture(int x, int y, sdl_texture_t *texture)
 {
     SDL_Rect dest;
     int w,h;
+
+    if (texture == NULL) {
+        return;
+    }
 
     sdl_query_texture(texture, &w, &h);
     dest.x = x;
@@ -840,6 +884,10 @@ void sdl_render_scaled_texture(sdl_rect_t *dest_arg, sdl_texture_t *texture_arg)
     SDL_Texture *texture = (SDL_Texture *)texture_arg;
     SDL_Rect *dest = (SDL_Rect*)dest_arg;
 
+    if (texture == NULL) {
+        return;
+    }
+
     SDL_RenderCopy(renderer, texture, NULL, dest);
 }
 
@@ -849,8 +897,6 @@ void sdl_render_scaled_texture(sdl_rect_t *dest_arg, sdl_texture_t *texture_arg)
 
 static unsigned long get_real_time_us(void);
 static char * time2str(char * str, long us, bool gmt, bool display_ms, bool display_date);
-
-// xxx setlinebug
 
 static void logmsg(char *lvl, const char *func, char *fmt, ...)
 {
@@ -870,10 +916,9 @@ static void logmsg(char *lvl, const char *func, char *fmt, ...)
         len--;
     }
 
-    // print the message, stdout has been redirected to the log file, in main.c;
-    // use './qne logcat' to monitor the log xxx
+    // print the message
     time2str(time_str, get_real_time_us(), false, true, true),
-    fprintf(stderr, "%s %s %s: %s\n", time_str, lvl, func, msg);  //xxx use stderr for logging in utils.c too
+    fprintf(stderr, "%s %s %s: %s\n", time_str, lvl, func, msg);
 }
 
 static unsigned long get_real_time_us(void)

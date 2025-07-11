@@ -63,13 +63,14 @@ int main(int argc, char **argv)
     loc = sdl_render_printf(100, 400, 50, COLOR_WHITE, COLOR_BLACK, "%s %d %d", "hello", 1, 2);
     printf("%d %d %d %d\n", loc->x, loc->y, loc->w, loc->h);
 
-    sdl_render_circle(1000, 500, 100, 10, COLOR_PURPLE);
+    sdl_render_circle(100, 100, 100, 10, COLOR_PURPLE);
+    sdl_render_circle(100, 500, 100, 2, COLOR_PURPLE);
 
     printf("calling display present\n");
     sdl_display_present();
 
-    printf("sleep 3\n");
-    sleep(3);
+    printf("sleep 6\n");
+    sleep(6);
 
     printf("return 77\n");
     return 77;

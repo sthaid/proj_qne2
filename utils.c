@@ -31,7 +31,7 @@ void logmsg(char *lvl, const char *func, char *fmt, ...)
     // print the message, stdout has been redirected to the log file, in main.c;
     // use './qne logcat' to monitor the log xxx
     time2str(time_str, get_real_time_us(), false, true, true),
-    printf("%s %s %s: %s\n", time_str, lvl, func, msg);
+    fprintf(stderr, "%s %s %s: %s\n", time_str, lvl, func, msg);
 #else
     // log the message, to the Android log;
     // use 'adb -s SDL/APP' to monitor the Android log

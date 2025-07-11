@@ -13,8 +13,6 @@ extern const int COLOR_GRAY;
 extern const int COLOR_WHITE;
 extern const int COLOR_BLACK;
 
-#define MAX_FONT_PTSIZE       200  // xxx check for out of range
-
 //
 // typedefs
 //
