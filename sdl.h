@@ -33,25 +33,27 @@ typedef struct sdl_texture sdl_texture_t;
 // prototypes
 //
 
-int sdl_init(int *w, int *h);  // xxx why ret int
+// sdl initialization and termination, must be done once
+int sdl_init(int *w, int *h);
 void sdl_exit(void);
 
+// display init and present, must be done for every display update
 void sdl_display_init(int color);
 void sdl_display_present(void);
 
+// event registration and query
 void sdl_register_event(sdl_rect_t *loc, int event_id);
 int sdl_get_event(long timeout_us);
 
+// create colors
 int sdl_create_color(int r, int g, int b, int a);
 int sdl_scale_color(int color, double inten);
 
-// xxx order and comments
-
+// render text
 sdl_rect_t *sdl_render_text(int x, int y, int ptsize, int fg_color, int bg_color, char *str);
 sdl_rect_t *sdl_render_printf(int x, int y, int ptsize, int fg_color, int bg_color, char *fmt, ...) 
         __attribute__ ((format (printf, 6, 7)));
 void sdl_get_char_size(int ptsize, int *char_width, int *char_height);
-
 
 // render rectangle, lines, circles, points
 void sdl_render_rect(sdl_rect_t *loc, int line_width, int color);

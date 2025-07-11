@@ -312,7 +312,7 @@ static void set_render_draw_color(int color)
     SDL_SetRenderDrawColor(renderer, r, g, b, a);
 }
 
-// -----------------  TEXT  -------------------------------
+// -----------------  RENDER TEXT  ------------------------
 
 sdl_rect_t *sdl_render_text(int x, int y, int ptsize, int fg_color, int bg_color, char * str)
 {
@@ -387,7 +387,7 @@ static void font_init(int ptsize)
     }
 }
 
-// -----------------  RECTANGLES, LINES, CIRCLES, POINTS  --------------------
+// -----------------  RENDER RECTANGLES, LINES, CIRCLES, POINTS  --------------------
 
 void sdl_render_rect(sdl_rect_t *loc, int line_width, int color)
 {
@@ -654,7 +654,7 @@ void sdl_render_points(sdl_point_t *points, int count, int color, int point_size
     }
 }
 
-// -----------------  TEXTURES  ----------------------------------------- 
+// -----------------  RENDER USING TEXTURES  ---------------------------- 
 
 sdl_texture_t *sdl_create_texture(int w, int h)
 {

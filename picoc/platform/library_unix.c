@@ -1,3 +1,5 @@
+// xxx use Pointer not Identifier
+
 #include "../interpreter.h"
 #include "../../sdl.h"
 
@@ -11,6 +13,10 @@ int StdioBasePrintf(struct ParseState *Parser, FILE *Stream, char *StrOut,
     int StrOutLen, char *Format, struct StdVararg *Args);
 
 // -----------------  SDL PLATFORM ROUTINES  ----------------------------
+
+//
+// sdl initialization and termination, must be done once
+//
 
 void Sdl_init (struct ParseState *Parser, struct Value *ReturnValue,
 	struct Value **Param, int NumArgs)
@@ -30,7 +36,9 @@ void Sdl_exit (struct ParseState *Parser, struct Value *ReturnValue,
     sdl_exit();
 }
 
-// - - - - -
+//
+// display init and present, must be done for every display update
+//
 
 void Sdl_display_init (struct ParseState *Parser, struct Value *ReturnValue,
 	struct Value **Param, int NumArgs)
@@ -46,7 +54,63 @@ void Sdl_display_present (struct ParseState *Parser, struct Value *ReturnValue,
     sdl_display_present();
 }
 
-// - - - - -
+//
+// event registration and query
+//
+
+void Sdl_register_event (struct ParseState *Parser, struct Value *ReturnValue,
+	struct Value **Param, int NumArgs)
+{
+    sdl_rect_t *loc      = (sdl_rect_t*)Param[0]->Val->Identifier;
+    int         event_id = Param[1]->Val->Integer;
+
+    sdl_register_event(loc, event_id);
+}
+
+void Sdl_get_event (struct ParseState *Parser, struct Value *ReturnValue,
+	struct Value **Param, int NumArgs)
+{
+    long timeout_us = Param[0]->Val->LongInteger;
+    int  event_id;
+
+    event_id = sdl_get_event(timeout_us);
+
+    ReturnValue->Val->Integer = event_id;
+}
+
+//
+// create colors
+//
+
+void Sdl_create_color (struct ParseState *Parser, struct Value *ReturnValue,
+	struct Value **Param, int NumArgs)
+{
+    int r = Param[0]->Val->Integer;
+    int g = Param[1]->Val->Integer;
+    int b = Param[2]->Val->Integer;
+    int a = Param[3]->Val->Integer;
+    int color;
+
+    color = sdl_create_color(r, g, b, a);
+    
+    ReturnValue->Val->Integer = color;
+}
+
+void Sdl_scale_color (struct ParseState *Parser, struct Value *ReturnValue,
+	struct Value **Param, int NumArgs)
+{
+    int color = Param[0]->Val->Integer;
+    int inten = Param[1]->Val->FP;
+    int scaled_color;
+
+    scaled_color = sdl_scale_color(color, inten);
+
+    ReturnValue->Val->Integer = scaled_color;
+}
+
+//
+// render text
+//
 
 void Sdl_render_text (struct ParseState *Parser, struct Value *ReturnValue,
 	struct Value **Param, int NumArgs)
@@ -96,29 +160,9 @@ void Sdl_get_char_size (struct ParseState *Parser, struct Value *ReturnValue,
     sdl_get_char_size(ptsize, char_width, char_height);
 }
 
-// - - - - -
-
-void Sdl_register_event (struct ParseState *Parser, struct Value *ReturnValue,
-	struct Value **Param, int NumArgs)
-{
-    sdl_rect_t *loc      = (sdl_rect_t*)Param[0]->Val->Identifier;
-    int         event_id = Param[1]->Val->Integer;
-
-    sdl_register_event(loc, event_id);
-}
-
-void Sdl_get_event (struct ParseState *Parser, struct Value *ReturnValue,
-	struct Value **Param, int NumArgs)
-{
-    long timeout_us = Param[0]->Val->LongInteger;
-    int  event_id;
-
-    event_id = sdl_get_event(timeout_us);
-
-    ReturnValue->Val->Integer = event_id;
-}
-
-// - - - - -
+//
+// render rectangle, lines, circles, points
+//
 
 void Sdl_render_rect (struct ParseState *Parser, struct Value *ReturnValue,
 	struct Value **Param, int NumArgs)
@@ -195,7 +239,9 @@ void Sdl_render_points (struct ParseState *Parser, struct Value *ReturnValue,
     sdl_render_points(points, count, color, point_size);
 }
 
-// - - - - -
+//
+// render using textures
+//
 
 void Sdl_create_texture (struct ParseState *Parser, struct Value *ReturnValue,
 	struct Value **Param, int NumArgs)
@@ -292,19 +338,26 @@ void Sdl_render_scaled_texture (struct ParseState *Parser, struct Value *ReturnV
 // -----------------  SDL PLATFORM REGISTRATION -------------------------
 
 struct LibraryFunction SdlFunctions[] = {
-    // xxx add headings
+    // sdl initialization and termination, must be done once
     { Sdl_init,            "int sdl_init(int *w, int *h);" },
     { Sdl_exit,            "void sdl_exit(void);" },
 
+    // display init and present, must be done for every display update
     { Sdl_display_init,    "void sdl_display_init(int color);" },
     { Sdl_display_present, "void sdl_display_present(void);" },
 
+    // event registration and query
+    { Sdl_register_event,  "void sdl_register_event(sdl_rect_t *loc, int event_id);" },
+    { Sdl_get_event,       "int sdl_get_event(long timeout_us);" },
+
+    // create colors
+    { Sdl_create_color,    "int sdl_create_color(int r, int g, int b, int a);" },
+    { Sdl_scale_color,     "int sdl_scale_color(int color, double inten);" },
+
+    // render text
     { Sdl_render_text,     "sdl_rect_t *sdl_render_text(int x, int y, int ptsize, int fg_color, int bg_color, char * str);" },
     { Sdl_render_printf,   "sdl_rect_t *sdl_render_printf(int x, int y, int ptsize, int fg_color, int bg_color, char * fmt, ...);" },
     { Sdl_get_char_size,   "void sdl_get_char_size(int ptsize, int *char_width, int *char_height);" },
-
-    { Sdl_register_event,  "void sdl_register_event(sdl_rect_t *loc, int event_id);" },
-    { Sdl_get_event,       "int sdl_get_event(long timeout_us);" },
 
     // render rectangle, lines, circles, points
     { Sdl_render_rect,     "void sdl_render_rect(sdl_rect_t *loc, int line_width, int color);" },
@@ -345,7 +398,7 @@ void PlatformLibraryInit(Picoc *pc)
                                   (union AnyValue*)&name,\
                                   writeable);
 
-    // sdl - platform init
+    // sdl - platform init xxx
     DEFINE_PLATFORM_VAR(COLOR_PURPLE, IntType, false);
     DEFINE_PLATFORM_VAR(COLOR_BLUE, IntType, false);
     DEFINE_PLATFORM_VAR(COLOR_LIGHT_BLUE, IntType, false);

@@ -85,7 +85,7 @@ static void controller(void)
 {
     int w, h, event_id, rc;
 
-    sdl_init(&w, &h);
+    rc = sdl_init(&w, &h); //xxx handle ret
 
     while (true) {
         // xxx reset other stuff here too, fontsz, color
