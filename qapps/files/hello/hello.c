@@ -21,6 +21,7 @@ int main(int argc, char **argv)
     printf("PICOC_VERSION = %s\n", PICOC_VERSION);
 #endif
 
+    printf("argc = %d\n", argc);
     for (i = 0; i < argc; i++) {
         printf("argv[%d] = '%s'\n", i, argv[i]);
     }
@@ -42,8 +43,17 @@ int main(int argc, char **argv)
     printf("w,h = %d %d\n", w,h);
 #endif
 
+    sdl_texture_t *texture;
+    texture = sdl_create_texture(100,100);
+    printf("texture = %p\n", texture);
+
+    texture = sdl_create_filled_circle_texture(100, COLOR_RED);
+
+
     printf("calling display init\n");
     sdl_display_init(COLOR_YELLOW);
+
+    sdl_render_texture(500, 500, texture);
 
     printf("calling sdl_render_text\n");
     loc = sdl_render_text(100, 200, 50, COLOR_WHITE, COLOR_BLACK, "hello world");

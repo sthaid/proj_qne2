@@ -27,8 +27,7 @@ typedef struct {
     int x, y;
 } sdl_point_t;
 
-typedef void * sdl_texture_t;
-
+typedef struct sdl_texture sdl_texture_t;
 
 //
 // prototypes
@@ -40,6 +39,12 @@ void sdl_exit(void);
 void sdl_display_init(int color);
 void sdl_display_present(void);
 
+void sdl_register_event(sdl_rect_t *loc, int event_id);
+int sdl_get_event(long timeout_us);
+
+int sdl_create_color(int r, int g, int b, int a);
+int sdl_scale_color(int color, double inten);
+
 // xxx order and comments
 
 sdl_rect_t *sdl_render_text(int x, int y, int ptsize, int fg_color, int bg_color, char *str);
@@ -47,11 +52,6 @@ sdl_rect_t *sdl_render_printf(int x, int y, int ptsize, int fg_color, int bg_col
         __attribute__ ((format (printf, 6, 7)));
 void sdl_get_char_size(int ptsize, int *char_width, int *char_height);
 
-int sdl_create_color(int r, int g, int b, int a);
-int sdl_scale_color(int color, double inten);
-
-void sdl_register_event(sdl_rect_t *loc, int event_id);
-int sdl_get_event(long timeout_us);
 
 // render rectangle, lines, circles, points
 void sdl_render_rect(sdl_rect_t *loc, int line_width, int color);
@@ -63,13 +63,12 @@ void sdl_render_point(int x, int y, int color, int point_size);
 void sdl_render_points(sdl_point_t *points, int count, int color, int point_size);
 
 // render using textures
-sdl_texture_t sdl_create_texture(int w, int h);
-sdl_texture_t sdl_create_texture_from_pane_pixels(sdl_rect_t *pane);
-sdl_texture_t sdl_create_filled_circle_texture(int radius, int color);
-sdl_texture_t sdl_create_text_texture(int ptsize, int fg_color, int bg_color, char *str);
-void sdl_destroy_texture(sdl_texture_t texture);
-
-void sdl_query_texture(sdl_texture_t texture, int *width, int *height);
-void sdl_update_texture(sdl_texture_t texture, uint8_t *pixels, int pitch);
-void sdl_render_texture(int x, int y, sdl_texture_t texture);
-void sdl_render_scaled_texture(sdl_rect_t *dest, sdl_texture_t texture);
+sdl_texture_t *sdl_create_texture(int w, int h);
+sdl_texture_t *sdl_create_texture_from_display(sdl_rect_t *loc);
+sdl_texture_t *sdl_create_filled_circle_texture(int radius, int color);
+sdl_texture_t *sdl_create_text_texture(int ptsize, int fg_color, int bg_color, char *str);
+void sdl_destroy_texture(sdl_texture_t *texture);
+void sdl_query_texture(sdl_texture_t *texture, int *width, int *height);
+void sdl_update_texture(sdl_texture_t *texture, char *pixels, int pitch);
+void sdl_render_texture(int x, int y, sdl_texture_t *texture);
+void sdl_render_scaled_texture(sdl_rect_t *dest, sdl_texture_t *texture);

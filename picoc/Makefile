@@ -7,7 +7,7 @@ CC=gcc
 
 # -O3 -g
 # -std=gnu11
-CFLAGS=-Wall -g -std=gnu11 -pedantic -DUNIX_HOST -DVER=\"a97d94fa\" -DTAG=\"v3.2.2\"
+CFLAGS=-Wall -g -std=gnu11 -DUNIX_HOST -DVER=\"a97d94fa\" -DTAG=\"v3.2.2\"
 CFLAGS+=-I/usr/include/SDL2 -D_REENTRANT -I..
 LIBS=-lm -lreadline -lSDL2 -lSDL2_ttf
 

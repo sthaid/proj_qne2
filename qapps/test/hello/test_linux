@@ -3,7 +3,7 @@
 TARGET=hello
 SRCS=hello.c
 
-CFLAGS="-Wall -g -I. -I../../.. -I/usr/include/SDL2 -D_REENTRANT"
+CFLAGS="-Wall -Werror -g -I. -I../../.. -I/usr/include/SDL2 -D_REENTRANT"
 
 gcc -o $TARGET $CFLAGS $SRCS ../../../sdl.c -lSDL2 -lSDL2_ttf -lm
 if [ $? -ne 0 ]; then
@@ -11,4 +11,4 @@ if [ $? -ne 0 ]; then
 fi
 
 ./hello
-rm hello
+#rm hello

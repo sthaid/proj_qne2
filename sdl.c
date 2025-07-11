@@ -656,7 +656,7 @@ void sdl_render_points(sdl_point_t *points, int count, int color, int point_size
 
 // -----------------  TEXTURES  ----------------------------------------- 
 
-sdl_texture_t sdl_create_texture(int w, int h)
+sdl_texture_t *sdl_create_texture(int w, int h)
 {
     SDL_Texture * texture;
 
@@ -669,18 +669,17 @@ sdl_texture_t sdl_create_texture(int w, int h)
         return NULL;
     }
 
-    return (sdl_texture_t)texture;
+    return (sdl_texture_t*)texture;
 }
 
-sdl_texture_t sdl_create_texture_from_display_pixels(sdl_rect_t *loc)
+sdl_texture_t *sdl_create_texture_from_display(sdl_rect_t *loc)
 {
-    sdl_texture_t texture;
+    sdl_texture_t *texture;
     int ret;
-    uint8_t * pixels;
-    SDL_Rect rect = *(SDL_Rect*)loc;
+    char * pixels;
 
     // allocate memory for the pixels
-    pixels = calloc(1, rect.h * rect.w * BYTES_PER_PIXEL);
+    pixels = calloc(1, loc->h * loc->w * BYTES_PER_PIXEL);
     if (pixels == NULL) {
         ERROR("allocate pixels failed\n");
         return NULL;
@@ -688,10 +687,10 @@ sdl_texture_t sdl_create_texture_from_display_pixels(sdl_rect_t *loc)
 
     // read the pixels
     ret = SDL_RenderReadPixels(renderer, 
-                               &rect,  
+                               (SDL_Rect*)loc,
                                SDL_PIXELFORMAT_ABGR8888, 
                                pixels, 
-                               rect.w * BYTES_PER_PIXEL);
+                               loc->w * BYTES_PER_PIXEL);
     if (ret < 0) {
         ERROR("SDL_RenderReadPixels, %s\n", SDL_GetError());
         free(pixels);
@@ -707,7 +706,7 @@ sdl_texture_t sdl_create_texture_from_display_pixels(sdl_rect_t *loc)
     }
 
     // update the texture with the pixels
-    SDL_UpdateTexture(texture, NULL, pixels, loc->w * BYTES_PER_PIXEL);
+    SDL_UpdateTexture((SDL_Texture*)texture, NULL, pixels, loc->w * BYTES_PER_PIXEL);
 
     // free pixels
     free(pixels);
@@ -716,14 +715,14 @@ sdl_texture_t sdl_create_texture_from_display_pixels(sdl_rect_t *loc)
     return texture;
 }
 
-sdl_texture_t sdl_create_filled_circle_texture(int radius, int color)
+sdl_texture_t *sdl_create_filled_circle_texture(int radius, int color)
 {
     int width = 2 * radius + 1;
     int x = radius;
     int y = 0;
     int radiusError = 1-x;
     int pixels[width][width];
-    SDL_Texture * texture;
+    sdl_texture_t * texture;
 
     #define DRAWLINE(Y, XS, XE, V) \
         do { \
@@ -755,14 +754,14 @@ sdl_texture_t sdl_create_filled_circle_texture(int radius, int color)
         ERROR("failed to allocate texture\n");
         return NULL;
     }
-    SDL_SetTextureBlendMode(texture, SDL_BLENDMODE_BLEND);
-    SDL_UpdateTexture(texture, NULL, pixels, width*BYTES_PER_PIXEL);
+    SDL_SetTextureBlendMode((SDL_Texture*)texture, SDL_BLENDMODE_BLEND);
+    SDL_UpdateTexture((SDL_Texture*)texture, NULL, pixels, width*BYTES_PER_PIXEL);
 
     // return texture
-    return (sdl_texture_t)texture;
+    return texture;
 }
 
-sdl_texture_t sdl_create_text_texture(int ptsize, int fg_color_arg, int bg_color_arg, char * str)
+sdl_texture_t *sdl_create_text_texture(int ptsize, int fg_color_arg, int bg_color_arg, char * str)
 {
     SDL_Surface * surface;
     SDL_Texture * texture;
@@ -793,17 +792,17 @@ sdl_texture_t sdl_create_text_texture(int ptsize, int fg_color_arg, int bg_color
     SDL_FreeSurface(surface);
 
     // return the texture which contains the text
-    return (sdl_texture_t)texture;
+    return (sdl_texture_t*)texture;
 }
 
-void sdl_destroy_texture(sdl_texture_t texture)
+void sdl_destroy_texture(sdl_texture_t *texture)
 {
     if (texture) {
         SDL_DestroyTexture((SDL_Texture *)texture);
     }
 }
 
-void sdl_query_texture(sdl_texture_t texture, int * width, int * height)
+void sdl_query_texture(sdl_texture_t *texture, int * width, int * height)
 {
     if (texture == NULL) {
         *width = 0;
@@ -814,7 +813,7 @@ void sdl_query_texture(sdl_texture_t texture, int * width, int * height)
     SDL_QueryTexture((SDL_Texture *)texture, NULL, NULL, width, height);
 }
 
-void sdl_update_texture(sdl_texture_t texture, uint8_t * pixels, int pitch)
+void sdl_update_texture(sdl_texture_t *texture, char * pixels, int pitch)
 {
     SDL_UpdateTexture((SDL_Texture*)texture,
                       NULL,                   // update entire texture
@@ -822,9 +821,8 @@ void sdl_update_texture(sdl_texture_t texture, uint8_t * pixels, int pitch)
                       pitch);                 // pitch  
 }
 
-void sdl_render_texture(int x, int y, sdl_texture_t texture_arg)
+void sdl_render_texture(int x, int y, sdl_texture_t *texture)
 {
-    SDL_Texture *texture = (SDL_Texture *)texture_arg;
     SDL_Rect dest;
     int w,h;
 
@@ -834,10 +832,10 @@ void sdl_render_texture(int x, int y, sdl_texture_t texture_arg)
     dest.w = w;
     dest.h = h;
 
-    SDL_RenderCopy(renderer, texture, NULL, &dest);
+    SDL_RenderCopy(renderer, (SDL_Texture*)texture, NULL, &dest);
 }
 
-void sdl_render_scaled_texture(sdl_rect_t *dest_arg, sdl_texture_t texture_arg)
+void sdl_render_scaled_texture(sdl_rect_t *dest_arg, sdl_texture_t *texture_arg)
 {
     SDL_Texture *texture = (SDL_Texture *)texture_arg;
     SDL_Rect *dest = (SDL_Rect*)dest_arg;
@@ -850,7 +848,7 @@ void sdl_render_scaled_texture(sdl_rect_t *dest_arg, sdl_texture_t texture_arg)
 #define MAX_TIME_STR 50
 
 static unsigned long get_real_time_us(void);
-static char * time2str(char * str, int64_t us, bool gmt, bool display_ms, bool display_date);
+static char * time2str(char * str, long us, bool gmt, bool display_ms, bool display_date);
 
 // xxx setlinebug
 
@@ -886,7 +884,7 @@ static unsigned long get_real_time_us(void)
     return ((unsigned long)ts.tv_sec * 1000000) + ((unsigned long)ts.tv_nsec / 1000);
 }
 
-static char * time2str(char * str, int64_t us, bool gmt, bool display_ms, bool display_date)
+static char * time2str(char * str, long us, bool gmt, bool display_ms, bool display_date)
 {
     struct tm tm;
     time_t secs;
