@@ -1,5 +1,3 @@
-// xxx use Pointer not Identifier
-
 #include "../interpreter.h"
 #include "../../sdl.h"
 
@@ -21,8 +19,8 @@ int StdioBasePrintf(struct ParseState *Parser, FILE *Stream, char *StrOut,
 void Sdl_init (struct ParseState *Parser, struct Value *ReturnValue,
 	struct Value **Param, int NumArgs)
 {
-    int * w = (int*)Param[0]->Val->Identifier;
-    int * h = (int*)Param[1]->Val->Identifier;
+    int *w = (int*)Param[0]->Val->Pointer;
+    int *h = (int*)Param[1]->Val->Pointer;
     int ret;
 
     ret = sdl_init(w, h);
@@ -61,7 +59,7 @@ void Sdl_display_present (struct ParseState *Parser, struct Value *ReturnValue,
 void Sdl_register_event (struct ParseState *Parser, struct Value *ReturnValue,
 	struct Value **Param, int NumArgs)
 {
-    sdl_rect_t *loc      = (sdl_rect_t*)Param[0]->Val->Identifier;
+    sdl_rect_t *loc      = (sdl_rect_t*)Param[0]->Val->Pointer;
     int         event_id = Param[1]->Val->Integer;
 
     sdl_register_event(loc, event_id);
@@ -115,13 +113,13 @@ void Sdl_scale_color (struct ParseState *Parser, struct Value *ReturnValue,
 void Sdl_render_text (struct ParseState *Parser, struct Value *ReturnValue,
 	struct Value **Param, int NumArgs)
 {
-    int               x        = Param[0]->Val->Integer;
-    int               y        = Param[1]->Val->Integer;
-    int               ptsize   = Param[2]->Val->Integer;
-    int               fg_color = Param[3]->Val->Integer;
-    int               bg_color = Param[4]->Val->Integer;
-    char            * str      = Param[5]->Val->Identifier;
-    sdl_rect_t * loc;
+    int         x        = Param[0]->Val->Integer;
+    int         y        = Param[1]->Val->Integer;
+    int         ptsize   = Param[2]->Val->Integer;
+    int         fg_color = Param[3]->Val->Integer;
+    int         bg_color = Param[4]->Val->Integer;
+    char       *str      = Param[5]->Val->Pointer;
+    sdl_rect_t *loc;
 
     loc = sdl_render_text(x, y, ptsize, fg_color, bg_color, str);
 
@@ -131,15 +129,16 @@ void Sdl_render_text (struct ParseState *Parser, struct Value *ReturnValue,
 void Sdl_render_printf (struct ParseState *Parser, struct Value *ReturnValue,
 	struct Value **Param, int NumArgs)
 {
-    int               x        = Param[0]->Val->Integer;
-    int               y        = Param[1]->Val->Integer;
-    int               ptsize   = Param[2]->Val->Integer;
-    int               fg_color = Param[3]->Val->Integer;
-    int               bg_color = Param[4]->Val->Integer;
-    char            * fmt      = Param[5]->Val->Identifier;
-    struct StdVararg  PrintfArgs;
-    char              str[200] = "";
-    sdl_rect_t      * loc;
+    int              x        = Param[0]->Val->Integer;
+    int              y        = Param[1]->Val->Integer;
+    int              ptsize   = Param[2]->Val->Integer;
+    int              fg_color = Param[3]->Val->Integer;
+    int              bg_color = Param[4]->Val->Integer;
+    char            *fmt      = Param[5]->Val->Pointer;
+
+    struct StdVararg PrintfArgs;
+    char             str[200] = "";
+    sdl_rect_t      *loc;
 
     PrintfArgs.Param = Param + 5;
     PrintfArgs.NumArgs = NumArgs - 6;
@@ -153,9 +152,9 @@ void Sdl_render_printf (struct ParseState *Parser, struct Value *ReturnValue,
 void Sdl_get_char_size (struct ParseState *Parser, struct Value *ReturnValue,
 	struct Value **Param, int NumArgs)
 {
-    int   ptsize       = Param[0]->Val->Integer;
-    int * char_width   = (int*)Param[1]->Val->Identifier;
-    int * char_height  = (int*)Param[2]->Val->Identifier;
+    int  ptsize       = Param[0]->Val->Integer;
+    int *char_width   = (int*)Param[1]->Val->Pointer;
+    int *char_height  = (int*)Param[2]->Val->Pointer;
 
     sdl_get_char_size(ptsize, char_width, char_height);
 }
@@ -167,7 +166,7 @@ void Sdl_get_char_size (struct ParseState *Parser, struct Value *ReturnValue,
 void Sdl_render_rect (struct ParseState *Parser, struct Value *ReturnValue,
 	struct Value **Param, int NumArgs)
 {
-    sdl_rect_t *loc        = (sdl_rect_t*)Param[0]->Val->Identifier;
+    sdl_rect_t *loc        = (sdl_rect_t*)Param[0]->Val->Pointer;
     int         line_width = Param[1]->Val->Integer;
     int         color      = Param[2]->Val->Integer;
 
@@ -177,8 +176,8 @@ void Sdl_render_rect (struct ParseState *Parser, struct Value *ReturnValue,
 void Sdl_render_fill_rect (struct ParseState *Parser, struct Value *ReturnValue,
 	struct Value **Param, int NumArgs)
 {
-    sdl_rect_t *loc        = (sdl_rect_t*)Param[0]->Val->Identifier;
-    int         color      = Param[1]->Val->Integer;
+    sdl_rect_t *loc   = (sdl_rect_t*)Param[0]->Val->Pointer;
+    int         color = Param[1]->Val->Integer;
 
     sdl_render_fill_rect(loc, color);
 }
@@ -198,7 +197,7 @@ void Sdl_render_line (struct ParseState *Parser, struct Value *ReturnValue,
 void Sdl_render_lines (struct ParseState *Parser, struct Value *ReturnValue,
 	struct Value **Param, int NumArgs)
 {
-    sdl_point_t *points = (sdl_point_t*)Param[0]->Val->Identifier;
+    sdl_point_t *points = (sdl_point_t*)Param[0]->Val->Pointer;
     int count           = Param[1]->Val->Integer;
     int color           = Param[2]->Val->Integer;
 
@@ -231,7 +230,7 @@ void Sdl_render_point (struct ParseState *Parser, struct Value *ReturnValue,
 void Sdl_render_points (struct ParseState *Parser, struct Value *ReturnValue,
 	struct Value **Param, int NumArgs)
 {
-    sdl_point_t *points = (sdl_point_t*)Param[0]->Val->Identifier;
+    sdl_point_t *points = (sdl_point_t*)Param[0]->Val->Pointer;
     int count           = Param[1]->Val->Integer;
     int color           = Param[2]->Val->Integer;
     int point_size      = Param[3]->Val->Integer;
@@ -251,17 +250,17 @@ void Sdl_create_texture (struct ParseState *Parser, struct Value *ReturnValue,
     sdl_texture_t *texture;
 
     texture = sdl_create_texture(w, h);
-    ReturnValue->Val->Identifier = (char*)texture; 
+    ReturnValue->Val->Pointer = (char*)texture; 
 }
 
 void Sdl_create_texture_from_display (struct ParseState *Parser, struct Value *ReturnValue,
 	struct Value **Param, int NumArgs)
 {
-    sdl_rect_t *loc = (sdl_rect_t*)Param[0]->Val->Identifier;
+    sdl_rect_t *loc = (sdl_rect_t*)Param[0]->Val->Pointer;
     sdl_texture_t *texture;
 
     texture = sdl_create_texture_from_display(loc);
-    ReturnValue->Val->Identifier = (char*)texture; 
+    ReturnValue->Val->Pointer = (char*)texture; 
 }
 
 void Sdl_create_filled_circle_texture (struct ParseState *Parser, struct Value *ReturnValue,
@@ -272,26 +271,26 @@ void Sdl_create_filled_circle_texture (struct ParseState *Parser, struct Value *
     sdl_texture_t *texture;
 
     texture = sdl_create_filled_circle_texture(radius, color);
-    ReturnValue->Val->Identifier = (char*)texture; 
+    ReturnValue->Val->Pointer = (char*)texture; 
 }
 
 void Sdl_create_text_texture (struct ParseState *Parser, struct Value *ReturnValue,
 	struct Value **Param, int NumArgs)
 {
-    int    ptsize   = Param[0]->Val->Integer;
-    int    fg_color = Param[1]->Val->Integer;
-    int    bg_color = Param[2]->Val->Integer;
-    char * str      = (char*)Param[3]->Val->Identifier;
+    int   ptsize   = Param[0]->Val->Integer;
+    int   fg_color = Param[1]->Val->Integer;
+    int   bg_color = Param[2]->Val->Integer;
+    char *str      = (char*)Param[3]->Val->Pointer;
     sdl_texture_t *texture;
 
     texture = sdl_create_text_texture(ptsize, fg_color, bg_color, str);
-    ReturnValue->Val->Identifier = (char*)texture; 
+    ReturnValue->Val->Pointer = (char*)texture; 
 }
 
 void Sdl_destroy_texture (struct ParseState *Parser, struct Value *ReturnValue,
 	struct Value **Param, int NumArgs)
 {
-    sdl_texture_t * texture = (sdl_texture_t*)Param[0]->Val->Identifier;
+    sdl_texture_t *texture = (sdl_texture_t*)Param[0]->Val->Pointer;
 
     sdl_destroy_texture(texture);
 }
@@ -299,9 +298,9 @@ void Sdl_destroy_texture (struct ParseState *Parser, struct Value *ReturnValue,
 void Sdl_query_texture (struct ParseState *Parser, struct Value *ReturnValue,
 	struct Value **Param, int NumArgs)
 {
-    sdl_texture_t * texture = (sdl_texture_t*)Param[0]->Val->Identifier;
-    int           * width   = (int*)Param[1]->Val->Identifier;
-    int           * height  = (int*)Param[2]->Val->Identifier;
+    sdl_texture_t *texture = (sdl_texture_t*)Param[0]->Val->Pointer;
+    int           *width   = (int*)Param[1]->Val->Pointer;
+    int           *height  = (int*)Param[2]->Val->Pointer;
 
     sdl_query_texture(texture, width, height);
 }
@@ -309,9 +308,9 @@ void Sdl_query_texture (struct ParseState *Parser, struct Value *ReturnValue,
 void Sdl_update_texture (struct ParseState *Parser, struct Value *ReturnValue,
 	struct Value **Param, int NumArgs)
 {
-    sdl_texture_t * texture = (sdl_texture_t*)Param[0]->Val->Identifier;
-    char          * pixels  = (char*)Param[1]->Val->Identifier;
-    int             pitch   = Param[2]->Val->Integer;
+    sdl_texture_t *texture = (sdl_texture_t*)Param[0]->Val->Pointer;
+    char          *pixels  = (char*)Param[1]->Val->Pointer;
+    int            pitch   = Param[2]->Val->Integer;
 
     sdl_update_texture(texture, pixels, pitch);
 }
@@ -319,9 +318,9 @@ void Sdl_update_texture (struct ParseState *Parser, struct Value *ReturnValue,
 void Sdl_render_texture (struct ParseState *Parser, struct Value *ReturnValue,
 	struct Value **Param, int NumArgs)
 {
-    int             x       = Param[0]->Val->Integer;
-    int             y       = Param[1]->Val->Integer;
-    sdl_texture_t * texture = (sdl_texture_t*)Param[2]->Val->Identifier;
+    int            x       = Param[0]->Val->Integer;
+    int            y       = Param[1]->Val->Integer;
+    sdl_texture_t *texture = (sdl_texture_t*)Param[2]->Val->Pointer;
 
     sdl_render_texture(x, y, texture);
 }
@@ -329,8 +328,8 @@ void Sdl_render_texture (struct ParseState *Parser, struct Value *ReturnValue,
 void Sdl_render_scaled_texture (struct ParseState *Parser, struct Value *ReturnValue,
 	struct Value **Param, int NumArgs)
 {
-    sdl_rect_t * dest = (sdl_rect_t*)Param[0]->Val->Identifier;
-    sdl_texture_t * texture = (sdl_texture_t*)Param[1]->Val->Identifier;
+    sdl_rect_t    *dest    = (sdl_rect_t*)Param[0]->Val->Pointer;
+    sdl_texture_t *texture = (sdl_texture_t*)Param[1]->Val->Pointer;
 
     sdl_render_scaled_texture(dest, texture);
 }
@@ -355,8 +354,8 @@ struct LibraryFunction SdlFunctions[] = {
     { Sdl_scale_color,     "int sdl_scale_color(int color, double inten);" },
 
     // render text
-    { Sdl_render_text,     "sdl_rect_t *sdl_render_text(int x, int y, int ptsize, int fg_color, int bg_color, char * str);" },
-    { Sdl_render_printf,   "sdl_rect_t *sdl_render_printf(int x, int y, int ptsize, int fg_color, int bg_color, char * fmt, ...);" },
+    { Sdl_render_text,     "sdl_rect_t *sdl_render_text(int x, int y, int ptsize, int fg_color, int bg_color, char *str);" },
+    { Sdl_render_printf,   "sdl_rect_t *sdl_render_printf(int x, int y, int ptsize, int fg_color, int bg_color, char *fmt, ...);" },
     { Sdl_get_char_size,   "void sdl_get_char_size(int ptsize, int *char_width, int *char_height);" },
 
     // render rectangle, lines, circles, points
