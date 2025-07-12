@@ -38,7 +38,6 @@ static int picoc_helper(char *args)
 {
     Picoc pc;
     char  args_copy[10000];  // xxx malloc
-    char  progname_buff[100], *progname;
     char *argv[20];
     char *s;
     int   argc = 0;
@@ -73,15 +72,7 @@ static int picoc_helper(char *args)
             printf("scanning %s\n", s);
             PicocPlatformScanFile(&pc, s);
             if (argc == 0) {
-                char *tmp;
-                strcpy(progname_buff, s);
-                progname = basename(progname_buff);
-                tmp = strstr(progname, ".c");
-                if (tmp) {
-                    *tmp = '\0';
-                }
-                printf("adding argv[%d] = %s\n", argc, progname);
-                argv[argc++] = progname;
+                argv[argc++] = "qne_app";
             }
         } else {
             printf("adding argv[%d] = %s\n", argc, s);

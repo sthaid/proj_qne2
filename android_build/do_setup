@@ -68,7 +68,7 @@ echo "Creating assets directory"
 cd $BUILD/app/src/main
 mkdir assets
 cd assets
-#ln -s xxx .
+cp /usr/share/fonts/truetype/freefont/FreeMonoBold.ttf .
 echo
 
 # create the launcher icon

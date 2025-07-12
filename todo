@@ -1,4 +1,21 @@
+add mouse swipe detection
+
+rotate texture with SDL_RenderCopyEx
+
+avoid calling sdl_init from hello.c on android
+
+check size of font on Android
+
 picoc.c arg0
+
+pthread_creae detached
+
+try SDL_RenderSetLogicalSize
+
+larger loc around matching events
+
+adb_connect not working
+
 hello.c
 - unit test 
 - swipe to change screens
@@ -8,27 +25,14 @@ hello.c
 - screen 3 = textures
 - screen 4 = sizeof prints
 
-avoid calling sdl_init from hello.c on android
-
-xxxxxxxxxxx
-
-move adb_connect
 renmae the qapps/bin/*
+
 shutdown the app?
 
-xxxxxx
-
-
-ERROR: connect, Connection refused
-ERROR: connect, Connection refused
-FORTIFY: pthread_mutex_lock called on a destroyed mutex (0x71bdc03598)
-FORTIFY: pthread_mutex_lock called on a destroyed mutex (0x71bdc03598)
+error messages
 FORTIFY: pthread_mutex_lock called on a destroyed mutex (0x719a7a8b18)
 
-
-xxxxxxxxx
-
-picoc
+picoc - comment these
 sizoef(char)      = 1
 sizoef(short)     = 2
 sizoef(int)       = 4
@@ -39,7 +43,6 @@ sizoef(time_t)    = 4
 sizeof(123)       = 8
 sizeof(123UL)     = 8
 sizeof sdl_rect   = 8
-
 Q app
 07/06/25 21:02:17.494 INFO SDL_main: sizoef(char)      = 1
 07/06/25 21:02:17.494 INFO SDL_main: sizoef(short)     = 2
@@ -50,79 +53,53 @@ Q app
 07/06/25 21:02:17.494 INFO SDL_main: sizoef(time_t)    = 8
 
 
--------------
-
-cleanup this file
-update the run_prog routine
-
--------------------
 cmds should cd to topdir
+
 these all need to get ip addr and password
-
--rwxr-xr-x 1 haid haid   44 Jul  5 16:50 adbc          ok
--rwxrwxr-x 1 haid haid  17K Jul  6 15:41 cmd          ok
--rw-rw-r-- 1 haid haid 3.5K Jul  6 11:03 cmd.c          ok
--rwxr-xr-x 1 haid haid   31 Jul  6 09:11 log_cat          ok
--rwxr-xr-x 1 haid haid   40 Jul  6 11:13 log_clear          ok
--rwxr-xr-x 1 haid haid   26 Jul  6 11:21 log_mark          ok
--rwxr-xr-x 1 haid haid   26 Jul  6 09:16 ls_files          ok
--rw-rw-r-- 1 haid haid   35 Jul  6 08:42 Makefile          ok
-
+-rwxr-xr-x 1 haid haid   44 Jul  5 16:50 adbc 
+-rwxrwxr-x 1 haid haid  17K Jul  6 15:41 cmd 
+-rw-rw-r-- 1 haid haid 3.5K Jul  6 11:03 cmd.c     
+-rwxr-xr-x 1 haid haid   31 Jul  6 09:11 log_cat  
+-rwxr-xr-x 1 haid haid   40 Jul  6 11:13 log_clear 
+-rwxr-xr-x 1 haid haid   26 Jul  6 11:21 log_mark 
+-rwxr-xr-x 1 haid haid   26 Jul  6 09:16 ls_files
+-rw-rw-r-- 1 haid haid   35 Jul  6 08:42 Makefile
 -rwxr-xr-x 1 haid haid  601 Jul  6 10:23 get
 -rwxr-xr-x 1 haid haid  429 Jul  6 11:00 get_tar
 -rwxr-xr-x 1 haid haid  421 Jul  6 10:39 put
 
--------
+read sensor using ndk
 
-bashrc_haid vs profile, have env vars
+add sdl rotate texture, and add a analog clock to hello.c
 
---------
-
-add more sdl stuff, and port reversi
-
-cleanup the bin dir, maybe call it apps, and have a bin subidr for tools
-- make a fiels subidr 
-- put files at top level in the get_tar
+port reversi
 
 reset cmd
 - make tar file and put in resources
-bin dir
 
-----
-
-reversi
-tic tack toe
-blackjack
-pong
-compass
-lat/long
-
------
+ideas for apps:
+- reversi
+- tic tack toe
+- blackjack
+- pong
+- compass
+- lat/long
+- flashlight app
 
 limit use of int32_t
 
-clean this up
-flashlight app
-menu code
-use tar 
-use one symlink to src dir
-
-
+version.c, put this in startup line, include build data time and git commit
 ---------
+
+================
+SENSOR ACCSS
+================
 
 https://developer.android.com/ndk/reference/group/sensor
 
-
 https://stackoverflow.com/questions/4200119/access-android-sensors-via-ndk
+
 sample code using android ndk to access sensors
-
-
-
-
-
-
-xxxxxxxxxxxxxxxx
-
 
 "android ndk example to get compass reading"
 
@@ -153,8 +130,18 @@ while (true) {
 ASensorEventQueue_disableSensor(queue, magneticSensor);
 ASensorManager_destroyEventQueue(sensor_manager, queue);
 
+https://developer.android.com/ndk/samples
+https://github.com/android/ndk-samples/tree/main
+git clone https://github.com/android/ndk-samples
+
+find ndk routines for
+- compass
+- level
+- flashlight
+- lat/long
+
 ==================
-APP DIR
+APP DIR LAYOUT
 ==================
 
 aliases: 
@@ -229,55 +216,6 @@ app/src/main/res
 todo
 ==================
 
-git ls-files --others --exclude-standard
-
-build scripts
-- rename to android-build
-- assets dir
-- script steps to get SDL2 and SDL2_ttf
-- dont patch, just copy, and save orig
-menu
-run_prog
-mkdir
-destroy and recreate the repo
-
-
-https://developer.android.com/ndk/samples
-
-https://github.com/android/ndk-samples/tree/main
-git clone https://github.com/android/ndk-samples
-
-sdl
-- add sdl event support
-
-creaet main menu, 
-
-toc file
-- prog name,  prog file list
-
-add sdl routines to picoc
-
-find ndk routines for
-- compass
-- level
-- flashlight
-- lat/long
-
----------------
-
-version.c, put this in startup line, include build data time and git commit
-
-updae the Android direcoty generator
-
-rename android-project dir to just android
-
-gcc -o hello hello.c, doesn't build, perhaps a gcc switch
-
---- later ---
-
-make git repo for qne_sdl3
-- make SDL3 version
-
 qne app
 - add auto start service when phone boots
 - add fuse support, connect to fuse svc running on my ubunut pc
@@ -291,7 +229,6 @@ git clone https://github.com/jpoirier/picoc
 
 cd picoc
 git diff 865ae807ff6384ec0cded86f84cec9d8c118956f HEAD .
-
 
 
 ================

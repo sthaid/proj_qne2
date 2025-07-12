@@ -25,7 +25,8 @@ static void logmsg(char *lvl, const char *func, char *fmt, ...)
 // 
 
 #ifdef ANDROID
-    #define FONT_FILE_PATH  "/system/fonts/DroidSansMono.ttf"
+    //#define FONT_FILE_PATH  "/system/fonts/DroidSansMono.ttf"
+    #define FONT_FILE_PATH  "FreeMonoBold.ttf"
 #else
     #define FONT_FILE_PATH "/usr/share/fonts/truetype/freefont/FreeMonoBold.ttf"
 #endif
@@ -56,7 +57,7 @@ const int COLOR_BLACK      = ( 0    |    0<<8 |    0<<16 |  255<<24 );
 
 typedef struct {
     TTF_Font *font;
-    //int       char_width;
+    //int       char_width;  xxx cleanup
     //int       char_height;
 } font_t;
 
@@ -117,9 +118,14 @@ int sdl_init(int *w, int *h)
     }
 #endif
 
+    //xxx int rc = SDL_RenderSetLogicalSize(renderer, 1000,2000);
+    //xxx INFO("rc %d\n", rc);
+
     // get the actual window size, which will be returned to caller and
     // also saved in vars win_width/height
     SDL_GetWindowSize(window, &win_width, &win_height);
+    //xxx win_width = 1000;
+    //xxx win_height = 2000;
     *w = win_width;
     *h = win_height;
     INFO("win_width=%d win_height=%d\n", win_width, win_height);
@@ -129,7 +135,8 @@ int sdl_init(int *w, int *h)
         ERROR("TTF_Init failed\n");
         return -1;
     }
-    sdl_print_init(40, COLOR_WHITE, COLOR_BLACK, NULL, NULL, NULL, NULL);
+    //sdl_print_init(40, COLOR_WHITE, COLOR_BLACK, NULL, NULL, NULL, NULL);
+    sdl_print_init(100, COLOR_WHITE, COLOR_BLACK, NULL, NULL, NULL, NULL);
 
     // SDL Text Input is not being used 
     SDL_StopTextInput();
@@ -246,6 +253,7 @@ static int process_sdl_event(SDL_Event *ev)
     switch (ev->type) {
     case SDL_MOUSEBUTTONDOWN:
     case SDL_MOUSEBUTTONUP: {
+#if 0
        INFO("MOUSEBUTTON button=%s state=%s x=%d y=%d\n",
                (ev->button.button == SDL_BUTTON_LEFT   ? "LEFT" :
                 ev->button.button == SDL_BUTTON_MIDDLE ? "MIDDLE" :
@@ -254,6 +262,7 @@ static int process_sdl_event(SDL_Event *ev)
                 ev->button.state == SDL_RELEASED ? "RELEASED" : "???"),
                ev->button.x,
                ev->button.y);
+#endif
 
         if (ev->button.state == SDL_RELEASED) {
             for (i = 0; i < max_event; i++) {
@@ -373,6 +382,7 @@ void sdl_print_init(int ptsize, int fg_color, int bg_color, int *char_width, int
     char_width_xxx = text.char_width; //xxx
 }
 
+// xxx add nk routine for this too
 sdl_rect_t *sdl_render_text(int x, int y, char * str)
 {
     SDL_Surface    * surface;

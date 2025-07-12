@@ -1,6 +1,5 @@
 #if 0
-picoc.c arg0
-hello.c
+hello.c outline
 - unit test 
 - swipe to change screens
 - screen 0 = clock
@@ -28,44 +27,56 @@ hello.c
 #define EVID_PAGE_INCREMENT    5
 #define EVID_SWIPE_LEFT        6
 
-
 #include <sdl.h>
 
-int w,h;
-int char_width;
-int char_height;
-int win_rows;
-int win_cols;
+static int win_width;  // xxx make static in sdl.c
+static int win_height;
+static int char_width;
+static int char_height;
+static int win_rows;
+static int win_cols;
+
 #define ROW2Y(r) ((r) * char_height)
 
 static void render_page(int n);
 
 int main(int argc, char **argv)
 {
-    int i, rc;
-    //int fcw, fch;
-    int pagenum=0, event_id;
+    int  i, rc, event_id;
+    int  pagenum = 0;
     bool end_program = false;
+    bool is_qne_app = (argc > 0 && strcmp(argv[0], "qne_app") == 0);
 
+    // xxx temp debug prints
     // font char height = ptsize
     //      char width = 0.6 * ptsize
     printf("argc = %d\n", argc);
     for (i = 0; i < argc; i++) {
         printf("argv[%d] = '%s'\n", i, argv[i]);
     }
+    printf("is_qne_app = %d\n", is_qne_app);
 
-    rc = sdl_init(&w, &h);
-    printf("sdl_init rc=%d\n", rc);
+    // if not qne_app then call sdl_init
+    if (!is_qne_app) {
+        rc = sdl_init(&win_width, &win_height);  // xxx need w,h?
+        if (rc != 0) {
+            return 1;
+        }
+    } else {
+        // xxx get win_width/height
+    }
 
-    sdl_print_init(40, COLOR_WHITE, COLOR_BLACK, 
+    // xxx temp
+    for (i = 10; i < MAX_FONT_PTSIZE; i++) {
+        sdl_print_init(i, COLOR_WHITE, COLOR_BLACK, 
+                    &char_width, &char_height, &win_rows, &win_cols);
+        printf("font %3d - %3d x %3d\n", i, char_width, char_height);
+    }
+
+    // xxx
+    sdl_print_init(88, COLOR_WHITE, COLOR_BLACK, 
                    &char_width, &char_height, &win_rows, &win_cols);
 
-#if 0
-    for (i = 10; i < MAX_FONT_PTSIZE; i++) {
-        sdl_get_char_size(i, &fcw, &fch);
-        printf("font %3d - %3d x %3d\n", i, fcw, fch);
-    }
-#endif
 
     while (!end_program) {
         // xxx reset other stuff here too, fontsz, color
@@ -102,7 +113,12 @@ int main(int argc, char **argv)
         }
     }
 
-    sdl_exit();
+    // if not qne_app then call sdl_exit
+    if (!is_qne_app) {
+        sdl_exit();
+    }
+
+    // return success
     return 0;
 }
 
@@ -133,19 +149,6 @@ static void render_page(int pagenum)
     case 1: render_page_1(); break;
     }
 }
-
-           struct tmx {
-               int tm_sec;    /* Seconds (0-60) */
-               int tm_min;    /* Minutes (0-59) */
-               int tm_hour;   /* Hours (0-23) */
-               int tm_mday;   /* Day of the month (1-31) */
-               int tm_mon;    /* Month (0-11) */
-               int tm_year;   /* Year - 1900 */
-               int tm_wday;   /* Day of the week (0-6, Sunday = 0) */
-               int tm_yday;   /* Day in the year (0-365, 1 Jan = 0) */
-               int tm_isdst;  /* Daylight saving time */
-           };
-
 
 static void render_page_0(void)
 {
@@ -179,7 +182,7 @@ static void render_page_1(void)
 }
 
 #if 0
-  printf("sizoef(char)      = %zd\n", sizeof(char));
+    printf("sizoef(char)      = %zd\n", sizeof(char));
     printf("sizoef(short)     = %zd\n", sizeof(short));
     printf("sizoef(int)       = %zd\n", sizeof(int));
     printf("sizoef(long)      = %zd\n", sizeof(long));
