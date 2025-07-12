@@ -56,8 +56,8 @@ const int COLOR_BLACK      = ( 0    |    0<<8 |    0<<16 |  255<<24 );
 
 typedef struct {
     TTF_Font *font;
-    int       char_width;
-    int       char_height;
+    //int       char_width;
+    //int       char_height;
 } font_t;
 
 typedef struct {
@@ -71,7 +71,7 @@ typedef struct {
 
 static SDL_Window     * window;
 static SDL_Renderer   * renderer;
-static int              win_width;
+       int              win_width; //xxx
 static int              win_height;
 
 static font_t           font[MAX_FONT_PTSIZE];
@@ -85,7 +85,6 @@ static int              max_event;
 
 static int process_sdl_event(SDL_Event *ev);
 static void set_render_draw_color(int color);
-static int font_init(int ptsize);
 
 // ----------------- INIT / EXIT --------------------------
 
@@ -130,6 +129,7 @@ int sdl_init(int *w, int *h)
         ERROR("TTF_Init failed\n");
         return -1;
     }
+    sdl_print_init(40, COLOR_WHITE, COLOR_BLACK, NULL, NULL, NULL, NULL);
 
     // SDL Text Input is not being used 
     SDL_StopTextInput();
@@ -325,23 +325,69 @@ static void set_render_draw_color(int color)
 
 // -----------------  RENDER TEXT  ------------------------
 
-sdl_rect_t *sdl_render_text(int x, int y, int ptsize, int fg_color, int bg_color, char * str)
+int char_width_xxx; //xxx
+
+static struct {
+    int ptsize;
+    SDL_Color fg_color;
+    SDL_Color bg_color;
+    int char_width;
+    int char_height;
+    int win_rows;
+    int win_cols;
+} text;
+
+void sdl_print_init(int ptsize, int fg_color, int bg_color, int *char_width, int *char_height, int *win_rows, int *win_cols)
+{
+    int chw, chh;
+
+    if (ptsize < 10) {
+        ptsize = 10;
+    }
+    if (ptsize >= MAX_FONT_PTSIZE) {
+        ptsize = MAX_FONT_PTSIZE-1;
+    }
+
+    if (font[ptsize].font == NULL) {
+        font[ptsize].font = TTF_OpenFont(FONT_FILE_PATH, ptsize);
+        if (font[ptsize].font == NULL) {
+            ERROR("TTF_OpenFont failed, ptsize=%d\n", ptsize);
+            return;
+        }
+    }
+    TTF_SizeText(font[ptsize].font, "X", &chw, &chh);
+
+    text.ptsize      = ptsize;
+    text.fg_color    = *(SDL_Color*)&fg_color;
+    text.bg_color    = *(SDL_Color*)&bg_color;
+    text.char_width  = chw;
+    text.char_height = chh;
+    text.win_rows    = win_height / chh;
+    text.win_cols    = win_width / chw;
+
+    if (char_width) *char_width = text.char_width;
+    if (char_height) *char_height = text.char_height;
+    if (win_rows) *win_rows = text.win_rows;
+    if (win_cols) *win_cols = text.win_cols;
+
+    char_width_xxx = text.char_width; //xxx
+}
+
+sdl_rect_t *sdl_render_text(int x, int y, char * str)
 {
     SDL_Surface    * surface;
     SDL_Texture    * texture;
-    int              rc;
     static SDL_Rect  pos;
 
-    // if the font has not been initialized then do so
-    rc = font_init(ptsize);
-    if (rc != 0) {
-        ERROR("font_init failed for ptsize %d\n", ptsize);
+    // if font not initialized then return error
+    if (font[text.ptsize].font == NULL) {
+        ERROR("font ptsize %d, not initialized\n", text.ptsize);
         memset(&pos, 0, sizeof(pos));
         return (sdl_rect_t*)&pos;
     }
 
     // render the string to a surface
-    surface = TTF_RenderText_Shaded(font[ptsize].font, str, *(SDL_Color*)&fg_color, *(SDL_Color*)&bg_color);
+    surface = TTF_RenderText_Shaded(font[text.ptsize].font, str, text.fg_color, text.bg_color);
     if (surface == NULL) {
         ERROR("TTF_RenderText_Shaded returned NULL\n");
         memset(&pos, 0, sizeof(pos));
@@ -366,7 +412,7 @@ sdl_rect_t *sdl_render_text(int x, int y, int ptsize, int fg_color, int bg_color
     return (sdl_rect_t*)&pos;
 }
 
-sdl_rect_t *sdl_render_printf(int x, int y, int ptsize, int fg_color, int bg_color, char * fmt, ...)
+sdl_rect_t *sdl_render_printf(int x, int y, char * fmt, ...)
 {
     char str[1000];
     va_list ap;
@@ -375,45 +421,27 @@ sdl_rect_t *sdl_render_printf(int x, int y, int ptsize, int fg_color, int bg_col
     vsnprintf(str, sizeof(str), fmt, ap);
     va_end(ap);
 
-    return sdl_render_text(x, y, ptsize, fg_color, bg_color, str);
+    return sdl_render_text(x, y, str);
 }
 
-void sdl_get_char_size(int ptsize, int *char_width, int *char_height)
+sdl_rect_t *sdl_render_printf_nk(int n, int k, int y, char * fmt, ...)
 {
-    int rc;
+    char str[1000];
+    va_list ap;
+    int x;
 
-    rc = font_init(ptsize);
-    if (rc != 0) {
-        ERROR("font_init failed for ptsize %d\n", ptsize);
-        *char_width = 0;
-        *char_height = 0;
-        return;
+    if (n == 0) {
+        // xxx print error
+        return sdl_render_text(0, y, str);
     }
 
-    *char_width = font[ptsize].char_width;
-    *char_height = font[ptsize].char_height;
-}
+    va_start(ap, fmt);
+    vsnprintf(str, sizeof(str), fmt, ap);
+    va_end(ap);
 
-static int font_init(int ptsize)
-{
-    if (ptsize < 10 || ptsize >= MAX_FONT_PTSIZE) {
-        ERROR("invalid ptsize %d\n", ptsize);
-        return -1;
-    }
+    x = ((win_width/2/(n)) + (k) * (win_width/(n)) - strlen(str) * text.char_width / 2);
 
-    if (font[ptsize].font == NULL) {
-        font[ptsize].font = TTF_OpenFont(FONT_FILE_PATH, ptsize);
-        if (font[ptsize].font == NULL) {
-            ERROR("TTF_OpenFont failed, ptsize=%d\n", ptsize);
-            return -1;
-        }
-
-        TTF_SizeText(font[ptsize].font, "X", &font[ptsize].char_width, &font[ptsize].char_height);
-        INFO("ptsize=%d char_width=%d char_height=%d\n",
-              ptsize, font[ptsize].char_width, font[ptsize].char_height);
-    }
-
-    return 0;
+    return sdl_render_text(x, y, str);
 }
 
 // -----------------  RENDER RECTANGLES, LINES, CIRCLES, POINTS  --------------------
@@ -790,29 +818,25 @@ sdl_texture_t *sdl_create_filled_circle_texture(int radius, int color)
     return texture;
 }
 
-sdl_texture_t *sdl_create_text_texture(int ptsize, int fg_color_arg, int bg_color_arg, char * str)
+sdl_texture_t *sdl_create_text_texture(char * str)
 {
     SDL_Surface * surface;
     SDL_Texture * texture;
-    SDL_Color fg_color = *(SDL_Color*)&fg_color_arg;
-    SDL_Color bg_color = *(SDL_Color*)&bg_color_arg;
-    int rc;
 
     if (str[0] == '\0') {
         return NULL;
     }
 
-    // if the font has not been initialized then do so
-    rc = font_init(ptsize);
-    if (rc != 0) {
-        ERROR("font_init failed for ptsize %d\n", ptsize);
+    // if font not initialized then return error
+    if (font[text.ptsize].font == NULL) {
+        ERROR("font ptsize %d, not initialized\n", text.ptsize);
         return NULL;
     }
 
     // render the text to a surface,
     // create a texture from the surface
     // free the surface
-    surface = TTF_RenderText_Shaded(font[ptsize].font, str, fg_color, bg_color);
+    surface = TTF_RenderText_Shaded(font[text.ptsize].font, str, text.fg_color, text.bg_color);
     if (surface == NULL) {
         ERROR("failed to allocate surface\n");
         return NULL;

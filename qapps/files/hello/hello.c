@@ -28,14 +28,17 @@ hello.c
 #define EVID_PAGE_INCREMENT    5
 #define EVID_SWIPE_LEFT        6
 
+
 #include <sdl.h>
 
 int w,h;
+int char_width;
+int char_height;
+int win_rows;
+int win_cols;
+#define ROW2Y(r) ((r) * char_height)
 
 static void render_page(int n);
-static void print_setup(int ptsize_arg, int fg_color_arg, int bg_color_arg);
-static sdl_rect_t *print_text(int x, int y, char *str);
-static sdl_rect_t *print_text_nk(int n, int k, int y, char *str);
 
 int main(int argc, char **argv)
 {
@@ -54,7 +57,9 @@ int main(int argc, char **argv)
     rc = sdl_init(&w, &h);
     printf("sdl_init rc=%d\n", rc);
 
-    print_setup(40, COLOR_WHITE, COLOR_BLACK);
+    sdl_print_init(40, COLOR_WHITE, COLOR_BLACK, 
+                   &char_width, &char_height, &win_rows, &win_cols);
+
 #if 0
     for (i = 10; i < MAX_FONT_PTSIZE; i++) {
         sdl_get_char_size(i, &fcw, &fch);
@@ -101,46 +106,6 @@ int main(int argc, char **argv)
     return 0;
 }
 
-// -----------------  PRINT SUPPORT  --------------------------
-
-// xxx move to sdl ?
-static int ptsize;
-static int fg_color;
-static int bg_color;
-static int char_width;
-static int char_height;
-static int rows;
-static int cols;
-
-#define ROW2Y(r) ((r) * char_height)
-
-static int XYZ(int n, int k, char *str)
-{
-    return ((w/2/(n)) + (k) * (w/(n)) - strlen(str) *char_width / 2);
-}
-
-static void print_setup(int ptsize_arg, int fg_color_arg, int bg_color_arg)
-{
-    ptsize = ptsize_arg;
-    fg_color = fg_color_arg;
-    bg_color = bg_color_arg;
-
-    sdl_get_char_size(ptsize, &char_width, &char_height);
-
-    rows = h / char_height;
-    cols = w / char_width;
-}
-
-static sdl_rect_t *print_text(int x, int y, char *str)
-{
-    return sdl_render_text(x, y, ptsize, fg_color, bg_color, str);
-}
-
-static sdl_rect_t *print_text_nk(int n, int k, int y, char *str)
-{
-    return sdl_render_text(XYZ(n,k,str), y, ptsize, fg_color, bg_color, str);
-}
-
 // -----------------  XXXXXXXXXXXXX  --------------------------
 
 static void render_page_0(void);
@@ -152,15 +117,15 @@ static void render_page(int pagenum)
     char str[100];
 
     sprintf(str, "Hello Page %d", pagenum);
-    print_text_nk(1, 0, ROW2Y(0), str);
+    sdl_render_printf_nk(1, 0, ROW2Y(0), "%s", str);
 
-    loc = print_text_nk(3, 0, ROW2Y(rows-1), "<");
+    loc = sdl_render_printf_nk(3, 0, ROW2Y(win_rows-1), "%s", "<");
     sdl_register_event(loc, EVID_PAGE_DECREMENT);
 
-    loc = print_text_nk(3, 1, ROW2Y(rows-1), ">");
+    loc = sdl_render_printf_nk(3, 1, ROW2Y(win_rows-1), "%s", ">");
     sdl_register_event(loc, EVID_PAGE_INCREMENT);
 
-    loc = print_text_nk(3, 2, ROW2Y(rows-1), "X");
+    loc = sdl_render_printf_nk(3, 2, ROW2Y(win_rows-1), "%s", "X");
     sdl_register_event(loc, EVID_END_PROGRAM);
 
     switch (pagenum) {
@@ -169,18 +134,32 @@ static void render_page(int pagenum)
     }
 }
 
+           struct tmx {
+               int tm_sec;    /* Seconds (0-60) */
+               int tm_min;    /* Minutes (0-59) */
+               int tm_hour;   /* Hours (0-23) */
+               int tm_mday;   /* Day of the month (1-31) */
+               int tm_mon;    /* Month (0-11) */
+               int tm_year;   /* Year - 1900 */
+               int tm_wday;   /* Day of the week (0-6, Sunday = 0) */
+               int tm_yday;   /* Day in the year (0-365, 1 Jan = 0) */
+               int tm_isdst;  /* Daylight saving time */
+           };
+
+
 static void render_page_0(void)
 {
     time_t t;
-    int r = rows/3;
+    int r = win_rows/3;
     struct tm *tm;
     char str[100];
 
     time(&t);
+    //tm = (struct tmx*)localtime(&t);
     tm = localtime(&t);
 
     sprintf(str, "%02d:%02d:%02d", tm->tm_hour, tm->tm_min, tm->tm_sec);
-    print_text_nk(1, 0, ROW2Y(r), str);
+    sdl_render_printf_nk(1, 0, ROW2Y(r), "%s", str);
 }
 
 static void render_page_1(void)
@@ -194,7 +173,7 @@ static void render_page_1(void)
                 ch+0, ch+1, ch+2, ch+3, ch+4, ch+5, ch+6, ch+7,
                 ch+8, ch+9, ch+10, ch+11, ch+12, ch+13, ch+14, ch+15);
 
-        print_text(0, ROW2Y(i+2), str);
+        sdl_render_text(0, ROW2Y(i+2), str);  // xxx make nk version too
         ch += 16;
     }
 }

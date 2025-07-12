@@ -97,7 +97,8 @@ void StdTimegm(struct ParseState *Parser, struct Value *ReturnValue,
 /* handy structure definitions */
 const char StdTimeDefs[] = "\
 typedef int time_t; \
-typedef int clock_t;\
+typedef int clock_t; \
+struct tm { int tm_sec; int tm_min; int tm_hour; int tm_mday; int tm_mon; int tm_year; int tm_wday; int tm_yday; int tm_isdst; }; \
 ";
 
 /* all string.h functions */
@@ -125,8 +126,8 @@ struct LibraryFunction StdTimeFunctions[] =
 void StdTimeSetupFunc(Picoc *pc)
 {
     /* make a "struct tm" which is the same size as a native tm structure */
-    TypeCreateOpaqueStruct(pc, NULL, TableStrRegister(pc, "tm"),
-        sizeof(struct tm));
+//  TypeCreateOpaqueStruct(pc, NULL, TableStrRegister(pc, "tm"),
+//      sizeof(struct tm)); //xxx
 
     /* define CLK_PER_SEC etc. */
     VariableDefinePlatformVar(pc, NULL, "CLOCKS_PER_SEC", &pc->IntType,
