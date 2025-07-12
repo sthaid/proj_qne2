@@ -1,3 +1,17 @@
+picoc.c arg0
+hello.c
+- unit test 
+- swipe to change screens
+- screen 0 = clock
+- screen 1 = font
+- screen 2 = render text and rectangles, etc
+- screen 3 = textures
+- screen 4 = sizeof prints
+
+avoid calling sdl_init from hello.c on android
+
+xxxxxxxxxxx
+
 move adb_connect
 renmae the qapps/bin/*
 shutdown the app?

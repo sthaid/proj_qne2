@@ -18,7 +18,7 @@ extern const int COLOR_BLACK;
 //
 
 typedef struct {
-    short x, y, w, h;
+    int x, y, w, h;
 } sdl_rect_t;
 
 typedef struct {
