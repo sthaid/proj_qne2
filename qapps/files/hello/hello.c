@@ -36,6 +36,10 @@ static int char_height;
 static int win_rows;
 static int win_cols;
 
+static void page_4_init(void);
+static void page_4_exit(void);
+
+
 #define ROW2Y(r) ((r) * char_height)
 
 static void render_page(int n);
@@ -43,7 +47,7 @@ static void render_page(int n);
 int main(int argc, char **argv)
 {
     int  i, rc, event_id;
-    int  pagenum = 0;
+    int  pagenum = 4; //XXX xxx
     bool end_program = false;
     bool is_qne_app = (argc > 0 && strcmp(argv[0], "qne_app") == 0);
 
@@ -67,16 +71,22 @@ int main(int argc, char **argv)
     }
 
     // xxx temp
-    for (i = 10; i < MAX_FONT_PTSIZE; i++) {
+    for (i = 100; i < 101; i++) {
         sdl_print_init(i, COLOR_WHITE, COLOR_BLACK, 
                     &char_width, &char_height, &win_rows, &win_cols);
-        printf("font %3d - %3d x %3d\n", i, char_width, char_height);
+        printf("TEMP font %3d - %3d x %3d, win rows x cols %d %d\n", 
+               i, char_width, char_height, win_rows, win_cols);
     }
 
     // xxx
-    sdl_print_init(88, COLOR_WHITE, COLOR_BLACK, 
+    //   ptsize * 0.6 * 20 = win_width
+    int ptsize = 1000 / (0.6 * 20);
+    sdl_print_init(ptsize, COLOR_WHITE, COLOR_BLACK, 
                    &char_width, &char_height, &win_rows, &win_cols);
+    printf("font %3d - %3d x %3d, win rows x cols %d %d\n", 
+               ptsize, char_width, char_height, win_rows, win_cols);
 
+    page_4_init();
 
     while (!end_program) {
         // xxx reset other stuff here too, fontsz, color
@@ -90,7 +100,7 @@ int main(int argc, char **argv)
 
         // wait for an event with 100 ms timeout;
         // if no event then redraw display
-        event_id = sdl_get_event(100000);
+        event_id = sdl_get_event(10000); //xxx 10ms
         if (event_id == -1) {
             continue;
         }
@@ -113,6 +123,9 @@ int main(int argc, char **argv)
         }
     }
 
+    // xxx destory all
+    page_4_exit();
+
     // if not qne_app then call sdl_exit
     if (!is_qne_app) {
         sdl_exit();
@@ -126,6 +139,9 @@ int main(int argc, char **argv)
 
 static void render_page_0(void);
 static void render_page_1(void);
+static void render_page_2(void);
+static void render_page_3(void);
+static void render_page_4(void);
 
 static void render_page(int pagenum)
 {
@@ -144,9 +160,14 @@ static void render_page(int pagenum)
     loc = sdl_render_printf_nk(3, 2, ROW2Y(win_rows-1), "%s", "X");
     sdl_register_event(loc, EVID_END_PROGRAM);
 
+    //sdl_render_text(0, ROW2Y(1), "123456789x123456789x123456789x123456789x");
+
     switch (pagenum) {
     case 0: render_page_0(); break;
     case 1: render_page_1(); break;
+    case 2: render_page_2(); break;
+    case 3: render_page_3(); break;
+    case 4: render_page_4(); break;
     }
 }
 
@@ -158,11 +179,14 @@ static void render_page_0(void)
     char str[100];
 
     time(&t);
-    //tm = (struct tmx*)localtime(&t);
     tm = localtime(&t);
 
     sprintf(str, "%02d:%02d:%02d", tm->tm_hour, tm->tm_min, tm->tm_sec);
     sdl_render_printf_nk(1, 0, ROW2Y(r), "%s", str);
+
+    // xxx intro text
+    // - following pages sameple code
+    // - swipe right, left, up
 }
 
 static void render_page_1(void)
@@ -181,14 +205,187 @@ static void render_page_1(void)
     }
 }
 
+static void render_page_2(void)
+{
+    int r = 2;
+
+    sdl_render_printf(0, ROW2Y(r++), "sizoef(char)   = %zd", sizeof(char));
+    sdl_render_printf(0, ROW2Y(r++), "sizoef(short)  = %zd", sizeof(short));
+    sdl_render_printf(0, ROW2Y(r++), "sizoef(int)    = %zd", sizeof(int));
+    sdl_render_printf(0, ROW2Y(r++), "sizoef(long)   = %zd", sizeof(long));
+    sdl_render_printf(0, ROW2Y(r++), "sizoef(size_t) = %zd", sizeof(size_t));
+    sdl_render_printf(0, ROW2Y(r++), "sizoef(off_t)  = %zd", sizeof(off_t));
+    sdl_render_printf(0, ROW2Y(r++), "sizoef(time_t) = %zd", sizeof(time_t));
+    sdl_render_printf(0, ROW2Y(r++), "sizeof(1)      = %zd", sizeof(123));
+    sdl_render_printf(0, ROW2Y(r++), "sizeof(1ULL);  = %zd", sizeof(123UL));
+}
+
+    static int pts[] = {
+        10, 500 ,
+        990, 500 ,
+        990, 1500 ,
+            };
+
+
+void *xyz(void *x)
+{
+    return x;
+}
+
+    #define DELTA_INTEN 0.01
+    static double inten;
+
+static double wavelen = 440;
+#define DELTA_WAVELEN 5
+
+static void render_page_3(void)
+{
+    sdl_rect_t loc;
+    
+    loc.x = loc.y = 0;
+    loc.w = 1000; loc.h = 1800;
+    loc.w = 1000; loc.h = 2166;
+    sdl_render_rect(&loc, 4, COLOR_PURPLE);
+
+    loc.x = 100; loc.y = 100; loc.w = 800; loc.h = 100;
+    sdl_render_fill_rect(&loc, COLOR_RED);
+
+
+    sdl_render_circle(500, 350, 100, 10, COLOR_ORANGE);
+
+    // xxx
+    //sdl_render_line(0, 500, 1000, 500, COLOR_WHITE);
+
+    //printf("count %d   %d %d\n", (int)(sizeof(pts)/(sizeof(sdl_point_t))),
+        //(int)sizeof(pts), (int)sizeof(sdl_point_t));
+    sdl_point_t pts[8];
+    pts[0].x = 100; pts[0].y = 500;
+    pts[1].x = 900; pts[1].y = 500;
+    pts[2].x = 900; pts[2].y = 1500;
+    pts[3].x = 100; pts[3].y = 1500;
+    pts[4].x = 100; pts[4].y = 500;
+    pts[5].x = 900; pts[5].y = 1500;
+    pts[6].x = 100; pts[6].y = 1500;
+    pts[7].x = 900; pts[7].y = 500;
+    sdl_render_lines(pts, 8, COLOR_RED);
+
+    sdl_render_line(50, 1550, 950, 1550, COLOR_WHITE);
+    sdl_render_line(50, 1600, 950, 1600, COLOR_WHITE);
+
+    //400, 1650, 200, 200
+    int color;
 #if 0
-    printf("sizoef(char)      = %zd\n", sizeof(char));
-    printf("sizoef(short)     = %zd\n", sizeof(short));
-    printf("sizoef(int)       = %zd\n", sizeof(int));
-    printf("sizoef(long)      = %zd\n", sizeof(long));
-    printf("sizoef(size_t)    = %zd\n", sizeof(size_t));
-    printf("sizoef(off_t)     = %zd\n", sizeof(off_t));
-    printf("sizoef(time_t)    = %zd\n", sizeof(time_t));
-    printf("sizeof(123)       = %zd\n", sizeof(123));
-    printf("sizeof(123UL)     = %zd\n", sizeof(123UL));
+    static double inten[] = {0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0};
+    static int idx;
+    int color;
+    color = sdl_scale_color(COLOR_YELLOW, inten[idx]);
+    idx = (idx + 1) % 11;
+    printf("idx = %d  color=0x%x\n", idx, color);
 #endif
+
+    inten += DELTA_INTEN;
+    printf("INTEN %f\n", inten);
+//  if (inten > 1) {
+//      printf("set to zero\n");
+//      inten = 0;
+//  }
+    if (inten > 1) inten = 0;
+    color = sdl_scale_color(COLOR_YELLOW, inten);
+    printf("COLOR 0x%x\n", color);
+
+    loc.x = 100; loc.y = 1650; loc.w = 200; loc.h = 200;
+    sdl_render_fill_rect(&loc, color);
+
+
+    wavelen += DELTA_WAVELEN;
+    if (wavelen > 750) wavelen = 440;
+    color = sdl_wavelength_to_color(wavelen);
+
+    loc.x = 700; loc.y = 1650; loc.w = 200; loc.h = 200;
+    sdl_render_fill_rect(&loc, color);
+
+// xxx test this
+//int sdl_create_color(int r, int g, int b, int a);
+}
+
+// ----------------------------------
+
+sdl_texture_t *circle;
+sdl_texture_t *text;
+int circle_x=400, circle_y=200;
+int text_x=0, text_y=800;
+
+double angle = 0;
+
+sdl_texture_t *t1;
+
+#define DELTA_CIRCLE_X 10
+
+static void render_page_4(void)
+{
+#if 0
+// render using textures
+sdl_texture_t *sdl_create_texture(int w, int h);                                      // k
+sdl_texture_t *sdl_create_texture_from_display(sdl_rect_t *loc);                      // xxx needed?
+sdl_texture_t *sdl_create_filled_circle_texture(int radius, int color);               // k
+sdl_texture_t *sdl_create_text_texture(char *str);                                    // k
+void sdl_destroy_texture(sdl_texture_t *texture);                                     // k 
+void sdl_query_texture(sdl_texture_t *texture, int *width, int *height);              // k
+void sdl_update_texture(sdl_texture_t *texture, char *pixels, int pitch);             // k   add more testing
+void sdl_render_texture(int x, int y, sdl_texture_t *texture);                        // k
+void sdl_render_scaled_texture(sdl_rect_t *dest, sdl_texture_t *texture);             // k
+#endif
+
+    sdl_render_texture(circle_x, circle_y, circle);
+    circle_x += DELTA_CIRCLE_X;
+    if (circle_x > 1000) circle_x = 0;
+
+    sdl_rect_t dest;
+
+    dest.x = 500 - 400/2;
+    dest.y = 500;
+    dest.w = 400;
+    dest.h = 200;
+    sdl_render_scaled_texture(&dest, circle);
+
+    sdl_render_texture(450, 800, t1);  // xxx purple squae
+
+    sdl_render_texture(0,1000, text);
+
+    int w,h;
+    sdl_query_texture(text, &w, &h);
+    sdl_render_rotated_texture(500-w/2, 1300, angle, text);
+    angle = angle + 1;
+    if (angle > 360) angle -= 360;
+}
+
+static void page_4_init(void)
+{
+    int w, h;
+    int *pixels;
+    int i;
+
+    circle = sdl_create_filled_circle_texture(100, COLOR_RED);
+    sdl_query_texture(circle, &w, &h);
+    printf("circle texture: w=%d h=%d\n", w, h);
+
+    text = sdl_create_text_texture("hello");
+    sdl_query_texture(text, &w, &h);
+    printf("text texture: w=%d h=%d\n", w, h);
+
+    t1 = sdl_create_texture(100, 100);
+    pixels = malloc(100 * 100 * 4);
+    memset(pixels, 0, 100*100*4);
+    for (i = 0; i < 10000; i++) {
+        pixels[i] = COLOR_PURPLE;
+    }
+    sdl_update_texture(t1, (char*)pixels, 100*4);
+    free(pixels);
+}
+
+static void page_4_exit(void)
+{
+    sdl_destroy_texture(circle);
+    sdl_destroy_texture(text);
+    sdl_destroy_texture(t1);
+}

@@ -98,12 +98,23 @@ void Sdl_scale_color (struct ParseState *Parser, struct Value *ReturnValue,
 	struct Value **Param, int NumArgs)
 {
     int color = Param[0]->Val->Integer;
-    int inten = Param[1]->Val->FP;
+    double inten = Param[1]->Val->FP;
     int scaled_color;
 
     scaled_color = sdl_scale_color(color, inten);
 
     ReturnValue->Val->Integer = scaled_color;
+}
+
+void Sdl_wavelength_to_color (struct ParseState *Parser, struct Value *ReturnValue,
+	struct Value **Param, int NumArgs)
+{
+    int wavelength = Param[0]->Val->Integer;
+    int color;
+
+    color = sdl_wavelength_to_color(wavelength);
+
+    ReturnValue->Val->Integer = color;
 }
 
 //
@@ -172,8 +183,10 @@ void Sdl_render_printf_nk (struct ParseState *Parser, struct Value *ReturnValue,
     sdl_rect_t      *loc;
     int              x;
 
-    extern int win_width;
-    extern int char_width_xxx;
+    //extern int win_width;
+    //extern int char_width_xxx;
+    int win_width = 1000;
+    int char_width_xxx = 50;
 
     PrintfArgs.Param = Param + 3;
     PrintfArgs.NumArgs = NumArgs - 4;
@@ -357,6 +370,17 @@ void Sdl_render_scaled_texture (struct ParseState *Parser, struct Value *ReturnV
     sdl_render_scaled_texture(dest, texture);
 }
 
+void Sdl_render_rotated_texture (struct ParseState *Parser, struct Value *ReturnValue,
+	struct Value **Param, int NumArgs)
+{
+    int            x       = Param[0]->Val->Integer;
+    int            y       = Param[1]->Val->Integer;
+    double         angle   = Param[2]->Val->FP;
+    sdl_texture_t *texture = (sdl_texture_t*)Param[3]->Val->Pointer;
+
+    sdl_render_rotated_texture(x, y, angle, texture);
+}
+
 // -----------------  SDL PLATFORM REGISTRATION -------------------------
 
 struct LibraryFunction SdlFunctions[] = {
@@ -375,6 +399,7 @@ struct LibraryFunction SdlFunctions[] = {
     // create colors
     { Sdl_create_color,    "int sdl_create_color(int r, int g, int b, int a);" },
     { Sdl_scale_color,     "int sdl_scale_color(int color, double inten);" },
+    { Sdl_wavelength_to_color, "int sdl_wavelength_to_color(int wavelength);" },
 
     // render text
     { Sdl_print_init,      "void sdl_print_init(int ptsize, int fg_color, int bg_color, int *char_width, int *char_height, int *win_rows, int *win_cols);" },
@@ -401,12 +426,13 @@ struct LibraryFunction SdlFunctions[] = {
     { Sdl_update_texture,               "void sdl_update_texture(sdl_texture_t *texture, char *pixels, int pitch);" },
     { Sdl_render_texture,               "void sdl_render_texture(int x, int y, sdl_texture_t *texture);" },
     { Sdl_render_scaled_texture,        "void sdl_render_scaled_texture(sdl_rect_t *dest, sdl_texture_t *texture);" },
+    { Sdl_render_rotated_texture,       "void sdl_render_rotated_texture(int x, int y, double angle, sdl_texture_t *texture);" },
 
     { NULL, NULL } };
 
 
 const char SdlDefs[] = "\
-typedef struct { short x; short y; short w; short h; } sdl_rect_t; \
+typedef struct { int x; int y; int w; int h; } sdl_rect_t; \
 typedef struct { int x; int y; } sdl_point_t; \
 typedef struct sdl_texture sdl_texture_t; \
 ";

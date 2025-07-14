@@ -112,20 +112,28 @@ int sdl_init(int *w, int *h)
         return -1;
     }
 #else
-    if (SDL_CreateWindowAndRenderer(500, 900, 0, &window, &renderer) != 0) {
+    if (SDL_CreateWindowAndRenderer(450, 975, 0, &window, &renderer) != 0) {
         ERROR("SDL_CreateWindowAndRenderer failed\n");
         return -1;
     }
 #endif
 
-    //xxx int rc = SDL_RenderSetLogicalSize(renderer, 1000,2000);
-    //xxx INFO("rc %d\n", rc);
+    int real_win_width, real_win_height;
+    SDL_GetWindowSize(window, &real_win_width, &real_win_height);
+    INFO("real_win_width x h = %d %d\n", real_win_width, real_win_height);
+    double aspect = (double)real_win_height / real_win_width;
+    INFO("aspect = %f\n", aspect);
 
+    win_width = 1000;
+    win_height = aspect * 1000;
+
+    int rc = SDL_RenderSetLogicalSize(renderer, win_width, win_height);
+    INFO("SDL_RenderSetLogicalSize rc %d\n", rc);
+
+#if 0
     // get the actual window size, which will be returned to caller and
     // also saved in vars win_width/height
-    SDL_GetWindowSize(window, &win_width, &win_height);
-    //xxx win_width = 1000;
-    //xxx win_height = 2000;
+#endif
     *w = win_width;
     *h = win_height;
     INFO("win_width=%d win_height=%d\n", win_width, win_height);
@@ -221,8 +229,8 @@ try_again:
             return -1;
         } else if (timeout_us < 0 || waited < timeout_us) {
             // either wait forever or time waited is less than timeout_us
-            usleep(100000);
-            waited += 100000;
+            usleep(1000);
+            waited += 1000;
             goto try_again;
         } else {
             // time waited exceeds timeout_us
@@ -253,6 +261,8 @@ static int process_sdl_event(SDL_Event *ev)
     switch (ev->type) {
     case SDL_MOUSEBUTTONDOWN:
     case SDL_MOUSEBUTTONUP: {
+        static int last_pressed_x = -1;
+        static int last_pressed_y = -1;
 #if 0
        INFO("MOUSEBUTTON button=%s state=%s x=%d y=%d\n",
                (ev->button.button == SDL_BUTTON_LEFT   ? "LEFT" :
@@ -264,7 +274,44 @@ static int process_sdl_event(SDL_Event *ev)
                ev->button.y);
 #endif
 
-        if (ev->button.state == SDL_RELEASED) {
+        if (ev->button.state == SDL_PRESSED) {
+            last_pressed_x = ev->button.x;
+            last_pressed_y = ev->button.y;
+        } else if (ev->button.state == SDL_RELEASED) {
+#define EVID_SWIPE_DOWN        2000
+#define EVID_SWIPE_UP          2
+#define EVID_SWIPE_RIGHT       4
+#define EVID_SWIPE_LEFT        6
+
+            int delta_x = ev->button.x - last_pressed_x;
+            int delta_y = ev->button.y - last_pressed_y;
+
+            if (delta_x > 200) {
+                INFO("got EVID_SWIPE_RIGHT %d\n", delta_x);
+                event_id = EVID_SWIPE_RIGHT;
+                break;
+            } else if (delta_x < -200) {
+                INFO("got EVID_SWIPE_LEFT %d\n", delta_x);
+                event_id = EVID_SWIPE_LEFT;
+                break;
+            } else if (delta_y > 200) {
+                INFO("got EVID_SWIPE_DOWN %d\n", delta_y);
+                event_id = EVID_SWIPE_DOWN;
+                break;
+            } else if (delta_y < -200) {
+                INFO("got EVID_SWIPE_UP %d\n", delta_y);
+                event_id = EVID_SWIPE_UP;
+                break;
+            }
+
+
+//          if (last_pressed_x != -1 && last_pressed_y != -1) {
+//          }
+//          last_pressed_x = -1;
+//          last_pressed_y = -1;
+
+
+
             for (i = 0; i < max_event; i++) {
                 if (AT_POS(ev->button.x, ev->button.y, event_tbl[i].loc)) {
                     break;
@@ -320,6 +367,54 @@ int sdl_scale_color(int color, double inten)
     b *= inten;
 
     return (r << 0) | (g << 8) | (b << 16) | (a << 24);
+}
+
+// ported from http://www.noah.org/wiki/Wavelength_to_RGB_in_Python
+// xxx violet not working well
+int sdl_wavelength_to_color(int wavelength_arg)
+{
+    double wavelength = wavelength_arg;
+    double attenuation;
+    double gamma = 0.8;
+    double R,G,B;
+
+    if (wavelength >= 380 && wavelength <= 440) {
+        double attenuation = 0.3 + 0.7 * (wavelength - 380) / (440 - 380);
+        R = pow((-(wavelength - 440) / (440 - 380)) * attenuation, gamma);
+        G = 0.0;
+        B = pow(1.0 * attenuation, gamma);
+    } else if (wavelength >= 440 && wavelength <= 490) {
+        R = 0.0;
+        G = pow((wavelength - 440) / (490 - 440), gamma);
+        B = 1.0;
+    } else if (wavelength >= 490 && wavelength <= 510) {
+        R = 0.0;
+        G = 1.0;
+        B = pow(-(wavelength - 510) / (510 - 490), gamma);
+    } else if (wavelength >= 510 && wavelength <= 580) {
+        R = pow((wavelength - 510) / (580 - 510), gamma);
+        G = 1.0;
+        B = 0.0;
+    } else if (wavelength >= 580 && wavelength <= 645) {
+        R = 1.0;
+        G = pow(-(wavelength - 645) / (645 - 580), gamma);
+        B = 0.0;
+    } else if (wavelength >= 645 && wavelength <= 750) {
+        attenuation = 0.3 + 0.7 * (750 - wavelength) / (750 - 645);
+        R = pow(1.0 * attenuation, gamma);
+        G = 0.0;
+        B = 0.0;
+    } else {
+        R = 0.0;
+        G = 0.0;
+        B = 0.0;
+    }
+
+    if (R < 0) R = 0; else if (R > 1) R = 1;
+    if (G < 0) G = 0; else if (G > 1) G = 1;
+    if (B < 0) B = 0; else if (B > 1) B = 1;
+
+    return sdl_create_color(R*255, G*255, B*255, 255);
 }
 
 static void set_render_draw_color(int color)
@@ -461,6 +556,9 @@ void sdl_render_rect(sdl_rect_t *loc, int line_width, int color)
     SDL_Rect rect = *(SDL_Rect*)loc;
     int i;
 
+//  INFO("color=0x%x line_width=%d  xywh=%d %d %d %d\n", color, line_width,
+//      loc->x, loc->y, loc->w, loc->h);
+
     set_render_draw_color(color);
 
     for (i = 0; i < line_width; i++) {
@@ -485,6 +583,8 @@ void sdl_render_fill_rect(sdl_rect_t *loc, int color)
 
 void sdl_render_line(int x1, int y1, int x2, int y2, int color)
 {
+    INFO("%d %d %d %d\n", x1, y1, x2, y2);
+
     sdl_point_t points[2] = { {x1,y1}, {x2,y2} };
     sdl_render_lines(points, 2, color);
 }
@@ -496,6 +596,11 @@ void sdl_render_lines(sdl_point_t *points, int count, int color)
     if (count <= 1) {
         return;
     }
+
+    INFO("POINTS %d %d - %d %d,  count=%d\n", 
+        sdl_points[0].x, sdl_points[0].y,
+        sdl_points[1].x, sdl_points[1].y,
+        count);
 
     set_render_draw_color(color);
 
@@ -913,16 +1018,31 @@ void sdl_render_texture(int x, int y, sdl_texture_t *texture)
     SDL_RenderCopy(renderer, (SDL_Texture*)texture, NULL, &dest);
 }
 
-void sdl_render_scaled_texture(sdl_rect_t *dest_arg, sdl_texture_t *texture_arg)
+// xxx rename from scaled to scale
+void sdl_render_scaled_texture(sdl_rect_t *dest, sdl_texture_t *texture)
 {
-    SDL_Texture *texture = (SDL_Texture *)texture_arg;
-    SDL_Rect *dest = (SDL_Rect*)dest_arg;
+    if (texture == NULL) {
+        return;
+    }
+
+    SDL_RenderCopy(renderer, (SDL_Texture*)texture, NULL, (SDL_Rect*)dest);
+}
+
+void sdl_render_rotated_texture(int x, int y, double angle, sdl_texture_t *texture)
+{
+    SDL_Rect dest;
+    int w,h;
 
     if (texture == NULL) {
         return;
     }
 
-    SDL_RenderCopy(renderer, texture, NULL, dest);
+    sdl_query_texture(texture, &w, &h);
+    dest.x = x;
+    dest.y = y;
+    dest.w = w;
+    dest.h = h;
+    SDL_RenderCopyEx(renderer, (SDL_Texture*)texture, NULL, &dest, angle, NULL, false);
 }
 
 // -----------------  LOGGING  --------------------------------------

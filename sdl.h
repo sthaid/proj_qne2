@@ -46,6 +46,7 @@ int sdl_get_event(long timeout_us);
 // create colors
 int sdl_create_color(int r, int g, int b, int a);
 int sdl_scale_color(int color, double inten);
+int sdl_wavelength_to_color(int wavelength);
 
 // render text
 void sdl_print_init(int ptsize, int fg_color, int bg_color, int *char_width, int *char_height, int *win_rows, int *win_cols);
@@ -72,3 +73,6 @@ void sdl_query_texture(sdl_texture_t *texture, int *width, int *height);
 void sdl_update_texture(sdl_texture_t *texture, char *pixels, int pitch);
 void sdl_render_texture(int x, int y, sdl_texture_t *texture);
 void sdl_render_scaled_texture(sdl_rect_t *dest, sdl_texture_t *texture);
+void sdl_render_rotated_texture(int x, int y, double angle, sdl_texture_t *texture);
+
+

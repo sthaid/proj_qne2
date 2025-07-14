@@ -1,3 +1,18 @@
+need win_width
+
+rename to micro apps = u-apps
+
+dir struct
+
+hello test pgm
+- rotation
+- font int, chars across
+
+screen size scaling, to 1000 width x N height
+- try SDL_RenderSetLogicalSize
+
+xxxxxxxxxxx
+
 add mouse swipe detection
 
 rotate texture with SDL_RenderCopyEx
@@ -9,8 +24,6 @@ check size of font on Android
 picoc.c arg0
 
 pthread_creae detached
-
-try SDL_RenderSetLogicalSize
 
 larger loc around matching events
 
