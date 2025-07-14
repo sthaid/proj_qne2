@@ -19,11 +19,9 @@ int StdioBasePrintf(struct ParseState *Parser, FILE *Stream, char *StrOut,
 void Sdl_init (struct ParseState *Parser, struct Value *ReturnValue,
 	struct Value **Param, int NumArgs)
 {
-    int *w = (int*)Param[0]->Val->Pointer;
-    int *h = (int*)Param[1]->Val->Pointer;
     int ret;
 
-    ret = sdl_init(w, h);
+    ret = sdl_init();
 
     ReturnValue->Val->Integer = ret;
 }
@@ -32,6 +30,15 @@ void Sdl_exit (struct ParseState *Parser, struct Value *ReturnValue,
 	struct Value **Param, int NumArgs)
 {
     sdl_exit();
+}
+
+void Sdl_get_win_size (struct ParseState *Parser, struct Value *ReturnValue,
+	struct Value **Param, int NumArgs)
+{
+    int *w = Param[0]->Val->Pointer;
+    int *h = Param[1]->Val->Pointer;
+
+    sdl_get_win_size(w, h);
 }
 
 //
@@ -121,18 +128,27 @@ void Sdl_wavelength_to_color (struct ParseState *Parser, struct Value *ReturnVal
 // render text
 //
 
+static int Char_width;
+
 void Sdl_print_init (struct ParseState *Parser, struct Value *ReturnValue,
 	struct Value **Param, int NumArgs)
 {
-    int ptsize       = Param[0]->Val->Integer;
-    int fg_color     = Param[1]->Val->Integer;
-    int bg_color     = Param[2]->Val->Integer;
+    int  numchars    = Param[0]->Val->Integer;
+    int  fg_color    = Param[1]->Val->Integer;
+    int  bg_color    = Param[2]->Val->Integer;
     int *char_width  = Param[3]->Val->Pointer;
     int *char_height = Param[4]->Val->Pointer;
     int *win_rows    = Param[5]->Val->Pointer;
     int *win_cols    = Param[6]->Val->Pointer;
+    int  tmp_char_width;
 
-    sdl_print_init(ptsize, fg_color, bg_color, char_width, char_height, win_rows, win_cols);
+    if (char_width == NULL) {
+        char_width = &tmp_char_width;
+    }
+
+    sdl_print_init(numchars, fg_color, bg_color, char_width, char_height, win_rows, win_cols);
+
+    Char_width = *char_width;
 }
 
 void Sdl_render_text (struct ParseState *Parser, struct Value *ReturnValue,
@@ -183,16 +199,14 @@ void Sdl_render_printf_nk (struct ParseState *Parser, struct Value *ReturnValue,
     sdl_rect_t      *loc;
     int              x;
 
-    //extern int win_width;
-    //extern int char_width_xxx;
-    int win_width = 1000;
-    int char_width_xxx = 50;
+    #define WIN_WIDTH 1000 //xxx ?
 
     PrintfArgs.Param = Param + 3;
     PrintfArgs.NumArgs = NumArgs - 4;
     StdioBasePrintf(Parser, NULL, str, sizeof(str), fmt, &PrintfArgs);
 
-    x = ((win_width/2/(n)) + (k) * (win_width/(n)) - strlen(str) * char_width_xxx / 2);
+    // xxx what if n or k are invalid
+    x = ((WIN_WIDTH/2/(n)) + (k) * (WIN_WIDTH/(n)) - strlen(str) * Char_width / 2);
     loc = sdl_render_text(x, y, str);
 
     ReturnValue->Val->Pointer = loc;
@@ -385,8 +399,9 @@ void Sdl_render_rotated_texture (struct ParseState *Parser, struct Value *Return
 
 struct LibraryFunction SdlFunctions[] = {
     // sdl initialization and termination, must be done once
-    { Sdl_init,            "int sdl_init(int *w, int *h);" },
+    { Sdl_init,            "int sdl_init(void);" },
     { Sdl_exit,            "void sdl_exit(void);" },
+    { Sdl_get_win_size,    "void sdl_get_win_size(int *w, int *h);" },
 
     // display init and present, must be done for every display update
     { Sdl_display_init,    "void sdl_display_init(int color);" },

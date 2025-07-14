@@ -29,7 +29,7 @@ hello.c outline
 
 #include <sdl.h>
 
-static int win_width;  // xxx make static in sdl.c
+static int win_width;
 static int win_height;
 static int char_width;
 static int char_height;
@@ -52,8 +52,6 @@ int main(int argc, char **argv)
     bool is_qne_app = (argc > 0 && strcmp(argv[0], "qne_app") == 0);
 
     // xxx temp debug prints
-    // font char height = ptsize
-    //      char width = 0.6 * ptsize
     printf("argc = %d\n", argc);
     for (i = 0; i < argc; i++) {
         printf("argv[%d] = '%s'\n", i, argv[i]);
@@ -61,30 +59,17 @@ int main(int argc, char **argv)
     printf("is_qne_app = %d\n", is_qne_app);
 
     // if not qne_app then call sdl_init
-    if (!is_qne_app) {
-        rc = sdl_init(&win_width, &win_height);  // xxx need w,h?
-        if (rc != 0) {
-            return 1;
-        }
-    } else {
-        // xxx get win_width/height
+    if (!is_qne_app && sdl_init() != 0) {
+        return 1;
     }
-
-    // xxx temp
-    for (i = 100; i < 101; i++) {
-        sdl_print_init(i, COLOR_WHITE, COLOR_BLACK, 
-                    &char_width, &char_height, &win_rows, &win_cols);
-        printf("TEMP font %3d - %3d x %3d, win rows x cols %d %d\n", 
-               i, char_width, char_height, win_rows, win_cols);
-    }
+    sdl_get_win_size(&win_width, &win_height);
+    printf("win_width/height = %d %d\n", win_width, win_height);
 
     // xxx
-    //   ptsize * 0.6 * 20 = win_width
-    int ptsize = 1000 / (0.6 * 20);
-    sdl_print_init(ptsize, COLOR_WHITE, COLOR_BLACK, 
+    sdl_print_init(20, COLOR_WHITE, COLOR_BLACK, 
                    &char_width, &char_height, &win_rows, &win_cols);
-    printf("font %3d - %3d x %3d, win rows x cols %d %d\n", 
-               ptsize, char_width, char_height, win_rows, win_cols);
+    printf("font char width x height = %3d x %3d, win rows x cols = %d %d\n", 
+               char_width, char_height, win_rows, win_cols);
 
     page_4_init();
 

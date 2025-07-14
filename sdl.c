@@ -25,13 +25,16 @@ static void logmsg(char *lvl, const char *func, char *fmt, ...)
 // 
 
 #ifdef ANDROID
-    //#define FONT_FILE_PATH  "/system/fonts/DroidSansMono.ttf"
+    //#define FONT_FILE_PATH  "/system/fonts/DroidSansMono.ttf"  xxx
     #define FONT_FILE_PATH  "FreeMonoBold.ttf"
 #else
     #define FONT_FILE_PATH "/usr/share/fonts/truetype/freefont/FreeMonoBold.ttf"
 #endif
 
+#define MIN_FONT_PTSIZE 10
 #define MAX_FONT_PTSIZE 200
+
+#define DEFAULT_NUMCHARS 20
 
 //
 // colors
@@ -56,12 +59,6 @@ const int COLOR_BLACK      = ( 0    |    0<<8 |    0<<16 |  255<<24 );
 //
 
 typedef struct {
-    TTF_Font *font;
-    //int       char_width;  xxx cleanup
-    //int       char_height;
-} font_t;
-
-typedef struct {
     sdl_rect_t loc;
     int        event_id;
 } event_t;
@@ -72,10 +69,10 @@ typedef struct {
 
 static SDL_Window     * window;
 static SDL_Renderer   * renderer;
-       int              win_width; //xxx
+static int              win_width;
 static int              win_height;
 
-static font_t           font[MAX_FONT_PTSIZE];
+static TTF_Font        *font[MAX_FONT_PTSIZE];
 
 static event_t          event_tbl[100];
 static int              max_event;
@@ -89,10 +86,14 @@ static void set_render_draw_color(int color);
 
 // ----------------- INIT / EXIT --------------------------
 
-int sdl_init(int *w, int *h)
+int sdl_init(void)
 {
-    // display available and current video drivers
+    int real_win_width, real_win_height;
     int num, i;
+    double aspect_ratio;
+    int chw, chh, rows, cols;
+
+    // display available and current video drivers
     num = SDL_GetNumVideoDrivers();
     INFO("Available Video Drivers: ");
     for (i = 0; i < num; i++) {
@@ -118,33 +119,42 @@ int sdl_init(int *w, int *h)
     }
 #endif
 
-    int real_win_width, real_win_height;
+    // get real windows size and aspect ratio
     SDL_GetWindowSize(window, &real_win_width, &real_win_height);
-    INFO("real_win_width x h = %d %d\n", real_win_width, real_win_height);
-    double aspect = (double)real_win_height / real_win_width;
-    INFO("aspect = %f\n", aspect);
+    aspect_ratio = (double)real_win_height / real_win_width;
+    INFO("real_win_width x h = %d %d  aspect = %f\n", real_win_width, real_win_height, aspect_ratio);
 
+    // set logical window size, with widt=1000, and maintain real aspect ratio
     win_width = 1000;
-    win_height = aspect * 1000;
-
-    int rc = SDL_RenderSetLogicalSize(renderer, win_width, win_height);
-    INFO("SDL_RenderSetLogicalSize rc %d\n", rc);
-
-#if 0
-    // get the actual window size, which will be returned to caller and
-    // also saved in vars win_width/height
-#endif
-    *w = win_width;
-    *h = win_height;
-    INFO("win_width=%d win_height=%d\n", win_width, win_height);
+    win_height = aspect_ratio * 1000;
+    if (SDL_RenderSetLogicalSize(renderer, win_width, win_height) != 0) {
+        ERROR("SDL_RenderSetLogicalSize failed\n");
+        return -1;
+    }
 
     // initialize True Type Font
     if (TTF_Init() < 0) {
         ERROR("TTF_Init failed\n");
         return -1;
     }
-    //sdl_print_init(40, COLOR_WHITE, COLOR_BLACK, NULL, NULL, NULL, NULL);
-    sdl_print_init(100, COLOR_WHITE, COLOR_BLACK, NULL, NULL, NULL, NULL);
+
+#if 0
+    // debug code to print font info
+    for (int ptsize = MIN_FONT_PTSIZE; ptsize < MAX_FONT_PTSIZE; ptsize++) {
+        TTF_Font *f = TTF_OpenFont(FONT_FILE_PATH, ptsize);
+        TTF_SizeText(f, "X", &chw, &chh);
+        TTF_CloseFont(f);
+        INFO("font ptsize = %d  chw/chh = %d %d\n", ptsize, chw, chh);
+    }
+#endif
+
+    // init default fontsize, where DEFAULT_NUMCHARS is num chars across display;
+    // and validate expected character size and columns
+    sdl_print_init(DEFAULT_NUMCHARS, COLOR_WHITE, COLOR_BLACK, &chw, &chh, &rows, &cols);
+    if (chw != 50 || chh != 83 || cols != 20) {
+        ERROR("chw,chh,cols expected = 50,83,20  actual = %d,%d,%d\n", chw, chh, cols);
+        return -1;
+    }
 
     // SDL Text Input is not being used 
     SDL_StopTextInput();
@@ -164,9 +174,9 @@ void sdl_exit(void)
 
     INFO("sdl exitting\n");
 
-    for (i = 0; i < MAX_FONT_PTSIZE; i++) {
-        if (font[i].font != NULL) {
-            TTF_CloseFont(font[i].font);
+    for (i = MIN_FONT_PTSIZE; i < MAX_FONT_PTSIZE; i++) {
+        if (font[i] != NULL) {
+            TTF_CloseFont(font[i]);
         }
     }
     TTF_Quit();
@@ -176,6 +186,12 @@ void sdl_exit(void)
     SDL_Quit();
 
     INFO("done\n");
+}
+
+void sdl_get_win_size(int *w, int *h)
+{
+    *w = win_width;
+    *h = win_height;
 }
 
 // ----------------- DISPLAY INIT / PRESENT ---------------
@@ -333,9 +349,10 @@ static int process_sdl_event(SDL_Event *ev)
                ev->motion.yrel);
 #endif
         break; }
-    case SDL_FINGERDOWN:  // xxx should these be used instead of mouse
+    case SDL_FINGERDOWN:
     case SDL_FINGERUP:
     case SDL_FINGERMOTION: {
+        // not used
         break; }
     default: {
         INFO("event_type %d - not supported\n", ev->type);
@@ -429,8 +446,6 @@ static void set_render_draw_color(int color)
 
 // -----------------  RENDER TEXT  ------------------------
 
-int char_width_xxx; //xxx
-
 static struct {
     int ptsize;
     SDL_Color fg_color;
@@ -441,25 +456,28 @@ static struct {
     int win_cols;
 } text;
 
-void sdl_print_init(int ptsize, int fg_color, int bg_color, int *char_width, int *char_height, int *win_rows, int *win_cols)
+void sdl_print_init(int numchars, int fg_color, int bg_color, int *char_width, int *char_height, int *win_rows, int *win_cols)
 {
-    int chw, chh;
+    int ptsize, chw, chh;
 
-    if (ptsize < 10) {
-        ptsize = 10;
+    // xxx comment about font characteristics
+    ptsize = 1000 / (0.6 * numchars);
+
+    if (ptsize < MIN_FONT_PTSIZE) {
+        ptsize = MIN_FONT_PTSIZE;
     }
     if (ptsize >= MAX_FONT_PTSIZE) {
         ptsize = MAX_FONT_PTSIZE-1;
     }
 
-    if (font[ptsize].font == NULL) {
-        font[ptsize].font = TTF_OpenFont(FONT_FILE_PATH, ptsize);
-        if (font[ptsize].font == NULL) {
+    if (font[ptsize] == NULL) {
+        font[ptsize] = TTF_OpenFont(FONT_FILE_PATH, ptsize);
+        if (font[ptsize] == NULL) {
             ERROR("TTF_OpenFont failed, ptsize=%d\n", ptsize);
             return;
         }
     }
-    TTF_SizeText(font[ptsize].font, "X", &chw, &chh);
+    TTF_SizeText(font[ptsize], "X", &chw, &chh);
 
     text.ptsize      = ptsize;
     text.fg_color    = *(SDL_Color*)&fg_color;
@@ -473,8 +491,6 @@ void sdl_print_init(int ptsize, int fg_color, int bg_color, int *char_width, int
     if (char_height) *char_height = text.char_height;
     if (win_rows) *win_rows = text.win_rows;
     if (win_cols) *win_cols = text.win_cols;
-
-    char_width_xxx = text.char_width; //xxx
 }
 
 // xxx add nk routine for this too
@@ -485,14 +501,14 @@ sdl_rect_t *sdl_render_text(int x, int y, char * str)
     static SDL_Rect  pos;
 
     // if font not initialized then return error
-    if (font[text.ptsize].font == NULL) {
+    if (font[text.ptsize] == NULL) {
         ERROR("font ptsize %d, not initialized\n", text.ptsize);
         memset(&pos, 0, sizeof(pos));
         return (sdl_rect_t*)&pos;
     }
 
     // render the string to a surface
-    surface = TTF_RenderText_Shaded(font[text.ptsize].font, str, text.fg_color, text.bg_color);
+    surface = TTF_RenderText_Shaded(font[text.ptsize], str, text.fg_color, text.bg_color);
     if (surface == NULL) {
         ERROR("TTF_RenderText_Shaded returned NULL\n");
         memset(&pos, 0, sizeof(pos));
@@ -531,18 +547,18 @@ sdl_rect_t *sdl_render_printf(int x, int y, char * fmt, ...)
 
 sdl_rect_t *sdl_render_printf_nk(int n, int k, int y, char * fmt, ...)
 {
-    char str[1000];
+    char str[200];
     va_list ap;
     int x;
-
-    if (n == 0) {
-        // xxx print error
-        return sdl_render_text(0, y, str);
-    }
 
     va_start(ap, fmt);
     vsnprintf(str, sizeof(str), fmt, ap);
     va_end(ap);
+
+    if (n == 0 || k >= n) {
+        ERROR("n=%d k=%d str='%s'\n", n, k, str);
+        return sdl_render_text(0, y, str);
+    }
 
     x = ((win_width/2/(n)) + (k) * (win_width/(n)) - strlen(str) * text.char_width / 2);
 
@@ -943,7 +959,7 @@ sdl_texture_t *sdl_create_text_texture(char * str)
     }
 
     // if font not initialized then return error
-    if (font[text.ptsize].font == NULL) {
+    if (font[text.ptsize] == NULL) {
         ERROR("font ptsize %d, not initialized\n", text.ptsize);
         return NULL;
     }
@@ -951,7 +967,7 @@ sdl_texture_t *sdl_create_text_texture(char * str)
     // render the text to a surface,
     // create a texture from the surface
     // free the surface
-    surface = TTF_RenderText_Shaded(font[text.ptsize].font, str, text.fg_color, text.bg_color);
+    surface = TTF_RenderText_Shaded(font[text.ptsize], str, text.fg_color, text.bg_color);
     if (surface == NULL) {
         ERROR("failed to allocate surface\n");
         return NULL;
@@ -1018,7 +1034,6 @@ void sdl_render_texture(int x, int y, sdl_texture_t *texture)
     SDL_RenderCopy(renderer, (SDL_Texture*)texture, NULL, &dest);
 }
 
-// xxx rename from scaled to scale
 void sdl_render_scaled_texture(sdl_rect_t *dest, sdl_texture_t *texture)
 {
     if (texture == NULL) {

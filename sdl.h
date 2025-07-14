@@ -32,8 +32,9 @@ typedef struct sdl_texture sdl_texture_t;
 //
 
 // sdl initialization and termination, must be done once
-int sdl_init(int *w, int *h);
+int sdl_init(void);
 void sdl_exit(void);
+void sdl_get_win_size(int *w, int *h);
 
 // display init and present, must be done for every display update
 void sdl_display_init(int color);

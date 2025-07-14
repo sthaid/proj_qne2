@@ -29,7 +29,6 @@ void logmsg(char *lvl, const char *func, char *fmt, ...)
 
 #ifndef USE_ANDROID_LOG
     // print the message, stdout has been redirected to the log file, in main.c;
-    // use './qne logcat' to monitor the log xxx
     time2str(time_str, get_real_time_us(), false, true, true),
     fprintf(stderr, "%s %s %s: %s\n", time_str, lvl, func, msg);
 #else
