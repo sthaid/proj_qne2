@@ -100,12 +100,12 @@ static void controller(void)
 
         // process the event
         INFO("proc event_id %d\n", event_id);
-        if (event_id < 0 || event_id >= MAX_MENU) {
-            ERROR("unexpected event_id %d\n", event_id);
-        } else if (strcmp(menu[event_id].name, "end") == 0) {
-            INFO("GOT EXIT CMD\n");
+        if (event_id == EVID_QUIT) {
             break;
+        } else if (event_id < 0 || event_id >= MAX_MENU) {
+            ERROR("unexpected event_id %d\n", event_id);
         } else {
+            // xxx check that menu entry is defined
             INFO("running %s\n", menu[event_id].name);
             rc = picoc_fg(menu[event_id].args);
             INFO("done %s, rc=%d\n", menu[event_id].name, rc);

@@ -295,11 +295,6 @@ static int process_sdl_event(SDL_Event *ev)
             last_pressed_x = ev->button.x;
             last_pressed_y = ev->button.y;
         } else if (ev->button.state == SDL_RELEASED) {
-#define EVID_SWIPE_DOWN        2000
-#define EVID_SWIPE_UP          2
-#define EVID_SWIPE_RIGHT       4
-#define EVID_SWIPE_LEFT        6
-
             int delta_x = ev->button.x - last_pressed_x;
             int delta_y = ev->button.y - last_pressed_y;
 
@@ -355,6 +350,10 @@ static int process_sdl_event(SDL_Event *ev)
     case SDL_FINGERMOTION: {
         // not used
         break; }
+    case SDL_QUIT: {
+        event_id = EVID_QUIT;
+        break; }
+
     default: {
         INFO("event_type %d - not supported\n", ev->type);
         break; }

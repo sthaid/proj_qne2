@@ -13,6 +13,13 @@ extern const int COLOR_GRAY;
 extern const int COLOR_WHITE;
 extern const int COLOR_BLACK;
 
+// xxx how to get defines in picoc
+#define EVID_SWIPE_DOWN        1000
+#define EVID_SWIPE_UP          1001
+#define EVID_SWIPE_RIGHT       1002
+#define EVID_SWIPE_LEFT        1003
+#define EVID_QUIT              9999
+
 //
 // typedefs
 //

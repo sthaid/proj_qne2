@@ -1,16 +1,8 @@
-dir struct
-- android                               okay
-  - assets, checkin the font          okay
-  - src          okay
-- linux             okay
-- apps          okay
-- tools         okay
-- picoc          okay
+api to provide ctr coords instead of top left
+- update menu code
+- upde hello.c
 
-maybe redo dir struct of files:
-- files/log
-- files/apps
-- files/apps/hello 
+finish hello.c code
 
 tools
 - add vitool
@@ -18,15 +10,10 @@ tools
 - tools/save dir has tests for the apps
 - maybe run cmd should allow multiple args
 
-
-
-add sdl_quit support for linux
-
 ------
 
 dont use logical size
 
-api to provide ctr coords instead of top left
 
 xxxxxxxxxxx
 
