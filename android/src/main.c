@@ -187,7 +187,7 @@ static void read_menu(void)
 
     // construct menu_path, if not already done so
     if (menu_path[0] == '\0') {
-        sprintf(menu_path, "%s/menu", internal_storage_path);
+        sprintf(menu_path, "%s/apps/menu", internal_storage_path);
     }
 
     // if menu file has not changed then return
