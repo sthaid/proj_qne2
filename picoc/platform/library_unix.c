@@ -1,5 +1,5 @@
 #include "../interpreter.h"
-#include "../../sdl.h"
+#include <sdl.h>
 
 struct StdVararg
 {

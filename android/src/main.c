@@ -18,13 +18,20 @@ int picoc_fg(char *args);
 
 // -----------------  MAIN  ------------------------------------------
 
+#ifdef ANDROID
 int SDL_main(int argc, char **argv)
+#else
+int main(int argc, char **argv)
+#endif
 {
-    FILE *fp;
     pthread_t tid;
 
     // init logging
+#ifdef ANDROID
     internal_storage_path = SDL_AndroidGetInternalStoragePath();
+#else
+    internal_storage_path = "/home/haid/proj/proj_qne2/linux/files";  //xxx
+#endif
     sprintf(log_file_pathname, "%s/%s", internal_storage_path, "log");
 
     freopen(log_file_pathname, "a", stdout);
@@ -253,7 +260,8 @@ static void read_menu(void)
 
 // ----------------- SERVER ----------------------------
 
-#define PORTNUM 1234
+//#define PORTNUM 1234
+#define PORTNUM 9000   // IANA registered port range 1024 - 49151
 
 static void *process_req_thread(void *cx);
 static void process_req_using_android_sh(int sockfd, char *cmd);
@@ -309,7 +317,6 @@ static void *server_thread(void *cx)
         struct sockaddr_in peer_addr;
         socklen_t          peer_addr_len;
         char               peer_addr_str[200];
-        int                ret;
 
         // accept connection
         peer_addr_len = sizeof(peer_addr);

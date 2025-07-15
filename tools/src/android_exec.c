@@ -11,8 +11,9 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 
-#define PORTNUM 1234
-#define IP_ADDR "192.168.1.243";
+#define PORTNUM 9000
+//#define IP_ADDR "192.168.1.243"  //xxx
+#define IP_ADDR "127.0.0.1"
 
 void set_fd_non_blocking(int fd);
 
@@ -62,7 +63,7 @@ int main(int argc, char **argv)
 
     addr.sin_family      = AF_INET;
     addr.sin_port        = htons(PORTNUM);
-    addr.sin_addr.s_addr = inet_addr("192.168.1.243");
+    addr.sin_addr.s_addr = inet_addr(IP_ADDR);
     addrlen = sizeof(addr);
     ret = connect(sockfd,  (struct sockaddr*)&addr, addrlen);
     if (ret != 0) {

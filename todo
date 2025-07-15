@@ -1,11 +1,26 @@
 dir struct
-- android
-  - assets, checkin the font
-  - src
-- linux
-- apps
-- tools
-- picoc
+- android                               okay
+  - assets, checkin the font          okay
+  - src          okay
+- linux             okay
+- apps          okay
+- tools         okay
+- picoc          okay
+
+tools
+- rename tool programs and get them to work with linux
+
+more tools
+- test_linux test_picoc
+
+maybe redo dir struct of files:
+- files/log
+- files/apps
+- files/apps/hello 
+
+add sdl_quit support for linux
+
+------
 
 dont use logical size
 

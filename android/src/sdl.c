@@ -28,7 +28,8 @@ static void logmsg(char *lvl, const char *func, char *fmt, ...)
     //#define FONT_FILE_PATH  "/system/fonts/DroidSansMono.ttf"  xxx
     #define FONT_FILE_PATH  "FreeMonoBold.ttf"
 #else
-    #define FONT_FILE_PATH "/usr/share/fonts/truetype/freefont/FreeMonoBold.ttf"
+    //#define FONT_FILE_PATH "/usr/share/fonts/truetype/freefont/FreeMonoBold.ttf"
+    #define FONT_FILE_PATH "../assets/FreeMonoBold.ttf"
 #endif
 
 #define MIN_FONT_PTSIZE 10
