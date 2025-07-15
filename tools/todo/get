@@ -38,7 +38,7 @@ while true; do
   
   # copy file from android
   echo "copying file from android $src_path to $dest_path"
-  android_exec "cat $src_path" > $dest_path
+  run "cat $src_path" > $dest_path
   
   # if dest_path file does not exist then error
   if [ ! -f $dest_path ]; then

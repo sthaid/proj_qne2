@@ -9,11 +9,11 @@ cd files
 tar --exclude log -cf /tmp/xfer.tar .
 
 # copy the tarfile to android
-cat /tmp/xfer.tar | android_exec -w 500000 "cat > ../xfer.tar"
+cat /tmp/xfer.tar | run -w 500000 "cat > ../xfer.tar"
 rm -f /tmp/xfer.tar
 
 # on android, remove contents of files, and recreate
-android_exec "rm -rf *"
-android_exec "tar -xvf ../xfer.tar"
-android_exec "rm ../xfer.tar"
-android_exec "log_clear"
+run "rm -rf *"
+run "tar -xvf ../xfer.tar"
+run "rm ../xfer.tar"
+run "log_clear"

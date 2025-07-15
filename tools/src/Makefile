@@ -1,2 +1,2 @@
-../android_exec: android_exec.c
-	gcc -o ../android_exec -Wall android_exec.c
+../run: run.c
+	gcc -o ../run -Wall run.c

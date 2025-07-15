@@ -7,16 +7,18 @@ dir struct
 - tools         okay
 - picoc          okay
 
-tools
-- rename tool programs and get them to work with linux
-
-more tools
-- test_linux test_picoc
-
 maybe redo dir struct of files:
 - files/log
 - files/apps
 - files/apps/hello 
+
+tools
+- add vitool
+- tools/todo dir
+- tools/save dir has tests for the apps
+- maybe run cmd should allow multiple args
+
+
 
 add sdl_quit support for linux
 

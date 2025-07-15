@@ -28,7 +28,7 @@ while true; do
   
   # copy file to android
   echo "copying file from $src_path to android $dest_path"
-  cat $src_path | android_exec -w 500000 "cat > $dest_path"
+  cat $src_path | run -w 500000 "cat > $dest_path"
 
   # next file
   shift

@@ -1,6 +1,6 @@
 #!/bin/bash
 
 while true; do
-  android_exec "tail -n 30 -F log"
+  run "tail -n 30 -F log"
   sleep 1
 done
