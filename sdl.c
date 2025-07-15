@@ -815,8 +815,11 @@ void sdl_render_points(sdl_point_t *points, int count, int color, int point_size
     if (count < 0) {
         return;
     }
-    if (point_size < 0 || point_size > 9) {
-        return;
+    if (point_size < 0) {
+        point_size = 0;
+    }
+    if (point_size > 9) {
+        point_size = 9;
     }
 
     set_render_draw_color(color);

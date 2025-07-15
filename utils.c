@@ -42,14 +42,6 @@ void logmsg(char *lvl, const char *func, char *fmt, ...)
         SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION,
                     "%s %s: %s\n",
                     lvl, func, msg);
-    } else if (strcmp(lvl, "FATAL") == 0) {
-        SDL_LogCritical(SDL_LOG_CATEGORY_APPLICATION,
-                        "%s %s: %s\n",
-                        lvl, func, msg);
-    } else if (strcmp(lvl, "DEBUG") == 0) {
-        SDL_LogDebug(SDL_LOG_CATEGORY_APPLICATION,
-                     "%s %s: %s\n",
-                     lvl, func, msg);
     } else {
         SDL_LogError(SDL_LOG_CATEGORY_APPLICATION,
                      "%s %s: %s\n",

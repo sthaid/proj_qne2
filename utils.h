@@ -12,11 +12,6 @@
     do { \
         logmsg("ERROR", __func__, fmt, ## args); \
     } while (0)
-#define FATAL(fmt, args...) \
-    do { \
-        logmsg("FATAL", __func__, fmt, ## args); \
-        exit(1); \
-    } while (0)
 
 void logmsg(char * lvl, const char * func, char * fmt, ...) __attribute__ ((format (printf, 3, 4)));
 

@@ -72,11 +72,12 @@ static void controller(void)
 {
     int w, h, event_id, rc;
 
-    rc = sdl_init(&w, &h); //xxx handle ret
+    rc = sdl_init(); //xxx handle ret
+    sdl_get_win_size(&w, &h);
 
     while (true) {
         // xxx reset other stuff here too, fontsz, color
-        sdl_display_init(COLOR_PURPLE);
+        sdl_display_init(COLOR_BLACK);
 
         // display menu, and register for sdl events
         display_menu(w, h);
@@ -109,20 +110,49 @@ static void controller(void)
 
 static void display_menu(int w, int h)
 {
-    int id, x, xx, y, yy;
-    sdl_rect_t *loc;
+    //int id, x, xx, y, yy;
+    //sdl_rect_t *loc;
+    int  x, y;
+    int id;
+    static sdl_texture_t *circle;
+
+    #define RADIUS 100
+
+    if (circle == NULL) {
+        circle = sdl_create_filled_circle_texture(RADIUS, COLOR_BLUE);
+    }
 
     // xxx
     read_menu();
 
     // xxx comment
     for (id = 0; id < MAX_MENU; id++) {
-        if (menu[id].name[0] == '\0') {
-            continue;
-        }
+        //if (menu[id].name[0] == '\0') {
+            //continue;
+        //}
+
+        x = (w/3/2) + (id%3) * (w/3) - RADIUS;
+        y = (h/6/2) + (id/3) * (h/6) - RADIUS;
+        //printf("id=%d  ctr = %d %d\n", id, x_center, y_center);
+
+        sdl_render_texture(x, y, circle);
+
+        sdl_render_text(x, y, menu[id].name);
+
+
+        //loc.x = x;
+        //loc.y = y;
+        //loc.w = 100;
+        //loc.h = 100;
+
+        // draw circle at loc
+
+        // parse menu[id].name into 1 or 2 strings
+
 
         // xxx add shape, maybe circle, or rounded off square
 
+#if 0
         // xxx cleanup
         x = id % 3;
         xx = (w/3)/2 + x * (w/3);
@@ -133,6 +163,8 @@ static void display_menu(int w, int h)
         loc = sdl_render_text(xx, yy, menu[id].name);
 
         sdl_register_event(loc, id);
+
+#endif
     }
 }
 

@@ -1,2 +1,11 @@
-0  hello : hello/hello.c
+0  X
+1  X1
+2  X12
+3  X123
+4  X1234
+5  X12345
+
+6  hello : hello/hello.c
+
+
 17 end   : n/a

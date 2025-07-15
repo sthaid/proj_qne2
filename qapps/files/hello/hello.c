@@ -39,6 +39,7 @@ static int win_cols;
 static void page_4_init(void);
 static void page_4_exit(void);
 
+void utils_proc(void);
 
 #define ROW2Y(r) ((r) * char_height)
 
@@ -50,6 +51,8 @@ int main(int argc, char **argv)
     int  pagenum = 4; //XXX xxx
     bool end_program = false;
     bool is_qne_app = (argc > 0 && strcmp(argv[0], "qne_app") == 0);
+
+    utils_proc();
 
     // xxx temp debug prints
     printf("argc = %d\n", argc);
@@ -291,6 +294,20 @@ static void render_page_3(void)
 
 // xxx test this
 //int sdl_create_color(int r, int g, int b, int a);
+
+    for (int pointsize = 0; pointsize <= 9; pointsize++) {
+        sdl_render_point(pointsize*100+50, 1900, COLOR_WHITE, pointsize);
+    }
+
+    sdl_point_t points[10];
+    for (int i = 0; i <= 9; i++) {
+        points[i].x = i*100+50;
+        points[i].y = 1950;
+    }
+    sdl_render_points(points, 10, COLOR_PURPLE, 5);
+    
+
+
 }
 
 // ----------------------------------
