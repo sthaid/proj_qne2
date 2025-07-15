@@ -54,12 +54,12 @@ echo
 echo "Creating symbolic links to source code"
 cd $BUILD/app/jni/src
 rm stub.c
-ln -s ../../../../../../../main.c .
-ln -s ../../../../../../../sdl.c .
-ln -s ../../../../../../../sdl.h .
-ln -s ../../../../../../../std_hdrs.h .
-ln -s ../../../../../../../utils.c .
-ln -s ../../../../../../../utils.h .
+ln -s ../../../../../../src/main.c .
+ln -s ../../../../../../src/sdl.c .
+ln -s ../../../../../../src/sdl.h .
+ln -s ../../../../../../src/std_hdrs.h .
+ln -s ../../../../../../src/utils.c .
+ln -s ../../../../../../src/utils.h .
 ln -s ../../../../../../../picoc/ .
 echo
 

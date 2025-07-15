@@ -1,6 +1,7 @@
 dir struct
 - android
   - assets, checkin the font
+  - src
 - linux
 - apps
 - tools
