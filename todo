@@ -1,4 +1,10 @@
 dir struct
+- android
+  - assets, checkin the font
+- linux
+- apps
+- tools
+- picoc
 
 dont use logical size
 
