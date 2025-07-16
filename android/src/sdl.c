@@ -456,12 +456,14 @@ static struct {
     int win_cols;
 } text;
 
-void sdl_print_init(int ptsize, int fg_color, int bg_color, int *char_width, int *char_height, int *win_rows, int *win_cols)
+void sdl_print_init(double numchars, int fg_color, int bg_color, int *char_width, int *char_height, int *win_rows, int *win_cols)
 {
-    int chw, chh;
+    int ptsize, chw, chh;
+    double chw2, chh2;
 
-    // xxx comment about font characteristics
-    //ptsize = 1000 / (0.6 * numchars);
+    chw2 = win_width / numchars;
+    chh2 = chw2 / 0.6;
+    ptsize = rint(chh2);
 
     if (ptsize < MIN_FONT_PTSIZE) {
         ptsize = MIN_FONT_PTSIZE;

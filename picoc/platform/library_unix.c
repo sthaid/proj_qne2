@@ -133,14 +133,14 @@ static int Char_width;
 void Sdl_print_init (struct ParseState *Parser, struct Value *ReturnValue,
 	struct Value **Param, int NumArgs)
 {
-    int  numchars    = Param[0]->Val->Integer;
-    int  fg_color    = Param[1]->Val->Integer;
-    int  bg_color    = Param[2]->Val->Integer;
-    int *char_width  = Param[3]->Val->Pointer;
-    int *char_height = Param[4]->Val->Pointer;
-    int *win_rows    = Param[5]->Val->Pointer;
-    int *win_cols    = Param[6]->Val->Pointer;
-    int  tmp_char_width;
+    double numchars    = Param[0]->Val->FP;
+    int    fg_color    = Param[1]->Val->Integer;
+    int    bg_color    = Param[2]->Val->Integer;
+    int   *char_width  = Param[3]->Val->Pointer;
+    int   *char_height = Param[4]->Val->Pointer;
+    int   *win_rows    = Param[5]->Val->Pointer;
+    int   *win_cols    = Param[6]->Val->Pointer;
+    int    tmp_char_width;
 
     if (char_width == NULL) {
         char_width = &tmp_char_width;
@@ -441,7 +441,7 @@ struct LibraryFunction SdlFunctions[] = {
     { Sdl_wavelength_to_color, "int sdl_wavelength_to_color(int wavelength);" },
 
     // render text
-    { Sdl_print_init,      "void sdl_print_init(int ptsize, int fg_color, int bg_color, int *char_width, int *char_height, int *win_rows, int *win_cols);" },
+    { Sdl_print_init,      "void sdl_print_init(double numchars, int fg_color, int bg_color, int *char_width, int *char_height, int *win_rows, int *win_cols);" },
     { Sdl_render_text,     "sdl_rect_t *sdl_render_text(bool, xy_is_ctr, int x, int y, char *str);" },
     { Sdl_render_printf,   "sdl_rect_t *sdl_render_printf(bool, xy_is_ctr, int x, int y, char *fmt, ...);" },
 

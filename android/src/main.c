@@ -66,28 +66,30 @@ int main(int argc, char **argv)
 #define MAX_MENU 18
 
 typedef struct {
-    char name[16];
+    char name[32];
     char *args;
 } menu_t;
 
+static int win_width, win_height;
+
 static menu_t menu[MAX_MENU];
 
-static void display_menu(int w, int h);
+static void display_menu(void);
 static void read_menu(void);
 
 static void controller(void)
 {
-    int w, h, event_id, rc;
+    int event_id, rc;
 
     rc = sdl_init(); //xxx handle ret
-    sdl_get_win_size(&w, &h);
+    sdl_get_win_size(&win_width, &win_height);
 
     while (true) {
         // xxx reset other stuff here too, fontsz, color
         sdl_display_init(COLOR_BLACK);
 
         // display menu, and register for sdl events
-        display_menu(w, h);
+        display_menu();
 
         // update the display
         sdl_display_present();
@@ -115,11 +117,10 @@ static void controller(void)
     sdl_exit();
 }
 
-static void display_menu(int w, int h)
+static void display_menu(void)
 {
     //int id, x, xx, y, yy;
     //sdl_rect_t *loc;
-    int  x, y;
     int id;
     static sdl_texture_t *circle;
 
@@ -134,50 +135,63 @@ static void display_menu(int w, int h)
 
     // xxx comment
     for (id = 0; id < MAX_MENU; id++) {
-        //if (menu[id].name[0] == '\0') {
-            //continue;
-        //}
+        char *name = menu[id].name;
+        char str1[32], str2[32], *p;
+        int len1, len2, len_max, x, y;
+        double numchars, chw, chh;
 
-        x = (w/3/2) + (id%3) * (w/3);
-        y = (h/6/2) + (id/3) * (h/6);
-        //printf("id=%d  ctr = %d %d\n", id, x_center, y_center);
+        if (name[0] == '\0') {
+            continue;
+        }
+
+        memset(str1, 0, sizeof(str1));
+        memset(str2, 0, sizeof(str2));
+        if ((p = strchr(name, '_')) != NULL) {
+            memcpy(str1, name, p-name);
+            strcpy(str2, p+1);
+        } else {
+            strcpy(str1, name);
+        }
+
+        len1 = strlen(str1);
+        len2 = strlen(str2);
+        len_max = (len1 > len2 ? len1 : len2);
+
+        x = (win_width/3/2) + (id%3) * (win_width/3);
+        y = (win_height/6/2) + (id/3) * (win_height/6);
 
         sdl_render_texture(true, x, y, circle);
 
-        //sdl_print_init(DEFAULT_NUMCHARS, COLOR_WHITE, COLOR_BLACK, NULL, NULL, NULL, NULL);
+        if (len2 == 0) {
+            if (len_max == 1) {
+                chw = (1.0 * RADIUS) / len_max;
+            } else {
+                chw = (1.5 * RADIUS) / len_max;
+            }
+        } else {
+            if (len_max == 1) {
+                chw = (0.59 * RADIUS) / len_max;
+            } else if (len_max == 2) {
+                chw = (1.0 * RADIUS) / len_max;
+            } else if (len_max == 3) {
+                chw = (1.4 * RADIUS) / len_max;
+            } else {
+                chw = (1.5 * RADIUS) / len_max;
+            }
+        }
+        chh = chw / 0.6;
+            
+        numchars = win_width / chw;
+        sdl_print_init(numchars, COLOR_WHITE, COLOR_BLUE, NULL, NULL, NULL, NULL);
 
-        int ptsize = (2 * RADIUS) / (5 * 0.6);
-        ptsize *= 0.8;  // aka char height   OR  use char_width
-        sdl_print_init(ptsize, COLOR_WHITE, COLOR_BLUE, NULL, NULL, NULL, NULL);
-
-        sdl_render_text(true, x, y, menu[id].name);
-
-
-        //loc.x = x;
-        //loc.y = y;
-        //loc.w = 100;
-        //loc.h = 100;
-
-        // draw circle at loc
-
-        // parse menu[id].name into 1 or 2 strings
-
-
-        // xxx add shape, maybe circle, or rounded off square
-
-#if 0
-        // xxx cleanup
-        x = id % 3;
-        xx = (w/3)/2 + x * (w/3);
-
-        y = id / 3;
-        yy = (h/6)/2 + y * (h/6);
-
-        loc = sdl_render_text(xx, yy, menu[id].name);
-
-        sdl_register_event(loc, id);
-
-#endif
+        if (len2 == 0) {
+            sdl_render_text(true, x, y, str1);
+        } else {
+            //sdl_render_text(true, x, rint(y-0.47*chh), str1);
+            //sdl_render_text(true, x, rint(y+0.47*chh), str2);
+            sdl_render_text(true, x, rint(y-0.5*chh), str1);
+            sdl_render_text(true, x, rint(y+0.5*chh), str2);
+        }
     }
 }
 

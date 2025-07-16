@@ -57,7 +57,7 @@ int sdl_scale_color(int color, double inten);
 int sdl_wavelength_to_color(int wavelength);
 
 // render text
-void sdl_print_init(int numchars, int fg_color, int bg_color, int *char_width, int *char_height, int *win_rows, int *win_cols);
+void sdl_print_init(double numchars, int fg_color, int bg_color, int *char_width, int *char_height, int *win_rows, int *win_cols);
 sdl_rect_t *sdl_render_text(bool xy_is_ctr, int x, int y, char *str);
 sdl_rect_t *sdl_render_printf(bool xy_is_ctr, int x, int y, char *fmt, ...) __attribute__ ((format (printf, 4, 5)));
 
