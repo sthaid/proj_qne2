@@ -456,12 +456,12 @@ static struct {
     int win_cols;
 } text;
 
-void sdl_print_init(int numchars, int fg_color, int bg_color, int *char_width, int *char_height, int *win_rows, int *win_cols)
+void sdl_print_init(int ptsize, int fg_color, int bg_color, int *char_width, int *char_height, int *win_rows, int *win_cols)
 {
-    int ptsize, chw, chh;
+    int chw, chh;
 
     // xxx comment about font characteristics
-    ptsize = 1000 / (0.6 * numchars);
+    //ptsize = 1000 / (0.6 * numchars);
 
     if (ptsize < MIN_FONT_PTSIZE) {
         ptsize = MIN_FONT_PTSIZE;
@@ -493,8 +493,7 @@ void sdl_print_init(int numchars, int fg_color, int bg_color, int *char_width, i
     if (win_cols) *win_cols = text.win_cols;
 }
 
-// xxx add nk routine for this too
-sdl_rect_t *sdl_render_text(int x, int y, char * str)
+sdl_rect_t *sdl_render_text(bool xy_is_ctr, int x, int y, char * str)
 {
     SDL_Surface    * surface;
     SDL_Texture    * texture;
@@ -516,10 +515,17 @@ sdl_rect_t *sdl_render_text(int x, int y, char * str)
     }
 
     // determine the display location
-    pos.x = x;
-    pos.y = y;
-    pos.w = surface->w;
-    pos.h = surface->h;
+    if (!xy_is_ctr) {
+        pos.x = x;
+        pos.y = y;
+        pos.w = surface->w;
+        pos.h = surface->h;
+    } else {
+        pos.x = x - surface->w/2;
+        pos.y = y - surface->h/2;
+        pos.w = surface->w;
+        pos.h = surface->h;
+    }
 
     // create texture from the surface, and render the texture
     texture = SDL_CreateTextureFromSurface(renderer, surface);
@@ -533,7 +539,7 @@ sdl_rect_t *sdl_render_text(int x, int y, char * str)
     return (sdl_rect_t*)&pos;
 }
 
-sdl_rect_t *sdl_render_printf(int x, int y, char * fmt, ...)
+sdl_rect_t *sdl_render_printf(bool xy_is_ctr, int x, int y, char * fmt, ...)
 {
     char str[1000];
     va_list ap;
@@ -542,9 +548,10 @@ sdl_rect_t *sdl_render_printf(int x, int y, char * fmt, ...)
     vsnprintf(str, sizeof(str), fmt, ap);
     va_end(ap);
 
-    return sdl_render_text(x, y, str);
+    return sdl_render_text(xy_is_ctr, x, y, str);
 }
 
+#if 0 //xxx del, first save the nk code
 sdl_rect_t *sdl_render_printf_nk(int n, int k, int y, char * fmt, ...)
 {
     char str[200];
@@ -564,16 +571,29 @@ sdl_rect_t *sdl_render_printf_nk(int n, int k, int y, char * fmt, ...)
 
     return sdl_render_text(x, y, str);
 }
+#endif
 
 // -----------------  RENDER RECTANGLES, LINES, CIRCLES, POINTS  --------------------
 
-void sdl_render_rect(sdl_rect_t *loc, int line_width, int color)
+void sdl_render_rect(bool xy_is_ctr, int x, int y, int w, int h, int line_width, int color)
 {
-    SDL_Rect rect = *(SDL_Rect*)loc;
+    SDL_Rect rect;
     int i;
 
-//  INFO("color=0x%x line_width=%d  xywh=%d %d %d %d\n", color, line_width,
-//      loc->x, loc->y, loc->w, loc->h);
+    //  INFO("color=0x%x line_width=%d  xywh=%d %d %d %d\n", color, line_width,
+    //      loc->x, loc->y, loc->w, loc->h);
+
+    if (!xy_is_ctr) {
+        rect.x = x;
+        rect.y = y;
+        rect.w = w;
+        rect.h = h;
+    } else {
+        rect.x = x - w/2;
+        rect.y = y - h/2;
+        rect.w = w;
+        rect.h = h;
+    }
 
     set_render_draw_color(color);
 
@@ -589,9 +609,21 @@ void sdl_render_rect(sdl_rect_t *loc, int line_width, int color)
     }
 }
 
-void sdl_render_fill_rect(sdl_rect_t *loc, int color)
+void sdl_render_fill_rect(bool xy_is_ctr, int x, int y, int w, int h, int color)
 {
-    SDL_Rect rect = *(SDL_Rect*)loc;
+    SDL_Rect rect;
+
+    if (!xy_is_ctr) {
+        rect.x = x;
+        rect.y = y;
+        rect.w = w;
+        rect.h = h;
+    } else {
+        rect.x = x - w/2;
+        rect.y = y - h/2;
+        rect.w = w;
+        rect.h = h;
+    }
 
     set_render_draw_color(color);
     SDL_RenderFillRect(renderer, &rect);
@@ -623,15 +655,23 @@ void sdl_render_lines(sdl_point_t *points, int count, int color)
     SDL_RenderDrawLines(renderer, sdl_points, count);
 }
 
-void sdl_render_circle(int x_center, int y_center, int radius,
-            int line_width, int color)
+void sdl_render_circle(bool xy_is_ctr, int x_arg, int y_arg, int radius, int line_width, int color)
 {
     int count = 0, i, angle, x, y;
+    int x_center, y_center;
     SDL_Point points[370];
 
     static int sin_table[370];
     static int cos_table[370];
     static bool first_call = true;
+
+    if (!xy_is_ctr) {
+        x_center = x_arg + radius/2;
+        y_center = y_arg + radius/2;
+    } else {
+        x_center = x_arg;
+        y_center = y_arg;
+    }
 
     // on first call make table of sin and cos indexed by degrees
     if (first_call) {
@@ -863,14 +903,27 @@ sdl_texture_t *sdl_create_texture(int w, int h)
     return (sdl_texture_t*)texture;
 }
 
-sdl_texture_t *sdl_create_texture_from_display(sdl_rect_t *loc)
+sdl_texture_t *sdl_create_texture_from_display(bool xy_is_ctr, int x, int y, int w, int h)
 {
     sdl_texture_t *texture;
     int ret;
-    char * pixels;
+    char *pixels;
+    SDL_Rect loc;
+
+    if (!xy_is_ctr) {
+        loc.x = x;
+        loc.y = y;
+        loc.w = w;
+        loc.h = h;
+    } else {
+        loc.x = x - w/2;
+        loc.y = y - h/2;
+        loc.w = w;
+        loc.h = h;
+    }
 
     // allocate memory for the pixels
-    pixels = calloc(1, loc->h * loc->w * BYTES_PER_PIXEL);
+    pixels = calloc(1, loc.h * loc.w * BYTES_PER_PIXEL);
     if (pixels == NULL) {
         ERROR("allocate pixels failed\n");
         return NULL;
@@ -878,10 +931,10 @@ sdl_texture_t *sdl_create_texture_from_display(sdl_rect_t *loc)
 
     // read the pixels
     ret = SDL_RenderReadPixels(renderer, 
-                               (SDL_Rect*)loc,
+                               &loc,
                                SDL_PIXELFORMAT_ABGR8888, 
                                pixels, 
-                               loc->w * BYTES_PER_PIXEL);
+                               loc.w * BYTES_PER_PIXEL);
     if (ret < 0) {
         ERROR("SDL_RenderReadPixels, %s\n", SDL_GetError());
         free(pixels);
@@ -889,7 +942,7 @@ sdl_texture_t *sdl_create_texture_from_display(sdl_rect_t *loc)
     }
 
     // create the texture
-    texture = sdl_create_texture(loc->w, loc->h);
+    texture = sdl_create_texture(loc.w, loc.h);
     if (texture == NULL) {
         ERROR("failed to allocate texture\n");
         free(pixels);
@@ -897,7 +950,7 @@ sdl_texture_t *sdl_create_texture_from_display(sdl_rect_t *loc)
     }
 
     // update the texture with the pixels
-    SDL_UpdateTexture((SDL_Texture*)texture, NULL, pixels, loc->w * BYTES_PER_PIXEL);
+    SDL_UpdateTexture((SDL_Texture*)texture, NULL, pixels, loc.w * BYTES_PER_PIXEL);
 
     // free pixels
     free(pixels);
@@ -1019,7 +1072,7 @@ void sdl_update_texture(sdl_texture_t *texture, char * pixels, int pitch)
                       pitch);                 // pitch  
 }
 
-void sdl_render_texture(int x, int y, sdl_texture_t *texture)
+void sdl_render_texture(bool xy_is_ctr, int x, int y, sdl_texture_t *texture)
 {
     SDL_Rect dest;
     int w,h;
@@ -1029,24 +1082,46 @@ void sdl_render_texture(int x, int y, sdl_texture_t *texture)
     }
 
     sdl_query_texture(texture, &w, &h);
-    dest.x = x;
-    dest.y = y;
-    dest.w = w;
-    dest.h = h;
+
+    if (!xy_is_ctr) {
+        dest.x = x;
+        dest.y = y;
+        dest.w = w;
+        dest.h = h;
+    } else {
+        dest.x = x - w/2;
+        dest.y = y - h/2;
+        dest.w = w;
+        dest.h = h;
+    }
 
     SDL_RenderCopy(renderer, (SDL_Texture*)texture, NULL, &dest);
 }
 
-void sdl_render_scaled_texture(sdl_rect_t *dest, sdl_texture_t *texture)
+void sdl_render_scaled_texture(bool xy_is_ctr, int x, int y, int w, int h, sdl_texture_t *texture)
 {
+    SDL_Rect dest;
+
     if (texture == NULL) {
         return;
     }
 
-    SDL_RenderCopy(renderer, (SDL_Texture*)texture, NULL, (SDL_Rect*)dest);
+    if (!xy_is_ctr) {
+        dest.x = x;
+        dest.y = y;
+        dest.w = w;
+        dest.h = h;
+    } else {
+        dest.x = x - w/2;
+        dest.y = y - h/2;
+        dest.w = w;
+        dest.h = h;
+    }
+
+    SDL_RenderCopy(renderer, (SDL_Texture*)texture, NULL, &dest);
 }
 
-void sdl_render_rotated_texture(int x, int y, double angle, sdl_texture_t *texture)
+void sdl_render_rotated_texture(bool xy_is_ctr, int x, int y, double angle, sdl_texture_t *texture)
 {
     SDL_Rect dest;
     int w,h;
@@ -1056,10 +1131,19 @@ void sdl_render_rotated_texture(int x, int y, double angle, sdl_texture_t *textu
     }
 
     sdl_query_texture(texture, &w, &h);
-    dest.x = x;
-    dest.y = y;
-    dest.w = w;
-    dest.h = h;
+
+    if (!xy_is_ctr) {
+        dest.x = x;
+        dest.y = y;
+        dest.w = w;
+        dest.h = h;
+    } else {
+        dest.x = x - w/2;
+        dest.y = y - h/2;
+        dest.w = w;
+        dest.h = h;
+    }
+
     SDL_RenderCopyEx(renderer, (SDL_Texture*)texture, NULL, &dest, angle, NULL, false);
 }
 

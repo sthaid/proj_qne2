@@ -154,12 +154,13 @@ void Sdl_print_init (struct ParseState *Parser, struct Value *ReturnValue,
 void Sdl_render_text (struct ParseState *Parser, struct Value *ReturnValue,
 	struct Value **Param, int NumArgs)
 {
-    int         x        = Param[0]->Val->Integer;
-    int         y        = Param[1]->Val->Integer;
-    char       *str      = Param[2]->Val->Pointer;
+    bool        xy_is_ctr = Param[0]->Val->Integer;
+    int         x         = Param[1]->Val->Integer;
+    int         y         = Param[2]->Val->Integer;
+    char       *str       = Param[3]->Val->Pointer;
     sdl_rect_t *loc;
 
-    loc = sdl_render_text(x, y, str);
+    loc = sdl_render_text(xy_is_ctr, x, y, str);
 
     ReturnValue->Val->Pointer = loc;
 }
@@ -169,23 +170,25 @@ void Sdl_render_text (struct ParseState *Parser, struct Value *ReturnValue,
 void Sdl_render_printf (struct ParseState *Parser, struct Value *ReturnValue,
 	struct Value **Param, int NumArgs)
 {
-    int              x        = Param[0]->Val->Integer;
-    int              y        = Param[1]->Val->Integer;
-    char            *fmt      = Param[2]->Val->Pointer;
+    bool  xy_is_ctr = Param[0]->Val->Integer;
+    int   x         = Param[1]->Val->Integer;
+    int   y         = Param[2]->Val->Integer;
+    char *fmt       = Param[3]->Val->Pointer;
 
     struct StdVararg PrintfArgs;
     char             str[200] = "";
     sdl_rect_t      *loc;
 
-    PrintfArgs.Param = Param + 2;
-    PrintfArgs.NumArgs = NumArgs - 3;
+    PrintfArgs.Param = Param + 3;
+    PrintfArgs.NumArgs = NumArgs - 4;
     StdioBasePrintf(Parser, NULL, str, sizeof(str), fmt, &PrintfArgs);
 
-    loc = sdl_render_text(x, y, str);
+    loc = sdl_render_text(xy_is_ctr, x, y, str);
 
     ReturnValue->Val->Pointer = loc;
 }
 
+#if 0
 void Sdl_render_printf_nk (struct ParseState *Parser, struct Value *ReturnValue,
 	struct Value **Param, int NumArgs)
 {
@@ -211,6 +214,7 @@ void Sdl_render_printf_nk (struct ParseState *Parser, struct Value *ReturnValue,
 
     ReturnValue->Val->Pointer = loc;
 }
+#endif
 
 //
 // render rectangle, lines, circles, points
@@ -219,20 +223,28 @@ void Sdl_render_printf_nk (struct ParseState *Parser, struct Value *ReturnValue,
 void Sdl_render_rect (struct ParseState *Parser, struct Value *ReturnValue,
 	struct Value **Param, int NumArgs)
 {
-    sdl_rect_t *loc        = (sdl_rect_t*)Param[0]->Val->Pointer;
-    int         line_width = Param[1]->Val->Integer;
-    int         color      = Param[2]->Val->Integer;
+    bool  xy_is_ctr  = Param[0]->Val->Integer;
+    int   x          = Param[1]->Val->Integer;
+    int   y          = Param[2]->Val->Integer;
+    int   w          = Param[3]->Val->Integer;
+    int   h          = Param[4]->Val->Integer;
+    int   line_width = Param[5]->Val->Integer;
+    int   color      = Param[6]->Val->Integer;
 
-    sdl_render_rect(loc, line_width, color);
+    sdl_render_rect(xy_is_ctr, x, y, w, h, line_width, color);
 }
 
 void Sdl_render_fill_rect (struct ParseState *Parser, struct Value *ReturnValue,
 	struct Value **Param, int NumArgs)
 {
-    sdl_rect_t *loc   = (sdl_rect_t*)Param[0]->Val->Pointer;
-    int         color = Param[1]->Val->Integer;
+    bool  xy_is_ctr  = Param[0]->Val->Integer;
+    int   x          = Param[1]->Val->Integer;
+    int   y          = Param[2]->Val->Integer;
+    int   w          = Param[3]->Val->Integer;
+    int   h          = Param[4]->Val->Integer;
+    int   color      = Param[5]->Val->Integer;
 
-    sdl_render_fill_rect(loc, color);
+    sdl_render_fill_rect(xy_is_ctr, x, y, w, h, color);
 }
 
 void Sdl_render_line (struct ParseState *Parser, struct Value *ReturnValue,
@@ -260,13 +272,14 @@ void Sdl_render_lines (struct ParseState *Parser, struct Value *ReturnValue,
 void Sdl_render_circle (struct ParseState *Parser, struct Value *ReturnValue,
 	struct Value **Param, int NumArgs)
 {
-    int x_center    = Param[0]->Val->Integer;
-    int y_center    = Param[1]->Val->Integer;
-    int radius      = Param[2]->Val->Integer;
-    int line_width  = Param[3]->Val->Integer;
-    int color       = Param[4]->Val->Integer;
+    bool xy_is_ctr  = Param[0]->Val->Integer;
+    int  x          = Param[1]->Val->Integer;
+    int  y          = Param[2]->Val->Integer;
+    int  radius     = Param[3]->Val->Integer;
+    int  line_width = Param[4]->Val->Integer;
+    int  color      = Param[5]->Val->Integer;
 
-    sdl_render_circle(x_center, y_center, radius, line_width, color);
+    sdl_render_circle(xy_is_ctr, x, y, radius, line_width, color);
 }
 
 void Sdl_render_point (struct ParseState *Parser, struct Value *ReturnValue,
@@ -309,10 +322,15 @@ void Sdl_create_texture (struct ParseState *Parser, struct Value *ReturnValue,
 void Sdl_create_texture_from_display (struct ParseState *Parser, struct Value *ReturnValue,
 	struct Value **Param, int NumArgs)
 {
-    sdl_rect_t *loc = (sdl_rect_t*)Param[0]->Val->Pointer;
+    bool  xy_is_ctr  = Param[0]->Val->Integer;
+    int   x          = Param[1]->Val->Integer;
+    int   y          = Param[2]->Val->Integer;
+    int   w          = Param[3]->Val->Integer;
+    int   h          = Param[4]->Val->Integer;
+
     sdl_texture_t *texture;
 
-    texture = sdl_create_texture_from_display(loc);
+    texture = sdl_create_texture_from_display(xy_is_ctr, x, y, w, h);
     ReturnValue->Val->Pointer = (char*)texture; 
 }
 
@@ -368,31 +386,37 @@ void Sdl_update_texture (struct ParseState *Parser, struct Value *ReturnValue,
 void Sdl_render_texture (struct ParseState *Parser, struct Value *ReturnValue,
 	struct Value **Param, int NumArgs)
 {
-    int            x       = Param[0]->Val->Integer;
-    int            y       = Param[1]->Val->Integer;
-    sdl_texture_t *texture = (sdl_texture_t*)Param[2]->Val->Pointer;
+    bool           xy_is_ctr = Param[0]->Val->Integer;
+    int            x         = Param[1]->Val->Integer;
+    int            y         = Param[2]->Val->Integer;
+    sdl_texture_t *texture   = (sdl_texture_t*)Param[3]->Val->Pointer;
 
-    sdl_render_texture(x, y, texture);
+    sdl_render_texture(xy_is_ctr, x, y, texture);
 }
 
 void Sdl_render_scaled_texture (struct ParseState *Parser, struct Value *ReturnValue,
 	struct Value **Param, int NumArgs)
 {
-    sdl_rect_t    *dest    = (sdl_rect_t*)Param[0]->Val->Pointer;
-    sdl_texture_t *texture = (sdl_texture_t*)Param[1]->Val->Pointer;
+    bool           xy_is_ctr  = Param[0]->Val->Integer;
+    int            x          = Param[1]->Val->Integer;
+    int            y          = Param[2]->Val->Integer;
+    int            w          = Param[3]->Val->Integer;
+    int            h          = Param[4]->Val->Integer;
+    sdl_texture_t *texture = (sdl_texture_t*)Param[5]->Val->Pointer;
 
-    sdl_render_scaled_texture(dest, texture);
+    sdl_render_scaled_texture(xy_is_ctr, x, y, w, h, texture);
 }
 
 void Sdl_render_rotated_texture (struct ParseState *Parser, struct Value *ReturnValue,
 	struct Value **Param, int NumArgs)
 {
-    int            x       = Param[0]->Val->Integer;
-    int            y       = Param[1]->Val->Integer;
-    double         angle   = Param[2]->Val->FP;
-    sdl_texture_t *texture = (sdl_texture_t*)Param[3]->Val->Pointer;
+    bool           xy_is_ctr = Param[0]->Val->Integer;
+    int            x         = Param[1]->Val->Integer;
+    int            y         = Param[2]->Val->Integer;
+    double         angle     = Param[3]->Val->FP;
+    sdl_texture_t *texture   = (sdl_texture_t*)Param[4]->Val->Pointer;
 
-    sdl_render_rotated_texture(x, y, angle, texture);
+    sdl_render_rotated_texture(xy_is_ctr, x, y, angle, texture);
 }
 
 // -----------------  SDL PLATFORM REGISTRATION -------------------------
@@ -418,30 +442,29 @@ struct LibraryFunction SdlFunctions[] = {
 
     // render text
     { Sdl_print_init,      "void sdl_print_init(int ptsize, int fg_color, int bg_color, int *char_width, int *char_height, int *win_rows, int *win_cols);" },
-    { Sdl_render_text,     "sdl_rect_t *sdl_render_text(int x, int y, char *str);" },
-    { Sdl_render_printf,   "sdl_rect_t *sdl_render_printf(int x, int y, char *fmt, ...);" },
-    { Sdl_render_printf_nk,"sdl_rect_t *sdl_render_printf_nk(int n, int k, int y, char *fmt, ...);" },
+    { Sdl_render_text,     "sdl_rect_t *sdl_render_text(bool, xy_is_ctr, int x, int y, char *str);" },
+    { Sdl_render_printf,   "sdl_rect_t *sdl_render_printf(bool, xy_is_ctr, int x, int y, char *fmt, ...);" },
 
     // render rectangle, lines, circles, points
-    { Sdl_render_rect,     "void sdl_render_rect(sdl_rect_t *loc, int line_width, int color);" },
-    { Sdl_render_fill_rect,"void sdl_render_fill_rect(sdl_rect_t *loc, int color);" },
+    { Sdl_render_rect,     "void sdl_render_rect(int xy_is_ctr, int x, int y, int w, int h, int line_width, int color);" },
+    { Sdl_render_fill_rect,"void sdl_render_fill_rect(int xy_is_ctr, int x, int y, int w, int h, int color);" },
     { Sdl_render_line,     "void sdl_render_line(int x1, int y1, int x2, int y2, int color);" },
     { Sdl_render_lines,    "void sdl_render_lines(sdl_point_t *points, int count, int color);" },
-    { Sdl_render_circle,   "void sdl_render_circle(int x_center, int y_center, int radius, int line_width, int color);" },
+    { Sdl_render_circle,   "void sdl_render_circle(bool xy_is_ctr, int x, int y, int radius, int line_width, int color);" },
     { Sdl_render_point,    "void sdl_render_point(int x, int y, int color, int point_size);" },
     { Sdl_render_points,   "void sdl_render_points(sdl_point_t *points, int count, int color, int point_size);" },
 
     // render using textures
     { Sdl_create_texture,               "sdl_texture_t *sdl_create_texture(int w, int h);" },
-    { Sdl_create_texture_from_display,  "sdl_texture_t *sdl_create_texture_from_display(sdl_rect_t *display);" },
+    { Sdl_create_texture_from_display,  "sdl_texture_t *sdl_create_texture_from_display(bool xy_is_ctr, int x, int y, int w, int h);" },
     { Sdl_create_filled_circle_texture, "sdl_texture_t *sdl_create_filled_circle_texture(int radius, int color);" },
     { Sdl_create_text_texture,          "sdl_texture_t *sdl_create_text_texture(char *str);" },
     { Sdl_destroy_texture,              "void sdl_destroy_texture(sdl_texture_t *texture);" },
     { Sdl_query_texture,                "void sdl_query_texture(sdl_texture_t *texture, int *width, int *height);" },
     { Sdl_update_texture,               "void sdl_update_texture(sdl_texture_t *texture, char *pixels, int pitch);" },
-    { Sdl_render_texture,               "void sdl_render_texture(int x, int y, sdl_texture_t *texture);" },
-    { Sdl_render_scaled_texture,        "void sdl_render_scaled_texture(sdl_rect_t *dest, sdl_texture_t *texture);" },
-    { Sdl_render_rotated_texture,       "void sdl_render_rotated_texture(int x, int y, double angle, sdl_texture_t *texture);" },
+    { Sdl_render_texture,               "void sdl_render_texture(bool xy_is_ctr, int x, int y, sdl_texture_t *texture);" },
+    { Sdl_render_scaled_texture,        "void sdl_render_scaled_texture(bool xy_is_ctr, int x, int y, int w, int h, sdl_texture_t *texture);" },
+    { Sdl_render_rotated_texture,       "void sdl_render_rotated_texture(bool xy_is_ctr, int x, int y, double angle, sdl_texture_t *texture);" },
 
     { NULL, NULL } };
 
@@ -483,5 +506,3 @@ void PlatformLibraryInit(Picoc *pc)
         SdlDefs
                     );
 }
-
-

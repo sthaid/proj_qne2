@@ -1,3 +1,5 @@
+move src to common dir ?
+
 api to provide ctr coords instead of top left
 - update menu code
 - upde hello.c

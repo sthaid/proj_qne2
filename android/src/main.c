@@ -138,13 +138,19 @@ static void display_menu(int w, int h)
             //continue;
         //}
 
-        x = (w/3/2) + (id%3) * (w/3) - RADIUS;
-        y = (h/6/2) + (id/3) * (h/6) - RADIUS;
+        x = (w/3/2) + (id%3) * (w/3);
+        y = (h/6/2) + (id/3) * (h/6);
         //printf("id=%d  ctr = %d %d\n", id, x_center, y_center);
 
-        sdl_render_texture(x, y, circle);
+        sdl_render_texture(true, x, y, circle);
 
-        sdl_render_text(x, y, menu[id].name);
+        //sdl_print_init(DEFAULT_NUMCHARS, COLOR_WHITE, COLOR_BLACK, NULL, NULL, NULL, NULL);
+
+        int ptsize = (2 * RADIUS) / (5 * 0.6);
+        ptsize *= 0.8;  // aka char height   OR  use char_width
+        sdl_print_init(ptsize, COLOR_WHITE, COLOR_BLUE, NULL, NULL, NULL, NULL);
+
+        sdl_render_text(true, x, y, menu[id].name);
 
 
         //loc.x = x;
