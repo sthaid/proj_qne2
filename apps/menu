@@ -1,4 +1,4 @@
-0  hello_world : apps/hello/hello.c
+0  hello_world : apps/hello/hello.c apps/hello/utils.c
 1  X  : 
 2  Xy  : 
 3  Xyz  : 
@@ -12,3 +12,6 @@
 11 aaaaa_X  : 
 12 123456789
 13 123456789_yyyyyyyyy
+15 <
+16 >
+17 X

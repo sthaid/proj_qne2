@@ -104,8 +104,13 @@ static void controller(void)
         INFO("proc event_id %d\n", event_id);
         if (event_id == EVID_QUIT) {
             break;
-        } else if (event_id < 0 || event_id >= MAX_MENU) {
-            ERROR("unexpected event_id %d\n", event_id);
+        } else if (event_id == 15) {
+            INFO("XXX GOT PAGE LEFT XXX\n");
+        } else if (event_id == 16) {
+            INFO("XXX GOT PAGE RIGHT XXX\n");
+        } else if (event_id == 17) {
+            INFO("XXX GOT QUIT XXX\n");
+            break;
         } else {
             // xxx check that menu entry is defined
             INFO("running %s\n", menu[event_id].name);
@@ -139,6 +144,7 @@ static void display_menu(void)
         char str1[32], str2[32], *p;
         int len1, len2, len_max, x, y;
         double numchars, chw, chh;
+        sdl_rect_t loc;
 
         if (name[0] == '\0') {
             continue;
@@ -160,7 +166,9 @@ static void display_menu(void)
         x = (win_width/3/2) + (id%3) * (win_width/3);
         y = (win_height/6/2) + (id/3) * (win_height/6);
 
-        sdl_render_texture(true, x, y, circle);
+        if (id < 15) {
+            sdl_render_texture(true, x, y, circle);
+        }
 
         if (len2 == 0) {
             if (len_max == 1) {
@@ -180,18 +188,26 @@ static void display_menu(void)
             }
         }
         chh = chw / 0.6;
-            
         numchars = win_width / chw;
-        sdl_print_init(numchars, COLOR_WHITE, COLOR_BLUE, NULL, NULL, NULL, NULL);
+
+        if (id < 15) {
+            sdl_print_init(numchars, COLOR_WHITE, COLOR_BLUE, NULL, NULL, NULL, NULL);
+        } else {
+            sdl_print_init(numchars, COLOR_WHITE, COLOR_BLACK, NULL, NULL, NULL, NULL);
+        }
 
         if (len2 == 0) {
             sdl_render_text(true, x, y, str1);
         } else {
-            //sdl_render_text(true, x, rint(y-0.47*chh), str1);
-            //sdl_render_text(true, x, rint(y+0.47*chh), str2);
             sdl_render_text(true, x, rint(y-0.5*chh), str1);
             sdl_render_text(true, x, rint(y+0.5*chh), str2);
         }
+
+        loc.x = x - RADIUS;
+        loc.y = y - RADIUS;
+        loc.w = 2 * RADIUS;
+        loc.h = 2 * RADIUS;
+        sdl_register_event(&loc, id);
     }
 }
 
@@ -280,7 +296,6 @@ static void read_menu(void)
 
 // ----------------- SERVER ----------------------------
 
-//#define PORTNUM 1234
 #define PORTNUM 9000   // IANA registered port range 1024 - 49151
 
 static void *process_req_thread(void *cx);

@@ -16,16 +16,10 @@ hello.c outline
 #include <stdbool.h>
 #include <stdlib.h>
 
+#define EVID_PAGE_DECREMENT 1
+#define EVID_PAGE_INCREMENT 2
+
 #define MAX_PAGE 5
-
-#define MAX_FONT_PTSIZE 200 // xxx global?
-
-#define EVID_END_PROGRAM       1
-#define EVID_SWIPE_UP          2
-#define EVID_PAGE_DECREMENT    3
-#define EVID_SWIPE_RIGHT       4
-#define EVID_PAGE_INCREMENT    5
-#define EVID_SWIPE_LEFT        6
 
 #include <sdl.h>
 
@@ -81,22 +75,23 @@ int main(int argc, char **argv)
         sdl_display_init(COLOR_BLACK);
 
         // xxx
-        render_page(pagenum);
+        //render_page(pagenum);
 
         // update the display
         sdl_display_present();
 
         // wait for an event with 100 ms timeout;
         // if no event then redraw display
-        event_id = sdl_get_event(10000); //xxx 10ms
+        event_id = sdl_get_event(1000000); //xxx 1000ms
         if (event_id == -1) {
             continue;
         }
 
+
         // process event
         printf("get event %d\n", event_id);
         switch (event_id) {
-        case EVID_END_PROGRAM:
+        case EVID_QUIT:
         case EVID_SWIPE_UP:
             end_program = true;
             break;
