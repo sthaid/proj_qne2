@@ -421,6 +421,31 @@ void Sdl_render_rotated_texture (struct ParseState *Parser, struct Value *Return
 
 // -----------------  SDL PLATFORM REGISTRATION -------------------------
 
+const char SdlDefs[] = "\
+typedef struct { int x; int y; int w; int h; } sdl_rect_t; \n\
+typedef struct { int x; int y; } sdl_point_t; \n\
+typedef struct sdl_texture sdl_texture_t; \n\
+\n\
+#define BYTES_PER_PIXEL  4 \n\
+#define COLOR_PURPLE     ( 127  |    0<<8 |  255<<16 |  255<<24 ) \n\
+#define COLOR_BLUE       ( 0    |    0<<8 |  255<<16 |  255<<24 ) \n\
+#define COLOR_LIGHT_BLUE ( 0    |  255<<8 |  255<<16 |  255<<24 ) \n\
+#define COLOR_GREEN      ( 0    |  255<<8 |    0<<16 |  255<<24 ) \n\
+#define COLOR_YELLOW     ( 255  |  255<<8 |    0<<16 |  255<<24 ) \n\
+#define COLOR_ORANGE     ( 255  |  128<<8 |    0<<16 |  255<<24 ) \n\
+#define COLOR_PINK       ( 255  |  105<<8 |  180<<16 |  255<<24 ) \n\
+#define COLOR_RED        ( 255  |    0<<8 |    0<<16 |  255<<24 ) \n\
+#define COLOR_GRAY       ( 224  |  224<<8 |  224<<16 |  255<<24 ) \n\
+#define COLOR_WHITE      ( 255  |  255<<8 |  255<<16 |  255<<24 ) \n\
+#define COLOR_BLACK      ( 0    |    0<<8 |    0<<16 |  255<<24 ) \n\
+\n\
+#define EVID_SWIPE_DOWN        1000 \n\
+#define EVID_SWIPE_UP          1001 \n\
+#define EVID_SWIPE_RIGHT       1002 \n\
+#define EVID_SWIPE_LEFT        1003 \n\
+#define EVID_QUIT              9999 \n\
+";
+
 struct LibraryFunction SdlFunctions[] = {
     // sdl initialization and termination, must be done once
     { Sdl_init,            "int sdl_init(void);" },
@@ -442,8 +467,8 @@ struct LibraryFunction SdlFunctions[] = {
 
     // render text
     { Sdl_print_init,      "void sdl_print_init(double numchars, int fg_color, int bg_color, int *char_width, int *char_height, int *win_rows, int *win_cols);" },
-    { Sdl_render_text,     "sdl_rect_t *sdl_render_text(bool, xy_is_ctr, int x, int y, char *str);" },
-    { Sdl_render_printf,   "sdl_rect_t *sdl_render_printf(bool, xy_is_ctr, int x, int y, char *fmt, ...);" },
+    { Sdl_render_text,     "sdl_rect_t *sdl_render_text(bool xy_is_ctr, int x, int y, char *str);" },
+    { Sdl_render_printf,   "sdl_rect_t *sdl_render_printf(bool xy_is_ctr, int x, int y, char *fmt, ...);" },
 
     // render rectangle, lines, circles, points
     { Sdl_render_rect,     "void sdl_render_rect(int xy_is_ctr, int x, int y, int w, int h, int line_width, int color);" },
@@ -468,41 +493,17 @@ struct LibraryFunction SdlFunctions[] = {
 
     { NULL, NULL } };
 
-
-const char SdlDefs[] = "\
-typedef struct { int x; int y; int w; int h; } sdl_rect_t; \
-typedef struct { int x; int y; } sdl_point_t; \
-typedef struct sdl_texture sdl_texture_t; \
-";
+void SdlSetupFunction(Picoc *pc)
+{
+    // not used
+}
 
 void PlatformLibraryInit(Picoc *pc)
 {
-    #define DEFINE_PLATFORM_VAR(name, type, writeable) \
-        VariableDefinePlatformVar(pc, \
-                                  NULL, \
-                                  #name, \
-                                  &pc->type,\
-                                  (union AnyValue*)&name,\
-                                  writeable);
-
-    // sdl - platform init xxx
-    DEFINE_PLATFORM_VAR(COLOR_PURPLE, IntType, false);
-    DEFINE_PLATFORM_VAR(COLOR_BLUE, IntType, false);
-    DEFINE_PLATFORM_VAR(COLOR_LIGHT_BLUE, IntType, false);
-    DEFINE_PLATFORM_VAR(COLOR_GREEN, IntType, false);
-    DEFINE_PLATFORM_VAR(COLOR_YELLOW, IntType, false);
-    DEFINE_PLATFORM_VAR(COLOR_ORANGE, IntType, false);
-    DEFINE_PLATFORM_VAR(COLOR_PINK, IntType, false);
-    DEFINE_PLATFORM_VAR(COLOR_RED, IntType, false);
-    DEFINE_PLATFORM_VAR(COLOR_GRAY, IntType, false);
-    DEFINE_PLATFORM_VAR(COLOR_WHITE, IntType, false);
-    DEFINE_PLATFORM_VAR(COLOR_BLACK, IntType, false);
-
     IncludeRegister(
         pc, 
         "sdl.h", 
-        NULL,  // SetupFunction not used
+        SdlSetupFunction,
         SdlFunctions, 
-        SdlDefs
-                    );
+        SdlDefs);
 }

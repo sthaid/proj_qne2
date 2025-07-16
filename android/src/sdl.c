@@ -25,35 +25,14 @@ static void logmsg(char *lvl, const char *func, char *fmt, ...)
 // 
 
 #ifdef ANDROID
-    //#define FONT_FILE_PATH  "/system/fonts/DroidSansMono.ttf"  xxx
     #define FONT_FILE_PATH  "FreeMonoBold.ttf"
 #else
-    //#define FONT_FILE_PATH "/usr/share/fonts/truetype/freefont/FreeMonoBold.ttf"
     #define FONT_FILE_PATH "../assets/FreeMonoBold.ttf"
 #endif
 
-#define MIN_FONT_PTSIZE 10
-#define MAX_FONT_PTSIZE 200
-
 #define DEFAULT_NUMCHARS 20
-
-//
-// colors
-//
-
-#define BYTES_PER_PIXEL  4
-
-const int COLOR_PURPLE     = ( 127  |    0<<8 |  255<<16 |  255<<24 );  // r,g,b,a
-const int COLOR_BLUE       = ( 0    |    0<<8 |  255<<16 |  255<<24 );
-const int COLOR_LIGHT_BLUE = ( 0    |  255<<8 |  255<<16 |  255<<24 );
-const int COLOR_GREEN      = ( 0    |  255<<8 |    0<<16 |  255<<24 );
-const int COLOR_YELLOW     = ( 255  |  255<<8 |    0<<16 |  255<<24 );
-const int COLOR_ORANGE     = ( 255  |  128<<8 |    0<<16 |  255<<24 );
-const int COLOR_PINK       = ( 255  |  105<<8 |  180<<16 |  255<<24 );
-const int COLOR_RED        = ( 255  |    0<<8 |    0<<16 |  255<<24 );
-const int COLOR_GRAY       = ( 224  |  224<<8 |  224<<16 |  255<<24 );
-const int COLOR_WHITE      = ( 255  |  255<<8 |  255<<16 |  255<<24 );
-const int COLOR_BLACK      = ( 0    |    0<<8 |    0<<16 |  255<<24 );
+#define MIN_FONT_PTSIZE  10
+#define MAX_FONT_PTSIZE  200
 
 //
 // typedefs

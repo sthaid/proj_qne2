@@ -1,19 +1,19 @@
 #include <SDL.h>
 #include <SDL_ttf.h>
 
-extern const int COLOR_PURPLE;
-extern const int COLOR_BLUE;
-extern const int COLOR_LIGHT_BLUE;
-extern const int COLOR_GREEN;
-extern const int COLOR_YELLOW;
-extern const int COLOR_ORANGE;
-extern const int COLOR_PINK;
-extern const int COLOR_RED;
-extern const int COLOR_GRAY;
-extern const int COLOR_WHITE;
-extern const int COLOR_BLACK;
+#define BYTES_PER_PIXEL  4
+#define COLOR_PURPLE     ( 127  |    0<<8 |  255<<16 |  255<<24 )
+#define COLOR_BLUE       ( 0    |    0<<8 |  255<<16 |  255<<24 )
+#define COLOR_LIGHT_BLUE ( 0    |  255<<8 |  255<<16 |  255<<24 )
+#define COLOR_GREEN      ( 0    |  255<<8 |    0<<16 |  255<<24 )
+#define COLOR_YELLOW     ( 255  |  255<<8 |    0<<16 |  255<<24 )
+#define COLOR_ORANGE     ( 255  |  128<<8 |    0<<16 |  255<<24 )
+#define COLOR_PINK       ( 255  |  105<<8 |  180<<16 |  255<<24 )
+#define COLOR_RED        ( 255  |    0<<8 |    0<<16 |  255<<24 )
+#define COLOR_GRAY       ( 224  |  224<<8 |  224<<16 |  255<<24 )
+#define COLOR_WHITE      ( 255  |  255<<8 |  255<<16 |  255<<24 )
+#define COLOR_BLACK      ( 0    |    0<<8 |    0<<16 |  255<<24 )
 
-// xxx how to get defines in picoc
 #define EVID_SWIPE_DOWN        1000
 #define EVID_SWIPE_UP          1001
 #define EVID_SWIPE_RIGHT       1002
