@@ -14,10 +14,10 @@
 #define COLOR_WHITE      ( 255  |  255<<8 |  255<<16 |  255<<24 )
 #define COLOR_BLACK      ( 0    |    0<<8 |    0<<16 |  255<<24 )
 
-#define EVID_SWIPE_DOWN        1000
-#define EVID_SWIPE_UP          1001
-#define EVID_SWIPE_RIGHT       1002
-#define EVID_SWIPE_LEFT        1003
+#define EVID_SWIPE_DOWN        9000
+#define EVID_SWIPE_UP          9001
+#define EVID_SWIPE_RIGHT       9002
+#define EVID_SWIPE_LEFT        9003
 #define EVID_QUIT              9999
 
 //

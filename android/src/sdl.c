@@ -334,7 +334,7 @@ static int process_sdl_event(SDL_Event *ev)
         break; }
 
     default: {
-        INFO("event_type %d - not supported\n", ev->type);
+        //INFO("event_type %d - not supported\n", ev->type);
         break; }
     }
 

@@ -1,17 +1,22 @@
-0  hello_world : apps/hello/hello.c apps/hello/utils.c
-1  X  : 
-2  Xy  : 
-3  Xyz  : 
-4  Xyz1  : 
-5  Xyz12  : 
-6  X_X  : 
-7  Xy_Xy  : 
-8  Xyz_Xyz  : 
-9  Xyz1_Xyz1  : 
-10 Xyz12_Xyz12  : 
-11 aaaaa_X  : 
-12 123456789
-13 123456789_yyyyyyyyy
-15 <
-16 >
-17 X
+# PG  ID              NAME       DIR  PICOC_ARGS
+# --  --  ----------------  --------  ---------------
+   0   0       hello_world     hello  hello.c utils.c
+   1   5       test_test        test  test.c
+
+
+# 1  X  : 
+# 2  Xy  : 
+# 3  Xyz  : 
+# 4  Xyz1  : 
+# 5  Xyz12  : 
+# 6  X_X  : 
+# 7  Xy_Xy  : 
+# 8  Xyz_Xyz  : 
+# 9  Xyz1_Xyz1  : 
+# 10 Xyz12_Xyz12  : 
+# 11 aaaaa_X  : 
+# 12 123456789
+# 13 123456789_yyyyyyyyy
+# 15 <
+# 16 >
+# 17 X

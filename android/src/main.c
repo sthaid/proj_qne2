@@ -3,6 +3,10 @@
 #include <sdl.h>
 #include <utils.h>
 
+// defines
+#define EVID_PAGE_DECREMENT 1000
+#define EVID_PAGE_INCREMENT 1001
+
 // variables
 const char *internal_storage_path;
 bool        server_thread_running;
@@ -63,16 +67,19 @@ int main(int argc, char **argv)
 
 // -----------------  CONTROLLER  ------------------------------------
 
-#define MAX_MENU 18
+#define MAX_PAGE 10
+#define MAX_MENU 15
 
 typedef struct {
-    char name[32];
+    char *dir;
+    char *name;
     char *args;
 } menu_t;
 
-static int win_width, win_height;
-
-static menu_t menu[MAX_MENU];
+static int    win_width, win_height;
+static int    page;
+static int    last_page;
+static menu_t menu[MAX_PAGE][MAX_MENU];
 
 static void display_menu(void);
 static void read_menu(void);
@@ -104,18 +111,26 @@ static void controller(void)
         INFO("proc event_id %d\n", event_id);
         if (event_id == EVID_QUIT) {
             break;
-        } else if (event_id == 15) {
+        } else if (event_id == EVID_PAGE_DECREMENT) {
             INFO("XXX GOT PAGE LEFT XXX\n");
-        } else if (event_id == 16) {
+            if (page > 0) {
+                page--;
+            }
+        } else if (event_id == EVID_PAGE_INCREMENT) {
             INFO("XXX GOT PAGE RIGHT XXX\n");
-        } else if (event_id == 17) {
+            if (page < last_page) {
+                page++;
+            }
+        } else if (event_id == EVID_QUIT) {
             INFO("XXX GOT QUIT XXX\n");
             break;
         } else {
             // xxx check that menu entry is defined
-            INFO("running %s\n", menu[event_id].name);
-            rc = picoc_fg(menu[event_id].args);
-            INFO("done %s, rc=%d\n", menu[event_id].name, rc);
+            int pg = event_id / MAX_MENU;
+            int id = event_id % MAX_MENU;
+            INFO("running %s\n", menu[pg][id].name);
+            rc = picoc_fg(menu[pg][id].args);
+            INFO("done %s, rc=%d\n", menu[pg][id].name, rc);
         }
     }
 
@@ -124,13 +139,12 @@ static void controller(void)
 
 static void display_menu(void)
 {
-    //int id, x, xx, y, yy;
-    //sdl_rect_t *loc;
-    int id;
+    int    id;
     static sdl_texture_t *circle;
 
     #define RADIUS 100
 
+    // xxx
     if (circle == NULL) {
         circle = sdl_create_filled_circle_texture(RADIUS, COLOR_BLUE);
     }
@@ -140,16 +154,19 @@ static void display_menu(void)
 
     // xxx comment
     for (id = 0; id < MAX_MENU; id++) {
-        char *name = menu[id].name;
+        char *name = menu[page][id].name;
         char str1[32], str2[32], *p;
         int len1, len2, len_max, x, y;
         double numchars, chw, chh;
         sdl_rect_t loc;
 
-        if (name[0] == '\0') {
+        // if this menu entry is not defined then continue
+        if (name == NULL) {
             continue;
         }
 
+        // if name contains '_' then divide name to 2 strings,
+        // else one string
         memset(str1, 0, sizeof(str1));
         memset(str2, 0, sizeof(str2));
         if ((p = strchr(name, '_')) != NULL) {
@@ -163,13 +180,9 @@ static void display_menu(void)
         len2 = strlen(str2);
         len_max = (len1 > len2 ? len1 : len2);
 
-        x = (win_width/3/2) + (id%3) * (win_width/3);
-        y = (win_height/6/2) + (id/3) * (win_height/6);
-
-        if (id < 15) {
-            sdl_render_texture(true, x, y, circle);
-        }
-
+        // determine the size of the chars that appear in the menu item;
+        // the size is determined differently if there are 2 strings vs 1;
+        // the numeric values were determined experimentally
         if (len2 == 0) {
             if (len_max == 1) {
                 chw = (1.0 * RADIUS) / len_max;
@@ -190,12 +203,14 @@ static void display_menu(void)
         chh = chw / 0.6;
         numchars = win_width / chw;
 
-        if (id < 15) {
-            sdl_print_init(numchars, COLOR_WHITE, COLOR_BLUE, NULL, NULL, NULL, NULL);
-        } else {
-            sdl_print_init(numchars, COLOR_WHITE, COLOR_BLACK, NULL, NULL, NULL, NULL);
-        }
+        // determine dispaly location of the center of the menu item
+        x = (win_width/3/2) + (id%3) * (win_width/3);
+        y = (win_height/6/2) + (id/3) * (win_height/6);
 
+        // display the menu item
+        sdl_render_texture(true, x, y, circle);
+
+        sdl_print_init(numchars, COLOR_WHITE, COLOR_BLUE, NULL, NULL, NULL, NULL);
         if (len2 == 0) {
             sdl_render_text(true, x, y, str1);
         } else {
@@ -203,19 +218,45 @@ static void display_menu(void)
             sdl_render_text(true, x, rint(y+0.5*chh), str2);
         }
 
+        // register event
         loc.x = x - RADIUS;
         loc.y = y - RADIUS;
         loc.w = 2 * RADIUS;
         loc.h = 2 * RADIUS;
-        sdl_register_event(&loc, id);
+        sdl_register_event(&loc, page * MAX_MENU + id);
     }
+
+    // xxx
+    int chw, chh;
+    double numchars;
+
+    chw = RADIUS;
+    numchars = (double)win_width / chw;
+    sdl_print_init(numchars, COLOR_WHITE, COLOR_BLACK, NULL, NULL, NULL, NULL);
+
+    #define DISPLAY_CONTROL_ITEM(row,col,str,evid) \
+        do { \
+            int x = (win_width/3/2) + (col) * (win_width/3); \
+            int y = (win_height/6/2) + (row) * (win_height/6); \
+            sdl_rect_t loc = {x-RADIUS, y-RADIUS, 2*RADIUS, 2*RADIUS}; \
+            sdl_render_text(true, x, y, str); \
+            sdl_register_event(&loc, evid); \
+        } while (0)
+
+    DISPLAY_CONTROL_ITEM(5,0,"<",EVID_PAGE_DECREMENT);
+    DISPLAY_CONTROL_ITEM(5,1,">",EVID_PAGE_INCREMENT);
+    DISPLAY_CONTROL_ITEM(5,2,"X",EVID_QUIT);
+
+    // xxx
+    sdl_print_init(20, COLOR_WHITE, COLOR_BLACK, NULL, &chh, NULL, NULL);
+    sdl_render_printf(true, win_width/2, win_height-chh/2, "page %d", page);
 }
 
 static void read_menu(void)
 {
     FILE *fp;
-    char s[1000], name[32], *args;
-    int cnt, id, n, ret;
+    char s[500], name[100], dir[100], *args;
+    int cnt, pg, id, n, ret;
     struct stat statbuf;
 
     static long menu_mtime;
@@ -238,10 +279,18 @@ static void read_menu(void)
     menu_mtime = statbuf.st_mtime;
 
     // free and clear menu
-    for (id = 0; id < MAX_MENU; id++) {
-        free(menu[id].args);
+    for (pg = 0; pg < MAX_PAGE; pg++) {
+        for (id = 0; id < MAX_MENU; id++) {
+            free(menu[pg][id].name);
+            free(menu[pg][id].dir);
+            free(menu[pg][id].args);
+        }
     }
     memset(menu, 0, sizeof(menu));
+
+    // xxx
+    last_page = 0;
+    page = 0;
 
     // open menu file
     fp = fopen(menu_path, "r");
@@ -259,26 +308,31 @@ static void read_menu(void)
             continue;
         }
 
-        // extract id, name, and args:
-        // example:
-        //   s = "5 test : test_main.c test2.c"
-        // scanf result:
-        //   id   = 5
-        //   name = test
-        //   args = test_main.c test2.c
+        // extract: pg, id, name, and args:
+        // example of line in menu file:
+        //   "0 5 test_app test test.c"
+        //   - pg       = menu page
+        //   - id       = location on menu page
+        //   - app_name = name shown on the menu page
+        //   - dir      = app is in dir files/apps/<dir>
+        //   - args     = args passed to picoc xxx explain more
         name[0] = '\0';
         id = n = 0;
-        cnt = sscanf(s, "%d %s : %n", &id, name, &n);
-        if (cnt < 2) {
+        cnt = sscanf(s, "%d %d %s %s %n", &pg, &id, name, dir, &n);
+        if (cnt < 4 || n == 0 || pg < 0 || pg >= MAX_PAGE || id < 0 || id >= MAX_MENU) {
             ERROR("invalid line in menu file, '%s'\n", s);
             continue;
         }
-        args = (n > 0 ? s+n : NULL);
+        args = s+n;
 
-        // save name and args in menu struct
-        strcpy(menu[id].name, name);
-        if (args != NULL) {
-            menu[id].args = strdup(args);
+        // save values in the menu table
+        menu[pg][id].name = strdup(name);
+        menu[pg][id].dir = strdup(dir);
+        menu[pg][id].args = strdup(args);
+
+        // keep track of last menu page
+        if (pg > last_page) {
+            last_page = pg;
         }
     }
 
@@ -287,9 +341,11 @@ static void read_menu(void)
 
     // debug print the new menu
     INFO("menu is now ...\n");
-    for (id = 0; id < MAX_MENU; id++) {
-        if (menu[id].name[0] != '\0') {
-            INFO("%4d %8s : %s\n", id, menu[id].name, menu[id].args);
+    for (pg = 0; pg < MAX_PAGE; pg++) {
+        for (id = 0; id < MAX_MENU; id++) {
+            if (menu[pg][id].name != NULL) {
+                INFO("%2d %2d %16s %8s %s\n", pg, id, menu[pg][id].name, menu[pg][id].dir, menu[pg][id].args);
+            }
         }
     }
 }
