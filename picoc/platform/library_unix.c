@@ -439,10 +439,10 @@ typedef struct sdl_texture sdl_texture_t; \n\
 #define COLOR_WHITE      ( 255  |  255<<8 |  255<<16 |  255<<24 ) \n\
 #define COLOR_BLACK      ( 0    |    0<<8 |    0<<16 |  255<<24 ) \n\
 \n\
-#define EVID_SWIPE_DOWN        1000 \n\
-#define EVID_SWIPE_UP          1001 \n\
-#define EVID_SWIPE_RIGHT       1002 \n\
-#define EVID_SWIPE_LEFT        1003 \n\
+#define EVID_SWIPE_DOWN        9000 \n\
+#define EVID_SWIPE_UP          9001 \n\
+#define EVID_SWIPE_RIGHT       9002 \n\
+#define EVID_SWIPE_LEFT        9003 \n\
 #define EVID_QUIT              9999 \n\
 ";
 

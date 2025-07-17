@@ -27,7 +27,7 @@ static void logmsg(char *lvl, const char *func, char *fmt, ...)
 #ifdef ANDROID
     #define FONT_FILE_PATH  "FreeMonoBold.ttf"
 #else
-    #define FONT_FILE_PATH "../assets/FreeMonoBold.ttf"
+    #define FONT_FILE_PATH "../../linux/assets/FreeMonoBold.ttf" //xxx
 #endif
 
 #define DEFAULT_NUMCHARS 20
@@ -612,7 +612,7 @@ void sdl_render_fill_rect(bool xy_is_ctr, int x, int y, int w, int h, int color)
 
 void sdl_render_line(int x1, int y1, int x2, int y2, int color)
 {
-    INFO("%d %d %d %d\n", x1, y1, x2, y2);
+    //INFO("%d %d %d %d\n", x1, y1, x2, y2);
 
     sdl_point_t points[2] = { {x1,y1}, {x2,y2} };
     sdl_render_lines(points, 2, color);
@@ -626,10 +626,10 @@ void sdl_render_lines(sdl_point_t *points, int count, int color)
         return;
     }
 
-    INFO("POINTS %d %d - %d %d,  count=%d\n", 
-        sdl_points[0].x, sdl_points[0].y,
-        sdl_points[1].x, sdl_points[1].y,
-        count);
+//  INFO("POINTS %d %d - %d %d,  count=%d\n", 
+//      sdl_points[0].x, sdl_points[0].y,
+//      sdl_points[1].x, sdl_points[1].y,
+//      count);
 
     set_render_draw_color(color);
 
