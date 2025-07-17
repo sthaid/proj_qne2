@@ -26,7 +26,7 @@
 
 typedef struct {
     int x, y, w, h;
-} sdl_rect_t;
+} sdl_loc_t;
 
 typedef struct {
     int x, y;
@@ -48,7 +48,7 @@ void sdl_display_init(int color);
 void sdl_display_present(void);
 
 // event registration and query
-void sdl_register_event(sdl_rect_t *loc, int event_id);
+void sdl_register_event(sdl_loc_t *loc, int event_id);
 int sdl_get_event(long timeout_us);
 
 // create colors
@@ -58,8 +58,8 @@ int sdl_wavelength_to_color(int wavelength);
 
 // render text
 void sdl_print_init(double numchars, int fg_color, int bg_color, int *char_width, int *char_height, int *win_rows, int *win_cols);
-sdl_rect_t *sdl_render_text(bool xy_is_ctr, int x, int y, char *str);
-sdl_rect_t *sdl_render_printf(bool xy_is_ctr, int x, int y, char *fmt, ...) __attribute__ ((format (printf, 4, 5)));
+sdl_loc_t *sdl_render_text(bool xy_is_ctr, int x, int y, char *str);
+sdl_loc_t *sdl_render_printf(bool xy_is_ctr, int x, int y, char *fmt, ...) __attribute__ ((format (printf, 4, 5)));
 
 // render rectangle, lines, circles, points
 void sdl_render_rect(bool xy_is_ctr, int x, int y, int w, int h, int line_width, int color);

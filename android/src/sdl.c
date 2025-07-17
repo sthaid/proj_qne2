@@ -1,3 +1,4 @@
+// xxx do we need so many of the xy_is_ctr?
 #include <std_hdrs.h>
 
 #include <sdl.h>
@@ -39,8 +40,8 @@ static void logmsg(char *lvl, const char *func, char *fmt, ...)
 //
 
 typedef struct {
-    sdl_rect_t loc;
-    int        event_id;
+    sdl_loc_t loc;
+    int       event_id;
 } event_t;
 
 //
@@ -191,7 +192,7 @@ void sdl_display_present(void)
 
 // -----------------  EVENTS  -----------------------------
 
-void sdl_register_event(sdl_rect_t *loc, int event_id)
+void sdl_register_event(sdl_loc_t *loc, int event_id)
 {
     if (loc == NULL || loc->w == 0 || loc->h == 0) {
         ERROR("invalid loc, event_id=%d\n", event_id);
@@ -246,10 +247,10 @@ try_again:
 
 static int process_sdl_event(SDL_Event *ev)
 {
-    #define AT_POS(X,Y,pos) (((X) >= (pos).x) && \
-                             ((X) < (pos).x + (pos).w) && \
-                             ((Y) >= (pos).y) && \
-                             ((Y) < (pos).y + (pos).h))
+    #define AT_POS(X,Y,pos) (((X) >= (pos).x - (pos).w / 2)   && \
+                             ((X) <= (pos).x + (pos).w / 2)   && \
+                             ((Y) >= (pos).y - (pos).h / 2)   && \
+                             ((Y) <= (pos).y + (pos).h / 2))
 
     int event_id = -1;
     int i;
@@ -474,28 +475,29 @@ void sdl_print_init(double numchars, int fg_color, int bg_color, int *char_width
     if (win_cols) *win_cols = text.win_cols;
 }
 
-sdl_rect_t *sdl_render_text(bool xy_is_ctr, int x, int y, char * str)
+sdl_loc_t *sdl_render_text(bool xy_is_ctr, int x, int y, char * str)
 {
-    SDL_Surface    * surface;
-    SDL_Texture    * texture;
-    static SDL_Rect  pos;
+    SDL_Surface *surface;
+    SDL_Texture *texture;
+    SDL_Rect     pos;
+    static sdl_loc_t loc;
 
     // if font not initialized then return error
     if (font[text.ptsize] == NULL) {
         ERROR("font ptsize %d, not initialized\n", text.ptsize);
-        memset(&pos, 0, sizeof(pos));
-        return (sdl_rect_t*)&pos;
+        memset(&loc, 0, sizeof(loc));
+        return &loc;
     }
 
     // render the string to a surface
     surface = TTF_RenderText_Shaded(font[text.ptsize], str, text.fg_color, text.bg_color);
     if (surface == NULL) {
         ERROR("TTF_RenderText_Shaded returned NULL\n");
-        memset(&pos, 0, sizeof(pos));
-        return (sdl_rect_t*)&pos;
+        memset(&loc, 0, sizeof(loc));
+        return &loc;
     }
 
-    // determine the display location
+    // determine the display location to render the text
     if (!xy_is_ctr) {
         pos.x = x;
         pos.y = y;
@@ -516,11 +518,17 @@ sdl_rect_t *sdl_render_text(bool xy_is_ctr, int x, int y, char * str)
     SDL_FreeSurface(surface);
     SDL_DestroyTexture(texture);
 
-    // return the display location where the text was rendered
-    return (sdl_rect_t*)&pos;
+    // return the display location where the text was rendered;
+    // this returned location x,y is the location of the center of
+    // the rendered text
+    loc.x = pos.x + pos.w / 2;
+    loc.y = pos.y + pos.h / 2;
+    loc.w = pos.w;
+    loc.h = pos.h;
+    return &loc;
 }
 
-sdl_rect_t *sdl_render_printf(bool xy_is_ctr, int x, int y, char * fmt, ...)
+sdl_loc_t *sdl_render_printf(bool xy_is_ctr, int x, int y, char * fmt, ...)
 {
     char str[1000];
     va_list ap;
@@ -531,28 +539,6 @@ sdl_rect_t *sdl_render_printf(bool xy_is_ctr, int x, int y, char * fmt, ...)
 
     return sdl_render_text(xy_is_ctr, x, y, str);
 }
-
-#if 0 //xxx del, first save the nk code
-sdl_rect_t *sdl_render_printf_nk(int n, int k, int y, char * fmt, ...)
-{
-    char str[200];
-    va_list ap;
-    int x;
-
-    va_start(ap, fmt);
-    vsnprintf(str, sizeof(str), fmt, ap);
-    va_end(ap);
-
-    if (n == 0 || k >= n) {
-        ERROR("n=%d k=%d str='%s'\n", n, k, str);
-        return sdl_render_text(0, y, str);
-    }
-
-    x = ((win_width/2/(n)) + (k) * (win_width/(n)) - strlen(str) * text.char_width / 2);
-
-    return sdl_render_text(x, y, str);
-}
-#endif
 
 // -----------------  RENDER RECTANGLES, LINES, CIRCLES, POINTS  --------------------
 

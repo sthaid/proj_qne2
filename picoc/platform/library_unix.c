@@ -66,8 +66,8 @@ void Sdl_display_present (struct ParseState *Parser, struct Value *ReturnValue,
 void Sdl_register_event (struct ParseState *Parser, struct Value *ReturnValue,
 	struct Value **Param, int NumArgs)
 {
-    sdl_rect_t *loc      = (sdl_rect_t*)Param[0]->Val->Pointer;
-    int         event_id = Param[1]->Val->Integer;
+    sdl_loc_t *loc      = (sdl_loc_t*)Param[0]->Val->Pointer;
+    int        event_id = Param[1]->Val->Integer;
 
     sdl_register_event(loc, event_id);
 }
@@ -158,7 +158,7 @@ void Sdl_render_text (struct ParseState *Parser, struct Value *ReturnValue,
     int         x         = Param[1]->Val->Integer;
     int         y         = Param[2]->Val->Integer;
     char       *str       = Param[3]->Val->Pointer;
-    sdl_rect_t *loc;
+    sdl_loc_t  *loc;
 
     loc = sdl_render_text(xy_is_ctr, x, y, str);
 
@@ -177,7 +177,7 @@ void Sdl_render_printf (struct ParseState *Parser, struct Value *ReturnValue,
 
     struct StdVararg PrintfArgs;
     char             str[200] = "";
-    sdl_rect_t      *loc;
+    sdl_loc_t       *loc;
 
     PrintfArgs.Param = Param + 3;
     PrintfArgs.NumArgs = NumArgs - 4;
@@ -187,34 +187,6 @@ void Sdl_render_printf (struct ParseState *Parser, struct Value *ReturnValue,
 
     ReturnValue->Val->Pointer = loc;
 }
-
-#if 0
-void Sdl_render_printf_nk (struct ParseState *Parser, struct Value *ReturnValue,
-	struct Value **Param, int NumArgs)
-{
-    int              n        = Param[0]->Val->Integer;
-    int              k        = Param[1]->Val->Integer;
-    int              y        = Param[2]->Val->Integer;
-    char            *fmt      = Param[3]->Val->Pointer;
-
-    struct StdVararg PrintfArgs;
-    char             str[200] = "";
-    sdl_rect_t      *loc;
-    int              x;
-
-    #define WIN_WIDTH 1000 //xxx ?
-
-    PrintfArgs.Param = Param + 3;
-    PrintfArgs.NumArgs = NumArgs - 4;
-    StdioBasePrintf(Parser, NULL, str, sizeof(str), fmt, &PrintfArgs);
-
-    // xxx what if n or k are invalid
-    x = ((WIN_WIDTH/2/(n)) + (k) * (WIN_WIDTH/(n)) - strlen(str) * Char_width / 2);
-    loc = sdl_render_text(x, y, str);
-
-    ReturnValue->Val->Pointer = loc;
-}
-#endif
 
 //
 // render rectangle, lines, circles, points
@@ -422,7 +394,7 @@ void Sdl_render_rotated_texture (struct ParseState *Parser, struct Value *Return
 // -----------------  SDL PLATFORM REGISTRATION -------------------------
 
 const char SdlDefs[] = "\
-typedef struct { int x; int y; int w; int h; } sdl_rect_t; \n\
+typedef struct { int x; int y; int w; int h; } sdl_loc_t; \n\
 typedef struct { int x; int y; } sdl_point_t; \n\
 typedef struct sdl_texture sdl_texture_t; \n\
 \n\
@@ -457,7 +429,7 @@ struct LibraryFunction SdlFunctions[] = {
     { Sdl_display_present, "void sdl_display_present(void);" },
 
     // event registration and query
-    { Sdl_register_event,  "void sdl_register_event(sdl_rect_t *loc, int event_id);" },
+    { Sdl_register_event,  "void sdl_register_event(sdl_loc_t *loc, int event_id);" },
     { Sdl_get_event,       "int sdl_get_event(long timeout_us);" },
 
     // create colors
@@ -467,8 +439,8 @@ struct LibraryFunction SdlFunctions[] = {
 
     // render text
     { Sdl_print_init,      "void sdl_print_init(double numchars, int fg_color, int bg_color, int *char_width, int *char_height, int *win_rows, int *win_cols);" },
-    { Sdl_render_text,     "sdl_rect_t *sdl_render_text(bool xy_is_ctr, int x, int y, char *str);" },
-    { Sdl_render_printf,   "sdl_rect_t *sdl_render_printf(bool xy_is_ctr, int x, int y, char *fmt, ...);" },
+    { Sdl_render_text,     "sdl_loc_t *sdl_render_text(bool xy_is_ctr, int x, int y, char *str);" },
+    { Sdl_render_printf,   "sdl_loc_t *sdl_render_printf(bool xy_is_ctr, int x, int y, char *fmt, ...);" },
 
     // render rectangle, lines, circles, points
     { Sdl_render_rect,     "void sdl_render_rect(int xy_is_ctr, int x, int y, int w, int h, int line_width, int color);" },

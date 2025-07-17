@@ -105,10 +105,14 @@ int main(int argc, char **argv)
             end_program = true;
             break;
         case EVID_SWIPE_RIGHT:
-            if (pagenum > 0) pagenum--;
+            if (--pagenum < 0) {
+                pagenum = MAX_PAGE-1;
+            }
             break;
         case EVID_SWIPE_LEFT:
-            if (pagenum < MAX_PAGE-1) pagenum++;
+            if (++pagenum >= MAX_PAGE) {
+                pagenum = 0;
+            }
             break;
         }
 
@@ -134,7 +138,7 @@ int main(int argc, char **argv)
 
 static void render_page(int pagenum)
 {
-    sdl_rect_t *loc;
+    sdl_loc_t *loc;
     char str[100];
 
     sprintf(str, "Unit Test - Page %d", pagenum);
@@ -143,14 +147,16 @@ static void render_page(int pagenum)
     sdl_print_init(10, COLOR_WHITE, COLOR_BLACK,
                    &char_width, &char_height, &win_rows, &win_cols);
 
-// xxx loc should match
     loc = sdl_render_printf(true, NK2X(3,0), win_height-120, "%s", "<");
+    loc->w = loc->h = 200;
     sdl_register_event(loc, EVID_SWIPE_RIGHT);
 
     loc = sdl_render_printf(true, NK2X(3,1), win_height-120, "%s", ">");
+    loc->w = loc->h = 200;
     sdl_register_event(loc, EVID_SWIPE_LEFT);
 
     loc = sdl_render_printf(true, NK2X(3,2), win_height-120, "%s", "X");
+    loc->w = loc->h = 200;
     sdl_register_event(loc, EVID_QUIT);
 
     sdl_print_init(20, COLOR_WHITE, COLOR_BLACK,
