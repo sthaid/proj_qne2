@@ -62,23 +62,23 @@ sdl_loc_t *sdl_render_text(bool xy_is_ctr, int x, int y, char *str);
 sdl_loc_t *sdl_render_printf(bool xy_is_ctr, int x, int y, char *fmt, ...) __attribute__ ((format (printf, 4, 5)));
 
 // render rectangle, lines, circles, points
-void sdl_render_rect(bool xy_is_ctr, int x, int y, int w, int h, int line_width, int color);
-void sdl_render_fill_rect(bool xy_is_ctr, int x, int y, int w, int h, int color);
+void sdl_render_rect(int x, int y, int w, int h, int line_width, int color);
+void sdl_render_fill_rect(int x, int y, int w, int h, int color);
 void sdl_render_line(int x1, int y1, int x2, int y2, int color);
 void sdl_render_lines(sdl_point_t *points, int count, int color);
-void sdl_render_circle(bool xy_is_ctr, int x, int y, int radius, int line_width, int color);
+void sdl_render_circle(int x, int y, int radius, int line_width, int color);
 void sdl_render_point(int x, int y, int color, int point_size);
 void sdl_render_points(sdl_point_t *points, int count, int color, int point_size);
 
 // render using textures
 sdl_texture_t *sdl_create_texture(int w, int h);
-sdl_texture_t *sdl_create_texture_from_display(bool xy_is_ctr, int x, int y, int w, int h);
+sdl_texture_t *sdl_create_texture_from_display(int x, int y, int w, int h);
 sdl_texture_t *sdl_create_filled_circle_texture(int radius, int color);
 sdl_texture_t *sdl_create_text_texture(char *str);
 void sdl_destroy_texture(sdl_texture_t *texture);
 void sdl_query_texture(sdl_texture_t *texture, int *w, int *h);
 void sdl_update_texture(sdl_texture_t *texture, char *pixels, int pitch);
-void sdl_render_texture(bool xy_is_ctr, int x, int y, sdl_texture_t *texture);
-void sdl_render_scaled_texture(bool xy_is_ctr, int x, int y, int w, int h, sdl_texture_t *texture);
-void sdl_render_rotated_texture(bool xy_is_ctr, int x, int y, double angle, sdl_texture_t *texture);
+void sdl_render_texture(int x, int y, sdl_texture_t *texture);
+void sdl_render_scaled_texture(int x, int y, int w, int h, sdl_texture_t *texture);
+void sdl_render_rotated_texture(int x, int y, double angle, sdl_texture_t *texture);
 

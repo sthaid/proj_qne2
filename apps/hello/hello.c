@@ -231,15 +231,15 @@ static void add_point(sdl_point_t **p, int x, int y);
 static void render_page_3(void)
 {
     // draw rect around perimeter
-    sdl_render_rect(false, 0, 0, win_width, win_height, 8, COLOR_PURPLE);
+    sdl_render_rect(win_width/2, win_height/2, win_width, win_height, 8, COLOR_PURPLE);
 
     // draw fill rect, y = 100 .. 300
-    sdl_render_fill_rect(true, win_width/2, 200, 800, 200, COLOR_RED);
+    sdl_render_fill_rect(win_width/2, 200, 800, 200, COLOR_RED);
 
     // draw circles, y = 300 .. 400
-    sdl_render_circle(true, 1*win_width/4, 350, 50, 3, COLOR_YELLOW);
-    sdl_render_circle(true, 2*win_width/4, 350, 50, 3, COLOR_YELLOW);
-    sdl_render_circle(true, 3*win_width/4, 350, 50, 3, COLOR_YELLOW);
+    sdl_render_circle(1*win_width/4, 350, 50, 3, COLOR_YELLOW);
+    sdl_render_circle(2*win_width/4, 350, 50, 3, COLOR_YELLOW);
+    sdl_render_circle(3*win_width/4, 350, 50, 3, COLOR_YELLOW);
 
     // draw 6 lines, y = 400 .. 500
     for (int y = 401; y <= 501; y += 20) {  //xxx
@@ -260,13 +260,13 @@ static void render_page_3(void)
     inten = inten + 0.01;
     if (inten > 1) inten = 0;
     color = sdl_scale_color(COLOR_YELLOW, inten);
-    sdl_render_fill_rect(true, 200, 750, 100, 100, color);
+    sdl_render_fill_rect(200, 750, 100, 100, color);
 
     static double wavelen = 750;
     wavelen -= 2;
     if (wavelen < 440) wavelen = 750;
     color = sdl_wavelength_to_color(wavelen);
-    sdl_render_fill_rect(true, 800, 750, 100, 100, color);
+    sdl_render_fill_rect(800, 750, 100, 100, color);
 
     // draw points with varying size, y = 850
     color = sdl_create_color(0, 255, 0, 255);
@@ -328,23 +328,23 @@ static void render_page_4(void)
 
     // render the circle texture at varying x location, y = 100 .. 300
     static int circle_x=100, circle_y=200;
-    sdl_render_texture(true, circle_x, circle_y, circle);
+    sdl_render_texture(circle_x, circle_y, circle);
     circle_x += 10;
     if (circle_x > 900) circle_x = 100;
 
     // render the circle texture using scaling, y = 300 .. 500
-    sdl_render_scaled_texture(true, 500, 400, 400, 200, circle);
+    sdl_render_scaled_texture(500, 400, 400, 200, circle);
 
     // render text texture, at y = 550
-    sdl_render_texture(true, 500, 550, text);
+    sdl_render_texture(500, 550, text);
 
     // rotate and render the text texture at y = 550 .. 950
     static double angle = 0;
     angle += 5;
-    sdl_render_rotated_texture(true, 500, 750, angle, text);
+    sdl_render_rotated_texture(500, 750, angle, text);
 
     // render the purple texture, which was constructed from pixels, y = 950 .. 1050
-    sdl_render_texture(true, 500, 1000, purple);
+    sdl_render_texture(500, 1000, purple);
 }
 
 static void page_4_cleanup(void)

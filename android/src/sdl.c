@@ -1,4 +1,3 @@
-// xxx do we need so many of the xy_is_ctr?
 #include <std_hdrs.h>
 
 #include <sdl.h>
@@ -542,7 +541,7 @@ sdl_loc_t *sdl_render_printf(bool xy_is_ctr, int x, int y, char * fmt, ...)
 
 // -----------------  RENDER RECTANGLES, LINES, CIRCLES, POINTS  --------------------
 
-void sdl_render_rect(bool xy_is_ctr, int x, int y, int w, int h, int line_width, int color)
+void sdl_render_rect(int x, int y, int w, int h, int line_width, int color)
 {
     SDL_Rect rect;
     int i;
@@ -550,17 +549,10 @@ void sdl_render_rect(bool xy_is_ctr, int x, int y, int w, int h, int line_width,
     //  INFO("color=0x%x line_width=%d  xywh=%d %d %d %d\n", color, line_width,
     //      loc->x, loc->y, loc->w, loc->h);
 
-    if (!xy_is_ctr) {
-        rect.x = x;
-        rect.y = y;
-        rect.w = w;
-        rect.h = h;
-    } else {
-        rect.x = x - w/2;
-        rect.y = y - h/2;
-        rect.w = w;
-        rect.h = h;
-    }
+    rect.x = x - w/2;
+    rect.y = y - h/2;
+    rect.w = w;
+    rect.h = h;
 
     set_render_draw_color(color);
 
@@ -576,21 +568,14 @@ void sdl_render_rect(bool xy_is_ctr, int x, int y, int w, int h, int line_width,
     }
 }
 
-void sdl_render_fill_rect(bool xy_is_ctr, int x, int y, int w, int h, int color)
+void sdl_render_fill_rect(int x, int y, int w, int h, int color)
 {
     SDL_Rect rect;
 
-    if (!xy_is_ctr) {
-        rect.x = x;
-        rect.y = y;
-        rect.w = w;
-        rect.h = h;
-    } else {
-        rect.x = x - w/2;
-        rect.y = y - h/2;
-        rect.w = w;
-        rect.h = h;
-    }
+    rect.x = x - w/2;
+    rect.y = y - h/2;
+    rect.w = w;
+    rect.h = h;
 
     set_render_draw_color(color);
     SDL_RenderFillRect(renderer, &rect);
@@ -622,7 +607,7 @@ void sdl_render_lines(sdl_point_t *points, int count, int color)
     SDL_RenderDrawLines(renderer, sdl_points, count);
 }
 
-void sdl_render_circle(bool xy_is_ctr, int x_arg, int y_arg, int radius, int line_width, int color)
+void sdl_render_circle(int x_arg, int y_arg, int radius, int line_width, int color)
 {
     int count = 0, i, angle, x, y;
     int x_center, y_center;
@@ -632,13 +617,8 @@ void sdl_render_circle(bool xy_is_ctr, int x_arg, int y_arg, int radius, int lin
     static int cos_table[370];
     static bool first_call = true;
 
-    if (!xy_is_ctr) {
-        x_center = x_arg + radius/2;
-        y_center = y_arg + radius/2;
-    } else {
-        x_center = x_arg;
-        y_center = y_arg;
-    }
+    x_center = x_arg;
+    y_center = y_arg;
 
     // on first call make table of sin and cos indexed by degrees
     if (first_call) {
@@ -870,24 +850,17 @@ sdl_texture_t *sdl_create_texture(int w, int h)
     return (sdl_texture_t*)texture;
 }
 
-sdl_texture_t *sdl_create_texture_from_display(bool xy_is_ctr, int x, int y, int w, int h)
+sdl_texture_t *sdl_create_texture_from_display(int x, int y, int w, int h)
 {
     sdl_texture_t *texture;
     int ret;
     char *pixels;
     SDL_Rect loc;
 
-    if (!xy_is_ctr) {
-        loc.x = x;
-        loc.y = y;
-        loc.w = w;
-        loc.h = h;
-    } else {
-        loc.x = x - w/2;
-        loc.y = y - h/2;
-        loc.w = w;
-        loc.h = h;
-    }
+    loc.x = x - w/2;
+    loc.y = y - h/2;
+    loc.w = w;
+    loc.h = h;
 
     // allocate memory for the pixels
     pixels = calloc(1, loc.h * loc.w * BYTES_PER_PIXEL);
@@ -1039,7 +1012,7 @@ void sdl_update_texture(sdl_texture_t *texture, char * pixels, int pitch)
                       pitch);                 // pitch  
 }
 
-void sdl_render_texture(bool xy_is_ctr, int x, int y, sdl_texture_t *texture)
+void sdl_render_texture(int x, int y, sdl_texture_t *texture)
 {
     SDL_Rect dest;
     int w,h;
@@ -1050,22 +1023,15 @@ void sdl_render_texture(bool xy_is_ctr, int x, int y, sdl_texture_t *texture)
 
     sdl_query_texture(texture, &w, &h);
 
-    if (!xy_is_ctr) {
-        dest.x = x;
-        dest.y = y;
-        dest.w = w;
-        dest.h = h;
-    } else {
-        dest.x = x - w/2;
-        dest.y = y - h/2;
-        dest.w = w;
-        dest.h = h;
-    }
+    dest.x = x - w/2;
+    dest.y = y - h/2;
+    dest.w = w;
+    dest.h = h;
 
     SDL_RenderCopy(renderer, (SDL_Texture*)texture, NULL, &dest);
 }
 
-void sdl_render_scaled_texture(bool xy_is_ctr, int x, int y, int w, int h, sdl_texture_t *texture)
+void sdl_render_scaled_texture(int x, int y, int w, int h, sdl_texture_t *texture)
 {
     SDL_Rect dest;
 
@@ -1073,22 +1039,15 @@ void sdl_render_scaled_texture(bool xy_is_ctr, int x, int y, int w, int h, sdl_t
         return;
     }
 
-    if (!xy_is_ctr) {
-        dest.x = x;
-        dest.y = y;
-        dest.w = w;
-        dest.h = h;
-    } else {
-        dest.x = x - w/2;
-        dest.y = y - h/2;
-        dest.w = w;
-        dest.h = h;
-    }
+    dest.x = x - w/2;
+    dest.y = y - h/2;
+    dest.w = w;
+    dest.h = h;
 
     SDL_RenderCopy(renderer, (SDL_Texture*)texture, NULL, &dest);
 }
 
-void sdl_render_rotated_texture(bool xy_is_ctr, int x, int y, double angle, sdl_texture_t *texture)
+void sdl_render_rotated_texture(int x, int y, double angle, sdl_texture_t *texture)
 {
     SDL_Rect dest;
     int w,h;
@@ -1099,17 +1058,10 @@ void sdl_render_rotated_texture(bool xy_is_ctr, int x, int y, double angle, sdl_
 
     sdl_query_texture(texture, &w, &h);
 
-    if (!xy_is_ctr) {
-        dest.x = x;
-        dest.y = y;
-        dest.w = w;
-        dest.h = h;
-    } else {
-        dest.x = x - w/2;
-        dest.y = y - h/2;
-        dest.w = w;
-        dest.h = h;
-    }
+    dest.x = x - w/2;
+    dest.y = y - h/2;
+    dest.w = w;
+    dest.h = h;
 
     SDL_RenderCopyEx(renderer, (SDL_Texture*)texture, NULL, &dest, angle, NULL, false);
 }
