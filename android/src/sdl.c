@@ -3,6 +3,7 @@
 #include <sdl.h>
 
 // xxx landscape
+// xxx keyboard events for < > END and up/down
 
 //
 // logging
@@ -864,7 +865,7 @@ sdl_texture_t *sdl_create_texture_from_display(int x, int y, int w, int h)
               SDL_CreateTexture(renderer,
                                 SDL_PIXELFORMAT_ABGR8888,
                                 SDL_TEXTUREACCESS_STREAMING,
-                                w, h);
+                                loc.w, loc.h);
     if (texture == NULL) {
         ERROR("failed to allocate texture\n");
         free(pixels);

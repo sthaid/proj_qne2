@@ -370,7 +370,11 @@ static void render_page_4(void)
     // xxx
     static sdl_texture_t *t;
     if (t == NULL) {
+        int w,h;
+        printf("XXXXXXXXXX win_width, char_height = %d %d\n", win_width, char_height);
         t = sdl_create_texture_from_display(0,0,win_width, char_height);
+        sdl_query_texture(t, &w, &h);
+        printf("XXXXXXXXXXXXXX w h = %d %d\n", w, h);
     }
     sdl_render_texture(0, 1500, -1, -1, 0, t);
 #if 0
