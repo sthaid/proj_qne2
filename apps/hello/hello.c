@@ -32,6 +32,10 @@ static int char_height;
 static int win_rows;
 static int win_cols;
 
+sdl_texture_t *circle;  // xxx can these be static
+sdl_texture_t *text;
+sdl_texture_t *purple;
+
 //
 // prototypes
 //
@@ -49,7 +53,7 @@ static void render_page_4(void);
 int main(int argc, char **argv)
 {
     int  i, event_id;
-    int  pagenum = 0;
+    int  pagenum = 4;
     bool end_program = false;
     bool is_qne_app = (argc > 0 && strcmp(argv[0], "qne_app") == 0);
 
@@ -142,7 +146,10 @@ static void render_page(int pagenum)
     char str[100];
 
     sprintf(str, "Unit Test - Page %d", pagenum);
+    sdl_print_init(20, COLOR_WHITE, COLOR_BLACK,
+                   &char_width, &char_height, &win_rows, &win_cols);
     sdl_render_printf(true, NK2X(1,0), ROW2Y_CTR(0), "%s", str);
+
 
     sdl_print_init(10, COLOR_WHITE, COLOR_BLACK,
                    &char_width, &char_height, &win_rows, &win_cols);
@@ -159,9 +166,12 @@ static void render_page(int pagenum)
     loc->w = loc->h = 200;
     sdl_register_event(loc, EVID_QUIT);
 
+
     sdl_print_init(20, COLOR_WHITE, COLOR_BLACK,
                    &char_width, &char_height, &win_rows, &win_cols);
     sdl_render_printf(true, win_width/2, win_height-char_height/2, "page %d", pagenum);
+//  printf("win_width=%d win_height=%d char_width=%d char_height=%d\n",
+//        win_width, win_height, char_width, char_height);
 
     switch (pagenum) {
     case 0: render_page_0(); break;
@@ -231,10 +241,11 @@ static void add_point(sdl_point_t **p, int x, int y);
 static void render_page_3(void)
 {
     // draw rect around perimeter
-    sdl_render_rect(win_width/2, win_height/2, win_width, win_height, 8, COLOR_PURPLE);
+    //sdl_render_rect(win_width/2, win_height/2, win_width, win_height, 2, COLOR_PURPLE);
+    sdl_render_rect(0, 0, win_width, win_height, 2, COLOR_PURPLE);
 
     // draw fill rect, y = 100 .. 300
-    sdl_render_fill_rect(win_width/2, 200, 800, 200, COLOR_RED);
+    sdl_render_fill_rect(100, 100, 800, 200, COLOR_RED);
 
     // draw circles, y = 300 .. 400
     sdl_render_circle(1*win_width/4, 350, 50, 3, COLOR_YELLOW);
@@ -292,17 +303,12 @@ static void add_point(sdl_point_t **p, int x, int y)
 
 // -----------------  PAGE 0: xxxxxxxxxxxxxxxxxxx  ------------
 
-sdl_texture_t *circle;  // xxx can these be static
-sdl_texture_t *text;
-sdl_texture_t *purple;
-
 // xxx test or replace this
 //sdl_texture_t *sdl_create_texture_from_display(sdl_rect_t *loc);                      // xxx needed?
 
 static void render_page_4(void)
 {
-    int *pixels;
-    int w,h;
+    //int w,h;
 
     // if the circle texture has not been initialized then
     // init the 3 textures used by this test:
@@ -311,40 +317,69 @@ static void render_page_4(void)
     // - purple: sdl_create_texture + sdl_update_texture xxx
     if (circle == NULL) {
         circle = sdl_create_filled_circle_texture(100, COLOR_RED);
-        sdl_query_texture(circle, &w, &h);
-        printf("circle texture w x h = %d %d,  expected 201 x 201\n", w, h);
+        //sdl_query_texture(circle, &w, &h);
+        //printf("circle texture w x h = %d %d,  expected 201 x 201\n", w, h);
 
         text = sdl_create_text_texture("hello");
-        sdl_query_texture(text, &w, &h);
+        //sdl_query_texture(text, &w, &h);
 
-        purple = sdl_create_texture(100, 100);
-        pixels = malloc(100 * 100 * 4);
+#if 0
+        int *pixels = malloc(100 * 100 * 4);
         for (int i = 0; i < 10000; i++) {
             pixels[i] = COLOR_PURPLE;
         }
-        sdl_update_texture(purple, (char*)pixels, 100*4);
+        //purple = sdl_create_texture_from_pixels(100, 100, pixels);
+        purple = sdl_create_texture_from_pixels(100, 100, NULL);
+        free(pixels);
+#endif
+
+        purple = sdl_create_texture_from_pixels(100, 100, NULL);
+
+        int *pixels = malloc(100 * 100 * 4);
+        for (int i = 0; i < 10000; i++) {
+            pixels[i] = COLOR_PURPLE;
+        }
+
+        sdl_update_texture(purple, pixels);
         free(pixels);
     }
 
     // render the circle texture at varying x location, y = 100 .. 300
     static int circle_x=100, circle_y=200;
-    sdl_render_texture(circle_x, circle_y, circle);
+    sdl_render_texture(circle_x, circle_y, 200, 200, 0, circle);
     circle_x += 10;
     if (circle_x > 900) circle_x = 100;
 
     // render the circle texture using scaling, y = 300 .. 500
-    sdl_render_scaled_texture(500, 400, 400, 200, circle);
+    //sdl_render_scaled_texture(500, 400, 400, 200, circle);
+    sdl_render_texture(100, 500, 200, 400, 0, circle);
 
     // render text texture, at y = 550
-    sdl_render_texture(500, 550, text);
+    sdl_render_texture(0, 1000, -1, -1, 0, text);
 
     // rotate and render the text texture at y = 550 .. 950
     static double angle = 0;
     angle += 5;
-    sdl_render_rotated_texture(500, 750, angle, text);
+    sdl_render_texture(500, 500, -1, -1, angle, text);
 
     // render the purple texture, which was constructed from pixels, y = 950 .. 1050
-    sdl_render_texture(500, 1000, purple);
+    sdl_render_texture(500, 1500, -1, -1, 45, purple);
+
+
+
+    // xxx
+    static sdl_texture_t *t;
+    if (t == NULL) {
+        t = sdl_create_texture_from_display(0,0,win_width, char_height);
+    }
+    sdl_render_texture(0, 1500, -1, -1, 0, t);
+#if 0
+    if (xyz != NULL) {
+        sdl_query_texture(xyz, &w, &h);
+        printf("rendering textur xyz %d %d\n", w, h);
+        sdl_render_texture(500, 1500, xyz);
+    }
+#endif
 }
 
 static void page_4_cleanup(void)
@@ -352,4 +387,5 @@ static void page_4_cleanup(void)
     sdl_destroy_texture(circle);
     sdl_destroy_texture(text);
     sdl_destroy_texture(purple);
+    //sdl_destroy_texture(xyz);
 }

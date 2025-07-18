@@ -51,6 +51,7 @@ static SDL_Window     * window;
 static SDL_Renderer   * renderer;
 static int              win_width;
 static int              win_height;
+static double           scale;
 
 static TTF_Font        *font[MAX_FONT_PTSIZE];
 
@@ -93,6 +94,7 @@ int sdl_init(void)
         return -1;
     }
 #else
+    // xxx test with larger win width
     if (SDL_CreateWindowAndRenderer(450, 975, 0, &window, &renderer) != 0) {
         ERROR("SDL_CreateWindowAndRenderer failed\n");
         return -1;
@@ -102,15 +104,13 @@ int sdl_init(void)
     // get real windows size and aspect ratio
     SDL_GetWindowSize(window, &real_win_width, &real_win_height);
     aspect_ratio = (double)real_win_height / real_win_width;
-    INFO("real_win_width x h = %d %d  aspect = %f\n", real_win_width, real_win_height, aspect_ratio);
+    INFO("real win_width x height = %d %d  aspect = %f\n", real_win_width, real_win_height, aspect_ratio);
 
-    // set logical window size, with widt=1000, and maintain real aspect ratio
-    win_width = 1000;
-    win_height = aspect_ratio * 1000;
-    if (SDL_RenderSetLogicalSize(renderer, win_width, win_height) != 0) {
-        ERROR("SDL_RenderSetLogicalSize failed\n");
-        return -1;
-    }
+    // xxx
+    win_width  = 1000;
+    win_height = rint(1000 * aspect_ratio);
+    scale = (double)real_win_width / win_width;
+    INFO("logical win_width x height = %d %d  scale = %f\n", win_width, win_height, scale);
 
     // initialize True Type Font
     if (TTF_Init() < 0) {
@@ -118,7 +118,7 @@ int sdl_init(void)
         return -1;
     }
 
-#if 0
+#if 0 //xxx make this a font routine
     // debug code to print font info
     for (int ptsize = MIN_FONT_PTSIZE; ptsize < MAX_FONT_PTSIZE; ptsize++) {
         TTF_Font *f = TTF_OpenFont(FONT_FILE_PATH, ptsize);
@@ -131,6 +131,7 @@ int sdl_init(void)
     // init default fontsize, where DEFAULT_NUMCHARS is num chars across display;
     // and validate expected character size and columns
     sdl_print_init(DEFAULT_NUMCHARS, COLOR_WHITE, COLOR_BLACK, &chw, &chh, &rows, &cols);
+    INFO("sdl_print_init(%d) returns chw,h=%d %d rows,cols=%d %d\n", DEFAULT_NUMCHARS, chw, chh, rows, cols);
     if (chw != 50 || chh != 83 || cols != 20) {
         ERROR("chw,chh,cols expected = 50,83,20  actual = %d,%d,%d\n", chw, chh, cols);
         return -1;
@@ -246,10 +247,10 @@ try_again:
 
 static int process_sdl_event(SDL_Event *ev)
 {
-    #define AT_POS(X,Y,pos) (((X) >= (pos).x - (pos).w / 2)   && \
-                             ((X) <= (pos).x + (pos).w / 2)   && \
-                             ((Y) >= (pos).y - (pos).h / 2)   && \
-                             ((Y) <= (pos).y + (pos).h / 2))
+    #define AT_LOC(X,Y,loc) (((X) >= (loc).x - (loc).w / 2)   && \
+                             ((X) <= (loc).x + (loc).w / 2)   && \
+                             ((Y) >= (loc).y - (loc).h / 2)   && \
+                             ((Y) <= (loc).y + (loc).h / 2))
 
     int event_id = -1;
     int i;
@@ -295,16 +296,8 @@ static int process_sdl_event(SDL_Event *ev)
                 break;
             }
 
-
-//          if (last_pressed_x != -1 && last_pressed_y != -1) {
-//          }
-//          last_pressed_x = -1;
-//          last_pressed_y = -1;
-
-
-
             for (i = 0; i < max_event; i++) {
-                if (AT_POS(ev->button.x, ev->button.y, event_tbl[i].loc)) {
+                if (AT_LOC(ev->button.x, ev->button.y, event_tbl[i].loc)) {
                     break;
                 }
             }
@@ -429,21 +422,23 @@ static struct {
     int ptsize;
     SDL_Color fg_color;
     SDL_Color bg_color;
-    int char_width;
-    int char_height;
-    int win_rows;
-    int win_cols;
 } text;
 
 void sdl_print_init(double numchars, int fg_color, int bg_color, int *char_width, int *char_height, int *win_rows, int *win_cols)
 {
     int ptsize, chw, chh;
-    double chw2, chh2;
+    int ret_char_width, ret_char_height, ret_win_rows, ret_win_cols;
 
-    chw2 = win_width / numchars;
-    chh2 = chw2 / 0.6;
-    ptsize = rint(chh2);
+    // determine real font ptsize to use;
+    // note: rint() not used here so ptsize will round down
+    {
+    double chw_fp, chh_fp;
+    chw_fp = (win_width / numchars) * scale;
+    chh_fp = chw_fp / 0.6;
+    ptsize = chh_fp;
+    }
 
+    // xxx comments
     if (ptsize < MIN_FONT_PTSIZE) {
         ptsize = MIN_FONT_PTSIZE;
     }
@@ -463,15 +458,16 @@ void sdl_print_init(double numchars, int fg_color, int bg_color, int *char_width
     text.ptsize      = ptsize;
     text.fg_color    = *(SDL_Color*)&fg_color;
     text.bg_color    = *(SDL_Color*)&bg_color;
-    text.char_width  = chw;
-    text.char_height = chh;
-    text.win_rows    = win_height / chh;
-    text.win_cols    = win_width / chw;
 
-    if (char_width) *char_width = text.char_width;
-    if (char_height) *char_height = text.char_height;
-    if (win_rows) *win_rows = text.win_rows;
-    if (win_cols) *win_cols = text.win_cols;
+    ret_char_width  = rint(win_width / numchars);
+    ret_char_height = rint(ret_char_width / 0.6);
+    ret_win_rows    = win_height / ret_char_height;
+    ret_win_cols    = win_width / ret_char_width;
+
+    if (char_width) *char_width = ret_char_width;
+    if (char_height) *char_height = ret_char_height;
+    if (win_rows) *win_rows = ret_win_rows;
+    if (win_cols) *win_cols = ret_win_cols;
 }
 
 sdl_loc_t *sdl_render_text(bool xy_is_ctr, int x, int y, char * str)
@@ -496,15 +492,15 @@ sdl_loc_t *sdl_render_text(bool xy_is_ctr, int x, int y, char * str)
         return &loc;
     }
 
-    // determine the display location to render the text
+    // determine the real display position to render the text
     if (!xy_is_ctr) {
-        pos.x = x;
-        pos.y = y;
+        pos.x = rint(x*scale);
+        pos.y = rint(y*scale);
         pos.w = surface->w;
         pos.h = surface->h;
     } else {
-        pos.x = x - surface->w/2;
-        pos.y = y - surface->h/2;
+        pos.x = rint(x*scale - surface->w/2.);
+        pos.y = rint(y*scale - surface->h/2.);
         pos.w = surface->w;
         pos.h = surface->h;
     }
@@ -546,13 +542,10 @@ void sdl_render_rect(int x, int y, int w, int h, int line_width, int color)
     SDL_Rect rect;
     int i;
 
-    //  INFO("color=0x%x line_width=%d  xywh=%d %d %d %d\n", color, line_width,
-    //      loc->x, loc->y, loc->w, loc->h);
-
-    rect.x = x - w/2;
-    rect.y = y - h/2;
-    rect.w = w;
-    rect.h = h;
+    rect.x = rint(x * scale);
+    rect.y = rint(y * scale);
+    rect.w = rint(w * scale);
+    rect.h = rint(h * scale);
 
     set_render_draw_color(color);
 
@@ -572,10 +565,10 @@ void sdl_render_fill_rect(int x, int y, int w, int h, int color)
 {
     SDL_Rect rect;
 
-    rect.x = x - w/2;
-    rect.y = y - h/2;
-    rect.w = w;
-    rect.h = h;
+    rect.x = rint(x * scale);
+    rect.y = rint(y * scale);
+    rect.w = rint(w * scale);
+    rect.h = rint(h * scale);
 
     set_render_draw_color(color);
     SDL_RenderFillRect(renderer, &rect);
@@ -583,30 +576,29 @@ void sdl_render_fill_rect(int x, int y, int w, int h, int color)
 
 void sdl_render_line(int x1, int y1, int x2, int y2, int color)
 {
-    //INFO("%d %d %d %d\n", x1, y1, x2, y2);
-
     sdl_point_t points[2] = { {x1,y1}, {x2,y2} };
     sdl_render_lines(points, 2, color);
 }
 
 void sdl_render_lines(sdl_point_t *points, int count, int color)
 {
-    SDL_Point * sdl_points = (SDL_Point*)points;
+    SDL_Point scaled_points[100];  // xxx malloc this
 
     if (count <= 1) {
         return;
     }
 
-//  INFO("POINTS %d %d - %d %d,  count=%d\n", 
-//      sdl_points[0].x, sdl_points[0].y,
-//      sdl_points[1].x, sdl_points[1].y,
-//      count);
+    for (int i = 0; i < count; i++) {
+        scaled_points[i].x = rint(points[i].x * scale);
+        scaled_points[i].y = rint(points[i].y * scale);
+    }
 
     set_render_draw_color(color);
 
-    SDL_RenderDrawLines(renderer, sdl_points, count);
+    SDL_RenderDrawLines(renderer, scaled_points, count);
 }
 
+// xxx change args to x_ctr_arg ..
 void sdl_render_circle(int x_arg, int y_arg, int radius, int line_width, int color)
 {
     int count = 0, i, angle, x, y;
@@ -617,8 +609,10 @@ void sdl_render_circle(int x_arg, int y_arg, int radius, int line_width, int col
     static int cos_table[370];
     static bool first_call = true;
 
-    x_center = x_arg;
-    y_center = y_arg;
+    // xxx comment
+    x_center = rint(x_arg * scale);
+    y_center = rint(y_arg * scale);
+    radius   = rint(radius * scale);
 
     // on first call make table of sin and cos indexed by degrees
     if (first_call) {
@@ -813,8 +807,8 @@ void sdl_render_points(sdl_point_t *points, int count, int color, int point_size
 
     for (i = 0; i < count; i++) {
         for (j = 0; j < pe->max; j++) {
-            x = points[i].x + peo[j].x;
-            y = points[i].y + peo[j].y;
+            x = rint((points[i].x + peo[j].x) * scale);
+            y = rint((points[i].y + peo[j].y) * scale);
             sdl_points[sdl_points_count].x = x;
             sdl_points[sdl_points_count].y = y;
             sdl_points_count++;
@@ -834,22 +828,6 @@ void sdl_render_points(sdl_point_t *points, int count, int color, int point_size
 
 // -----------------  RENDER USING TEXTURES  ---------------------------- 
 
-sdl_texture_t *sdl_create_texture(int w, int h)
-{
-    SDL_Texture * texture;
-
-    texture = SDL_CreateTexture(renderer,
-                                SDL_PIXELFORMAT_ABGR8888,
-                                SDL_TEXTUREACCESS_STREAMING,
-                                w, h);
-    if (texture == NULL) {
-        ERROR("failed to allocate texture, %s\n", SDL_GetError());
-        return NULL;
-    }
-
-    return (sdl_texture_t*)texture;
-}
-
 sdl_texture_t *sdl_create_texture_from_display(int x, int y, int w, int h)
 {
     sdl_texture_t *texture;
@@ -857,10 +835,10 @@ sdl_texture_t *sdl_create_texture_from_display(int x, int y, int w, int h)
     char *pixels;
     SDL_Rect loc;
 
-    loc.x = x - w/2;
-    loc.y = y - h/2;
-    loc.w = w;
-    loc.h = h;
+    loc.x = rint(x * scale);
+    loc.y = rint(y * scale);
+    loc.w = rint(w * scale);
+    loc.h = rint(h * scale);
 
     // allocate memory for the pixels
     pixels = calloc(1, loc.h * loc.w * BYTES_PER_PIXEL);
@@ -882,7 +860,11 @@ sdl_texture_t *sdl_create_texture_from_display(int x, int y, int w, int h)
     }
 
     // create the texture
-    texture = sdl_create_texture(loc.w, loc.h);
+    texture = (sdl_texture_t*)
+              SDL_CreateTexture(renderer,
+                                SDL_PIXELFORMAT_ABGR8888,
+                                SDL_TEXTUREACCESS_STREAMING,
+                                w, h);
     if (texture == NULL) {
         ERROR("failed to allocate texture\n");
         free(pixels);
@@ -896,6 +878,27 @@ sdl_texture_t *sdl_create_texture_from_display(int x, int y, int w, int h)
     free(pixels);
 
     // return the texture
+    return texture;
+}
+
+sdl_texture_t *sdl_create_texture_from_pixels(int w, int h, int *pixels)
+{
+    sdl_texture_t *texture;
+
+    texture = (sdl_texture_t*)
+              SDL_CreateTexture(renderer,
+                                SDL_PIXELFORMAT_ABGR8888,
+                                SDL_TEXTUREACCESS_STREAMING,
+                                w, h);
+    if (texture == NULL) {
+        ERROR("failed to allocate texture\n");
+        return NULL;
+    }
+
+    if (pixels != NULL) {
+        SDL_UpdateTexture((SDL_Texture*)texture, NULL, pixels, w*BYTES_PER_PIXEL);
+    }
+
     return texture;
 }
 
@@ -933,7 +936,11 @@ sdl_texture_t *sdl_create_filled_circle_texture(int radius, int color)
     }
 
     // create the texture and copy the pixels to the texture
-    texture = sdl_create_texture(width, width);
+    texture = (sdl_texture_t*)
+              SDL_CreateTexture(renderer,
+                                SDL_PIXELFORMAT_ABGR8888,
+                                SDL_TEXTUREACCESS_STREAMING,
+                                width, width);
     if (texture == NULL) {
         ERROR("failed to allocate texture\n");
         return NULL;
@@ -980,6 +987,31 @@ sdl_texture_t *sdl_create_text_texture(char * str)
     return (sdl_texture_t*)texture;
 }
 
+void sdl_render_texture(int x, int y, int w, int h, double angle, sdl_texture_t *texture)
+{
+    SDL_Rect dest;
+
+    if (texture == NULL) {
+        return;
+    }
+
+    if (w == -1 || h == -1) {
+        SDL_QueryTexture((SDL_Texture *)texture, NULL, NULL, &w, &h);
+        //INFO("XXX wh = %d %d\n", w, h);
+        dest.x = rint(x * scale);
+        dest.y = rint(y * scale);
+        dest.w = w;
+        dest.h = h;
+    } else {
+        dest.x = rint(x * scale);
+        dest.y = rint(y * scale);
+        dest.w = rint(w * scale);
+        dest.h = rint(h * scale);
+    }
+
+    SDL_RenderCopyEx(renderer, (SDL_Texture*)texture, NULL, &dest, angle, NULL, false);
+}
+
 void sdl_destroy_texture(sdl_texture_t *texture)
 {
     if (texture == NULL) {
@@ -987,6 +1019,23 @@ void sdl_destroy_texture(sdl_texture_t *texture)
     }
 
     SDL_DestroyTexture((SDL_Texture *)texture);
+}
+
+void sdl_update_texture(sdl_texture_t *texture, int * pixels)
+{
+    int w, h, pitch;
+
+    if (texture == NULL) { // xxx all routines should check
+        return;
+    }
+
+    sdl_query_texture(texture, &w, &h);
+    pitch = w * BYTES_PER_PIXEL;
+
+    SDL_UpdateTexture((SDL_Texture*)texture,
+                      NULL, // update entire texture  xxx option to update part of it
+                      pixels,
+                      pitch);
 }
 
 void sdl_query_texture(sdl_texture_t *texture, int * width, int * height)
@@ -998,72 +1047,6 @@ void sdl_query_texture(sdl_texture_t *texture, int * width, int * height)
     }
 
     SDL_QueryTexture((SDL_Texture *)texture, NULL, NULL, width, height);
-}
-
-void sdl_update_texture(sdl_texture_t *texture, char * pixels, int pitch)
-{
-    if (texture == NULL) {
-        return;
-    }
-
-    SDL_UpdateTexture((SDL_Texture*)texture,
-                      NULL,                   // update entire texture
-                      pixels,                 // pixels
-                      pitch);                 // pitch  
-}
-
-void sdl_render_texture(int x, int y, sdl_texture_t *texture)
-{
-    SDL_Rect dest;
-    int w,h;
-
-    if (texture == NULL) {
-        return;
-    }
-
-    sdl_query_texture(texture, &w, &h);
-
-    dest.x = x - w/2;
-    dest.y = y - h/2;
-    dest.w = w;
-    dest.h = h;
-
-    SDL_RenderCopy(renderer, (SDL_Texture*)texture, NULL, &dest);
-}
-
-void sdl_render_scaled_texture(int x, int y, int w, int h, sdl_texture_t *texture)
-{
-    SDL_Rect dest;
-
-    if (texture == NULL) {
-        return;
-    }
-
-    dest.x = x - w/2;
-    dest.y = y - h/2;
-    dest.w = w;
-    dest.h = h;
-
-    SDL_RenderCopy(renderer, (SDL_Texture*)texture, NULL, &dest);
-}
-
-void sdl_render_rotated_texture(int x, int y, double angle, sdl_texture_t *texture)
-{
-    SDL_Rect dest;
-    int w,h;
-
-    if (texture == NULL) {
-        return;
-    }
-
-    sdl_query_texture(texture, &w, &h);
-
-    dest.x = x - w/2;
-    dest.y = y - h/2;
-    dest.w = w;
-    dest.h = h;
-
-    SDL_RenderCopyEx(renderer, (SDL_Texture*)texture, NULL, &dest, angle, NULL, false);
 }
 
 // -----------------  LOGGING  --------------------------------------
