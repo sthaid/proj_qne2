@@ -19,7 +19,8 @@
 #define ROW2Y(r) ((r) * char_height)  // xxx ctr vs ...
 #define ROW2Y_CTR(r) ((r) * char_height + char_height/2)
 
-#define NK2X(n,k) ((win_width/2/(n)) + (k) * (win_width/(n)))
+//#define NK2X(n,k) ((win_width/2/(n)) + (k) * (win_width/(n)))
+#define NK2X(n,k) ((int)rint(((double)win_width/2/(n)) + (k) * ((double)win_width/(n))))
 
 //
 // variables
@@ -155,15 +156,17 @@ static void render_page(int pagenum)
                    &char_width, &char_height, &win_rows, &win_cols);
 
     loc = sdl_render_printf(true, NK2X(3,0), win_height-120, "%s", "<");
-    loc->w = loc->h = 200;
+    //loc->w = loc->h = 200;
     sdl_register_event(loc, EVID_SWIPE_RIGHT);
 
     loc = sdl_render_printf(true, NK2X(3,1), win_height-120, "%s", ">");
-    loc->w = loc->h = 200;
+    //loc->w = loc->h = 200;
+    printf("ZZZZZZZZ xywh  %d %d %d %d   NK2X=%d\n",
+        loc->x, loc->y, loc->w, loc->h, NK2X(3,1));
     sdl_register_event(loc, EVID_SWIPE_LEFT);
 
     loc = sdl_render_printf(true, NK2X(3,2), win_height-120, "%s", "X");
-    loc->w = loc->h = 200;
+    //loc->w = loc->h = 200;
     sdl_register_event(loc, EVID_QUIT);
 
 

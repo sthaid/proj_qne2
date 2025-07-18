@@ -261,6 +261,7 @@ static int process_sdl_event(SDL_Event *ev)
     case SDL_MOUSEBUTTONUP: {
         static int last_pressed_x = -1;
         static int last_pressed_y = -1;
+        int x, y;
 #if 0
        INFO("MOUSEBUTTON button=%s state=%s x=%d y=%d\n",
                (ev->button.button == SDL_BUTTON_LEFT   ? "LEFT" :
@@ -271,24 +272,28 @@ static int process_sdl_event(SDL_Event *ev)
                ev->button.x,
                ev->button.y);
 #endif
+        x = ev->button.x / scale;
+        y = ev->button.y / scale;
 
         if (ev->button.state == SDL_PRESSED) {
-            last_pressed_x = ev->button.x;
-            last_pressed_y = ev->button.y;
+            last_pressed_x = x;
+            last_pressed_y = y;
         } else if (ev->button.state == SDL_RELEASED) {
-            int delta_x = ev->button.x - last_pressed_x;
-            int delta_y = ev->button.y - last_pressed_y;
+            int delta_x = x - last_pressed_x;
+            int delta_y = y - last_pressed_y;
+
+            INFO("button released xy = %d %d, delta xy = %d %d\n", x, y, delta_x, delta_y);
 
             if (delta_x > 200) {
-                INFO("got EVID_SWIPE_RIGHT %d\n", delta_x);
+                INFO("got EVID_SWIPE_RIGHT %d %d\n", delta_x, delta_y);
                 event_id = EVID_SWIPE_RIGHT;
                 break;
             } else if (delta_x < -200) {
-                INFO("got EVID_SWIPE_LEFT %d\n", delta_x);
+                INFO("got EVID_SWIPE_LEFT %d %d\n", delta_x, delta_y);
                 event_id = EVID_SWIPE_LEFT;
                 break;
             } else if (delta_y > 200) {
-                INFO("got EVID_SWIPE_DOWN %d\n", delta_y);
+                INFO("got EVID_SWIPE_DOWN %d %d\n", delta_x, delta_y);
                 event_id = EVID_SWIPE_DOWN;
                 break;
             } else if (delta_y < -200) {
@@ -298,7 +303,7 @@ static int process_sdl_event(SDL_Event *ev)
             }
 
             for (i = 0; i < max_event; i++) {
-                if (AT_LOC(ev->button.x, ev->button.y, event_tbl[i].loc)) {
+                if (AT_LOC(x, y, event_tbl[i].loc)) {
                     break;
                 }
             }
@@ -517,10 +522,13 @@ sdl_loc_t *sdl_render_text(bool xy_is_ctr, int x, int y, char * str)
     // return the display location where the text was rendered;
     // this returned location x,y is the location of the center of
     // the rendered text
-    loc.x = pos.x + pos.w / 2;
-    loc.y = pos.y + pos.h / 2;
-    loc.w = pos.w;
-    loc.h = pos.h;
+    loc.x = (pos.x + pos.w / 2) / scale;
+    loc.y = (pos.y + pos.h / 2) / scale;
+    loc.w = pos.w / scale;
+    loc.h = pos.h / scale;
+    if (loc.w < loc.h) {
+        loc.w = loc.h;
+    }
     return &loc;
 }
 
