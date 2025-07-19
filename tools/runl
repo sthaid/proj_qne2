@@ -1,10 +1,10 @@
 #!/bin/bash
 
 TARGET=/tmp/qne_$(basename $PWD)
-CFLAGS="-Wall -g -I. -I../../android/src $(sdl2-config --cflags)"
+CFLAGS="-Wall -g -I. -I$QNE_TOP/src $(sdl2-config --cflags)"
 SRCS=$(echo *.c)
 
-gcc -o $TARGET $CFLAGS $SRCS ../../android/src/sdl.c -lSDL2 -lSDL2_ttf -lm
+gcc -o $TARGET $CFLAGS $SRCS $QNE_TOP/src/sdl.c -lSDL2 -lSDL2_ttf -lm
 if [ $? -ne 0 ]; then
   exit 1
 fi

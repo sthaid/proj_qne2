@@ -1,6 +1,8 @@
 
 SRCS :=  \
-  main.c sdl.c utils.c \
+  ../src/main.c \
+  ../src/sdl.c \
+  ../src/utils.c \
   picoc/clibrary.c \
   picoc/debug.c \
   picoc/expression.c \
@@ -27,7 +29,7 @@ SRCS :=  \
 
 TARGET = app
 
-CFLAGS = -Wall -g -I. $(shell sdl2-config --cflags)
+CFLAGS = -Wall -g -I../src $(shell sdl2-config --cflags)
 
 $(TARGET):
 	gcc -o $@ $(CFLAGS) $(SRCS) -lSDL2 -lSDL2_ttf -lm

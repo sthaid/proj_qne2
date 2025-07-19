@@ -267,11 +267,11 @@ APP DIR LAYOUT
 ==================
 
 aliases: 
-alias app_top='~/proj/proj_qne2/android-project/SDL2/build/org.sthaid.qne2'
-alias app='~/proj/proj_qne2/android-project/SDL2/build/org.sthaid.qne2/app'
-alias app_jni='~/proj/proj_qne2/android-project/SDL2/build/org.sthaid.qne2/app/jni'
-alias app_jni_src='~/proj/proj_qne2/android-project/SDL2/build/org.sthaid.qne2/app/jni/src'
-alias app_src_main='~/proj/proj_qne2/android-project/SDL2/build/org.sthaid.qne2/app/src/main'
+alias qne_app_top='~/proj/proj_qne2/android-project/SDL2/build/org.sthaid.qne2'
+alias qne_app='~/proj/proj_qne2/android-project/SDL2/build/org.sthaid.qne2/app'
+alias qne_app_jni='~/proj/proj_qne2/android-project/SDL2/build/org.sthaid.qne2/app/jni'
+alias qne_app_jni_src='~/proj/proj_qne2/android-project/SDL2/build/org.sthaid.qne2/app/jni/src'
+alias qne_app_src_main='~/proj/proj_qne2/android-project/SDL2/build/org.sthaid.qne2/app/src/main'
 
 --------
 top = SDL2/build/org.sthaid.qne2
@@ -332,7 +332,6 @@ app/src/main/res
 ./app/src/main/res/values/styles.xml
 ./app/src/main/res/mipmap-xxhdpi/ic_launcher.png
 ./app/src/main/res/mipmap-xxxhdpi/ic_launcher.png
-
 
 ==================
 todo
