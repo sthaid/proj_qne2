@@ -38,8 +38,10 @@ int main(int argc, char **argv)
 #endif
     sprintf(log_file_pathname, "%s/%s", internal_storage_path, "log");
 
+#if 0  // init logging in utils.c
     freopen(log_file_pathname, "a", stdout);
     freopen(log_file_pathname, "a", stderr);
+#endif
     setlinebuf(stdout);
     setlinebuf(stderr);
 
@@ -113,13 +115,13 @@ static void controller(void)
             break;
         } else if (event_id == EVID_PAGE_DECREMENT) {
             INFO("XXX GOT PAGE LEFT XXX\n");
-            if (page > 0) {
-                page--;  // xxx rotate
+            if (--page < 0) {
+                page = last_page;
             }
         } else if (event_id == EVID_PAGE_INCREMENT) {
             INFO("XXX GOT PAGE RIGHT XXX\n");
-            if (page < last_page) {
-                page++;
+            if (++page > last_page) {
+                page = 0;
             }
         } else if (event_id == EVID_QUIT) {
             INFO("XXX GOT QUIT XXX\n");
@@ -128,8 +130,13 @@ static void controller(void)
             // xxx check that menu entry is defined
             int pg = event_id / MAX_MENU;
             int id = event_id % MAX_MENU;
+            char working_dir[100];
+
             INFO("running %s\n", menu[pg][id].name);
+            sprintf(working_dir, "apps/%s", menu[pg][id].dir);
+            chdir(working_dir);
             rc = picoc_fg(menu[pg][id].args);
+            chdir("../..");
             INFO("done %s, rc=%d\n", menu[pg][id].name, rc);
         }
     }
@@ -389,6 +396,7 @@ static void *server_thread(void *cx)
                (struct sockaddr *)&server_address,
                sizeof(server_address));
     if (ret == -1) {
+        // xxx maybe retry, and server_thread_running not being set
         ERROR("bind, %s\n", strerror(errno));
         return NULL;
     }

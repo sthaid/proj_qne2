@@ -29,7 +29,7 @@ static void logmsg(char *lvl, const char *func, char *fmt, ...)
 #ifdef ANDROID
     #define FONT_FILE_PATH  "FreeMonoBold.ttf"
 #else
-    #define FONT_FILE_PATH "../../linux/assets/FreeMonoBold.ttf" //xxx
+    #define FONT_FILE_PATH "/home/haid/proj/proj_qne2/linux/assets/FreeMonoBold.ttf" //xxx
 #endif
 
 #define DEFAULT_NUMCHARS 20

@@ -27,6 +27,10 @@ void logmsg(char *lvl, const char *func, char *fmt, ...)
         len--;
     }
 
+    // xxx tbd
+    printf("%s\n", msg);
+    return;
+
 #ifndef USE_ANDROID_LOG
     // print the message, stdout has been redirected to the log file, in main.c;
     time2str(time_str, get_real_time_us(), false, true, true),
