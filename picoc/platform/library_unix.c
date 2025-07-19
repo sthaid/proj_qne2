@@ -231,13 +231,13 @@ void Sdl_render_lines (struct ParseState *Parser, struct Value *ReturnValue,
 void Sdl_render_circle (struct ParseState *Parser, struct Value *ReturnValue,
 	struct Value **Param, int NumArgs)
 {
-    int  x          = Param[0]->Val->Integer;
-    int  y          = Param[1]->Val->Integer;
+    int  x_ctr      = Param[0]->Val->Integer;
+    int  y_ctr      = Param[1]->Val->Integer;
     int  radius     = Param[2]->Val->Integer;
     int  line_width = Param[3]->Val->Integer;
     int  color      = Param[4]->Val->Integer;
 
-    sdl_render_circle(x, y, radius, line_width, color);
+    sdl_render_circle(x_ctr, y_ctr, radius, line_width, color);
 }
 
 void Sdl_render_point (struct ParseState *Parser, struct Value *ReturnValue,
@@ -410,7 +410,7 @@ struct LibraryFunction SdlFunctions[] = {
     { Sdl_render_fill_rect,"void sdl_render_fill_rect(int x, int y, int w, int h, int color);" },
     { Sdl_render_line,     "void sdl_render_line(int x1, int y1, int x2, int y2, int color);" },
     { Sdl_render_lines,    "void sdl_render_lines(sdl_point_t *points, int count, int color);" },
-    { Sdl_render_circle,   "void sdl_render_circle(int x, int y, int radius, int line_width, int color);" },
+    { Sdl_render_circle,   "void sdl_render_circle(int x_ctr, int y_ctr, int radius, int line_width, int color);" },
     { Sdl_render_point,    "void sdl_render_point(int x, int y, int color, int point_size);" },
     { Sdl_render_points,   "void sdl_render_points(sdl_point_t *points, int count, int color, int point_size);" },
 

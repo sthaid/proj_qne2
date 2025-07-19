@@ -1,3 +1,19 @@
+move src to top dir
+make a topdir define
+redo tools, with better names
+
+
+--------------
+
+build linux app simulator
+include tar of the apps in the assets
+populate when prog starts
+add buttons:
+- reset
+- devel
+
+-----------
+
 move src to common dir ?
 
 api to provide ctr coords instead of top left

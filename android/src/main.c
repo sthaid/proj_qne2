@@ -101,7 +101,7 @@ static void controller(void)
         // update the display
         sdl_display_present();
 
-        // wait for an event
+        // wait for an event, 1 sec timeout
         event_id = sdl_get_event(1000000);
         if (event_id == -1) {
             continue;
@@ -114,7 +114,7 @@ static void controller(void)
         } else if (event_id == EVID_PAGE_DECREMENT) {
             INFO("XXX GOT PAGE LEFT XXX\n");
             if (page > 0) {
-                page--;
+                page--;  // xxx rotate
             }
         } else if (event_id == EVID_PAGE_INCREMENT) {
             INFO("XXX GOT PAGE RIGHT XXX\n");
@@ -158,7 +158,7 @@ static void display_menu(void)
         char str1[32], str2[32], *p;
         int len1, len2, len_max, x, y;
         double numchars, chw, chh;
-        sdl_rect_t loc;
+        sdl_loc_t loc;
 
         // if this menu entry is not defined then continue
         if (name == NULL) {
@@ -208,7 +208,7 @@ static void display_menu(void)
         y = (win_height/6/2) + (id/3) * (win_height/6);
 
         // display the menu item
-        sdl_render_texture(true, x, y, circle);
+        sdl_render_texture(x-RADIUS, y-RADIUS, 2*RADIUS, 2*RADIUS, 0, circle);
 
         sdl_print_init(numchars, COLOR_WHITE, COLOR_BLUE, NULL, NULL, NULL, NULL);
         if (len2 == 0) {
@@ -219,8 +219,8 @@ static void display_menu(void)
         }
 
         // register event
-        loc.x = x - RADIUS;
-        loc.y = y - RADIUS;
+        loc.x = x;
+        loc.y = y;
         loc.w = 2 * RADIUS;
         loc.h = 2 * RADIUS;
         sdl_register_event(&loc, page * MAX_MENU + id);
@@ -238,7 +238,7 @@ static void display_menu(void)
         do { \
             int x = (win_width/3/2) + (col) * (win_width/3); \
             int y = (win_height/6/2) + (row) * (win_height/6); \
-            sdl_rect_t loc = {x-RADIUS, y-RADIUS, 2*RADIUS, 2*RADIUS}; \
+            sdl_loc_t loc = {x, y, 2*RADIUS, 2*RADIUS}; \
             sdl_render_text(true, x, y, str); \
             sdl_register_event(&loc, evid); \
         } while (0)

@@ -66,7 +66,7 @@ void sdl_render_rect(int x, int y, int w, int h, int line_width, int color);
 void sdl_render_fill_rect(int x, int y, int w, int h, int color);
 void sdl_render_line(int x1, int y1, int x2, int y2, int color);
 void sdl_render_lines(sdl_point_t *points, int count, int color);
-void sdl_render_circle(int x, int y, int radius, int line_width, int color);
+void sdl_render_circle(int x_ctr, int y_ctr, int radius, int line_width, int color);
 void sdl_render_point(int x, int y, int color, int point_size);
 void sdl_render_points(sdl_point_t *points, int count, int color, int point_size);
 

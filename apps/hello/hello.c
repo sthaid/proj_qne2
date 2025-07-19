@@ -9,6 +9,8 @@
 
 #include <sdl.h>
 
+#include "utils.h"
+
 //
 // defines
 //
@@ -19,8 +21,8 @@
 #define ROW2Y(r) ((r) * char_height)  // xxx ctr vs ...
 #define ROW2Y_CTR(r) ((r) * char_height + char_height/2)
 
-//#define NK2X(n,k) ((win_width/2/(n)) + (k) * (win_width/(n)))
-#define NK2X(n,k) ((int)rint(((double)win_width/2/(n)) + (k) * ((double)win_width/(n))))
+#define NK2X(n,k) ((win_width/2/(n)) + (k) * (win_width/(n)))
+//#define NK2X(n,k) ((int)rint(((double)win_width/2/(n)) + (k) * ((double)win_width/(n))))
 
 //
 // variables
@@ -64,6 +66,9 @@ int main(int argc, char **argv)
         printf("argv[%d] = '%s'\n", i, argv[i]);
     }
     printf("is_qne_app = %d\n", is_qne_app);
+
+    // xxx
+    utils_proc();
 
     // if not qne_app then call sdl_init
     if (!is_qne_app && sdl_init() != 0) {
@@ -161,8 +166,6 @@ static void render_page(int pagenum)
 
     loc = sdl_render_printf(true, NK2X(3,1), win_height-120, "%s", ">");
     //loc->w = loc->h = 200;
-    printf("ZZZZZZZZ xywh  %d %d %d %d   NK2X=%d\n",
-        loc->x, loc->y, loc->w, loc->h, NK2X(3,1));
     sdl_register_event(loc, EVID_SWIPE_LEFT);
 
     loc = sdl_render_printf(true, NK2X(3,2), win_height-120, "%s", "X");

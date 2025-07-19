@@ -4,6 +4,7 @@
 
 // xxx landscape
 // xxx keyboard events for < > END and up/down
+// xxx read pixels routien
 
 //
 // logging
@@ -608,7 +609,7 @@ void sdl_render_lines(sdl_point_t *points, int count, int color)
 }
 
 // xxx change args to x_ctr_arg ..
-void sdl_render_circle(int x_arg, int y_arg, int radius, int line_width, int color)
+void sdl_render_circle(int x_ctr_arg, int y_ctr_arg, int radius, int line_width, int color)
 {
     int count = 0, i, angle, x, y;
     int x_center, y_center;
@@ -619,8 +620,8 @@ void sdl_render_circle(int x_arg, int y_arg, int radius, int line_width, int col
     static bool first_call = true;
 
     // xxx comment
-    x_center = rint(x_arg * scale);
-    y_center = rint(y_arg * scale);
+    x_center = rint(x_ctr_arg * scale);
+    y_center = rint(y_ctr_arg * scale);
     radius   = rint(radius * scale);
 
     // on first call make table of sin and cos indexed by degrees
@@ -1005,6 +1006,7 @@ void sdl_render_texture(int x, int y, int w, int h, double angle, sdl_texture_t 
     }
 
     if (w == -1 || h == -1) {
+        // xxx maybe dont need this
         SDL_QueryTexture((SDL_Texture *)texture, NULL, NULL, &w, &h);
         //INFO("XXX wh = %d %d\n", w, h);
         dest.x = rint(x * scale);
