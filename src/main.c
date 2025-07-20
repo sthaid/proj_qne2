@@ -507,11 +507,14 @@ static void settings_proc(void)
     int event_id;
     sdl_loc_t *loc;
     bool quit = false;
+    bool reset_apps_confirm = false;
 
     INFO("SETTINGS\n");
 
 #define EVID_DEVEL_MODE 1000
 #define EVID_RESET_APPS 1001
+#define EVID_RESET_APPS_CONFIRM 1002
+#define EVID_RESET_APPS_CANCEL  1003
     while (true) {
         sdl_print_init(20, COLOR_WHITE, COLOR_BLACK);
 
@@ -519,11 +522,21 @@ static void settings_proc(void)
 
         sdl_render_text(true, sdl_win_width/2, sdl_char_height/2, "Settings");
 
-        loc = sdl_render_printf(false, 0, ROW2Y(2), "Devel_Mode = %ld", settings.devel_mode);
-        sdl_register_event(loc, EVID_DEVEL_MODE);
+        if (!reset_apps_confirm) {
+            loc = sdl_render_printf(false, 0, ROW2Y(2), "Devel_Mode = %ld", settings.devel_mode);
+            sdl_register_event(loc, EVID_DEVEL_MODE);
 
-        loc = sdl_render_printf(false, 0, ROW2Y(4), "Reset_Apps");
-        sdl_register_event(loc, EVID_RESET_APPS);
+            loc = sdl_render_printf(false, 0, ROW2Y(4), "Reset_Apps");
+            sdl_register_event(loc, EVID_RESET_APPS);
+        } else {
+            sdl_render_printf(false, 0, ROW2Y(4), "Reset_Apps?");
+
+            loc = sdl_render_printf(false, 0, ROW2Y(6), "Confirm");
+            sdl_register_event(loc, EVID_RESET_APPS_CONFIRM);
+
+            loc = sdl_render_printf(false, sdl_win_width/2, ROW2Y(6), "Cancel");
+            sdl_register_event(loc, EVID_RESET_APPS_CANCEL);
+        }
 
         //int chh = sdl_char_height;
         DISPLAY_CONTROL_ITEM(2,"X",EVID_QUIT);
@@ -543,7 +556,15 @@ static void settings_proc(void)
             write_settings();
             break;
         case EVID_RESET_APPS:
+            reset_apps_confirm = true;
+            //create_default_apps();
+            break;
+        case EVID_RESET_APPS_CONFIRM:
             create_default_apps();
+            reset_apps_confirm = false;
+            break;
+        case EVID_RESET_APPS_CANCEL:
+            reset_apps_confirm = false;
             break;
         case EVID_QUIT:
             quit = true;

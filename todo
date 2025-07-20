@@ -1,3 +1,6 @@
+make new printf routine for ctr
+
+
  VariableDefinePlatformVar(NULL,
                                                   "RobotIsExploding",
                                                   &IntType,
