@@ -362,17 +362,22 @@ typedef struct { int x; int y; } sdl_point_t; \n\
 typedef struct sdl_texture sdl_texture_t; \n\
 \n\
 #define BYTES_PER_PIXEL  4 \n\
-#define COLOR_PURPLE     ( 127  |    0<<8 |  255<<16 |  255<<24 ) \n\
-#define COLOR_BLUE       ( 0    |    0<<8 |  255<<16 |  255<<24 ) \n\
-#define COLOR_LIGHT_BLUE ( 0    |  255<<8 |  255<<16 |  255<<24 ) \n\
-#define COLOR_GREEN      ( 0    |  255<<8 |    0<<16 |  255<<24 ) \n\
-#define COLOR_YELLOW     ( 255  |  255<<8 |    0<<16 |  255<<24 ) \n\
-#define COLOR_ORANGE     ( 255  |  128<<8 |    0<<16 |  255<<24 ) \n\
-#define COLOR_PINK       ( 255  |  105<<8 |  180<<16 |  255<<24 ) \n\
-#define COLOR_RED        ( 255  |    0<<8 |    0<<16 |  255<<24 ) \n\
-#define COLOR_GRAY       ( 224  |  224<<8 |  224<<16 |  255<<24 ) \n\
+#define COLOR_BLACK      (   0  |    0<<8 |    0<<16 |  255<<24 ) \n\
 #define COLOR_WHITE      ( 255  |  255<<8 |  255<<16 |  255<<24 ) \n\
-#define COLOR_BLACK      ( 0    |    0<<8 |    0<<16 |  255<<24 ) \n\
+#define COLOR_RED        ( 255  |    0<<8 |    0<<16 |  255<<24 ) \n\
+#define COLOR_ORANGE     ( 255  |  128<<8 |    0<<16 |  255<<24 ) \n\
+#define COLOR_YELLOW     ( 255  |  255<<8 |    0<<16 |  255<<24 ) \n\
+#define COLOR_GREEN      (   0  |  255<<8 |    0<<16 |  255<<24 ) \n\
+#define COLOR_BLUE       (   0  |    0<<8 |  255<<16 |  255<<24 ) \n\
+#define COLOR_INDIGO     (  75  |    0<<8 |  130<<16 |  255<<24 ) \n\
+#define COLOR_VIOLET     ( 238  |  130<<8 |  238<<16 |  255<<24 ) \n\
+#define COLOR_PURPLE     ( 127  |    0<<8 |  255<<16 |  255<<24 ) \n\
+#define COLOR_LIGHT_BLUE (   0  |  255<<8 |  255<<16 |  255<<24 ) \n\
+#define COLOR_PINK       ( 255  |  105<<8 |  180<<16 |  255<<24 ) \n\
+#define COLOR_TEAL       (   0  |  128<<8 |  128<<16 |  255<<24 ) \n\
+#define COLOR_LIGHT_GRAY ( 192  |  192<<8 |  192<<16 |  255<<24 ) \n\
+#define COLOR_GRAY       ( 128  |  128<<8 |  128<<16 |  255<<24 ) \n\
+#define COLOR_DARK_GRAY  (  64  |   64<<8 |   64<<16 |  255<<24 ) \n\
 \n\
 #define EVID_SWIPE_DOWN        9000 \n\
 #define EVID_SWIPE_UP          9001 \n\

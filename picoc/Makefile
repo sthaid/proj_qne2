@@ -8,7 +8,7 @@ CC=gcc
 # -O3 -g
 # -std=gnu11
 CFLAGS=-Wall -g -std=gnu11 -DUNIX_HOST -DVER=\"a97d94fa\" -DTAG=\"v3.2.2\"
-CFLAGS+=-I/usr/include/SDL2 -D_REENTRANT -I../android/src
+CFLAGS+=-I/usr/include/SDL2 -D_REENTRANT -I../src
 LIBS=-lm -lreadline -lSDL2 -lSDL2_ttf
 
 TARGET	= picoc
@@ -17,7 +17,7 @@ SRCS	= picoc.c table.c lex.c parse.c expression.c heap.c type.c \
 	platform/platform_unix.c platform/library_unix.c \
 	cstdlib/stdio.c cstdlib/math.c cstdlib/string.c cstdlib/stdlib.c \
 	cstdlib/time.c cstdlib/errno.c cstdlib/ctype.c cstdlib/stdbool.c \
-	cstdlib/unistd.c ../android/src/sdl.c
+	cstdlib/unistd.c ../src/sdl.c
 OBJS	:= $(SRCS:%.c=%.o)
 
 all: $(TARGET)

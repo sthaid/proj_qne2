@@ -15,7 +15,7 @@
 // defines
 //
 
-#define MAX_PAGE 5
+#define MAX_PAGE 6
 
 // xxx check these
 #define ROW2Y(r) ((r) * char_height)  // xxx ctr vs ...
@@ -50,13 +50,14 @@ static void render_page_1(void);
 static void render_page_2(void);
 static void render_page_3(void);
 static void render_page_4(void);
+static void render_page_5(void);
 
 // -----------------  MAIN  ------------------------------------------
 
 int main(int argc, char **argv)
 {
     int  i, event_id;
-    int  pagenum = 4;
+    int  pagenum = 0;
     bool end_program = false;
     bool is_qne_app = (argc > 0 && strcmp(argv[0], "qne_app") == 0);
 
@@ -146,38 +147,32 @@ int main(int argc, char **argv)
 
 // -----------------  RENDER PAGS PROC  -----------------------
 
+char *title[] = {
+        "Unit Test",
+        "Font",
+        "Sizeof",
+        "Drawing",
+        "Textures",
+        "Colors" ,
+            };
 static void render_page(int pagenum)
 {
     sdl_loc_t *loc;
-    char str[100];
-
-    sprintf(str, "Unit Test - Page %d", pagenum);
-    sdl_print_init(20, COLOR_WHITE, COLOR_BLACK,
-                   &char_width, &char_height, &win_rows, &win_cols);
-    sdl_render_printf(true, NK2X(1,0), ROW2Y_CTR(0), "%s", str);
 
 
     sdl_print_init(10, COLOR_WHITE, COLOR_BLACK,
                    &char_width, &char_height, &win_rows, &win_cols);
-
-    loc = sdl_render_printf(true, NK2X(3,0), win_height-120, "%s", "<");
-    //loc->w = loc->h = 200;
+    loc = sdl_render_printf(true, NK2X(3,0), win_height-char_height/2, "%s", "<");
     sdl_register_event(loc, EVID_SWIPE_RIGHT);
-
-    loc = sdl_render_printf(true, NK2X(3,1), win_height-120, "%s", ">");
-    //loc->w = loc->h = 200;
+    loc = sdl_render_printf(true, NK2X(3,1), win_height-char_height/2, "%s", ">");
     sdl_register_event(loc, EVID_SWIPE_LEFT);
-
-    loc = sdl_render_printf(true, NK2X(3,2), win_height-120, "%s", "X");
-    //loc->w = loc->h = 200;
+    loc = sdl_render_printf(true, NK2X(3,2), win_height-char_height/2, "%s", "X");
     sdl_register_event(loc, EVID_QUIT);
-
 
     sdl_print_init(20, COLOR_WHITE, COLOR_BLACK,
                    &char_width, &char_height, &win_rows, &win_cols);
-    sdl_render_printf(true, win_width/2, win_height-char_height/2, "page %d", pagenum);
-//  printf("win_width=%d win_height=%d char_width=%d char_height=%d\n",
-//        win_width, win_height, char_width, char_height);
+    sdl_render_text(true, NK2X(1,0), ROW2Y_CTR(0), title[pagenum]);
+    sdl_render_printf(true, win_width-char_width/2, ROW2Y_CTR(0), "%d", pagenum);
 
     switch (pagenum) {
     case 0: render_page_0(); break;
@@ -185,6 +180,7 @@ static void render_page(int pagenum)
     case 2: render_page_2(); break;
     case 3: render_page_3(); break;
     case 4: render_page_4(); break;
+    case 5: render_page_5(); break;
     }
 }
 
@@ -398,4 +394,36 @@ static void page_4_cleanup(void)
     sdl_destroy_texture(text);
     sdl_destroy_texture(purple);
     //sdl_destroy_texture(xyz);
+}
+
+// -----------------  PAGE 0: COLORS  -------------------------
+
+static void color_test(int idx, char *color_name, int color)
+{
+    int y = idx * 100;
+
+    sdl_render_text(false, 0, y, color_name);
+    sdl_render_fill_rect(500, y, 500, char_height, color);
+}
+
+static void render_page_5(void)
+{
+    int idx = 1;
+
+    color_test(idx++, "WHITE", COLOR_WHITE);
+    color_test(idx++, "RED",   COLOR_RED);
+    color_test(idx++, "ORANGE", COLOR_ORANGE);
+    color_test(idx++, "YELLOW", COLOR_YELLOW);
+    color_test(idx++, "GREEN", COLOR_GREEN);
+    color_test(idx++, "BLUE", COLOR_BLUE);
+    color_test(idx++, "INDIGO", COLOR_INDIGO);
+    color_test(idx++, "VIOLET", COLOR_VIOLET);
+    color_test(idx++, "PURPLE", COLOR_PURPLE);
+    color_test(idx++, "LIGHT_BLUE", COLOR_LIGHT_BLUE);
+    color_test(idx++, "PINK", COLOR_PINK);
+    color_test(idx++, "TEAL", COLOR_TEAL);
+    color_test(idx++, "LIGHT_GRAY", COLOR_LIGHT_GRAY);
+    color_test(idx++, "GRAY", COLOR_GRAY);
+    color_test(idx++, "DARK_GRAY", COLOR_DARK_GRAY);
+
 }

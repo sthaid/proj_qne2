@@ -95,7 +95,7 @@ static void controller(void)
 
     while (true) {
         // xxx reset other stuff here too, fontsz, color
-        sdl_display_init(COLOR_BLACK);
+        sdl_display_init(COLOR_TEAL);
 
         // display menu, and register for sdl events
         display_menu();
@@ -235,28 +235,25 @@ static void display_menu(void)
 
     // xxx
     int chw, chh;
-    double numchars;
 
-    chw = RADIUS;
-    numchars = (double)win_width / chw;
-    sdl_print_init(numchars, COLOR_WHITE, COLOR_BLACK, NULL, NULL, NULL, NULL);
+    sdl_print_init(10, COLOR_WHITE, COLOR_TEAL, &chw, &chh, NULL, NULL);
 
-    #define DISPLAY_CONTROL_ITEM(row,col,str,evid) \
+    #define DISPLAY_CONTROL_ITEM(col,str,evid) \
         do { \
             int x = (win_width/3/2) + (col) * (win_width/3); \
-            int y = (win_height/6/2) + (row) * (win_height/6); \
+            int y = win_height - chh/2; \
             sdl_loc_t loc = {x, y, 2*RADIUS, 2*RADIUS}; \
             sdl_render_text(true, x, y, str); \
             sdl_register_event(&loc, evid); \
         } while (0)
 
-    DISPLAY_CONTROL_ITEM(5,0,"<",EVID_PAGE_DECREMENT);
-    DISPLAY_CONTROL_ITEM(5,1,">",EVID_PAGE_INCREMENT);
-    DISPLAY_CONTROL_ITEM(5,2,"X",EVID_QUIT);
+    DISPLAY_CONTROL_ITEM(0,"<",EVID_PAGE_DECREMENT);
+    DISPLAY_CONTROL_ITEM(1,">",EVID_PAGE_INCREMENT);
+    DISPLAY_CONTROL_ITEM(2,"X",EVID_QUIT);
 
-    // xxx
-    sdl_print_init(20, COLOR_WHITE, COLOR_BLACK, NULL, &chh, NULL, NULL);
-    sdl_render_printf(true, win_width/2, win_height-chh/2, "page %d", page);
+    sdl_print_init(20, COLOR_WHITE, COLOR_TEAL, &chw, &chh, NULL, NULL);
+    // xxx display "Menu" as title
+    sdl_render_printf(true, win_width-chw/2, chh/2, "%d", page);
 }
 
 static void read_menu(void)

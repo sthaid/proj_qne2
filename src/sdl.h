@@ -1,18 +1,25 @@
 #include <SDL.h>
 #include <SDL_ttf.h>
 
+// https://www.w3schools.com/colors/colors_converter.asp
+
 #define BYTES_PER_PIXEL  4
-#define COLOR_PURPLE     ( 127  |    0<<8 |  255<<16 |  255<<24 )
-#define COLOR_BLUE       ( 0    |    0<<8 |  255<<16 |  255<<24 )
-#define COLOR_LIGHT_BLUE ( 0    |  255<<8 |  255<<16 |  255<<24 )
-#define COLOR_GREEN      ( 0    |  255<<8 |    0<<16 |  255<<24 )
-#define COLOR_YELLOW     ( 255  |  255<<8 |    0<<16 |  255<<24 )
-#define COLOR_ORANGE     ( 255  |  128<<8 |    0<<16 |  255<<24 )
-#define COLOR_PINK       ( 255  |  105<<8 |  180<<16 |  255<<24 )
-#define COLOR_RED        ( 255  |    0<<8 |    0<<16 |  255<<24 )
-#define COLOR_GRAY       ( 224  |  224<<8 |  224<<16 |  255<<24 )
+#define COLOR_BLACK      (   0  |    0<<8 |    0<<16 |  255<<24 )
 #define COLOR_WHITE      ( 255  |  255<<8 |  255<<16 |  255<<24 )
-#define COLOR_BLACK      ( 0    |    0<<8 |    0<<16 |  255<<24 )
+#define COLOR_RED        ( 255  |    0<<8 |    0<<16 |  255<<24 )
+#define COLOR_ORANGE     ( 255  |  128<<8 |    0<<16 |  255<<24 )
+#define COLOR_YELLOW     ( 255  |  255<<8 |    0<<16 |  255<<24 )
+#define COLOR_GREEN      (   0  |  255<<8 |    0<<16 |  255<<24 )
+#define COLOR_BLUE       (   0  |    0<<8 |  255<<16 |  255<<24 )
+#define COLOR_INDIGO     (  75  |    0<<8 |  130<<16 |  255<<24 )
+#define COLOR_VIOLET     ( 238  |  130<<8 |  238<<16 |  255<<24 )
+#define COLOR_PURPLE     ( 127  |    0<<8 |  255<<16 |  255<<24 )
+#define COLOR_LIGHT_BLUE (   0  |  255<<8 |  255<<16 |  255<<24 )
+#define COLOR_PINK       ( 255  |  105<<8 |  180<<16 |  255<<24 )
+#define COLOR_TEAL       (   0  |  128<<8 |  128<<16 |  255<<24 )
+#define COLOR_LIGHT_GRAY ( 192  |  192<<8 |  192<<16 |  255<<24 )
+#define COLOR_GRAY       ( 128  |  128<<8 |  128<<16 |  255<<24 )
+#define COLOR_DARK_GRAY  (  64  |   64<<8 |   64<<16 |  255<<24 )
 
 #define EVID_SWIPE_DOWN        9000
 #define EVID_SWIPE_UP          9001
