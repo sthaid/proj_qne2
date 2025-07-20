@@ -1,3 +1,16 @@
+register for swipe and motion events
+
+motion returns extra data
+- x,y,xrel,yrel
+
+copyright code
+- assets file for copyright
+- read file 
+- display from top of file
+- add y motion
+
+---------
+
 make new printf routine for ctr
 
 

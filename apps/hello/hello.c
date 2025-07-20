@@ -53,6 +53,7 @@ int main(int argc, char **argv)
     int  pagenum = 0;
     bool end_program = false;
     bool is_qne_app = (argc > 0 && strcmp(argv[0], "qne_app") == 0);
+    sdl_event_data_t event_data;
 
     // print args 
     printf("argc = %d\n", argc);
@@ -97,7 +98,7 @@ int main(int argc, char **argv)
 
         // wait for an event with 100 ms timeout;
         // if no event then redraw display
-        event_id = sdl_get_event(100000);
+        event_id = sdl_get_event(100000, &event_data);
         if (event_id == -1) {
             continue;
         }
@@ -116,6 +117,12 @@ int main(int argc, char **argv)
             if (++pagenum >= MAX_PAGE) {
                 pagenum = 0;
             }
+        case EVID_MOTION:
+            printf("XXXXXXXXXXX %d %d %d %d\n", 
+                  event_data.u.motion.x,
+                  event_data.u.motion.y,
+                  event_data.u.motion.xrel,
+                  event_data.u.motion.yrel);
             break;
         }
 

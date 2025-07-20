@@ -67,9 +67,10 @@ void Sdl_get_event (struct ParseState *Parser, struct Value *ReturnValue,
 	struct Value **Param, int NumArgs)
 {
     long timeout_us = Param[0]->Val->LongInteger;
+    sdl_event_data_t *event_data = Param[1]->Val->Pointer;
     int  event_id;
 
-    event_id = sdl_get_event(timeout_us);
+    event_id = sdl_get_event(timeout_us, event_data);
 
     ReturnValue->Val->Integer = event_id;
 }
@@ -343,10 +344,18 @@ void Sdl_query_texture (struct ParseState *Parser, struct Value *ReturnValue,
 
 // -----------------  SDL PLATFORM REGISTRATION -------------------------
 
+// xxx reformat
 const char SdlDefs[] = "\
 typedef struct { int x; int y; int w; int h; } sdl_loc_t; \n\
 typedef struct { int x; int y; } sdl_point_t; \n\
 typedef struct sdl_texture sdl_texture_t; \n\
+typedef struct { \n\
+    union { \n\
+        struct { \n\
+            int x; int y; int xrel; int yrel; \n\
+        } motion; \n\
+    } u; \n\
+} sdl_event_data_t; \n\
 \n\
 #define BYTES_PER_PIXEL  4 \n\
 #define COLOR_BLACK      (   0  |    0<<8 |    0<<16 |  255<<24 ) \n\
@@ -368,6 +377,7 @@ typedef struct sdl_texture sdl_texture_t; \n\
 \n\
 #define EVID_SWIPE_RIGHT       9990 \n\
 #define EVID_SWIPE_LEFT        9991 \n\
+#define EVID_MOTION            9992 \n\
 #define EVID_QUIT              9999 \n\
 ";
 
@@ -382,7 +392,7 @@ struct LibraryFunction SdlFunctions[] = {
 
     // event registration and query
     { Sdl_register_event,  "void sdl_register_event(sdl_loc_t *loc, int event_id);" },
-    { Sdl_get_event,       "int sdl_get_event(long timeout_us);" },
+    { Sdl_get_event,       "int sdl_get_event(long timeout_us, sdl_event_data_t *ed);" },
 
     // create colors
     { Sdl_create_color,    "int sdl_create_color(int r, int g, int b, int a);" },

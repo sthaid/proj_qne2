@@ -511,10 +511,11 @@ static void settings_proc(void)
 
     INFO("SETTINGS\n");
 
-#define EVID_DEVEL_MODE 1000
-#define EVID_RESET_APPS 1001
-#define EVID_RESET_APPS_CONFIRM 1002
-#define EVID_RESET_APPS_CANCEL  1003
+    #define EVID_DEVEL_MODE 1000
+    #define EVID_RESET_APPS 1001
+    #define EVID_RESET_APPS_CONFIRM 1002
+    #define EVID_RESET_APPS_CANCEL  1003
+
     while (true) {
         sdl_print_init(20, COLOR_WHITE, COLOR_BLACK);
 
@@ -528,6 +529,15 @@ static void settings_proc(void)
 
             loc = sdl_render_printf(false, 0, ROW2Y(4), "Reset_Apps");
             sdl_register_event(loc, EVID_RESET_APPS);
+
+            sdl_render_printf(false, 0, ROW2Y(6), "Version = %ld", settings.version);
+
+            sdl_render_printf(false, 0, ROW2Y(8), "Copyright");
+
+            sdl_print_init(40, COLOR_WHITE, COLOR_BLACK);
+            sdl_render_printf(false, 0, sdl_win_height-100, 
+"123456789 123456789 123456789 123456789 123456789 123456789 123456789 123456789 ");
+
         } else {
             sdl_render_printf(false, 0, ROW2Y(4), "Reset_Apps?");
 

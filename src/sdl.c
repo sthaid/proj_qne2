@@ -72,7 +72,7 @@ static int              max_event;
 // prototypes
 //
 
-static int process_sdl_event(SDL_Event *ev);
+static int process_sdl_event(SDL_Event *ev, sdl_event_data_t *event_data);
 static void set_render_draw_color(int color);
 
 // ----------------- INIT / EXIT --------------------------
@@ -212,7 +212,7 @@ void sdl_register_event(sdl_loc_t *loc, int event_id)
 //   -1:     wait forever
 //    0:     don't wait
 //    usecs: timeout
-int sdl_get_event(long timeout_us)
+int sdl_get_event(long timeout_us, sdl_event_data_t *event_data)
 {
     SDL_Event ev;
     int event_id = -1;
@@ -240,7 +240,7 @@ try_again:
     }
 
     // process the sdl_event; this may or may not return an event_id
-    event_id = process_sdl_event(&ev);
+    event_id = process_sdl_event(&ev, event_data);
     if (event_id == -1) {
         goto try_again;
     }
@@ -249,7 +249,7 @@ try_again:
     return event_id;
 }
 
-static int process_sdl_event(SDL_Event *ev)
+static int process_sdl_event(SDL_Event *ev, sdl_event_data_t *event_data)
 {
     #define AT_LOC(X,Y,loc) (((X) >= (loc).x - (loc).w / 2)   && \
                              ((X) <= (loc).x + (loc).w / 2)   && \
@@ -295,14 +295,6 @@ static int process_sdl_event(SDL_Event *ev)
                 INFO("got EVID_SWIPE_LEFT %d %d\n", delta_x, delta_y);
                 event_id = EVID_SWIPE_LEFT;
                 break;
-            } else if (delta_y > 200) {
-                INFO("got EVID_SWIPE_DOWN %d %d\n", delta_x, delta_y);
-                event_id = EVID_SWIPE_DOWN;
-                break;
-            } else if (delta_y < -200) {
-                INFO("got EVID_SWIPE_UP %d\n", delta_y);
-                event_id = EVID_SWIPE_UP;
-                break;
             }
 
             for (i = 0; i < max_event; i++) {
@@ -325,6 +317,13 @@ static int process_sdl_event(SDL_Event *ev)
                ev->motion.xrel,
                ev->motion.yrel);
 #endif
+        if (event_data != NULL) {
+            event_data->u.motion.x = ev->motion.x;
+            event_data->u.motion.y = ev->motion.y;
+            event_data->u.motion.xrel = ev->motion.xrel;
+            event_data->u.motion.yrel = ev->motion.yrel;
+            event_id = EVID_MOTION;
+        }
         break; }
     case SDL_FINGERDOWN:
     case SDL_FINGERUP:

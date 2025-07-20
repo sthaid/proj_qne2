@@ -21,10 +21,9 @@
 #define COLOR_GRAY       ( 128  |  128<<8 |  128<<16 |  255<<24 )
 #define COLOR_DARK_GRAY  (  64  |   64<<8 |   64<<16 |  255<<24 )
 
-#define EVID_SWIPE_DOWN        9000
-#define EVID_SWIPE_UP          9001
-#define EVID_SWIPE_RIGHT       9002
-#define EVID_SWIPE_LEFT        9003
+#define EVID_SWIPE_RIGHT       9990
+#define EVID_SWIPE_LEFT        9991
+#define EVID_MOTION            9992
 #define EVID_QUIT              9999
 
 //
@@ -40,6 +39,14 @@ typedef struct {
 } sdl_point_t;
 
 typedef struct sdl_texture sdl_texture_t;
+
+typedef struct {
+    union {
+        struct {
+            int x, y, xrel, yrel;
+        } motion;
+    } u;  // xxx is u needed
+} sdl_event_data_t;
 
 //
 // global variables
@@ -64,7 +71,7 @@ void sdl_display_present(void);
 
 // event registration and query
 void sdl_register_event(sdl_loc_t *loc, int event_id);
-int sdl_get_event(long timeout_us);
+int sdl_get_event(long timeout_us, sdl_event_data_t *event_data);
 
 // create colors
 int sdl_create_color(int r, int g, int b, int a);
