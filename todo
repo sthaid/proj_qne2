@@ -1,16 +1,30 @@
+ VariableDefinePlatformVar(NULL,
+                                                  "RobotIsExploding",
+                                                  &IntType,
+                                                  (union AnyValue*)&RobotIsExploding,
+                                                  false);
+
+
+
+make minimum loc size
+
+make sdl global vars for win_width,height, char width, height
+- remove get_size
+- remove args from printinit
+- dont need win_rows cols
+
 swipe up causes crash in menu
 
 maybe dont need sdl_print_init
 
 sdl_print_init ?
+
 devel mode
-- purple screen
 - don't allow any new connections, or process any in progress
 
 settings menu entry
 - version
-- devel_mode
-- reset_apps
+- reset_apps, are you sure
 - copyright,  scrolling with mouse
 
 dont swipe up to exit
@@ -22,6 +36,12 @@ reset_apps
 
 
 ---- done ---
+settings
+- devel_mode
+- reset_apps
+
+devel mode
+- purple screen
 
 settings file
 - version

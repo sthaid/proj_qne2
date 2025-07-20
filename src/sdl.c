@@ -46,13 +46,21 @@ typedef struct {
 } event_t;
 
 //
+// global variables
+//
+
+int sdl_win_width;
+int sdl_win_height;
+int sdl_char_width;
+int sdl_char_height;
+
+//
 // variables
 //
 
+
 static SDL_Window     * window;
 static SDL_Renderer   * renderer;
-static int              win_width;
-static int              win_height;
 static double           scale;
 
 static TTF_Font        *font[MAX_FONT_PTSIZE];
@@ -74,7 +82,6 @@ int sdl_init(void)
     int real_win_width, real_win_height;
     int num, i;
     double aspect_ratio;
-    int chw, chh, rows, cols;
 
     // display available and current video drivers
     num = SDL_GetNumVideoDrivers();
@@ -109,10 +116,10 @@ int sdl_init(void)
     INFO("real win_width x height = %d %d  aspect = %f\n", real_win_width, real_win_height, aspect_ratio);
 
     // xxx
-    win_width  = 1000;
-    win_height = rint(1000 * aspect_ratio);
-    scale = (double)real_win_width / win_width;
-    INFO("logical win_width x height = %d %d  scale = %f\n", win_width, win_height, scale);
+    sdl_win_width  = 1000;
+    sdl_win_height = rint(1000 * aspect_ratio);
+    scale = (double)real_win_width / sdl_win_width;
+    INFO("logical sdl_win_width x height = %d %d  scale = %f\n", sdl_win_width, sdl_win_height, scale);
 
     // initialize True Type Font
     if (TTF_Init() < 0) {
@@ -132,10 +139,11 @@ int sdl_init(void)
 
     // init default fontsize, where DEFAULT_NUMCHARS is num chars across display;
     // and validate expected character size and columns
-    sdl_print_init(DEFAULT_NUMCHARS, COLOR_WHITE, COLOR_BLACK, &chw, &chh, &rows, &cols);
-    INFO("sdl_print_init(%d) returns chw,h=%d %d rows,cols=%d %d\n", DEFAULT_NUMCHARS, chw, chh, rows, cols);
-    if (chw != 50 || chh != 83 || cols != 20) {
-        ERROR("chw,chh,cols expected = 50,83,20  actual = %d,%d,%d\n", chw, chh, cols);
+    sdl_print_init(DEFAULT_NUMCHARS, COLOR_WHITE, COLOR_BLACK);
+    INFO("sdl_print_init(%d) sdl_char_width=%d sdl_char_height=%d\n", 
+         DEFAULT_NUMCHARS, sdl_char_width, sdl_char_height);
+    if (sdl_char_width != 50 || sdl_char_height != 83) {
+        ERROR("chw,chh, expected = 50,83  actual = %d,%d\n", sdl_char_width, sdl_char_height);
         return -1;
     }
 
@@ -169,12 +177,6 @@ void sdl_exit(void)
     SDL_Quit();
 
     INFO("done\n");
-}
-
-void sdl_get_win_size(int *w, int *h)
-{
-    *w = win_width;
-    *h = win_height;
 }
 
 // ----------------- DISPLAY INIT / PRESENT ---------------
@@ -431,16 +433,15 @@ static struct {
     SDL_Color bg_color;
 } text;
 
-void sdl_print_init(double numchars, int fg_color, int bg_color, int *char_width, int *char_height, int *win_rows, int *win_cols)
+void sdl_print_init(double numchars, int fg_color, int bg_color)
 {
     int ptsize, chw, chh;
-    int ret_char_width, ret_char_height, ret_win_rows, ret_win_cols;
 
     // determine real font ptsize to use;
     // note: rint() not used here so ptsize will round down
     {
     double chw_fp, chh_fp;
-    chw_fp = (win_width / numchars) * scale;
+    chw_fp = (sdl_win_width / numchars) * scale;
     chh_fp = chw_fp / 0.6;
     ptsize = chh_fp;
     }
@@ -466,15 +467,8 @@ void sdl_print_init(double numchars, int fg_color, int bg_color, int *char_width
     text.fg_color    = *(SDL_Color*)&fg_color;
     text.bg_color    = *(SDL_Color*)&bg_color;
 
-    ret_char_width  = rint(win_width / numchars);
-    ret_char_height = rint(ret_char_width / 0.6);
-    ret_win_rows    = win_height / ret_char_height;
-    ret_win_cols    = win_width / ret_char_width;
-
-    if (char_width) *char_width = ret_char_width;
-    if (char_height) *char_height = ret_char_height;
-    if (win_rows) *win_rows = ret_win_rows;
-    if (win_cols) *win_cols = ret_win_cols;
+    sdl_char_width  = rint(sdl_win_width / numchars);
+    sdl_char_height = rint(sdl_char_width / 0.6);
 }
 
 sdl_loc_t *sdl_render_text(bool xy_is_ctr, int x, int y, char * str)

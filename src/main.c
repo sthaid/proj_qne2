@@ -205,7 +205,6 @@ typedef struct {
     char *args;
 } menu_t;
 
-static int    win_width, win_height;
 static int    page;
 static int    last_page;
 static menu_t menu[MAX_PAGE][MAX_MENU];
@@ -219,7 +218,8 @@ static void controller(void)
     int event_id, rc;
 
     rc = sdl_init(); //xxx handle ret
-    sdl_get_win_size(&win_width, &win_height);
+    INFO("sdl_win_width,height = %d %d  sdl_char_width,height=%d %d\n",
+        sdl_win_width, sdl_win_height, sdl_char_width, sdl_char_height);
 
     while (true) {
         // xxx reset other stuff here too, fontsz, color
@@ -343,16 +343,16 @@ static void display_menu(void)
             }
         }
         chh = chw / 0.6;
-        numchars = win_width / chw;
+        numchars = sdl_win_width / chw;
 
         // determine dispaly location of the center of the menu item
-        x = (win_width/3/2) + (id%3) * (win_width/3);
-        y = (win_height/6/2) + (id/3) * (win_height/6);
+        x = (sdl_win_width/3/2) + (id%3) * (sdl_win_width/3);
+        y = (sdl_win_height/6/2) + (id/3) * (sdl_win_height/6);
 
         // display the menu item
         sdl_render_texture(x-RADIUS, y-RADIUS, 2*RADIUS, 2*RADIUS, 0, circle);
 
-        sdl_print_init(numchars, COLOR_WHITE, COLOR_BLUE, NULL, NULL, NULL, NULL);
+        sdl_print_init(numchars, COLOR_WHITE, COLOR_BLUE);
         if (len2 == 0) {
             sdl_render_text(true, x, y, str1);
         } else {
@@ -369,15 +369,13 @@ static void display_menu(void)
     }
 
     // xxx
-    int chw, chh;
-
-    sdl_print_init(10, COLOR_WHITE, MENU_BG_COLOR, &chw, &chh, NULL, NULL);
+    sdl_print_init(10, COLOR_WHITE, MENU_BG_COLOR);
 
     // xxx use loc returned by print
     #define DISPLAY_CONTROL_ITEM(col,str,evid) \
         do { \
-            int x = (win_width/3/2) + (col) * (win_width/3); \
-            int y = win_height - chh/2; \
+            int x = (sdl_win_width/3/2) + (col) * (sdl_win_width/3); \
+            int y = sdl_win_height - sdl_char_height/2; \
             sdl_loc_t loc = {x, y, 2*RADIUS, 2*RADIUS}; \
             sdl_render_text(true, x, y, str); \
             sdl_register_event(&loc, evid); \
@@ -394,7 +392,7 @@ static void display_menu(void)
     //sdl_print_init(20, COLOR_WHITE, MENU_BG_COLOR, &chw, &chh, NULL, NULL);
 
     // xxx display "Menu" as title
-    //sdl_render_printf(true, win_width-chw/2, chh/2, "%d", page);
+    //sdl_render_printf(true, sdl_win_width-chw/2, chh/2, "%d", page);
 }
 
 static void read_menu(void)
@@ -500,13 +498,12 @@ static void read_menu(void)
     }
 }
 
-#define ROW2Y(r) ((r) * char_height)  // xxx ctr vs ...
-#define ROW2Y_CTR(r) ((r) * char_height + char_height/2)
-#define NK2X(n,k) ((win_width/2/(n)) + (k) * (win_width/(n)))
+#define ROW2Y(r) ((r) * sdl_char_height)  // xxx ctr vs ...
+#define ROW2Y_CTR(r) ((r) * sdl_char_height + sdl_char_height/2)
+#define NK2X(n,k) ((sdl_win_width/2/(n)) + (k) * (sdl_win_width/(n)))
 
 static void settings_proc(void)
 {
-    int char_height;
     int event_id;
     sdl_loc_t *loc;
     bool quit = false;
@@ -516,11 +513,11 @@ static void settings_proc(void)
 #define EVID_DEVEL_MODE 1000
 #define EVID_RESET_APPS 1001
     while (true) {
-        sdl_print_init(20, COLOR_WHITE, COLOR_BLACK, NULL, &char_height, NULL, NULL);
+        sdl_print_init(20, COLOR_WHITE, COLOR_BLACK);
 
         sdl_display_init(COLOR_BLACK);
 
-        sdl_render_text(true, win_width/2, char_height/2, "Settings");
+        sdl_render_text(true, sdl_win_width/2, sdl_char_height/2, "Settings");
 
         loc = sdl_render_printf(false, 0, ROW2Y(2), "Devel_Mode = %ld", settings.devel_mode);
         sdl_register_event(loc, EVID_DEVEL_MODE);
@@ -528,7 +525,7 @@ static void settings_proc(void)
         loc = sdl_render_printf(false, 0, ROW2Y(4), "Reset_Apps");
         sdl_register_event(loc, EVID_RESET_APPS);
 
-        int chh = char_height;
+        //int chh = sdl_char_height;
         DISPLAY_CONTROL_ITEM(2,"X",EVID_QUIT);
 
         sdl_display_present();

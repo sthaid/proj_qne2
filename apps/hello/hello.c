@@ -18,22 +18,15 @@
 #define MAX_PAGE 6
 
 // xxx check these
-#define ROW2Y(r) ((r) * char_height)  // xxx ctr vs ...
-#define ROW2Y_CTR(r) ((r) * char_height + char_height/2)
+#define ROW2Y(r) ((r) * sdl_char_height)  // xxx ctr vs ...
+#define ROW2Y_CTR(r) ((r) * sdl_char_height + sdl_char_height/2)
 
-#define NK2X(n,k) ((win_width/2/(n)) + (k) * (win_width/(n)))
-//#define NK2X(n,k) ((int)rint(((double)win_width/2/(n)) + (k) * ((double)win_width/(n))))
+#define NK2X(n,k) ((sdl_win_width/2/(n)) + (k) * (sdl_win_width/(n)))
+//#define NK2X(n,k) ((int)rint(((double)sdl_win_width/2/(n)) + (k) * ((double)sdl_win_width/(n))))
 
 //
 // variables
 //
-
-static int win_width;
-static int win_height;
-static int char_width;
-static int char_height;
-static int win_rows;
-static int win_cols;
 
 sdl_texture_t *circle;  // xxx can these be static
 sdl_texture_t *text;
@@ -77,9 +70,9 @@ int main(int argc, char **argv)
         return 1;
     }
 
-    // get windows size
-    sdl_get_win_size(&win_width, &win_height);
-    printf("win_width/height = %d %d\n", win_width, win_height);
+    // get windows size xxx comment
+    printf("sdl_win_width/height  = %d %d\n", sdl_win_width, sdl_win_height);
+    printf("sdl_char_width/height = %d %d\n", sdl_char_width, sdl_char_height);
 
 #if 0
     // initialize font for 20 chars across display, white on black;
@@ -112,7 +105,6 @@ int main(int argc, char **argv)
         // process event
         switch (event_id) {
         case EVID_QUIT:
-        case EVID_SWIPE_UP:
             end_program = true;
             break;
         case EVID_SWIPE_RIGHT:
@@ -160,19 +152,17 @@ static void render_page(int pagenum)
     sdl_loc_t *loc;
 
 
-    sdl_print_init(10, COLOR_WHITE, COLOR_BLACK,
-                   &char_width, &char_height, &win_rows, &win_cols);
-    loc = sdl_render_printf(true, NK2X(3,0), win_height-char_height/2, "%s", "<");
+    sdl_print_init(10, COLOR_WHITE, COLOR_BLACK);
+    loc = sdl_render_printf(true, NK2X(3,0), sdl_win_height-sdl_char_height/2, "%s", "<");
     sdl_register_event(loc, EVID_SWIPE_RIGHT);
-    loc = sdl_render_printf(true, NK2X(3,1), win_height-char_height/2, "%s", ">");
+    loc = sdl_render_printf(true, NK2X(3,1), sdl_win_height-sdl_char_height/2, "%s", ">");
     sdl_register_event(loc, EVID_SWIPE_LEFT);
-    loc = sdl_render_printf(true, NK2X(3,2), win_height-char_height/2, "%s", "X");
+    loc = sdl_render_printf(true, NK2X(3,2), sdl_win_height-sdl_char_height/2, "%s", "X");
     sdl_register_event(loc, EVID_QUIT);
 
-    sdl_print_init(20, COLOR_WHITE, COLOR_BLACK,
-                   &char_width, &char_height, &win_rows, &win_cols);
+    sdl_print_init(20, COLOR_WHITE, COLOR_BLACK);
     sdl_render_text(true, NK2X(1,0), ROW2Y_CTR(0), title[pagenum]);
-    sdl_render_printf(true, win_width-char_width/2, ROW2Y_CTR(0), "%d", pagenum);
+    sdl_render_printf(true, sdl_win_width-sdl_char_width/2, ROW2Y_CTR(0), "%d", pagenum);
 
     switch (pagenum) {
     case 0: render_page_0(); break;
@@ -196,7 +186,7 @@ static void render_page_0(void)
     tm = localtime(&t);
 
     sprintf(str, "%02d:%02d:%02d", tm->tm_hour, tm->tm_min, tm->tm_sec);
-    sdl_render_printf(true, win_width/2,  ROW2Y_CTR(win_rows/3), "%s", str);
+    sdl_render_printf(true, sdl_win_width/2, sdl_win_height/3, "%s", str);
 
     // xxx intro text
 }
@@ -243,16 +233,15 @@ static void add_point(sdl_point_t **p, int x, int y);
 static void render_page_3(void)
 {
     // draw rect around perimeter
-    //sdl_render_rect(win_width/2, win_height/2, win_width, win_height, 2, COLOR_PURPLE);
-    sdl_render_rect(0, 0, win_width, win_height, 2, COLOR_PURPLE);
+    sdl_render_rect(0, 0, sdl_win_width, sdl_win_height, 2, COLOR_PURPLE);
 
     // draw fill rect, y = 100 .. 300
     sdl_render_fill_rect(100, 100, 800, 200, COLOR_RED);
 
     // draw circles, y = 300 .. 400
-    sdl_render_circle(1*win_width/4, 350, 50, 3, COLOR_YELLOW);
-    sdl_render_circle(2*win_width/4, 350, 50, 3, COLOR_YELLOW);
-    sdl_render_circle(3*win_width/4, 350, 50, 3, COLOR_YELLOW);
+    sdl_render_circle(1*sdl_win_width/4, 350, 50, 3, COLOR_YELLOW);
+    sdl_render_circle(2*sdl_win_width/4, 350, 50, 3, COLOR_YELLOW);
+    sdl_render_circle(3*sdl_win_width/4, 350, 50, 3, COLOR_YELLOW);
 
     // draw 6 lines, y = 400 .. 500
     for (int y = 401; y <= 501; y += 20) {  //xxx
@@ -373,8 +362,8 @@ static void render_page_4(void)
     static sdl_texture_t *t;
     if (t == NULL) {
         int w,h;
-        printf("XXXXXXXXXX win_width, char_height = %d %d\n", win_width, char_height);
-        t = sdl_create_texture_from_display(0,0,win_width, char_height);
+        printf("XXXXXXXXXX sdl_win_width, sdl_char_height = %d %d\n", sdl_win_width, sdl_char_height);
+        t = sdl_create_texture_from_display(0,0,sdl_win_width, sdl_char_height);
         sdl_query_texture(t, &w, &h);
         printf("XXXXXXXXXXXXXX w h = %d %d\n", w, h);
     }
@@ -403,7 +392,7 @@ static void color_test(int idx, char *color_name, int color)
     int y = idx * 100;
 
     sdl_render_text(false, 0, y, color_name);
-    sdl_render_fill_rect(500, y, 500, char_height, color);
+    sdl_render_fill_rect(500, y, 500, sdl_char_height, color);
 }
 
 static void render_page_5(void)

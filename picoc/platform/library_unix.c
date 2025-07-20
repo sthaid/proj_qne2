@@ -32,15 +32,6 @@ void Sdl_exit (struct ParseState *Parser, struct Value *ReturnValue,
     sdl_exit();
 }
 
-void Sdl_get_win_size (struct ParseState *Parser, struct Value *ReturnValue,
-	struct Value **Param, int NumArgs)
-{
-    int *w = Param[0]->Val->Pointer;
-    int *h = Param[1]->Val->Pointer;
-
-    sdl_get_win_size(w, h);
-}
-
 //
 // display init and present, must be done for every display update
 //
@@ -134,12 +125,8 @@ void Sdl_print_init (struct ParseState *Parser, struct Value *ReturnValue,
     double numchars    = Param[0]->Val->FP;
     int    fg_color    = Param[1]->Val->Integer;
     int    bg_color    = Param[2]->Val->Integer;
-    int   *char_width  = Param[3]->Val->Pointer;
-    int   *char_height = Param[4]->Val->Pointer;
-    int   *win_rows    = Param[5]->Val->Pointer;
-    int   *win_cols    = Param[6]->Val->Pointer;
 
-    sdl_print_init(numchars, fg_color, bg_color, char_width, char_height, win_rows, win_cols);
+    sdl_print_init(numchars, fg_color, bg_color);
 }
 
 void Sdl_render_text (struct ParseState *Parser, struct Value *ReturnValue,
@@ -379,10 +366,8 @@ typedef struct sdl_texture sdl_texture_t; \n\
 #define COLOR_GRAY       ( 128  |  128<<8 |  128<<16 |  255<<24 ) \n\
 #define COLOR_DARK_GRAY  (  64  |   64<<8 |   64<<16 |  255<<24 ) \n\
 \n\
-#define EVID_SWIPE_DOWN        9000 \n\
-#define EVID_SWIPE_UP          9001 \n\
-#define EVID_SWIPE_RIGHT       9002 \n\
-#define EVID_SWIPE_LEFT        9003 \n\
+#define EVID_SWIPE_RIGHT       9990 \n\
+#define EVID_SWIPE_LEFT        9991 \n\
 #define EVID_QUIT              9999 \n\
 ";
 
@@ -390,7 +375,6 @@ struct LibraryFunction SdlFunctions[] = {
     // sdl initialization and termination, must be done once
     { Sdl_init,            "int sdl_init(void);" },
     { Sdl_exit,            "void sdl_exit(void);" },
-    { Sdl_get_win_size,    "void sdl_get_win_size(int *w, int *h);" },
 
     // display init and present, must be done for every display update
     { Sdl_display_init,    "void sdl_display_init(int color);" },
@@ -406,7 +390,7 @@ struct LibraryFunction SdlFunctions[] = {
     { Sdl_wavelength_to_color, "int sdl_wavelength_to_color(int wavelength);" },
 
     // render text
-    { Sdl_print_init,      "void sdl_print_init(double numchars, int fg_color, int bg_color, int *char_width, int *char_height, int *win_rows, int *win_cols);" },
+    { Sdl_print_init,      "void sdl_print_init(double numchars, int fg_color, int bg_color);" },
     { Sdl_render_text,     "sdl_loc_t *sdl_render_text(bool xy_is_ctr, int x, int y, char *str);" },
     { Sdl_render_printf,   "sdl_loc_t *sdl_render_printf(bool xy_is_ctr, int x, int y, char *fmt, ...);" },
 
@@ -433,7 +417,16 @@ struct LibraryFunction SdlFunctions[] = {
 
 void SdlSetupFunction(Picoc *pc)
 {
-    // not used
+    #define PLATFORM_VAR(name, type, writeable) \
+        do { \
+            VariableDefinePlatformVar(pc, NULL, #name, &pc->type, \
+                                      (union AnyValue *)&name, writeable); \
+        } while (0)
+        
+    PLATFORM_VAR(sdl_win_width, IntType, false);
+    PLATFORM_VAR(sdl_win_height, IntType, false);
+    PLATFORM_VAR(sdl_char_width, IntType, false);
+    PLATFORM_VAR(sdl_char_height, IntType, false);
 }
 
 void PlatformLibraryInit(Picoc *pc)

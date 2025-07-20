@@ -42,13 +42,21 @@ typedef struct {
 typedef struct sdl_texture sdl_texture_t;
 
 //
+// global variables
+//
+
+extern int sdl_win_width;
+extern int sdl_win_height;
+extern int sdl_char_width;
+extern int sdl_char_height;
+
+//
 // prototypes
 //
 
 // sdl initialization and termination, must be done once
 int sdl_init(void);
 void sdl_exit(void);
-void sdl_get_win_size(int *w, int *h);
 
 // display init and present, must be done for every display update
 void sdl_display_init(int color);
@@ -64,7 +72,7 @@ int sdl_scale_color(int color, double inten);
 int sdl_wavelength_to_color(int wavelength);
 
 // render text
-void sdl_print_init(double numchars, int fg_color, int bg_color, int *char_width, int *char_height, int *win_rows, int *win_cols);
+void sdl_print_init(double numchars, int fg_color, int bg_color);
 sdl_loc_t *sdl_render_text(bool xy_is_ctr, int x, int y, char *str);
 sdl_loc_t *sdl_render_printf(bool xy_is_ctr, int x, int y, char *fmt, ...) __attribute__ ((format (printf, 4, 5)));
 
