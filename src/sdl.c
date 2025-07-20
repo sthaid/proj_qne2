@@ -434,7 +434,7 @@ static struct {
 
 void sdl_print_init(double numchars, int fg_color, int bg_color)
 {
-    int ptsize, chw, chh;
+    int ptsize;
 
     // determine real font ptsize to use;
     // note: rint() not used here so ptsize will round down
@@ -460,7 +460,6 @@ void sdl_print_init(double numchars, int fg_color, int bg_color)
             return;
         }
     }
-    TTF_SizeText(font[ptsize], "X", &chw, &chh);
 
     text.ptsize      = ptsize;
     text.fg_color    = *(SDL_Color*)&fg_color;
