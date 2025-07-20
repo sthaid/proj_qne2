@@ -2,12 +2,39 @@
 
 #include <utils.h>
 
-//#define USE_ANDROID_LOG
-#ifdef USE_ANDROID_LOG
-#include <SDL.h>
+#ifdef ANDROID
+    //#define USE_ANDROID_LOGGING
+    #ifdef USE_ANDROID_LOGGING
+        #include <SDL.h>
+    #endif
 #endif
 
 // ----------------- LOGGING -----------------
+
+void init_logging(char *logfile)
+{
+    FILE *fp;
+    int rc;
+
+    if (logfile) {
+        fp = freopen(logfile, "a", stdout);
+        if (fp == NULL) {
+            ERROR("failed to reopen stdout to file '%s', %s\n", logfile, strerror(errno));
+            return;
+        }
+        rc = dup2(fileno(stdout), fileno(stderr));
+        if (rc != 0) {
+            ERROR("failed to dup stdout to stderr, %s\n", strerror(errno));
+            return;
+        }
+    }
+
+    setlinebuf(stdout);
+    setlinebuf(stderr);
+
+    fprintf(stdout, "test print to stdout\n");  //xxx temp
+    fprintf(stderr, "test print to stderr\n");
+}
 
 void logmsg(char *lvl, const char *func, char *fmt, ...)
 {
@@ -27,15 +54,7 @@ void logmsg(char *lvl, const char *func, char *fmt, ...)
         len--;
     }
 
-    // xxx tbd
-    printf("%s\n", msg);
-    return;
-
-#ifndef USE_ANDROID_LOG
-    // print the message, stdout has been redirected to the log file, in main.c;
-    time2str(time_str, get_real_time_us(), false, true, true),
-    fprintf(stderr, "%s %s %s: %s\n", time_str, lvl, func, msg);
-#else
+#ifdef USE_ANDROID_LOGGING
     // log the message, to the Android log;
     // use 'adb -s SDL/APP' to monitor the Android log
     if (strcmp(lvl, "INFO") == 0) {
@@ -51,7 +70,12 @@ void logmsg(char *lvl, const char *func, char *fmt, ...)
                      "%s %s: %s\n",
                      lvl, func, msg);
     }
+    return;
 #endif
+
+    // log using printf to stderr
+    time2str(time_str, get_real_time_us(), false, true, true),
+    fprintf(stderr, "%s %s %s: %s\n", time_str, lvl, func, msg);
 }
 
 // ----------------- TIME --------------------

@@ -1,5 +1,60 @@
+swipe up causes crash in menu
+
+maybe dont need sdl_print_init
+
+sdl_print_init ?
+devel mode
+- purple screen
+- don't allow any new connections, or process any in progress
+
+settings menu entry
+- version
+- devel_mode
+- reset_apps
+- copyright,  scrolling with mouse
+
+dont swipe up to exit
+
+
+reset_apps
+- at init time, if apps dir not present
+- and when selected in settings
+
+
+---- done ---
+
+settings file
+- version
+- devel_mode
+- spares follow
+
+
+init routine
+- read settings when starting
+
+makefile
+- create apps tarfile, and put in assets
+
+---- info ----
+
+dir struct
+files  (TOP)
+- log
+- settings
+- apps
+  - menu
+  - hello ...
+  - reversi ...
+================================
+================================
+================================
+================================
+
+--------------
+
 
 redo tools, with better names
+- use ez_apps  
 
 
 --------------

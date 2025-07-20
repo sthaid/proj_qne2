@@ -33,9 +33,12 @@ CFLAGS = -Wall -g -I../src $(shell sdl2-config --cflags)
 
 $(TARGET):
 	gcc -o $@ $(CFLAGS) $(SRCS) -lSDL2 -lSDL2_ttf -lm
+	tar -C .. -cvf assets/apps.tar apps
 
 clean:
 	rm $(TARGET)
+	rm -rf files/*
+	rm -f assets/apps.tar
 
 .PHONY: $(TARGET)
 

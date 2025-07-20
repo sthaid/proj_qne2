@@ -3,68 +3,195 @@
 #include <sdl.h>
 #include <utils.h>
 
+//
 // defines
+//
+
+
+#ifdef ANDROID
+#define MAIN SDL_main
+#else
+#define MAIN main
+#endif
+
+#define VERSION 1
+
 #define EVID_PAGE_DECREMENT 1000
 #define EVID_PAGE_INCREMENT 1001
 
-// variables
-const char *internal_storage_path;
-bool        server_thread_running;
-char        log_file_pathname[100];
+#define MENU_BG_COLOR (!settings.devel_mode ? COLOR_TEAL : COLOR_VIOLET)
 
+//
+// typedefs
+//
+
+typedef struct {
+    unsigned long version;
+    unsigned long devel_mode;
+    unsigned long reserved[14];
+} settings_t;
+
+//
+// variables
+//
+
+static const char *storage_path;
+static bool        server_thread_running;
+static char        log_file_pathname[100];
+static settings_t  settings;
+
+//
 // prototypes 
+//
+
 static void controller(void);
 static void *server_thread(void *cx);
 
+//
 // routines to launch a C program using picoc interpreter
-void picoc_bg(char *args);
+//
+
 int picoc_fg(char *args);
+void picoc_bg(char *args);
 
 // -----------------  MAIN  ------------------------------------------
 
-#ifdef ANDROID
-int SDL_main(int argc, char **argv)
-#else
-int main(int argc, char **argv)
-#endif
+static void init(void);
+static void create_default_apps(void);
+static void read_settings(void);
+static void write_settings(void);
+static void print_settings(void);
+
+int MAIN(int argc, char **argv)
 {
-    pthread_t tid;
-
-    // init logging
-#ifdef ANDROID
-    internal_storage_path = SDL_AndroidGetInternalStoragePath();
-#else
-    internal_storage_path = "/home/haid/proj/proj_qne2/linux/files";  //xxx
-#endif
-    sprintf(log_file_pathname, "%s/%s", internal_storage_path, "log");
-
-#if 0  // init logging in utils.c
-    freopen(log_file_pathname, "a", stdout);
-    freopen(log_file_pathname, "a", stderr);
-#endif
-    setlinebuf(stdout);
-    setlinebuf(stderr);
-
-    // print startup messages
-    INFO("=====================================================\n");  // xxx include version
-    INFO("internal_storage_path = %s\n", internal_storage_path);
-
-    // xxx
-    chdir(internal_storage_path);
-
-    // create server thread
-    pthread_create(&tid, NULL, server_thread, NULL);
-    while (server_thread_running == false) {
-        usleep(10000);
-    }
+    // initialize
+    init();
 
     // xxx comment
     controller();
 
-    // end program
-    // xxx kill the server thread ?
+    // end program xxx kill the server thread ?
     INFO("TERMINATING\n");
     return 0;
+}
+
+static void init(void)
+{
+    pthread_t tid;
+    int rc;
+    struct stat statbuf;
+
+    // determine storage_path, and 
+    // set current working directory to storage_path
+#ifdef ANDROID
+    storage_path = SDL_AndroidGetInternalStoragePath();
+#else
+    storage_path = "/home/haid/proj/proj_qne2/linux/files";  //xxx
+#endif
+    chdir(storage_path);
+
+    // init logging
+#ifdef ANDROID
+    init_logging("log");
+#else
+    init_logging(NULL);
+#endif
+
+    // read settings, if file deosn't exist it will be created
+    read_settings();
+
+    // print startup messages
+    INFO("========== STARTING: VERSION=%ld ==========\n", settings.version);
+    print_settings();
+
+    // if apps dir doesn't exist then create it
+    rc = stat("apps", &statbuf);
+    if (rc != 0 || !S_ISDIR(statbuf.st_mode)) {
+        create_default_apps();
+    }
+
+    // create server thread
+    pthread_create(&tid, NULL, server_thread, NULL);
+//  while (server_thread_running == false) {
+//      usleep(10000);
+//  }
+}
+
+static void create_default_apps(void)
+{
+    INFO("creating default apps\n");
+    system("rm -rf apps");
+    system("tar -xvf ../assets/apps.tar");
+}
+
+static void read_settings(void)
+{
+    #define UPDATE_SETTING(which) \
+        if (strcmp(name, #which) == 0) { \
+            settings.which = value; \
+            continue; \
+        }
+
+    FILE *fp;
+    char s[100];
+    int cnt;
+    char name[100];
+    unsigned long value;
+
+    // open settings file
+    fp = fopen("settings", "r");
+
+    // if failed to open settings file then create default settings file
+    if (fp == NULL) {
+        static settings_t default_settings = { VERSION };
+        settings = default_settings;
+        write_settings();
+        return;
+    }
+
+    // read settings
+    while (fgets(s, sizeof(s), fp) != NULL) {
+        remove_trailing_newline(s);
+
+        cnt = sscanf(s, "%s %ld", name, &value);
+        if (cnt != 2) {
+            ERROR("invalid line in settings file '%s'\n", s);
+            break;
+        }
+
+        UPDATE_SETTING(version);
+        UPDATE_SETTING(devel_mode);
+    }
+
+    // close 
+    fclose(fp);
+
+}
+
+static void write_settings(void)
+{
+    FILE *fp;
+
+    fp = fopen("settings", "w");
+    if (fp == NULL) {
+        ERROR("failed to open 'settings' for writing, %s\n", strerror(errno));
+        return;
+    }
+
+    fprintf(fp, "version    %ld\n", settings.version);
+    fprintf(fp, "devel_mode %ld\n", settings.devel_mode);
+
+    fclose(fp);
+}
+
+static void print_settings(void)
+{
+    #define PRINT_SETTING(which) \
+        INFO("  %-16s = %ld\n", #which, settings.which)
+
+    INFO("settings ...\n");
+    PRINT_SETTING(version);
+    PRINT_SETTING(devel_mode);
 }
 
 // -----------------  CONTROLLER  ------------------------------------
@@ -85,6 +212,7 @@ static menu_t menu[MAX_PAGE][MAX_MENU];
 
 static void display_menu(void);
 static void read_menu(void);
+static void settings_proc(void); //xxx
 
 static void controller(void)
 {
@@ -95,7 +223,7 @@ static void controller(void)
 
     while (true) {
         // xxx reset other stuff here too, fontsz, color
-        sdl_display_init(COLOR_TEAL);
+        sdl_display_init(MENU_BG_COLOR);
 
         // display menu, and register for sdl events
         display_menu();
@@ -130,19 +258,26 @@ static void controller(void)
             // xxx check that menu entry is defined
             int pg = event_id / MAX_MENU;
             int id = event_id % MAX_MENU;
-            char working_dir[100];
 
-            INFO("running %s\n", menu[pg][id].name);
-            sprintf(working_dir, "apps/%s", menu[pg][id].dir);
-            chdir(working_dir);
-            rc = picoc_fg(menu[pg][id].args);
-            chdir("../..");
-            INFO("done %s, rc=%d\n", menu[pg][id].name, rc);
+            if (pg == 0 && id == MAX_MENU-1) {
+                INFO("running Settings\n");
+                settings_proc();
+                INFO("done Settings\n");
+            } else {
+                char working_dir[100];
+                INFO("running %s\n", menu[pg][id].name);
+                sprintf(working_dir, "apps/%s", menu[pg][id].dir);
+                chdir(working_dir);
+                rc = picoc_fg(menu[pg][id].args);
+                chdir("../..");
+                INFO("done %s, rc=%d\n", menu[pg][id].name, rc);
+            }
         }
     }
 
     sdl_exit();
 }
+
 
 static void display_menu(void)
 {
@@ -236,8 +371,9 @@ static void display_menu(void)
     // xxx
     int chw, chh;
 
-    sdl_print_init(10, COLOR_WHITE, COLOR_TEAL, &chw, &chh, NULL, NULL);
+    sdl_print_init(10, COLOR_WHITE, MENU_BG_COLOR, &chw, &chh, NULL, NULL);
 
+    // xxx use loc returned by print
     #define DISPLAY_CONTROL_ITEM(col,str,evid) \
         do { \
             int x = (win_width/3/2) + (col) * (win_width/3); \
@@ -247,13 +383,18 @@ static void display_menu(void)
             sdl_register_event(&loc, evid); \
         } while (0)
 
-    DISPLAY_CONTROL_ITEM(0,"<",EVID_PAGE_DECREMENT);
-    DISPLAY_CONTROL_ITEM(1,">",EVID_PAGE_INCREMENT);
+    // xxx no arrows if not needed
+    if (last_page > 0) {
+        DISPLAY_CONTROL_ITEM(0,"<",EVID_PAGE_DECREMENT);
+        DISPLAY_CONTROL_ITEM(1,">",EVID_PAGE_INCREMENT);
+    }
     DISPLAY_CONTROL_ITEM(2,"X",EVID_QUIT);
 
-    sdl_print_init(20, COLOR_WHITE, COLOR_TEAL, &chw, &chh, NULL, NULL);
+    // init print xxx needed ?  maybe do at top
+    //sdl_print_init(20, COLOR_WHITE, MENU_BG_COLOR, &chw, &chh, NULL, NULL);
+
     // xxx display "Menu" as title
-    sdl_render_printf(true, win_width-chw/2, chh/2, "%d", page);
+    //sdl_render_printf(true, win_width-chw/2, chh/2, "%d", page);
 }
 
 static void read_menu(void)
@@ -268,7 +409,7 @@ static void read_menu(void)
 
     // construct menu_path, if not already done so
     if (menu_path[0] == '\0') {
-        sprintf(menu_path, "%s/apps/menu", internal_storage_path);
+        sprintf(menu_path, "%s/apps/menu", storage_path);
     }
 
     // if menu file has not changed then return
@@ -343,13 +484,77 @@ static void read_menu(void)
     // close menu file
     fclose(fp);
 
+    // xxx
+    menu[0][MAX_MENU-1].name = strdup("Settings");
+    menu[0][MAX_MENU-1].dir  = NULL;
+    menu[0][MAX_MENU-1].args = NULL;
+
     // debug print the new menu
     INFO("menu is now ...\n");
     for (pg = 0; pg < MAX_PAGE; pg++) {
         for (id = 0; id < MAX_MENU; id++) {
             if (menu[pg][id].name != NULL) {
-                INFO("%2d %2d %16s %8s %s\n", pg, id, menu[pg][id].name, menu[pg][id].dir, menu[pg][id].args);
+                INFO("%2d %2d  %16s  %8s  %s\n", pg, id, menu[pg][id].name, menu[pg][id].dir, menu[pg][id].args);
             }
+        }
+    }
+}
+
+#define ROW2Y(r) ((r) * char_height)  // xxx ctr vs ...
+#define ROW2Y_CTR(r) ((r) * char_height + char_height/2)
+#define NK2X(n,k) ((win_width/2/(n)) + (k) * (win_width/(n)))
+
+static void settings_proc(void)
+{
+    int char_height;
+    int event_id;
+    sdl_loc_t *loc;
+    bool quit = false;
+
+    INFO("SETTINGS\n");
+
+#define EVID_DEVEL_MODE 1000
+#define EVID_RESET_APPS 1001
+    while (true) {
+        sdl_print_init(20, COLOR_WHITE, COLOR_BLACK, NULL, &char_height, NULL, NULL);
+
+        sdl_display_init(COLOR_BLACK);
+
+        sdl_render_text(true, win_width/2, char_height/2, "Settings");
+
+        loc = sdl_render_printf(false, 0, ROW2Y(2), "Devel_Mode = %ld", settings.devel_mode);
+        sdl_register_event(loc, EVID_DEVEL_MODE);
+
+        loc = sdl_render_printf(false, 0, ROW2Y(4), "Reset_Apps");
+        sdl_register_event(loc, EVID_RESET_APPS);
+
+        int chh = char_height;
+        DISPLAY_CONTROL_ITEM(2,"X",EVID_QUIT);
+
+        sdl_display_present();
+
+        event_id = sdl_get_event(-1);
+        if (event_id == -1) {
+            continue;
+        }
+
+        // process the event
+        INFO("proc event_id %d\n", event_id);
+        switch (event_id) {
+        case EVID_DEVEL_MODE:
+            settings.devel_mode = (settings.devel_mode ? 0 : 1);
+            write_settings();
+            break;
+        case EVID_RESET_APPS:
+            create_default_apps();
+            break;
+        case EVID_QUIT:
+            quit = true;
+            break;
+        }
+
+        if (quit) {
+            break;
         }
     }
 }
@@ -367,6 +572,7 @@ static void *server_thread(void *cx)
     int                listen_sockfd, ret;
     pthread_t          tid;
 
+    sleep(1);
     INFO("SERVER_THREAD STARTING\n");
 
     // create listen socket
@@ -407,7 +613,7 @@ static void *server_thread(void *cx)
 
     // accept and process connections
     INFO("accepting connections\n");
-    server_thread_running = true;
+    server_thread_running = true;  // xxx needed?
     while (1) {
         int                sockfd;
         struct sockaddr_in peer_addr;
@@ -496,7 +702,7 @@ static void process_req_using_android_sh(int sockfd, char *cmd)
     dup2(sockfd, 1);
     dup2(sockfd, 2);
 
-    sprintf(cmd2, "cd %s; %s", internal_storage_path, cmd);
+    sprintf(cmd2, "cd %s; %s", storage_path, cmd);
     argv[0] = "/bin/sh";
     argv[1] = "-c";
     argv[2] = cmd2;
