@@ -72,7 +72,7 @@ static int              max_event;
 // prototypes
 //
 
-static int process_sdl_event(SDL_Event *ev, sdl_event_data_t *event_data);
+static void process_sdl_event(SDL_Event *ev, sdl_event_t *event);
 static void set_render_draw_color(int color);
 
 // ----------------- INIT / EXIT --------------------------
@@ -212,12 +212,14 @@ void sdl_register_event(sdl_loc_t *loc, int event_id)
 //   -1:     wait forever
 //    0:     don't wait
 //    usecs: timeout
-int sdl_get_event(long timeout_us, sdl_event_data_t *event_data)
+void sdl_get_event(long timeout_us, sdl_event_t *event)
 {
     SDL_Event ev;
-    int event_id = -1;
     int ret;
     long waited = 0;
+
+    memset(event, 0, sizeof(*event));
+    event->event_id = -1;
 
 try_again:
     // get event
@@ -227,7 +229,7 @@ try_again:
     if (ret == 0) {
         if (timeout_us == 0) {
             // dont wait
-            return -1;
+            return;
         } else if (timeout_us < 0 || waited < timeout_us) {
             // either wait forever or time waited is less than timeout_us
             usleep(1000);
@@ -235,28 +237,27 @@ try_again:
             goto try_again;
         } else {
             // time waited exceeds timeout_us
-            return -1;
+            return;
         }
     }
 
-    // process the sdl_event; this may or may not return an event_id
-    event_id = process_sdl_event(&ev, event_data);
-    if (event_id == -1) {
+    // process the sdl_event; this may or may not return an event
+    process_sdl_event(&ev, event);
+    if (event->event_id == -1) {
         goto try_again;
     }
 
-    // got an event_id, return it
-    return event_id;
+    // an event was returned from process_sdl_event
+    return;
 }
 
-static int process_sdl_event(SDL_Event *ev, sdl_event_data_t *event_data)
+static void process_sdl_event(SDL_Event *ev, sdl_event_t *event)
 {
     #define AT_LOC(X,Y,loc) (((X) >= (loc).x - (loc).w / 2)   && \
                              ((X) <= (loc).x + (loc).w / 2)   && \
                              ((Y) >= (loc).y - (loc).h / 2)   && \
                              ((Y) <= (loc).y + (loc).h / 2))
 
-    int event_id = -1;
     int i;
 
     switch (ev->type) {
@@ -287,13 +288,13 @@ static int process_sdl_event(SDL_Event *ev, sdl_event_data_t *event_data)
 
             INFO("button released xy = %d %d, delta xy = %d %d\n", x, y, delta_x, delta_y);
 
-            if (delta_x > 200) {
+            if (delta_x > 500) {
                 INFO("got EVID_SWIPE_RIGHT %d %d\n", delta_x, delta_y);
-                event_id = EVID_SWIPE_RIGHT;
+                event->event_id = EVID_SWIPE_RIGHT;
                 break;
-            } else if (delta_x < -200) {
+            } else if (delta_x < -500) {
                 INFO("got EVID_SWIPE_LEFT %d %d\n", delta_x, delta_y);
-                event_id = EVID_SWIPE_LEFT;
+                event->event_id = EVID_SWIPE_LEFT;
                 break;
             }
 
@@ -302,27 +303,28 @@ static int process_sdl_event(SDL_Event *ev, sdl_event_data_t *event_data)
                     break;
                 }
             }
-            if (i < max_event) {
-                event_id = event_tbl[i].event_id;
+            if (i < max_event &&
+                AT_LOC(last_pressed_x, last_pressed_y, event_tbl[i].loc))
+            {
+                event->event_id = event_tbl[i].event_id;
             }
         }
         break; }
     case SDL_MOUSEMOTION: {
-#if 0
-        INFO("MOUSEMOTION state=%s x=%d y=%d xrel=%d yrel=%d\n",
-               (ev->motion.state == SDL_PRESSED  ? "PRESSED" :
-                ev->motion.state == SDL_RELEASED ? "RELEASED" : "???"),
-               ev->motion.x,
-               ev->motion.y,
-               ev->motion.xrel,
-               ev->motion.yrel);
-#endif
-        if (event_data != NULL) {
-            event_data->u.motion.x = ev->motion.x;
-            event_data->u.motion.y = ev->motion.y;
-            event_data->u.motion.xrel = ev->motion.xrel;
-            event_data->u.motion.yrel = ev->motion.yrel;
-            event_id = EVID_MOTION;
+        if (ev->motion.state == SDL_PRESSED) {
+            INFO("MOUSEMOTION state=%s x=%d y=%d xrel=%d yrel=%d\n",
+                (ev->motion.state == SDL_PRESSED  ? "PRESSED" :
+                 ev->motion.state == SDL_RELEASED ? "RELEASED" : "???"),
+                ev->motion.x,
+                ev->motion.y,
+                ev->motion.xrel,
+                ev->motion.yrel);
+
+            event->event_id = EVID_MOTION;
+            event->u.motion.x = ev->motion.x;
+            event->u.motion.y = ev->motion.y;
+            event->u.motion.xrel = ev->motion.xrel;
+            event->u.motion.yrel = ev->motion.yrel;
         }
         break; }
     case SDL_FINGERDOWN:
@@ -331,15 +333,13 @@ static int process_sdl_event(SDL_Event *ev, sdl_event_data_t *event_data)
         // not used
         break; }
     case SDL_QUIT: {
-        event_id = EVID_QUIT;
+        event->event_id = EVID_QUIT;
         break; }
 
     default: {
         //INFO("event_type %d - not supported\n", ev->type);
         break; }
     }
-
-    return event_id;
 }
 
 // -----------------  COLORS  -----------------------------
@@ -469,12 +469,14 @@ void sdl_print_init(double numchars, int fg_color, int bg_color)
     sdl_char_height = rint(sdl_char_width / 0.6);
 }
 
-sdl_loc_t *sdl_render_text(bool xy_is_ctr, int x, int y, char * str)
+static sdl_loc_t *render_text(bool xy_is_ctr, int x, int y, char * str)
 {
     SDL_Surface *surface;
     SDL_Texture *texture;
     SDL_Rect     pos;
     static sdl_loc_t loc;
+
+    //printf("xy_is_ctr = %d x=%d y=%d str='%s'\n", xy_is_ctr, x, y, str);
 
     // if font not initialized then return error
     if (font[text.ptsize] == NULL) {
@@ -519,13 +521,57 @@ sdl_loc_t *sdl_render_text(bool xy_is_ctr, int x, int y, char * str)
     loc.y = (pos.y + pos.h / 2) / scale;
     loc.w = pos.w / scale;
     loc.h = pos.h / scale;
+// xxx enforce minimum w,h in loc
     if (loc.w < loc.h) {
         loc.w = loc.h;
     }
     return &loc;
 }
 
-sdl_loc_t *sdl_render_printf(bool xy_is_ctr, int x, int y, char * fmt, ...)
+void sdl_render_multiline_text(int y_top, int y_display_begin, int y_display_end, char * str)
+{
+    char line[1000], *p;
+    int len;
+    int y = y_top;
+
+    while (str[0]) {
+        // get line
+        p = strchr(str, '\n');
+        len = (p == NULL ? strlen(str) : p-str);
+        memcpy(line, str, len);
+        line[len] = '\0';
+        //printf("LINE '%s'\n", line);
+
+        // if y pos of line is below the bottom of the
+        // display region then break
+        if (y > y_display_end - sdl_char_height) {
+            break;
+        }
+
+        // if y loc of line is at or below the begining of the display
+        // region then render the line
+        if (y >= y_display_begin && len > 0) {
+            render_text(false, 0, y, line);
+        }
+
+        // advance y and str to the next line
+        y += sdl_char_height;
+        str += len;
+        if (str[0] == '\n') str++;
+    }
+}
+
+sdl_loc_t *sdl_render_text(int x, int y, char * str)
+{
+    return render_text(false, x, y, str);
+}
+
+sdl_loc_t *sdl_render_text_xyctr(int x, int y, char * str)
+{
+    return render_text(true, x, y, str);
+}
+
+sdl_loc_t *sdl_render_printf(int x, int y, char * fmt, ...)
 {
     char str[1000];
     va_list ap;
@@ -534,8 +580,22 @@ sdl_loc_t *sdl_render_printf(bool xy_is_ctr, int x, int y, char * fmt, ...)
     vsnprintf(str, sizeof(str), fmt, ap);
     va_end(ap);
 
-    return sdl_render_text(xy_is_ctr, x, y, str);
+    return sdl_render_text(x, y, str);
 }
+
+sdl_loc_t *sdl_render_printf_xyctr(int x, int y, char * fmt, ...)
+{
+    char str[1000];
+    va_list ap;
+
+    va_start(ap, fmt);
+    vsnprintf(str, sizeof(str), fmt, ap);
+    va_end(ap);
+
+    return sdl_render_text_xyctr(x, y, str);
+}
+
+
 
 // -----------------  RENDER RECTANGLES, LINES, CIRCLES, POINTS  --------------------
 

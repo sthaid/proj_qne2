@@ -41,12 +41,13 @@ typedef struct {
 typedef struct sdl_texture sdl_texture_t;
 
 typedef struct {
+    int event_id;
     union {
         struct {
             int x, y, xrel, yrel;
         } motion;
-    } u;  // xxx is u needed
-} sdl_event_data_t;
+    } u;
+} sdl_event_t;
 
 //
 // global variables
@@ -71,7 +72,7 @@ void sdl_display_present(void);
 
 // event registration and query
 void sdl_register_event(sdl_loc_t *loc, int event_id);
-int sdl_get_event(long timeout_us, sdl_event_data_t *event_data);
+void sdl_get_event(long timeout_us, sdl_event_t *event);
 
 // create colors
 int sdl_create_color(int r, int g, int b, int a);
@@ -80,8 +81,11 @@ int sdl_wavelength_to_color(int wavelength);
 
 // render text
 void sdl_print_init(double numchars, int fg_color, int bg_color);
-sdl_loc_t *sdl_render_text(bool xy_is_ctr, int x, int y, char *str);
-sdl_loc_t *sdl_render_printf(bool xy_is_ctr, int x, int y, char *fmt, ...) __attribute__ ((format (printf, 4, 5)));
+sdl_loc_t *sdl_render_text(int x, int y, char *str);
+sdl_loc_t *sdl_render_printf(int x, int y, char *fmt, ...) __attribute__ ((format (printf, 3, 4)));
+sdl_loc_t *sdl_render_text_xyctr(int x, int y, char *str);
+sdl_loc_t *sdl_render_printf_xyctr(int x, int y, char *fmt, ...) __attribute__ ((format (printf, 3, 4)));
+void sdl_render_multiline_text(int y_top, int y_display_begin, int y_display_end, char * str);
 
 // render rectangle, lines, circles, points
 void sdl_render_rect(int x, int y, int w, int h, int line_width, int color);

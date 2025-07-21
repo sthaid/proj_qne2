@@ -38,9 +38,9 @@ rm stub.c
 echo
 
 # extract SDL2_ttf source code to build dir
-echo "Extractng SDL2_ttf-2.0.15.tar.gz"
+echo "Extractng SDL2_ttf-2.0.18.tar.gz"
 cd $BUILD/app/jni
-tar -xf $TOP/setup_files/SDL2_ttf-2.0.15.tar.gz
+tar -xf $TOP/setup_files/SDL2_ttf-2.0.18.tar.gz
 echo
 
 # update some build files in $BUILD

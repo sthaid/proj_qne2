@@ -232,7 +232,7 @@ static void controller(void)
         sdl_display_present();
 
         // wait for an event, 1 sec timeout
-        event_id = sdl_get_event(1000000);
+        event_id = sdl_get_event(1000000, NULL);
         if (event_id == -1) {
             continue;
         }
@@ -354,10 +354,10 @@ static void display_menu(void)
 
         sdl_print_init(numchars, COLOR_WHITE, COLOR_BLUE);
         if (len2 == 0) {
-            sdl_render_text(true, x, y, str1);
+            sdl_render_text_xyctr(x, y, str1);
         } else {
-            sdl_render_text(true, x, rint(y-0.5*chh), str1);
-            sdl_render_text(true, x, rint(y+0.5*chh), str2);
+            sdl_render_text_xyctr(x, rint(y-0.5*chh), str1);
+            sdl_render_text_xyctr(x, rint(y+0.5*chh), str2);
         }
 
         // register event
@@ -377,7 +377,7 @@ static void display_menu(void)
             int x = (sdl_win_width/3/2) + (col) * (sdl_win_width/3); \
             int y = sdl_win_height - sdl_char_height/2; \
             sdl_loc_t loc = {x, y, 2*RADIUS, 2*RADIUS}; \
-            sdl_render_text(true, x, y, str); \
+            sdl_render_text_xyctr(x, y, str); \
             sdl_register_event(&loc, evid); \
         } while (0)
 
@@ -521,30 +521,30 @@ static void settings_proc(void)
 
         sdl_display_init(COLOR_BLACK);
 
-        sdl_render_text(true, sdl_win_width/2, sdl_char_height/2, "Settings");
+        sdl_render_text_xyctr(sdl_win_width/2, sdl_char_height/2, "Settings");
 
         if (!reset_apps_confirm) {
-            loc = sdl_render_printf(false, 0, ROW2Y(2), "Devel_Mode = %ld", settings.devel_mode);
+            loc = sdl_render_printf(0, ROW2Y(2), "Devel_Mode = %ld", settings.devel_mode);
             sdl_register_event(loc, EVID_DEVEL_MODE);
 
-            loc = sdl_render_printf(false, 0, ROW2Y(4), "Reset_Apps");
+            loc = sdl_render_printf(0, ROW2Y(4), "Reset_Apps");
             sdl_register_event(loc, EVID_RESET_APPS);
 
-            sdl_render_printf(false, 0, ROW2Y(6), "Version = %ld", settings.version);
+            sdl_render_printf(0, ROW2Y(6), "Version = %ld", settings.version);
 
-            sdl_render_printf(false, 0, ROW2Y(8), "Copyright");
+            sdl_render_printf(0, ROW2Y(8), "Copyright");
 
             sdl_print_init(40, COLOR_WHITE, COLOR_BLACK);
-            sdl_render_printf(false, 0, sdl_win_height-100, 
+            sdl_render_printf(0, sdl_win_height-100, 
 "123456789 123456789 123456789 123456789 123456789 123456789 123456789 123456789 ");
 
         } else {
-            sdl_render_printf(false, 0, ROW2Y(4), "Reset_Apps?");
+            sdl_render_printf(0, ROW2Y(4), "Reset_Apps?");
 
-            loc = sdl_render_printf(false, 0, ROW2Y(6), "Confirm");
+            loc = sdl_render_printf(0, ROW2Y(6), "Confirm");
             sdl_register_event(loc, EVID_RESET_APPS_CONFIRM);
 
-            loc = sdl_render_printf(false, sdl_win_width/2, ROW2Y(6), "Cancel");
+            loc = sdl_render_printf(sdl_win_width/2, ROW2Y(6), "Cancel");
             sdl_register_event(loc, EVID_RESET_APPS_CANCEL);
         }
 
@@ -553,7 +553,7 @@ static void settings_proc(void)
 
         sdl_display_present();
 
-        event_id = sdl_get_event(-1);
+        event_id = sdl_get_event(-1, NULL);
         if (event_id == -1) {
             continue;
         }
