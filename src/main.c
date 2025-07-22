@@ -215,7 +215,8 @@ static void settings_proc(void); //xxx
 
 static void controller(void)
 {
-    int event_id, rc;
+    int rc;
+    sdl_event_t event;
 
     rc = sdl_init(); //xxx handle ret
     INFO("sdl_win_width,height = %d %d  sdl_char_width,height=%d %d\n",
@@ -232,32 +233,32 @@ static void controller(void)
         sdl_display_present();
 
         // wait for an event, 1 sec timeout
-        event_id = sdl_get_event(1000000, NULL);
-        if (event_id == -1) {
+        sdl_get_event(1000000, &event);
+        if (event.event_id == -1) {
             continue;
         }
 
         // process the event
-        INFO("proc event_id %d\n", event_id);
-        if (event_id == EVID_QUIT) {
+        INFO("proc event_id %d\n", event.event_id);
+        if (event.event_id == EVID_QUIT) {
             break;
-        } else if (event_id == EVID_PAGE_DECREMENT) {
+        } else if (event.event_id == EVID_PAGE_DECREMENT) {
             INFO("XXX GOT PAGE LEFT XXX\n");
             if (--page < 0) {
                 page = last_page;
             }
-        } else if (event_id == EVID_PAGE_INCREMENT) {
+        } else if (event.event_id == EVID_PAGE_INCREMENT) {
             INFO("XXX GOT PAGE RIGHT XXX\n");
             if (++page > last_page) {
                 page = 0;
             }
-        } else if (event_id == EVID_QUIT) {
+        } else if (event.event_id == EVID_QUIT) {
             INFO("XXX GOT QUIT XXX\n");
             break;
         } else {
             // xxx check that menu entry is defined
-            int pg = event_id / MAX_MENU;
-            int id = event_id % MAX_MENU;
+            int pg = event.event_id / MAX_MENU;
+            int id = event.event_id % MAX_MENU;
 
             if (pg == 0 && id == MAX_MENU-1) {
                 INFO("running Settings\n");
@@ -504,7 +505,7 @@ static void read_menu(void)
 
 static void settings_proc(void)
 {
-    int event_id;
+    sdl_event_t event;
     sdl_loc_t *loc;
     bool quit = false;
     bool reset_apps_confirm = false;
@@ -530,6 +531,7 @@ static void settings_proc(void)
             loc = sdl_render_printf(0, ROW2Y(4), "Reset_Apps");
             sdl_register_event(loc, EVID_RESET_APPS);
 
+//xxx version 1st?
             sdl_render_printf(0, ROW2Y(6), "Version = %ld", settings.version);
 
             sdl_render_printf(0, ROW2Y(8), "Copyright");
@@ -553,21 +555,20 @@ static void settings_proc(void)
 
         sdl_display_present();
 
-        event_id = sdl_get_event(-1, NULL);
-        if (event_id == -1) {
+        sdl_get_event(-1, &event);
+        if (event.event_id == -1) {
             continue;
         }
 
         // process the event
-        INFO("proc event_id %d\n", event_id);
-        switch (event_id) {
+        INFO("proc event_id %d\n", event.event_id);
+        switch (event.event_id) {
         case EVID_DEVEL_MODE:
             settings.devel_mode = (settings.devel_mode ? 0 : 1);
             write_settings();
             break;
         case EVID_RESET_APPS:
             reset_apps_confirm = true;
-            //create_default_apps();
             break;
         case EVID_RESET_APPS_CONFIRM:
             create_default_apps();

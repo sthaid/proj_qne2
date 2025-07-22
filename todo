@@ -1,81 +1,122 @@
-rename to ez_apps
 
-register for swipe and motion events
+add networking support for apps, test in unit_test
 
-motion returns extra data
-- x,y,xrel,yrel
+new utils.h for picoc
+- microsec_timer
+- test this in unit_test app
 
-copyright code
-- assets file for copyright
-- read file 
-- display from top of file
-- add y motion
+apps now:
+- rename hello.c to unit_test,  and finish it
 
----------
-
-make new printf routine for ctr
-
-
- VariableDefinePlatformVar(NULL,
-                                                  "RobotIsExploding",
-                                                  &IntType,
-                                                  (union AnyValue*)&RobotIsExploding,
-                                                  false);
-
-
-
-make minimum loc size
-
-make sdl global vars for win_width,height, char width, height
-- remove get_size
-- remove args from printinit
-- dont need win_rows cols
-
-swipe up causes crash in menu
-
-maybe dont need sdl_print_init
-
-sdl_print_init ?
+settings menu, finish this up, and check order
+- copyright
+  - assets file for copyright
+  - read file 
+- version.c, put this in startup line, include build data time and git commit
 
 devel mode
 - don't allow any new connections, or process any in progress
 
-settings menu entry
-- version
-- reset_apps, are you sure
-- copyright,  scrolling with mouse
+make minimum loc size
+- larger loc around matching events
 
-dont swipe up to exit
+audio support
 
+sdl
+- ability to save a pixels file, and restore a texture from it
 
-reset_apps
-- at init time, if apps dir not present
-- and when selected in settings
+---- new platform routines ----
 
+clock_gettime
+socket
+connect
+send
+recv
+read,  write  are these already there?
 
----- done ---
-settings
-- devel_mode
-- reset_apps
-
-devel mode
-- purple screen
-
-settings file
-- version
-- devel_mode
-- spares follow
+long sdl_microsec_timer(void) {
+    struct timespec ts;
+    clock_gettime(CLOCK_MONOTONIC, &ts);
+    return ts.tv_sec * 1000000L + ts.tv_nsec / 1000L;
+}
 
 
-init routine
-- read settings when starting
+----
 
-makefile
+sensor support
+
+apps continue:
+- add primes
+- work on reversi
+
+swipe up causes crash in menu - RETEST
+
+android:
+- build and test android
+- end program problem on android
+- get at assets files and add the reset apps support
 - create apps tarfile, and put in assets
+- read settings at startup, and create file if not exist
 
+misc
+- add pthread_create_detached
+
+tools
+- need IP addr, and port
+- settings, needs port
+- should cd to topdir ???
+
+events:
+- register for swipe and motion events - MAYBE NOT
+- keyboard events, for testing on linux
+
+rename to ez_apps
+- and updat tools
+
+--------------
+---- apps ----
+--------------
+
+- unit_test
+- primes
+- clock
+- reversi
+- morse_code
+- tic tack toe
+- blackjack
+- pong
+
+sensor apps
+- lat/long
+- flashlight app
+- compass
+
+--------------
+---- later ---
+--------------
+
+add auto start service when phone boots
+
+stop creating sdl.o in src dir, picoc build
+
+code formatting
+- replace 'xxx * s' with 'xxx *s'
+- replace qne, with 'ez'
+- make a new repo
+- limit use of int32_t
+
+README files
+
+test with both windows and linux developer 
+- is windows crlf a problem
+
+use netcat instead  MAYBE
+- is netcat on windows,  YES, but would it work the same as linux
+
+--------------
 ---- info ----
+--------------
 
-dir struct
 files  (TOP)
 - log
 - settings
@@ -83,170 +124,8 @@ files  (TOP)
   - menu
   - hello ...
   - reversi ...
-================================
-================================
-================================
-================================
-
---------------
-
-
-redo tools, with better names
-- use ez_apps  
-
-
---------------
-
-build linux app simulator
-include tar of the apps in the assets
-populate when prog starts
-add buttons:
-- reset
-- devel
-
------------
-
-move src to common dir ?
-
-api to provide ctr coords instead of top left
-- update menu code
-- upde hello.c
-
-finish hello.c code
-
-tools
-- add vitool
-- tools/todo dir
-- tools/save dir has tests for the apps
-- maybe run cmd should allow multiple args
-
-------
-
-dont use logical size
-
-
-xxxxxxxxxxx
-
-simplify how test_linux and test_picoc work
-
-use bigger font, or expand mouse area for controls on bottom      <=========
-
-unit_test pgm      <=========
-- test sdl_create_texture_from_display
-  - sdl_query_texture
-- event processing ?
-- sdl_create_color
-- printing with and without nk
-- first page should handle events to jump to specific pages
-- sdl_render_points
-
-improve controller menu
-
-apps ...
-- devel mode   <=======
-- prime num   <=======
-- unit test   <=====
-- copy right
-- clock
-- reversi
-- morse code test
-
-use netcat instead  <========
-- is netcat on windows  <========  YES
-
-end program prblem
-
-redo dir struct  <===========
-
-devel mode support  <===========
-
-README files
-
-menu  <==========
-- menu icons, circle plus one or two lines of text
-  - sizeof of text auto determined
-- multiple menu screens
-
-display multi lines of text
-- use pgup/down or vertical scroll with mouse
 
 picoc
-- unit test multiple c files , with common hdr file   <=======  DONE
-- add Sdl_render_text_nk
-- Sdl_render_printf_nk use win_width and char_width   <======== DONE
-
-misc
-- does log file have to be in files?
-
-code
--rw-rw-r-- 1 haid haid 4.4K Jul 12 13:22 utils.c
--rw-rw-r-- 1 haid haid 1.2K Jul 10 08:21 utils.h
-- add pthread_create_detached
-- get rid of FATAL   <===========
--rw-rw-r-- 1 haid haid 9.2K Jul 12 13:21 main.c
-- misc xxx marked
--rw-rw-r-- 1 haid haid  35K Jul 13 19:25 sdl.c
--rw-rw-r-- 1 haid haid 2.7K Jul 13 19:17 sdl.h
-- misc
-- is sdl_create_texture_from_display needed
-
-code formatting
-- replace 'xxx * s' with 'xxx *s'
-
-test with both windows and linux developer 
-- is windows crlf a problem
-
-
----------------
-
-need win_width
-
-rename to micro apps = u-apps
-
-dir struct
-
-hello test pgm
-- rotation
-- font int, chars across
-
-screen size scaling, to 1000 width x N height
-- try SDL_RenderSetLogicalSize
-
-xxxxxxxxxxx
-
-add mouse swipe detection
-
-rotate texture with SDL_RenderCopyEx
-
-avoid calling sdl_init from hello.c on android
-
-check size of font on Android
-
-picoc.c arg0
-
-pthread_creae detached
-
-larger loc around matching events
-
-adb_connect not working
-
-hello.c
-- unit test 
-- swipe to change screens
-- screen 0 = clock
-- screen 1 = font
-- screen 2 = render text and rectangles, etc
-- screen 3 = textures
-- screen 4 = sizeof prints
-
-renmae the qapps/bin/*
-
-shutdown the app?
-
-error messages
-FORTIFY: pthread_mutex_lock called on a destroyed mutex (0x719a7a8b18)
-
-picoc - comment these
 sizoef(char)      = 1
 sizoef(short)     = 2
 sizoef(int)       = 4
@@ -257,7 +136,8 @@ sizoef(time_t)    = 4
 sizeof(123)       = 8
 sizeof(123UL)     = 8
 sizeof sdl_rect   = 8
-Q app
+
+android
 07/06/25 21:02:17.494 INFO SDL_main: sizoef(char)      = 1
 07/06/25 21:02:17.494 INFO SDL_main: sizoef(short)     = 2
 07/06/25 21:02:17.494 INFO SDL_main: sizoef(int)       = 4
@@ -266,8 +146,16 @@ Q app
 07/06/25 21:02:17.494 INFO SDL_main: sizoef(off_t)     = 8
 07/06/25 21:02:17.494 INFO SDL_main: sizoef(time_t)    = 8
 
+================================
+============  SAVE  ============
+================================
 
-cmds should cd to topdir
+tools
+- add vitool
+- tools/todo dir
+- tools/save dir has tests for the apps
+- maybe run cmd should allow multiple args
+
 
 these all need to get ip addr and password
 -rwxr-xr-x 1 haid haid   44 Jul  5 16:50 adbc 
@@ -281,29 +169,6 @@ these all need to get ip addr and password
 -rwxr-xr-x 1 haid haid  601 Jul  6 10:23 get
 -rwxr-xr-x 1 haid haid  429 Jul  6 11:00 get_tar
 -rwxr-xr-x 1 haid haid  421 Jul  6 10:39 put
-
-read sensor using ndk
-
-add sdl rotate texture, and add a analog clock to hello.c
-
-port reversi
-
-reset cmd
-- make tar file and put in resources
-
-ideas for apps:
-- reversi
-- tic tack toe
-- blackjack
-- pong
-- compass
-- lat/long
-- flashlight app
-
-limit use of int32_t
-
-version.c, put this in startup line, include build data time and git commit
----------
 
 ================
 SENSOR ACCSS
@@ -424,14 +289,6 @@ app/src/main/res
 ./app/src/main/res/values/styles.xml
 ./app/src/main/res/mipmap-xxhdpi/ic_launcher.png
 ./app/src/main/res/mipmap-xxxhdpi/ic_launcher.png
-
-==================
-todo
-==================
-
-qne app
-- add auto start service when phone boots
-- add fuse support, connect to fuse svc running on my ubunut pc
 
 ================
 c interpreter
