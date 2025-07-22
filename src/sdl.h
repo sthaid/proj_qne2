@@ -86,6 +86,7 @@ sdl_loc_t *sdl_render_printf(int x, int y, char *fmt, ...) __attribute__ ((forma
 sdl_loc_t *sdl_render_text_xyctr(int x, int y, char *str);
 sdl_loc_t *sdl_render_printf_xyctr(int x, int y, char *fmt, ...) __attribute__ ((format (printf, 3, 4)));
 void sdl_render_multiline_text(int y_top, int y_display_begin, int y_display_end, char * str);
+void sdl_render_multiline_text_2(int y_top, int y_display_begin, int y_display_end, char **lines, int n);
 
 // render rectangle, lines, circles, points
 void sdl_render_rect(int x, int y, int w, int h, int line_width, int color);
@@ -97,11 +98,11 @@ void sdl_render_point(int x, int y, int color, int point_size);
 void sdl_render_points(sdl_point_t *points, int count, int color, int point_size);
 
 // render using textures
+sdl_texture_t *sdl_create_texture(int w, int h);
 sdl_texture_t *sdl_create_texture_from_display(int x, int y, int w, int h);
-sdl_texture_t *sdl_create_texture_from_pixels(int w, int h, int *pixels);
 sdl_texture_t *sdl_create_filled_circle_texture(int radius, int color);
 sdl_texture_t *sdl_create_text_texture(char *str);
 void sdl_render_texture(int x, int y, int w, int h, double angle, sdl_texture_t *texture);
 void sdl_destroy_texture(sdl_texture_t *texture);
-void sdl_update_texture(sdl_texture_t *texture, int *pixels);  //xxx region
+void sdl_update_texture(sdl_texture_t *texture, int *pixels);  //xxx add region
 void sdl_query_texture(sdl_texture_t *texture, int *w, int *h);

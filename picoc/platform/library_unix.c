@@ -204,6 +204,18 @@ void Sdl_render_multiline_text (struct ParseState *Parser, struct Value *ReturnV
     sdl_render_multiline_text(y_top, y_display_begin, y_display_end, str);
 }
 
+void Sdl_render_multiline_text_2 (struct ParseState *Parser, struct Value *ReturnValue,
+	struct Value **Param, int NumArgs)
+{
+    int    y_top           = Param[0]->Val->Integer;
+    int    y_display_begin = Param[1]->Val->Integer;
+    int    y_display_end   = Param[2]->Val->Integer;
+    char **lines           = Param[3]->Val->Pointer;
+    int    n               = Param[4]->Val->Integer;
+
+    sdl_render_multiline_text_2(y_top, y_display_begin, y_display_end, lines, n);
+}
+
 //
 // render rectangle, lines, circles, points
 //
@@ -293,6 +305,17 @@ void Sdl_render_points (struct ParseState *Parser, struct Value *ReturnValue,
 // render using textures
 //
 
+void Sdl_create_texture(struct ParseState *Parser, struct Value *ReturnValue,
+        struct Value **Param, int NumArgs)
+{
+    int w = Param[0]->Val->Integer;
+    int h = Param[1]->Val->Integer;
+    sdl_texture_t *texture;
+
+    texture = sdl_create_texture(w, h);
+    ReturnValue->Val->Pointer = (char*)texture; 
+}
+
 void Sdl_create_texture_from_display (struct ParseState *Parser, struct Value *ReturnValue,
 	struct Value **Param, int NumArgs)
 {
@@ -304,19 +327,6 @@ void Sdl_create_texture_from_display (struct ParseState *Parser, struct Value *R
     sdl_texture_t *texture;
 
     texture = sdl_create_texture_from_display(x, y, w, h);
-    ReturnValue->Val->Pointer = (char*)texture; 
-}
-
-void Sdl_create_texture_from_pixels (struct ParseState *Parser, struct Value *ReturnValue,
-        struct Value **Param, int NumArgs)
-{
-    int w       = Param[0]->Val->Integer;
-    int h       = Param[1]->Val->Integer;
-    int *pixels = (int*)Param[2]->Val->Pointer;
-
-    sdl_texture_t *texture;
-
-    texture = sdl_create_texture_from_pixels(w, h, pixels);
     ReturnValue->Val->Pointer = (char*)texture; 
 }
 
@@ -440,12 +450,13 @@ struct LibraryFunction SdlFunctions[] = {
     { Sdl_wavelength_to_color, "int sdl_wavelength_to_color(int wavelength);" },
 
     // render text
-    { Sdl_print_init,            "void sdl_print_init(double numchars, int fg_color, int bg_color);" },
-    { Sdl_render_text,           "sdl_loc_t *sdl_render_text(int x, int y, char *str);" },
-    { Sdl_render_printf,         "sdl_loc_t *sdl_render_printf(int x, int y, char *fmt, ...);" },
-    { Sdl_render_text_xyctr,     "sdl_loc_t *sdl_render_text_xyctr(int x, int y, char *str);" },
-    { Sdl_render_printf_xyctr,   "sdl_loc_t *sdl_render_printf_xyctr(int x, int y, char *fmt, ...);" },
-    { Sdl_render_multiline_text, "void sdl_render_multiline_text(int y_top, int y_display_begin, int y_display_end, char * str);" },
+    { Sdl_print_init,              "void sdl_print_init(double numchars, int fg_color, int bg_color);" },
+    { Sdl_render_text,             "sdl_loc_t *sdl_render_text(int x, int y, char *str);" },
+    { Sdl_render_printf,           "sdl_loc_t *sdl_render_printf(int x, int y, char *fmt, ...);" },
+    { Sdl_render_text_xyctr,       "sdl_loc_t *sdl_render_text_xyctr(int x, int y, char *str);" },
+    { Sdl_render_printf_xyctr,     "sdl_loc_t *sdl_render_printf_xyctr(int x, int y, char *fmt, ...);" },
+    { Sdl_render_multiline_text,   "void sdl_render_multiline_text(int y_top, int y_display_begin, int y_display_end, char * str);" },
+    { Sdl_render_multiline_text_2, "void sdl_render_multiline_text_2(int y_top, int y_display_begin, int y_display_end, char **lines, int n);" },
 
     // render rectangle, lines, circles, points
     { Sdl_render_rect,     "void sdl_render_rect(int x, int y, int w, int h, int line_width, int color);" },
@@ -457,8 +468,8 @@ struct LibraryFunction SdlFunctions[] = {
     { Sdl_render_points,   "void sdl_render_points(sdl_point_t *points, int count, int color, int point_size);" },
 
     // render using textures
+    { Sdl_create_texture,               "sdl_texture_t *sdl_create_texture(int w, int h);" },
     { Sdl_create_texture_from_display,  "sdl_texture_t *sdl_create_texture_from_display(int x, int y, int w, int h);" },
-    { Sdl_create_texture_from_pixels,   "sdl_texture_t *sdl_create_texture_from_pixels(int w, int h, int *pixels);" },
     { Sdl_create_filled_circle_texture, "sdl_texture_t *sdl_create_filled_circle_texture(int radius, int color);" },
     { Sdl_create_text_texture,          "sdl_texture_t *sdl_create_text_texture(char *str);" },
     { Sdl_render_texture,               "void sdl_render_texture(int x, int y, int w, int h, double angle, sdl_texture_t *texture);" },

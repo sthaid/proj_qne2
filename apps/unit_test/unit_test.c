@@ -1,5 +1,3 @@
-// This uapp provides unit test of the following:
-// xxx
 #include <stdio.h>
 #include <unistd.h>
 #include <time.h>
@@ -22,23 +20,23 @@
 #define ROW2Y_CTR(r) ((r) * sdl_char_height + sdl_char_height/2)
 
 #define NK2X(n,k) ((sdl_win_width/2/(n)) + (k) * (sdl_win_width/(n)))
-//#define NK2X(n,k) ((int)rint(((double)sdl_win_width/2/(n)) + (k) * ((double)sdl_win_width/(n))))
+
+#define EVID_PREV_PAGE   1
+#define EVID_NEXT_PAGE   2
+#define EVID_END_PROGRAM 3
 
 //
 // variables
 //
 
-sdl_texture_t *circle;  // xxx can these be static
-sdl_texture_t *text;
-sdl_texture_t *purple;
-
-sdl_event_t event;
+static sdl_event_t event;
 
 //
 // prototypes
 //
 
-static void page_4_cleanup(void);
+static void page_3_cleanup(void);
+static void page_5_cleanup(void);
 static void render_page(int n, bool init);
 static void render_page_0(bool init);
 static void render_page_1(bool init);
@@ -55,49 +53,42 @@ int main(int argc, char **argv)
     int  i;
     int  pagenum = 0;
     bool end_program = false;
-    bool is_qne_app = (argc > 0 && strcmp(argv[0], "qne_app") == 0);
-    bool init = false;
+    bool is_ez_app = (argc > 0 && strcmp(argv[0], "ez_app") == 0);
+    bool init = true;
 
     // print args 
     printf("argc = %d\n", argc);
     for (i = 0; i < argc; i++) {
         printf("argv[%d] = '%s'\n", i, argv[i]);
     }
-    printf("is_qne_app = %d\n", is_qne_app);
+    printf("is_ez_app = %d\n", is_ez_app);
 
-    // xxx
-    utils_proc();
-
-    // if not qne_app then call sdl_init
-    if (!is_qne_app && sdl_init() != 0) {
+    // if not ez_app then call sdl_init
+    if (!is_ez_app && sdl_init() != 0) {
         printf("ERROR: sdl_init failed\n");
         return 1;
     }
 
-    // get windows size xxx comment
+    // get window and char sized, these are global variables from sdl.c
     printf("sdl_win_width/height  = %d %d\n", sdl_win_width, sdl_win_height);
     printf("sdl_char_width/height = %d %d\n", sdl_char_width, sdl_char_height);
 
-#if 0
-    // initialize font for 20 chars across display, white on black;
-    // and print returned values
-    sdl_print_init(20, COLOR_WHITE, COLOR_BLACK,
-                   &char_width, &char_height, &win_rows, &win_cols);
-    printf("font char width x height = %3d x %3d, win rows x cols = %d %d\n", 
-               char_width, char_height, win_rows, win_cols);
-#endif
+    // test calling a routine that is defined in another file
+    utils_proc();
 
     // loop, displaying the currently selected pagenum and proces events
     while (!end_program) {
-        // xxx reset other stuff here too, fontsz, color  ??
-        // xxx comment
+        // init the backbuffer
         sdl_display_init(COLOR_BLACK);
 
-        // xxx
+        // XXX
+        // xxx register for swipe and motion
+
+        // render to the backbuffer
         render_page(pagenum, init);
         init = false;
 
-        // update the display
+        // present the display
         sdl_display_present();
 
         // wait for an event with 100 ms timeout;
@@ -108,28 +99,28 @@ int main(int argc, char **argv)
         }
 
         // process event
+        // note that EVID_QUIT is always provided xxx?
         switch (event.event_id) {
         case EVID_QUIT:
+        case EVID_END_PROGRAM:
             end_program = true;
             break;
         case EVID_SWIPE_RIGHT:
+        case EVID_PREV_PAGE:
             if (--pagenum < 0) {
                 pagenum = MAX_PAGE-1;
             }
             init = true;
             break;
         case EVID_SWIPE_LEFT:
+        case EVID_NEXT_PAGE:
             if (++pagenum >= MAX_PAGE) {
                 pagenum = 0;
             }
             init = true;
         case EVID_MOTION:
-//          motion_yrel = event_data.u.motion.yrel;
-//          printf("XXXXXXXXXXX %d %d %d %d\n", 
-//                event_data.u.motion.x,
-//                event_data.u.motion.y,
-//                event_data.u.motion.xrel,
-//                event_data.u.motion.yrel);
+            // motion events are handled in the pagges that
+            // utilize motion events; 'event' is a global variable
             break;
         }
 
@@ -139,11 +130,12 @@ int main(int argc, char **argv)
         }
     }
 
-    // xxx destory all
-    page_4_cleanup();
+    // call cleanup routines, to free allocations
+    page_3_cleanup();
+    page_5_cleanup();
 
-    // if not qne_app then call sdl_exit
-    if (!is_qne_app) {
+    // if not ez_app then call sdl_exit
+    if (!is_ez_app) {
         sdl_exit();
     }
 
@@ -153,32 +145,38 @@ int main(int argc, char **argv)
 
 // -----------------  RENDER PAGS PROC  -----------------------
 
-// xxx can this be static?
-char *title[] = {
-        "Unit Test",
-        "Font",
-        "Sizeof",
-        "Drawing",
-        "Textures",
-        "Colors",
-        "XXX-PAGE6",
+// picoc: picoc does not support this being static, causes crash
+char *title[] = {       // Page
+        "Unit Test",    //   0
+        "Font",         //   1
+        "Sizeof",       //   2
+        "Multi Lines",  //   3
+        "Drawing",      //   4
+        "Textures",     //   5
+        "Colors",       //   6
             };
+
 static void render_page(int pagenum, bool init)
 {
     sdl_loc_t *loc;
 
+    // render text and register events for the following:
+    // "<" - previous page
+    // ">" - next page
+    // 'X' - end prorgram
     sdl_print_init(10, COLOR_WHITE, COLOR_BLACK);
     loc = sdl_render_printf_xyctr(NK2X(3,0), sdl_win_height-sdl_char_height/2, "%s", "<");
-    sdl_register_event(loc, EVID_SWIPE_RIGHT);
+    sdl_register_event(loc, EVID_PREV_PAGE);
     loc = sdl_render_printf_xyctr(NK2X(3,1), sdl_win_height-sdl_char_height/2, "%s", ">");
-    sdl_register_event(loc, EVID_SWIPE_LEFT);
+    sdl_register_event(loc, EVID_NEXT_PAGE);
     loc = sdl_render_printf_xyctr(NK2X(3,2), sdl_win_height-sdl_char_height/2, "%s", "X");
-    sdl_register_event(loc, EVID_QUIT);
+    sdl_register_event(loc, EVID_END_PROGRAM);
 
+    // display title line 
     sdl_print_init(20, COLOR_WHITE, COLOR_BLACK);
     sdl_render_text_xyctr(NK2X(1,0), ROW2Y_CTR(0), title[pagenum]);
-    sdl_render_printf_xyctr(sdl_win_width-sdl_char_width/2, ROW2Y_CTR(0), "%d", pagenum);
 
+    // render the page
     switch (pagenum) {
     case 0: render_page_0(init); break;
     case 1: render_page_1(init); break;
@@ -190,7 +188,7 @@ static void render_page(int pagenum, bool init)
     }
 }
 
-// -----------------  PAGE 0: xxxxxxxxxxxxxxxxxxx  ------------
+// -----------------  PAGE 0: CLOCK  --------------------------
 
 static void render_page_0(bool init)
 {
@@ -203,11 +201,9 @@ static void render_page_0(bool init)
 
     sprintf(str, "%02d:%02d:%02d", tm->tm_hour, tm->tm_min, tm->tm_sec);
     sdl_render_printf_xyctr(sdl_win_width/2, sdl_win_height/3, "%s", str);
-
-    // xxx intro text
 }
 
-// -----------------  PAGE 0: xxxxxxxxxxxxxxxxxxx  ------------
+// -----------------  PAGE 1: FONT  ---------------------------
 
 static void render_page_1(bool init)
 {
@@ -225,7 +221,7 @@ static void render_page_1(bool init)
     }
 }
 
-// -----------------  PAGE 0: xxxxxxxxxxxxxxxxxxx  ------------
+// -----------------  PAGE 2: SIZEOF  -------------------------
 
 static void render_page_2(bool init)
 {
@@ -242,61 +238,120 @@ static void render_page_2(bool init)
     sdl_render_printf(0, ROW2Y(r++), "sizeof(1ULL);  = %zd", sizeof(123UL));
 }
 
-// -----------------  PAGE 0: xxxxxxxxxxxxxxxxxxx  ------------
+// -----------------  PAGE 3: MULTI LINE TEXT  ----------------
+
+// This tests both
+// - sdl_render_multiline_text, and
+// - sdl_render_multiline_text_2
+// on alternate entering of this page.
+
+static int y_top;
+static int y_display_begin;
+static int y_display_end;
+static char lines[2000];
+static char *lines_2[100];
+static bool test_v1;
+static bool first_call = true;
+
+static void render_page_3(bool init)
+{
+    if (first_call) {
+        char *p = lines;
+        for (int i = 0; i < 100; i++) {
+            p += sprintf(p, "Line %d\n", i);
+        }
+
+        for (int i = 0; i < 100; i++) {
+            lines_2[i] = malloc(20);
+            sprintf(lines_2[i], "Line-V2 %d", i);
+        }
+
+        first_call = false;
+    }
+
+    if (init) {
+        y_top = ROW2Y(2); 
+        y_display_begin = ROW2Y(2);
+        y_display_end = sdl_win_height-3*sdl_char_height;  // xxx improve?
+        test_v1 = !test_v1;
+    }
+
+    if (test_v1) {
+        sdl_render_multiline_text(y_top, y_display_begin, y_display_end, lines);
+    } else {
+        sdl_render_multiline_text_2(y_top, y_display_begin, y_display_end, lines_2, 100);
+    }
+
+    if (event.event_id == EVID_MOTION) {
+        y_top += event.u.motion.yrel;
+        if (y_top >= y_display_begin) {
+            y_top = y_display_begin;
+        }
+    }
+}
+
+static void page_3_cleanup(void)
+{
+    for (int i = 0; i < 100; i++) {
+        free(lines_2[i]);
+    }
+}
+
+// -----------------  PAGE 4: DRAWING  ------------------------
 
 static void add_point(sdl_point_t **p, int x, int y);
 
-static void render_page_3(bool init)
+static void render_page_4(bool init)
 {
     // draw rect around perimeter
     sdl_render_rect(0, 0, sdl_win_width, sdl_win_height, 2, COLOR_PURPLE);
 
-    // draw fill rect, y = 100 .. 300
-    sdl_render_fill_rect(100, 100, 800, 200, COLOR_RED);
+    // draw fill rect, y = 170 .. 400
+    sdl_render_fill_rect(100, 170, 800, 230, COLOR_RED);
 
-    // draw circles, y = 300 .. 400
-    sdl_render_circle(1*sdl_win_width/4, 350, 50, 3, COLOR_YELLOW);
-    sdl_render_circle(2*sdl_win_width/4, 350, 50, 3, COLOR_YELLOW);
-    sdl_render_circle(3*sdl_win_width/4, 350, 50, 3, COLOR_YELLOW);
+    // draw circles, y = 400 .. 500
+    sdl_render_circle(1*sdl_win_width/4, 450, 50, 3, COLOR_YELLOW);
+    sdl_render_circle(2*sdl_win_width/4, 450, 50, 3, COLOR_YELLOW);
+    sdl_render_circle(3*sdl_win_width/4, 450, 50, 3, COLOR_YELLOW);
 
-    // draw 6 lines, y = 400 .. 500
-    for (int y = 401; y <= 501; y += 20) {  //xxx
+    // draw 6 lines, y = 500 .. 600
+    for (int y = 500; y <= 600; y += 20) {
         sdl_render_line(0, y, 1000, y, COLOR_WHITE);
     }
 
-    // draw 3 lines to make a triangle, y = 500 .. 700
+    // draw 3 lines to make a triangle, y = 600 .. 800
     sdl_point_t pts[4], *ptsx=pts;
-    add_point(&ptsx, 501, 501);
-    add_point(&ptsx, 701, 701);
-    add_point(&ptsx, 301, 701);
-    add_point(&ptsx, 501, 501);
+    add_point(&ptsx, 500, 600);
+    add_point(&ptsx, 700, 800);
+    add_point(&ptsx, 300, 800);
+    add_point(&ptsx, 500, 600);
     sdl_render_lines(pts, 4, COLOR_RED);
 
-    // draw 2 squares and vary intensity and wavelen, y = 700 .. 800
+    // draw 2 squares and vary intensity and wavelen, y = 800 .. 900
     static double inten;
     int color;
     inten = inten + 0.01;
     if (inten > 1) inten = 0;
     color = sdl_scale_color(COLOR_YELLOW, inten);
-    sdl_render_fill_rect(200, 750, 100, 100, color);
+    sdl_render_fill_rect(100, 800, 100, 100, color);
 
     static double wavelen = 750;
     wavelen -= 2;
     if (wavelen < 440) wavelen = 750;
     color = sdl_wavelength_to_color(wavelen);
-    sdl_render_fill_rect(800, 750, 100, 100, color);
+    sdl_render_fill_rect(800, 800, 100, 100, color);
 
-    // draw points with varying size, y = 850
+    // draw points with varying size, y = 1000
     color = sdl_create_color(0, 255, 0, 255);
     for (int pointsize = 0; pointsize <= 9; pointsize++) {
-        sdl_render_point(pointsize*100+50, 850, color, pointsize);
+        sdl_render_point(pointsize*100+50, 1000, color, pointsize);
     }
 
-    // draw 10 points of the same size, y = 950
+    // draw 10 points of the same size, y = 1100
     sdl_point_t points[10];
     for (int i = 0; i < 10; i++) {
         points[i].x = i*100+50;
-        points[i].y = 950;
+        points[i].y = 1100;
     }
     sdl_render_points(points, 10, COLOR_PURPLE, 5);
 }
@@ -308,48 +363,34 @@ static void add_point(sdl_point_t **p, int x, int y)
     (*p)++;
 }
 
-// -----------------  PAGE 0: xxxxxxxxxxxxxxxxxxx  ------------
+// -----------------  PAGE 5: TEXTURES  -----------------------
 
-// xxx test or replace this
-//sdl_texture_t *sdl_create_texture_from_display(sdl_rect_t *loc);                      // xxx needed?
+static sdl_texture_t *circle;
+static sdl_texture_t *text;
+static sdl_texture_t *purple;
 
-static void render_page_4(bool init)
+static void render_page_5(bool init)
 {
-    //int w,h;
-
     // if the circle texture has not been initialized then
     // init the 3 textures used by this test:
     // - circle: sdl_create_filled_circle_texture
     // - text:   sdl_create_text_texture
-    // - purple: sdl_create_texture + sdl_update_texture xxx
+    // - purple: sdl_create_texture + sdl_update_texture
     if (circle == NULL) {
         circle = sdl_create_filled_circle_texture(100, COLOR_RED);
-        //sdl_query_texture(circle, &w, &h);
-        //printf("circle texture w x h = %d %d,  expected 201 x 201\n", w, h);
 
-        text = sdl_create_text_texture("hello");
-        //sdl_query_texture(text, &w, &h);
+        text   = sdl_create_text_texture("hello");
 
-#if 0
+        purple = sdl_create_texture(100, 100);
         int *pixels = malloc(100 * 100 * 4);
-        for (int i = 0; i < 10000; i++) {
+        for (int i = 0; i < 100*100; i++) {
             pixels[i] = COLOR_PURPLE;
         }
-        //purple = sdl_create_texture_from_pixels(100, 100, pixels);
-        purple = sdl_create_texture_from_pixels(100, 100, NULL);
-        free(pixels);
-#endif
-
-        purple = sdl_create_texture_from_pixels(100, 100, NULL);
-
-        int *pixels = malloc(100 * 100 * 4);
-        for (int i = 0; i < 10000; i++) {
-            pixels[i] = COLOR_PURPLE;
-        }
-
         sdl_update_texture(purple, pixels);
         free(pixels);
     }
+
+    // xxx fixup the following ...
 
     // render the circle texture at varying x location, y = 100 .. 300
     static int circle_x=100, circle_y=200;
@@ -372,8 +413,6 @@ static void render_page_4(bool init)
     // render the purple texture, which was constructed from pixels, y = 950 .. 1050
     sdl_render_texture(500, 1500, -1, -1, 45, purple);
 
-
-
     // xxx
     static sdl_texture_t *t;
     if (t == NULL) {
@@ -384,36 +423,24 @@ static void render_page_4(bool init)
         printf("XXXXXXXXXXXXXX w h = %d %d\n", w, h);
     }
     sdl_render_texture(0, 1500, -1, -1, 0, t);
-#if 0
-    if (xyz != NULL) {
-        sdl_query_texture(xyz, &w, &h);
-        printf("rendering textur xyz %d %d\n", w, h);
-        sdl_render_texture(500, 1500, xyz);
-    }
-#endif
+
+    // xxx test reading dipslay pixels, writing to file, and restoring from file if it exists
 }
 
-static void page_4_cleanup(void)
+static void page_5_cleanup(void)
 {
     sdl_destroy_texture(circle);
     sdl_destroy_texture(text);
     sdl_destroy_texture(purple);
-    //sdl_destroy_texture(xyz);
 }
 
-// -----------------  PAGE 0: COLORS  -------------------------
+// -----------------  PAGE 6: COLORS  -------------------------
 
-static void color_test(int idx, char *color_name, int color)
+static void color_test(int idx, char *color_name, int color);
+
+static void render_page_6(bool init)
 {
-    int y = idx * 100;
-
-    sdl_render_text(0, y, color_name);
-    sdl_render_fill_rect(500, y, 500, sdl_char_height, color);
-}
-
-static void render_page_5(bool init)
-{
-    int idx = 1;
+    int idx = 0;
 
     color_test(idx++, "WHITE", COLOR_WHITE);
     color_test(idx++, "RED",   COLOR_RED);
@@ -432,68 +459,11 @@ static void render_page_5(bool init)
     color_test(idx++, "DARK_GRAY", COLOR_DARK_GRAY);
 }
 
-// -----------------  PAGE 6: xxxxxxxxxx-----------------------
-
-
-char xxx[] = "\
-0 123456789\n\
-1 123456789\n\
-2 123456789\n\
-3 123456789\n\
-4 123456789\n\
-5 123456789\n\
-10 123456789\n\
-11 123456789\n\
-12 123456789\n\
-13 123456789\n\
-14 123456789\n\
-15 123456789\n\
-20 123456789\n\
-21 123456789\n\
-22 123456789\n\
-23 123456789\n\
-24 123456789\n\
-25 123456789\n\
-30 123456789\n\
-31 123456789\n\
-32 123456789\n\
-33 123456789\n\
-34 123456789\n\
-35 123456789\n\
-40 123456789\n\
-41 123456789\n\
-42 123456789\n\
-43 123456789\n\
-44 123456789\n\
-45 123456789\n\
-50 123456789\n\
-51 123456789\n\
-52 123456789\n\
-53 123456789\n\
-54 123456789\n\
-55 123456789\n\
-60 123456789\n\
-61 123456789\n\
-62 123456789\n\
-63 123456789\n\
-64 123456789\n\
-65 123456789\n";
-
-int y_top = 200;
-
-static void render_page_6(bool init)
+static void color_test(int idx, char *color_name, int color)
 {
-    //printf("XXXX ytop = %d\n", y_top);
+    int y = 2 * sdl_char_height + idx * 100;
 
-    if (init) {
-        y_top = 200;
-    }
-
-    sdl_render_multiline_text(y_top, 200, 2000, xxx);
-
-    if (event.event_id == EVID_MOTION) {
-        //printf("   yrel = %d\n", event.u.motion.yrel);
-        y_top += event.u.motion.yrel;
-        if (y_top >= 200) y_top = 200;
-    }
+    sdl_render_text(0, y, color_name);
+    sdl_render_fill_rect(500, y, 500, sdl_char_height, color);
 }
+

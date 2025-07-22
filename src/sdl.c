@@ -528,6 +528,7 @@ static sdl_loc_t *render_text(bool xy_is_ctr, int x, int y, char * str)
     return &loc;
 }
 
+// xxx explain str
 void sdl_render_multiline_text(int y_top, int y_display_begin, int y_display_end, char * str)
 {
     char line[1000], *p;
@@ -558,6 +559,29 @@ void sdl_render_multiline_text(int y_top, int y_display_begin, int y_display_end
         y += sdl_char_height;
         str += len;
         if (str[0] == '\n') str++;
+    }
+}
+
+void sdl_render_multiline_text_2(int y_top, int y_display_begin, int y_display_end, char **lines, int n)
+{
+    int i;
+    int y = y_top;
+
+    for (i = 0; i < n; i++) {
+        // if y pos of line is below the bottom of the
+        // display region then break
+        if (y > y_display_end - sdl_char_height) {
+            break;
+        }
+
+        // if y loc of line is at or below the begining of the display
+        // region then render the line
+        if (y >= y_display_begin && lines[i][0] != '\0') {
+            render_text(false, 0, y, lines[i]);
+        }
+
+        // advance y for the next line
+        y += sdl_char_height;
     }
 }
 
@@ -890,6 +914,23 @@ void sdl_render_points(sdl_point_t *points, int count, int color, int point_size
 
 // -----------------  RENDER USING TEXTURES  ---------------------------- 
 
+sdl_texture_t *sdl_create_texture(int w, int h)
+{
+    sdl_texture_t *texture;
+
+    texture = (sdl_texture_t*)
+              SDL_CreateTexture(renderer,
+                                SDL_PIXELFORMAT_ABGR8888,
+                                SDL_TEXTUREACCESS_STREAMING,
+                                w, h);
+    if (texture == NULL) {
+        ERROR("failed to allocate texture\n");
+        return NULL;
+    }
+
+    return texture;
+}
+
 sdl_texture_t *sdl_create_texture_from_display(int x, int y, int w, int h)
 {
     sdl_texture_t *texture;
@@ -940,27 +981,6 @@ sdl_texture_t *sdl_create_texture_from_display(int x, int y, int w, int h)
     free(pixels);
 
     // return the texture
-    return texture;
-}
-
-sdl_texture_t *sdl_create_texture_from_pixels(int w, int h, int *pixels)
-{
-    sdl_texture_t *texture;
-
-    texture = (sdl_texture_t*)
-              SDL_CreateTexture(renderer,
-                                SDL_PIXELFORMAT_ABGR8888,
-                                SDL_TEXTUREACCESS_STREAMING,
-                                w, h);
-    if (texture == NULL) {
-        ERROR("failed to allocate texture\n");
-        return NULL;
-    }
-
-    if (pixels != NULL) {
-        SDL_UpdateTexture((SDL_Texture*)texture, NULL, pixels, w*BYTES_PER_PIXEL);
-    }
-
     return texture;
 }
 
