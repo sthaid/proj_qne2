@@ -52,7 +52,7 @@ static void render_page_6(bool init);
 int main(int argc, char **argv)
 {
     int  i;
-    int  pagenum = 5;
+    int  pagenum = 0;
     bool end_program = false;
     bool is_ez_app = (argc > 0 && strcmp(argv[0], "ez_app") == 0);
     bool init = true;
@@ -196,14 +196,26 @@ static void render_page_0(bool init)
     time_t t;
     struct tm *tm;
     char str[100];
+    long usecs, delta;
+    static long usecs_last, usecs_first;
 
     time(&t);
     tm = localtime(&t);
 
     sprintf(str, "%02d:%02d:%02d", tm->tm_hour, tm->tm_min, tm->tm_sec);
-    sdl_render_printf_xyctr(sdl_win_width/2, sdl_win_height/3, "%s", str);
+    sdl_render_text_xyctr(sdl_win_width/2, ROW2Y(5), str);
 
-    // xxx add test of time utils
+    usecs = util_get_real_time_us();
+    util_time2str(str, usecs, false, true, false);
+    sdl_render_text_xyctr(sdl_win_width/2, ROW2Y(7), str);
+
+    usecs = util_microsec_timer();
+    if (usecs_first == 0) {
+        usecs_first = usecs;
+    }
+    delta = usecs - usecs_last;
+    usecs_last = usecs;
+    sdl_render_printf_xyctr(sdl_win_width/2, ROW2Y(9), "%0.3f %ld", (usecs-usecs_first)/1000000., delta);
 }
 
 // -----------------  PAGE 1: FONT  ---------------------------

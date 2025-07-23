@@ -1,7 +1,6 @@
-# PG  ID              NAME       DIR  PICOC_ARGS
-# --  --  ----------------  --------  ---------------
-   0   0       hello_world     hello  hello.c utils.c
-   1   5       test_test        test  test.c
+# PG  ID              NAME           DIR  PICOC_ARGS
+# --  --  ----------------  ------------  --------------------
+   0   0         unit_test     unit_test  unit_test.c tester.c
 
 
 # 1  X  : 

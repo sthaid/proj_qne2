@@ -72,7 +72,7 @@ static int picoc_helper(char *args)
             printf("scanning %s\n", s);
             PicocPlatformScanFile(&pc, s);
             if (argc == 0) {
-                argv[argc++] = "qne_app";
+                argv[argc++] = "ez_app";
             }
         } else {
             printf("adding argv[%d] = %s\n", argc, s);
