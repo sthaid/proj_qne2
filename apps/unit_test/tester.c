@@ -1,5 +1,5 @@
 #include <stdio.h>
-#include "utils.h"
+#include "tester.h"
 
 void tester_proc(void)
 {

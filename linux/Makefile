@@ -3,6 +3,7 @@ SRCS :=  \
   ../src/main.c \
   ../src/sdl.c \
   ../src/utils.c \
+  ../src/logging.c \
   picoc/clibrary.c \
   picoc/debug.c \
   picoc/expression.c \

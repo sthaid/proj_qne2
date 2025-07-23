@@ -2,6 +2,7 @@
 
 #include <sdl.h>
 #include <utils.h>
+#include <logging.h>
 
 //
 // defines
@@ -26,9 +27,8 @@
 //
 
 typedef struct {
-    unsigned long version;
-    unsigned long devel_mode;
-    unsigned long reserved[14];
+    long version;
+    long devel_mode;
 } settings_t;
 
 //
@@ -46,6 +46,10 @@ static settings_t  settings;
 
 static void controller(void);
 static void *server_thread(void *cx);
+static char *sock_addr_to_str(char * s, int slen, struct sockaddr * addr);
+//static bool is_socket_connected(int socket_fd); xxx
+//static void get_file_info(char *pathname, size_t *size, time_t *mtime); xxx
+static void remove_trailing_newline(char *s);
 
 //
 // routines to launch a C program using picoc interpreter
@@ -136,7 +140,7 @@ static void read_settings(void)
     char s[100];
     int cnt;
     char name[100];
-    unsigned long value;
+    long value;
 
     // open settings file
     fp = fopen("settings", "r");
@@ -743,3 +747,64 @@ static void process_req_using_android_sh(int sockfd, char *cmd)
     exit(1);
 }
 
+// -----------------  UTILS  ----------------------------------
+
+static char * sock_addr_to_str(char * s, int slen, struct sockaddr * addr)
+{
+    char addr_str[100];
+    int port2;
+
+    if (addr->sa_family == AF_INET) {
+        inet_ntop(AF_INET,
+                  &((struct sockaddr_in*)addr)->sin_addr,
+                  addr_str, sizeof(addr_str));
+        port2 = ((struct sockaddr_in*)addr)->sin_port;
+    } else if (addr->sa_family == AF_INET6) {
+        inet_ntop(AF_INET6,
+                  &((struct sockaddr_in6*)addr)->sin6_addr,
+                 addr_str, sizeof(addr_str));
+        port2 = ((struct sockaddr_in6*)addr)->sin6_port;
+    } else {
+        snprintf(s,slen,"Invalid AddrFamily %d", addr->sa_family);
+        return s;
+    }
+
+    snprintf(s,slen,"%s:%d",addr_str,ntohs(port2));
+    return s;
+}
+
+#if 0 //xxx
+static bool is_socket_connected(int socket_fd)
+{
+    int error = 0;
+    int ret;
+    socklen_t len = sizeof(error);
+
+    ret = getsockopt(socket_fd, SOL_SOCKET, SO_ERROR, &error, &len);
+
+    return ret == 0 && error == 0;
+}
+
+static void get_file_info(char *pathname, size_t *size, time_t *mtime)
+{
+    struct stat statbuf;
+
+    if (lstat(pathname, &statbuf) != 0) {
+        if (size) *size = 0;
+        if (mtime) *mtime = 0;
+        return;
+    }
+
+    if (size) *size = statbuf.st_size;
+    if (mtime) *mtime = statbuf.st_mtime;
+}
+#endif
+
+static void remove_trailing_newline(char *s)
+{
+    int len = strlen(s);
+
+    if (len > 0) {
+        s[len-1] = '\0';
+    }
+}

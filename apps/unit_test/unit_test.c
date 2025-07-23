@@ -6,8 +6,9 @@
 #include <stdlib.h>
 
 #include <sdl.h>
+#include <utils.h>
 
-#include "utils.h"
+#include "tester.h"
 
 //
 // defines
@@ -74,7 +75,7 @@ int main(int argc, char **argv)
     printf("sdl_char_width/height = %d %d\n", sdl_char_width, sdl_char_height);
 
     // test calling a routine that is defined in another file
-    utils_proc();
+    tester_proc();
 
     // loop, displaying the currently selected pagenum and proces events
     while (!end_program) {
@@ -201,6 +202,8 @@ static void render_page_0(bool init)
 
     sprintf(str, "%02d:%02d:%02d", tm->tm_hour, tm->tm_min, tm->tm_sec);
     sdl_render_printf_xyctr(sdl_win_width/2, sdl_win_height/3, "%s", str);
+
+    // xxx add test of time utils
 }
 
 // -----------------  PAGE 1: FONT  ---------------------------
@@ -370,7 +373,7 @@ static sdl_texture_t *text;
 
 static void render_page_5(bool init)
 {
-    int w, h, fd;
+    int ret, w, h, file_length;
     sdl_texture_t *t;
     sdl_pixels_t *pixels;
 
@@ -403,13 +406,18 @@ static void render_page_5(bool init)
     angle += 5;
     sdl_render_texture(500-w/2, 600+w/2-h/2, -1, -1, angle, text);
 
-    // xxx move some of this to init
+    // xxx move some of this to init AND comment
     pixels = sdl_read_display_pixels(0, 0, sdl_win_width, sdl_char_height);
-    write_file("unit_test_pixels", pixels, pixels->struct_len);
+    ret = util_write_file("unit_test_pixels", pixels, pixels->struct_len);
+    if (ret != 0) {
+        printf("ERROR: failed to write unit_test_pixels\n");
+        free(pixels);
+        goto done;
+    }
     free(pixels);
 
-    pixels = read_file("unit_test_pixels", &file_length);
-    if (pixels == NULL || pixels->struct_len != file_length) {
+    pixels = util_read_file("unit_test_pixels", &file_length);
+    if (pixels == NULL || pixels->magic != PIXELS_MAGIC || pixels->struct_len != file_length) {
         printf("ERROR: failed to read unit_test_pixels\n");
         goto done;
     }
@@ -426,8 +434,6 @@ static void page_5_cleanup(void)
     sdl_destroy_texture(circle);
     sdl_destroy_texture(text);
 }
-
-
 
 // -----------------  PAGE 6: COLORS  -------------------------
 

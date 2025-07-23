@@ -2,101 +2,25 @@
 
 #include <utils.h>
 
-#ifdef ANDROID
-    //#define USE_ANDROID_LOGGING
-    #ifdef USE_ANDROID_LOGGING
-        #include <SDL.h>
-    #endif
-#endif
-
-// ----------------- LOGGING -----------------
-
-void init_logging(char *logfile)
-{
-    FILE *fp;
-    int rc;
-
-    if (logfile) {
-        fp = freopen(logfile, "a", stdout);
-        if (fp == NULL) {
-            ERROR("failed to reopen stdout to file '%s', %s\n", logfile, strerror(errno));
-            return;
-        }
-        rc = dup2(fileno(stdout), fileno(stderr));
-        if (rc != 0) {
-            ERROR("failed to dup stdout to stderr, %s\n", strerror(errno));
-            return;
-        }
-    }
-
-    setlinebuf(stdout);
-    setlinebuf(stderr);
-
-    fprintf(stdout, "test print to stdout\n");  //xxx temp
-    fprintf(stderr, "test print to stderr\n");
-}
-
-void logmsg(char *lvl, const char *func, char *fmt, ...)
-{
-    va_list ap;
-    char    msg[1000];
-    char    time_str[MAX_TIME_STR];
-    int     len;
-
-    // construct msg
-    va_start(ap, fmt);
-    len = vsnprintf(msg, sizeof(msg), fmt, ap);
-    va_end(ap);
-
-    // remove terminating newline
-    if (len > 0 && msg[len-1] == '\n') {
-        msg[len-1] = '\0';
-        len--;
-    }
-
-#ifdef USE_ANDROID_LOGGING
-    // log the message, to the Android log;
-    // use 'adb -s SDL/APP' to monitor the Android log
-    if (strcmp(lvl, "INFO") == 0) {
-        SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,
-                    "%s %s: %s\n",
-                    lvl, func, msg);
-    } else if (strcmp(lvl, "WARN") == 0) {
-        SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION,
-                    "%s %s: %s\n",
-                    lvl, func, msg);
-    } else {
-        SDL_LogError(SDL_LOG_CATEGORY_APPLICATION,
-                     "%s %s: %s\n",
-                     lvl, func, msg);
-    }
-    return;
-#endif
-
-    // log using printf to stderr
-    time2str(time_str, get_real_time_us(), false, true, true),
-    fprintf(stderr, "%s %s %s: %s\n", time_str, lvl, func, msg);
-}
-
 // ----------------- TIME --------------------
 
-unsigned long microsec_timer(void)
+long util_microsec_timer(void)
 {
     struct timespec ts;
 
     clock_gettime(CLOCK_MONOTONIC,&ts);
-    return  ((unsigned long)ts.tv_sec * 1000000) + ((unsigned long)ts.tv_nsec / 1000);
+    return  ((long)ts.tv_sec * 1000000) + ((long)ts.tv_nsec / 1000);
 }
 
-unsigned long get_real_time_us(void)
+long util_get_real_time_us(void)
 {
     struct timespec ts;
 
     clock_gettime(CLOCK_REALTIME,&ts);
-    return ((unsigned long)ts.tv_sec * 1000000) + ((unsigned long)ts.tv_nsec / 1000);
+    return ((long)ts.tv_sec * 1000000) + ((long)ts.tv_nsec / 1000);
 }
 
-char * time2str(char * str, unsigned long us, bool gmt, bool display_ms, bool display_date)
+char *util_time2str(char * str, long us, int gmt, int display_ms, int display_date)
 {
     struct tm tm;
     time_t secs;
@@ -133,66 +57,59 @@ char * time2str(char * str, unsigned long us, bool gmt, bool display_ms, bool di
     return str;
 }
 
-// ----------------- NETWORKING --------------
 
-char * sock_addr_to_str(char * s, int slen, struct sockaddr * addr)
+// xxxxxxxxx
+int util_write_file(char *path, void *buf, int len)
 {
-    char addr_str[100];
-    int port2;
+    int fd, ret;
 
-    if (addr->sa_family == AF_INET) {
-        inet_ntop(AF_INET,
-                  &((struct sockaddr_in*)addr)->sin_addr,
-                  addr_str, sizeof(addr_str));
-        port2 = ((struct sockaddr_in*)addr)->sin_port;
-    } else if (addr->sa_family == AF_INET6) {
-        inet_ntop(AF_INET6,
-                  &((struct sockaddr_in6*)addr)->sin6_addr,
-                 addr_str, sizeof(addr_str));
-        port2 = ((struct sockaddr_in6*)addr)->sin6_port;
-    } else {
-        snprintf(s,slen,"Invalid AddrFamily %d", addr->sa_family);
-        return s;
+    fd = open(path, O_CREAT | O_TRUNC | O_WRONLY, 0666);
+    if (fd < 0) {
+        return -1;
     }
 
-    snprintf(s,slen,"%s:%d",addr_str,ntohs(port2));
-    return s;
+    ret = write(fd, buf, len);
+    if (ret != len) {
+        return -1;
+    }
+
+    close(fd);
+    return 0;
 }
 
-bool is_socket_connected(int socket_fd)
+void *util_read_file(char *path, int *len_ret)
 {
-    int error = 0;
-    int ret;
-    socklen_t len = sizeof(error);
-
-    ret = getsockopt(socket_fd, SOL_SOCKET, SO_ERROR, &error, &len);
-
-    return ret == 0 && error == 0;
-}
-
-// ----------------- MISC --------------------
-
-void get_file_info(char *pathname, size_t *size, time_t *mtime)
-{
+    int fd, ret;
     struct stat statbuf;
+    void *buf;
 
-    if (lstat(pathname, &statbuf) != 0) {
-        if (size) *size = 0;
-        if (mtime) *mtime = 0;
-        return;
+    ret = stat(path, &statbuf);
+    if (ret < 0) {
+        return NULL;
     }
 
-    if (size) *size = statbuf.st_size;
-    if (mtime) *mtime = statbuf.st_mtime;
-}
-
-void remove_trailing_newline(char *s)
-{
-    int len = strlen(s);
-
-    if (len > 0) {
-        s[len-1] = '\0';
+    buf = malloc(statbuf.st_size);
+    if (buf == NULL) {
+        return NULL;
     }
+
+    fd = open(path, O_RDONLY);
+    if (fd < 0) {
+        free(buf);
+        return NULL;
+    }
+
+    ret = read(fd, buf, statbuf.st_size);
+    if (ret != statbuf.st_size) {
+        free(buf);
+        return NULL;
+    }
+
+    close(fd);
+
+    *len_ret = statbuf.st_size;
+    return buf;
 }
+
 
 // xxx pthread_create_detached

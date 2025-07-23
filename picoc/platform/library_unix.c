@@ -1,5 +1,6 @@
 #include "../interpreter.h"
 #include <sdl.h>
+#include <utils.h>
 
 struct StdVararg
 {
@@ -305,28 +306,13 @@ void Sdl_render_points (struct ParseState *Parser, struct Value *ReturnValue,
 // render using textures
 //
 
-void Sdl_create_texture(struct ParseState *Parser, struct Value *ReturnValue,
+void Sdl_create_texture_from_pixels (struct ParseState *Parser, struct Value *ReturnValue,
         struct Value **Param, int NumArgs)
 {
-    int w = Param[0]->Val->Integer;
-    int h = Param[1]->Val->Integer;
+    sdl_pixels_t *pixels = Param[0]->Val->Pointer;
     sdl_texture_t *texture;
 
-    texture = sdl_create_texture(w, h);
-    ReturnValue->Val->Pointer = (char*)texture; 
-}
-
-void Sdl_create_texture_from_display (struct ParseState *Parser, struct Value *ReturnValue,
-	struct Value **Param, int NumArgs)
-{
-    int x = Param[0]->Val->Integer;
-    int y = Param[1]->Val->Integer;
-    int w = Param[2]->Val->Integer;
-    int h = Param[3]->Val->Integer;
-
-    sdl_texture_t *texture;
-
-    texture = sdl_create_texture_from_display(x, y, w, h);
+    texture = sdl_create_texture_from_pixels(pixels);
     ReturnValue->Val->Pointer = (char*)texture; 
 }
 
@@ -372,15 +358,6 @@ void Sdl_destroy_texture (struct ParseState *Parser, struct Value *ReturnValue,
     sdl_destroy_texture(texture);
 }
 
-void Sdl_update_texture (struct ParseState *Parser, struct Value *ReturnValue,
-	struct Value **Param, int NumArgs)
-{
-    sdl_texture_t *texture = (sdl_texture_t*)Param[0]->Val->Pointer;
-    int           *pixels  = (int*)Param[1]->Val->Pointer;
-
-    sdl_update_texture(texture, pixels);
-}
-
 void Sdl_query_texture (struct ParseState *Parser, struct Value *ReturnValue,
 	struct Value **Param, int NumArgs)
 {
@@ -391,45 +368,36 @@ void Sdl_query_texture (struct ParseState *Parser, struct Value *ReturnValue,
     sdl_query_texture(texture, width, height);
 }
 
-// -----------------  SDL PLATFORM REGISTRATION -------------------------
+void Sdl_read_display_pixels (struct ParseState *Parser, struct Value *ReturnValue,
+	struct Value **Param, int NumArgs)
+{
+    int x = Param[0]->Val->Integer;
+    int y = Param[1]->Val->Integer;
+    int w = Param[2]->Val->Integer;
+    int h = Param[3]->Val->Integer;
+    sdl_pixels_t *pixels;
 
-// xxx reformat
-const char SdlDefs[] = "\
-typedef struct { int x; int y; int w; int h; } sdl_loc_t; \n\
-typedef struct { int x; int y; } sdl_point_t; \n\
-typedef struct sdl_texture sdl_texture_t; \n\
-typedef struct { \n\
-    int event_id; \n\
-    union { \n\
-        struct { \n\
-            int x; int y; int xrel; int yrel; \n\
-        } motion; \n\
-    } u; \n\
-} sdl_event_t; \n\
-\n\
-#define BYTES_PER_PIXEL  4 \n\
-#define COLOR_BLACK      (   0  |    0<<8 |    0<<16 |  255<<24 ) \n\
-#define COLOR_WHITE      ( 255  |  255<<8 |  255<<16 |  255<<24 ) \n\
-#define COLOR_RED        ( 255  |    0<<8 |    0<<16 |  255<<24 ) \n\
-#define COLOR_ORANGE     ( 255  |  128<<8 |    0<<16 |  255<<24 ) \n\
-#define COLOR_YELLOW     ( 255  |  255<<8 |    0<<16 |  255<<24 ) \n\
-#define COLOR_GREEN      (   0  |  255<<8 |    0<<16 |  255<<24 ) \n\
-#define COLOR_BLUE       (   0  |    0<<8 |  255<<16 |  255<<24 ) \n\
-#define COLOR_INDIGO     (  75  |    0<<8 |  130<<16 |  255<<24 ) \n\
-#define COLOR_VIOLET     ( 238  |  130<<8 |  238<<16 |  255<<24 ) \n\
-#define COLOR_PURPLE     ( 127  |    0<<8 |  255<<16 |  255<<24 ) \n\
-#define COLOR_LIGHT_BLUE (   0  |  255<<8 |  255<<16 |  255<<24 ) \n\
-#define COLOR_PINK       ( 255  |  105<<8 |  180<<16 |  255<<24 ) \n\
-#define COLOR_TEAL       (   0  |  128<<8 |  128<<16 |  255<<24 ) \n\
-#define COLOR_LIGHT_GRAY ( 192  |  192<<8 |  192<<16 |  255<<24 ) \n\
-#define COLOR_GRAY       ( 128  |  128<<8 |  128<<16 |  255<<24 ) \n\
-#define COLOR_DARK_GRAY  (  64  |   64<<8 |   64<<16 |  255<<24 ) \n\
-\n\
-#define EVID_SWIPE_RIGHT       9990 \n\
-#define EVID_SWIPE_LEFT        9991 \n\
-#define EVID_MOTION            9992 \n\
-#define EVID_QUIT              9999 \n\
-";
+    pixels = sdl_read_display_pixels(x, y, w, h);
+    ReturnValue->Val->Pointer = (char*)pixels; 
+}
+
+//
+// SDL REGISTRATION
+//
+
+void SdlSetupFunction(Picoc *pc)
+{
+    #define PLATFORM_VAR(name, type, writeable) \
+        do { \
+            VariableDefinePlatformVar(pc, NULL, #name, &pc->type, \
+                                      (union AnyValue *)&name, writeable); \
+        } while (0)
+        
+    PLATFORM_VAR(sdl_win_width, IntType, false);
+    PLATFORM_VAR(sdl_win_height, IntType, false);
+    PLATFORM_VAR(sdl_char_width, IntType, false);
+    PLATFORM_VAR(sdl_char_height, IntType, false);
+}
 
 struct LibraryFunction SdlFunctions[] = {
     // sdl initialization and termination, must be done once
@@ -468,30 +436,144 @@ struct LibraryFunction SdlFunctions[] = {
     { Sdl_render_points,   "void sdl_render_points(sdl_point_t *points, int count, int color, int point_size);" },
 
     // render using textures
-    { Sdl_create_texture,               "sdl_texture_t *sdl_create_texture(int w, int h);" },
-    { Sdl_create_texture_from_display,  "sdl_texture_t *sdl_create_texture_from_display(int x, int y, int w, int h);" },
+    { Sdl_create_texture_from_pixels,   "sdl_texture_t *sdl_create_texture_from_pixels(sdl_pixels_t *pixels);" },
     { Sdl_create_filled_circle_texture, "sdl_texture_t *sdl_create_filled_circle_texture(int radius, int color);" },
     { Sdl_create_text_texture,          "sdl_texture_t *sdl_create_text_texture(char *str);" },
     { Sdl_render_texture,               "void sdl_render_texture(int x, int y, int w, int h, double angle, sdl_texture_t *texture);" },
     { Sdl_destroy_texture,              "void sdl_destroy_texture(sdl_texture_t *texture);" },
-    { Sdl_update_texture,               "void sdl_update_texture(sdl_texture_t *texture, int *pixels);" },
     { Sdl_query_texture,                "void sdl_query_texture(sdl_texture_t *texture, int *width, int *height);" },
+    { Sdl_read_display_pixels,          "void *sdl_read_display_pixels(int x, int y, int w, int h);" },
 
     { NULL, NULL } };
 
-void SdlSetupFunction(Picoc *pc)
+// xxx reformat
+const char SdlDefs[] = "\
+typedef struct { int x; int y; int w; int h; } sdl_loc_t; \n\
+typedef struct { int x; int y; } sdl_point_t; \n\
+typedef struct sdl_texture sdl_texture_t; \n\
+typedef struct { \n\
+    int event_id; \n\
+    union { \n\
+        struct { \n\
+            int x; int y; int xrel; int yrel; \n\
+        } motion; \n\
+    } u; \n\
+} sdl_event_t; \n\
+typedef struct { \n\
+    int magic; \n\
+    int struct_len; \n\
+    int w; \n\
+    int h; \n\
+    int pixels[0]; \n\
+} sdl_pixels_t; \n\
+\n\
+#define PIXELS_MAGIC 0x11223344 \n\
+\n\
+#define BYTES_PER_PIXEL  4 \n\
+#define COLOR_BLACK      (   0  |    0<<8 |    0<<16 |  255<<24 ) \n\
+#define COLOR_WHITE      ( 255  |  255<<8 |  255<<16 |  255<<24 ) \n\
+#define COLOR_RED        ( 255  |    0<<8 |    0<<16 |  255<<24 ) \n\
+#define COLOR_ORANGE     ( 255  |  128<<8 |    0<<16 |  255<<24 ) \n\
+#define COLOR_YELLOW     ( 255  |  255<<8 |    0<<16 |  255<<24 ) \n\
+#define COLOR_GREEN      (   0  |  255<<8 |    0<<16 |  255<<24 ) \n\
+#define COLOR_BLUE       (   0  |    0<<8 |  255<<16 |  255<<24 ) \n\
+#define COLOR_INDIGO     (  75  |    0<<8 |  130<<16 |  255<<24 ) \n\
+#define COLOR_VIOLET     ( 238  |  130<<8 |  238<<16 |  255<<24 ) \n\
+#define COLOR_PURPLE     ( 127  |    0<<8 |  255<<16 |  255<<24 ) \n\
+#define COLOR_LIGHT_BLUE (   0  |  255<<8 |  255<<16 |  255<<24 ) \n\
+#define COLOR_PINK       ( 255  |  105<<8 |  180<<16 |  255<<24 ) \n\
+#define COLOR_TEAL       (   0  |  128<<8 |  128<<16 |  255<<24 ) \n\
+#define COLOR_LIGHT_GRAY ( 192  |  192<<8 |  192<<16 |  255<<24 ) \n\
+#define COLOR_GRAY       ( 128  |  128<<8 |  128<<16 |  255<<24 ) \n\
+#define COLOR_DARK_GRAY  (  64  |   64<<8 |   64<<16 |  255<<24 ) \n\
+\n\
+#define EVID_SWIPE_RIGHT       9990 \n\
+#define EVID_SWIPE_LEFT        9991 \n\
+#define EVID_MOTION            9992 \n\
+#define EVID_QUIT              9999 \n\
+";
+
+// -----------------  UTILS PLATFORM ROUTINES  --------------------------
+
+//
+// utils time routines
+//
+
+void Util_microsec_timer (struct ParseState *Parser, struct Value *ReturnValue,
+	struct Value **Param, int NumArgs)
 {
-    #define PLATFORM_VAR(name, type, writeable) \
-        do { \
-            VariableDefinePlatformVar(pc, NULL, #name, &pc->type, \
-                                      (union AnyValue *)&name, writeable); \
-        } while (0)
-        
-    PLATFORM_VAR(sdl_win_width, IntType, false);
-    PLATFORM_VAR(sdl_win_height, IntType, false);
-    PLATFORM_VAR(sdl_char_width, IntType, false);
-    PLATFORM_VAR(sdl_char_height, IntType, false);
+    ReturnValue->Val->LongInteger = util_microsec_timer();
 }
+
+void Util_get_real_time_us (struct ParseState *Parser, struct Value *ReturnValue,
+	struct Value **Param, int NumArgs)
+{
+    ReturnValue->Val->LongInteger = util_get_real_time_us();
+}
+
+void Util_time2str (struct ParseState *Parser, struct Value *ReturnValue,
+	struct Value **Param, int NumArgs)
+{
+    char *str          = Param[0]->Val->Pointer;
+    long  us           = Param[1]->Val->LongInteger;
+    int   gmt          = Param[2]->Val->Integer;
+    int   display_ms   = Param[3]->Val->Integer;
+    int   display_date = Param[4]->Val->Integer;
+    char *s;
+
+    s = util_time2str(str, us, gmt, display_ms, display_date);
+    ReturnValue->Val->Pointer = s;
+}
+
+//
+// utils file write / read routines
+//
+
+void Util_write_file (struct ParseState *Parser, struct Value *ReturnValue,
+	struct Value **Param, int NumArgs)
+{
+    char *path = Param[0]->Val->Pointer;
+    void *data = Param[1]->Val->Pointer;
+    int   len  = Param[2]->Val->Integer;
+    int   ret;
+
+    ret = util_write_file(path, data, len);
+    ReturnValue->Val->Integer = ret;
+}
+
+void Util_read_file (struct ParseState *Parser, struct Value *ReturnValue,
+	struct Value **Param, int NumArgs)
+{
+    char *path = Param[0]->Val->Pointer;
+    int  *len  = Param[1]->Val->Pointer;
+    void *file_contents;
+
+    file_contents = util_read_file(path, len);
+    ReturnValue->Val->Pointer = file_contents;
+}
+
+//
+// UTILS REGISTRATION
+//
+
+void UtilsSetupFunction(Picoc *pc)
+{
+}
+
+struct LibraryFunction UtilsFunctions[] = {
+    // time
+    { Util_microsec_timer,   "long util_microsec_timer(void);" },
+    { Util_get_real_time_us, "long util_get_real_time_us(void);" },
+    { Util_time2str,         "char *util_time2str(char * str, long us, bool gmt, bool display_ms, bool display_date);" },
+    // file read/write
+    { Util_write_file,       "int util_write_file(char *path, void *data, int len);" },
+    { Util_read_file,        "void *util_read_file(char *path, int *len);" },
+
+    { NULL, NULL } };
+
+const char UtilsDefs[] = "";
+
+// -----------------  PLATFORM INIT PROC  -------------------------------
 
 void PlatformLibraryInit(Picoc *pc)
 {
@@ -501,4 +583,11 @@ void PlatformLibraryInit(Picoc *pc)
         SdlSetupFunction,
         SdlFunctions, 
         SdlDefs);
+
+    IncludeRegister(
+        pc, 
+        "utils.h", 
+        UtilsSetupFunction,
+        UtilsFunctions, 
+        UtilsDefs);
 }
