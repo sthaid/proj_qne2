@@ -49,6 +49,15 @@ typedef struct {
     } u;
 } sdl_event_t;
 
+#define PIXELS_MAGIC 0x11223344
+typedef struct {
+    int magic;
+    int sizeof_struct;
+    int w;
+    int h;
+    int pixels[0];
+} sdl_pixels_t;
+
 //
 // global variables
 //
@@ -97,6 +106,7 @@ void sdl_render_circle(int x_ctr, int y_ctr, int radius, int line_width, int col
 void sdl_render_point(int x, int y, int color, int point_size);
 void sdl_render_points(sdl_point_t *points, int count, int color, int point_size);
 
+#if 0
 // render using textures
 sdl_texture_t *sdl_create_texture(int w, int h);
 sdl_texture_t *sdl_create_texture_from_display(int x, int y, int w, int h);
@@ -106,3 +116,15 @@ void sdl_render_texture(int x, int y, int w, int h, double angle, sdl_texture_t 
 void sdl_destroy_texture(sdl_texture_t *texture);
 void sdl_update_texture(sdl_texture_t *texture, int *pixels);  //xxx add region
 void sdl_query_texture(sdl_texture_t *texture, int *w, int *h);
+#endif
+// render using textures
+sdl_texture_t *sdl_create_texture_from_pixels(sdl_pixels_t *pixels);
+sdl_texture_t *sdl_create_filled_circle_texture(int radius, int color);
+sdl_texture_t *sdl_create_text_texture(char *str);
+void sdl_render_texture(int x, int y, int w, int h, double angle, sdl_texture_t *texture);
+void sdl_destroy_texture(sdl_texture_t *texture);
+void sdl_query_texture(sdl_texture_t *texture, int *w, int *h);  // xxx is this really needed
+sdl_pixels_t *sdl_read_display_pixels(int x, int y, int w, int h);
+
+
+// xxx maybe void sdl_update_texture(sdl_texture_t *texture, int *pixels);  //xxx add region

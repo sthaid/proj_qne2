@@ -1,5 +1,5 @@
 #ifndef UTILS
 #define UTILS
-void utils_proc(void);
+void tester_proc(void);
 #endif
 

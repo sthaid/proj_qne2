@@ -914,71 +914,34 @@ void sdl_render_points(sdl_point_t *points, int count, int color, int point_size
 
 // -----------------  RENDER USING TEXTURES  ---------------------------- 
 
-sdl_texture_t *sdl_create_texture(int w, int h)
+#if 0
+sdl_texture_t *sdl_create_texture_from_pixels(int w, int h, int *pixels)
+sdl_texture_t *sdl_create_filled_circle_texture(int radius, int color);
+sdl_texture_t *sdl_create_text_texture(char *str);
+void sdl_render_texture(int x, int y, int w, int h, double angle, sdl_texture_t *texture);
+void sdl_destroy_texture(sdl_texture_t *texture);
+void sdl_query_texture(sdl_texture_t *texture, int *w, int *h);
+void sdl_read_display_pixels(int x, int y, int w, int h, int **pixels);
+#endif
+
+
+sdl_texture_t *sdl_create_texture_from_pixels(sdl_pixels_t *pixels)
 {
     sdl_texture_t *texture;
-
-    texture = (sdl_texture_t*)
-              SDL_CreateTexture(renderer,
-                                SDL_PIXELFORMAT_ABGR8888,
-                                SDL_TEXTUREACCESS_STREAMING,
-                                w, h);
-    if (texture == NULL) {
-        ERROR("failed to allocate texture\n");
-        return NULL;
-    }
-
-    return texture;
-}
-
-sdl_texture_t *sdl_create_texture_from_display(int x, int y, int w, int h)
-{
-    sdl_texture_t *texture;
-    int ret;
-    char *pixels;
-    SDL_Rect loc;
-
-    loc.x = rint(x * scale);
-    loc.y = rint(y * scale);
-    loc.w = rint(w * scale);
-    loc.h = rint(h * scale);
-
-    // allocate memory for the pixels
-    pixels = calloc(1, loc.h * loc.w * BYTES_PER_PIXEL);
-    if (pixels == NULL) {
-        ERROR("allocate pixels failed\n");
-        return NULL;
-    }
-
-    // read the pixels
-    ret = SDL_RenderReadPixels(renderer, 
-                               &loc,
-                               SDL_PIXELFORMAT_ABGR8888, 
-                               pixels, 
-                               loc.w * BYTES_PER_PIXEL);
-    if (ret < 0) {
-        ERROR("SDL_RenderReadPixels, %s\n", SDL_GetError());
-        free(pixels);
-        return NULL;
-    }
 
     // create the texture
     texture = (sdl_texture_t*)
               SDL_CreateTexture(renderer,
                                 SDL_PIXELFORMAT_ABGR8888,
                                 SDL_TEXTUREACCESS_STREAMING,
-                                loc.w, loc.h);
+                                pixels->w, pixels->h);
     if (texture == NULL) {
         ERROR("failed to allocate texture\n");
-        free(pixels);
         return NULL;
     }
 
     // update the texture with the pixels
-    SDL_UpdateTexture((SDL_Texture*)texture, NULL, pixels, loc.w * BYTES_PER_PIXEL);
-
-    // free pixels
-    free(pixels);
+    SDL_UpdateTexture((SDL_Texture*)texture, NULL, pixels->pixels, pixels->w * BYTES_PER_PIXEL);
 
     // return the texture
     return texture;
@@ -986,6 +949,8 @@ sdl_texture_t *sdl_create_texture_from_display(int x, int y, int w, int h)
 
 sdl_texture_t *sdl_create_filled_circle_texture(int radius, int color)
 {
+    radius *= scale;
+
     int width = 2 * radius + 1;
     int x = radius;
     int y = 0;
@@ -1077,10 +1042,8 @@ void sdl_render_texture(int x, int y, int w, int h, double angle, sdl_texture_t 
         return;
     }
 
-    if (w == -1 || h == -1) {
-        // xxx maybe dont need this
+    if (w == -1 || h == -1) {  // xxx check these both yield the same result
         SDL_QueryTexture((SDL_Texture *)texture, NULL, NULL, &w, &h);
-        //INFO("XXX wh = %d %d\n", w, h);
         dest.x = rint(x * scale);
         dest.y = rint(y * scale);
         dest.w = w;
@@ -1104,6 +1067,82 @@ void sdl_destroy_texture(sdl_texture_t *texture)
     SDL_DestroyTexture((SDL_Texture *)texture);
 }
 
+void sdl_query_texture(sdl_texture_t *texture, int * width, int * height)
+{
+    int w, h;
+
+    if (texture == NULL) {
+        *width = 0;
+        *height = 0;
+        return;
+    }
+
+    SDL_QueryTexture((SDL_Texture *)texture, NULL, NULL, &w, &h);
+    *width = rint(w / scale);
+    *height = rint(h / scale);
+}
+
+// caller must free pixels
+sdl_pixels_t *sdl_read_display_pixels(int x, int y, int w, int h)
+{
+    sdl_pixels_t *pixels;
+    SDL_Rect loc;
+    int ret, malloc_len;
+
+    loc.x = x * scale; // xxx rint
+    loc.y = y * scale;
+    loc.w = w * scale;
+    loc.h = h * scale;
+
+    // allocate memory for the pixels
+    malloc_len = sizeof(sdl_pixels_t) + loc.w * loc.h * BYTES_PER_PIXEL;
+    pixels = malloc(malloc_len);
+    if (pixels == NULL) {
+        ERROR("allocate pixels failed\n");
+        return NULL;
+    }
+
+    // init pixels header fields
+    pixels->magic         = PIXELS_MAGIC;
+    pixels->sizeof_struct = malloc_len;
+    pixels->w             = loc.w;
+    pixels->h             = loc.h;
+
+    // read the pixels
+    ret = SDL_RenderReadPixels(renderer, 
+                               &loc,
+                               SDL_PIXELFORMAT_ABGR8888, 
+                               pixels->pixels,
+                               loc.w * BYTES_PER_PIXEL);
+    if (ret < 0) {
+        ERROR("SDL_RenderReadPixels, %s\n", SDL_GetError());
+        free(pixels);
+        return NULL;
+    }
+
+    // success
+    return pixels;
+}
+
+#if 0
+sdl_texture_t *sdl_create_texture(int w, int h)
+{
+    sdl_texture_t *texture;
+
+    texture = (sdl_texture_t*)
+              SDL_CreateTexture(renderer,
+                                SDL_PIXELFORMAT_ABGR8888,
+                                SDL_TEXTUREACCESS_STREAMING,
+                                w, h);
+    if (texture == NULL) {
+        ERROR("failed to allocate texture\n");
+        return NULL;
+    }
+
+    return texture;
+}
+#endif
+#if 0
 void sdl_update_texture(sdl_texture_t *texture, int * pixels)
 {
     int w, h, pitch;
@@ -1112,7 +1151,7 @@ void sdl_update_texture(sdl_texture_t *texture, int * pixels)
         return;
     }
 
-    sdl_query_texture(texture, &w, &h);
+    SDL_QueryTexture((SDL_Texture *)texture, NULL, NULL, &w, &h);
     pitch = w * BYTES_PER_PIXEL;
 
     SDL_UpdateTexture((SDL_Texture*)texture,
@@ -1120,17 +1159,63 @@ void sdl_update_texture(sdl_texture_t *texture, int * pixels)
                       pixels,
                       pitch);
 }
+#endif
 
-void sdl_query_texture(sdl_texture_t *texture, int * width, int * height)
+
+#if 0
+sdl_texture_t *sdl_create_texture_from_display(int x, int y, int w, int h)
 {
-    if (texture == NULL) {
-        *width = 0;
-        *height = 0;
-        return;
+    sdl_texture_t *texture;
+    int ret;
+    char *pixels;
+    SDL_Rect loc;
+
+    loc.x = rint(x * scale);
+    loc.y = rint(y * scale);
+    loc.w = rint(w * scale);
+    loc.h = rint(h * scale);
+
+    // allocate memory for the pixels
+    pixels = calloc(1, loc.h * loc.w * BYTES_PER_PIXEL);
+    if (pixels == NULL) {
+        ERROR("allocate pixels failed\n");
+        return NULL;
     }
 
-    SDL_QueryTexture((SDL_Texture *)texture, NULL, NULL, width, height);
+    // read the pixels
+    ret = SDL_RenderReadPixels(renderer, 
+                               &loc,
+                               SDL_PIXELFORMAT_ABGR8888, 
+                               pixels, 
+                               loc.w * BYTES_PER_PIXEL);
+    if (ret < 0) {
+        ERROR("SDL_RenderReadPixels, %s\n", SDL_GetError());
+        free(pixels);
+        return NULL;
+    }
+
+    // create the texture
+    texture = (sdl_texture_t*)
+              SDL_CreateTexture(renderer,
+                                SDL_PIXELFORMAT_ABGR8888,
+                                SDL_TEXTUREACCESS_STREAMING,
+                                loc.w, loc.h);
+    if (texture == NULL) {
+        ERROR("failed to allocate texture\n");
+        free(pixels);
+        return NULL;
+    }
+
+    // update the texture with the pixels
+    SDL_UpdateTexture((SDL_Texture*)texture, NULL, pixels, loc.w * BYTES_PER_PIXEL);
+
+    // free pixels
+    free(pixels);
+
+    // return the texture
+    return texture;
 }
+#endif
 
 // -----------------  LOGGING  --------------------------------------
 

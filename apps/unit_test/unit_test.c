@@ -51,7 +51,7 @@ static void render_page_6(bool init);
 int main(int argc, char **argv)
 {
     int  i;
-    int  pagenum = 0;
+    int  pagenum = 5;
     bool end_program = false;
     bool is_ez_app = (argc > 0 && strcmp(argv[0], "ez_app") == 0);
     bool init = true;
@@ -367,72 +367,67 @@ static void add_point(sdl_point_t **p, int x, int y)
 
 static sdl_texture_t *circle;
 static sdl_texture_t *text;
-static sdl_texture_t *purple;
 
 static void render_page_5(bool init)
 {
+    int w, h, fd;
+    sdl_texture_t *t;
+    sdl_pixels_t *pixels;
+
     // if the circle texture has not been initialized then
-    // init the 3 textures used by this test:
+    // init the textures used by this test:
     // - circle: sdl_create_filled_circle_texture
     // - text:   sdl_create_text_texture
-    // - purple: sdl_create_texture + sdl_update_texture
     if (circle == NULL) {
         circle = sdl_create_filled_circle_texture(100, COLOR_RED);
-
-        text   = sdl_create_text_texture("hello");
-
-        purple = sdl_create_texture(100, 100);
-        int *pixels = malloc(100 * 100 * 4);
-        for (int i = 0; i < 100*100; i++) {
-            pixels[i] = COLOR_PURPLE;
-        }
-        sdl_update_texture(purple, pixels);
-        free(pixels);
+        text   = sdl_create_text_texture("XXXXX");
     }
 
     // xxx fixup the following ...
 
-    // render the circle texture at varying x location, y = 100 .. 300
-    static int circle_x=100, circle_y=200;
-    sdl_render_texture(circle_x, circle_y, 200, 200, 0, circle);
+    // render the circle texture at varying x location, y = 200 .. 400
+    static int circle_x=-200;
+    sdl_render_texture(circle_x, 200, -1, -1, 0, circle);
     circle_x += 10;
-    if (circle_x > 900) circle_x = 100;
+    if (circle_x > 1000) circle_x = -200;
 
-    // render the circle texture using scaling, y = 300 .. 500
-    //sdl_render_scaled_texture(500, 400, 400, 200, circle);
-    sdl_render_texture(100, 500, 200, 400, 0, circle);
+    // render the circle texture using scaling, y = 400 .. 600
+    sdl_render_texture(500-200, 400, 400, 200, 0, circle);
 
-    // render text texture, at y = 550
-    sdl_render_texture(0, 1000, -1, -1, 0, text);
+    // render text texture, at y = 500
+    sdl_query_texture(text, &w, &h);
+    sdl_render_texture(0, 500-h/2, -1, -1, 0, text);
 
-    // rotate and render the text texture at y = 550 .. 950
+    // rotate and render the text texture at y = 600 .. 850
     static double angle = 0;
     angle += 5;
-    sdl_render_texture(500, 500, -1, -1, angle, text);
+    sdl_render_texture(500-w/2, 600+w/2-h/2, -1, -1, angle, text);
 
-    // render the purple texture, which was constructed from pixels, y = 950 .. 1050
-    sdl_render_texture(500, 1500, -1, -1, 45, purple);
+    // xxx move some of this to init
+    pixels = sdl_read_display_pixels(0, 0, sdl_win_width, sdl_char_height);
+    write_file("unit_test_pixels", pixels, pixels->struct_len);
+    free(pixels);
 
-    // xxx
-    static sdl_texture_t *t;
-    if (t == NULL) {
-        int w,h;
-        printf("XXXXXXXXXX sdl_win_width, sdl_char_height = %d %d\n", sdl_win_width, sdl_char_height);
-        t = sdl_create_texture_from_display(0,0,sdl_win_width, sdl_char_height);
-        sdl_query_texture(t, &w, &h);
-        printf("XXXXXXXXXXXXXX w h = %d %d\n", w, h);
+    pixels = read_file("unit_test_pixels", &file_length);
+    if (pixels == NULL || pixels->struct_len != file_length) {
+        printf("ERROR: failed to read unit_test_pixels\n");
+        goto done;
     }
-    sdl_render_texture(0, 1500, -1, -1, 0, t);
+    t = sdl_create_texture_from_pixels(pixels);
+    sdl_render_texture(0, 900, -1, -1, 0, t);
+    sdl_destroy_texture(t);
+    free(pixels);
 
-    // xxx test reading dipslay pixels, writing to file, and restoring from file if it exists
+done:
 }
 
 static void page_5_cleanup(void)
 {
     sdl_destroy_texture(circle);
     sdl_destroy_texture(text);
-    sdl_destroy_texture(purple);
 }
+
+
 
 // -----------------  PAGE 6: COLORS  -------------------------
 
