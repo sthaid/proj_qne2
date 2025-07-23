@@ -30,7 +30,7 @@ SRCS :=  \
 
 TARGET = app
 
-CFLAGS = -Wall -g -I../src $(shell sdl2-config --cflags)
+CFLAGS = -Wall -O2 -g -I../src $(shell sdl2-config --cflags)
 
 $(TARGET):
 	gcc -o $@ $(CFLAGS) $(SRCS) -lSDL2 -lSDL2_ttf -lm

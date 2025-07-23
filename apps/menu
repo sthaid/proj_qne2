@@ -1,6 +1,7 @@
 # PG  ID              NAME           DIR  PICOC_ARGS
 # --  --  ----------------  ------------  --------------------
-   0   0         unit_test     unit_test  unit_test.c tester.c
+   0   0         Unit_Test     unit_test  unit_test.c tester.c
+   0   1            Primes        primes  primes.c
 
 
 # 1  X  : 
