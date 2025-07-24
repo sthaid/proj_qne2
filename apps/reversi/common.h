@@ -11,6 +11,8 @@
 #define BLACK  1
 #define WHITE  2
 
+#define OTHER_COLOR(x) ((x) == BLACK ? WHITE : BLACK)
+
 #define MOVE_PASS -1
 
 typedef struct {

@@ -12,6 +12,7 @@
 #define GAME_STATE_READY   1
 #define GAME_STATE_ACTIVE  2
 #define GAME_STATE_OVER    3
+#define GAME_STATE_ERROR   4
 
 #define EVID_GAME_START   201
 #define EVID_GAME_RESET   202
@@ -34,9 +35,10 @@
 static void game_init(board_t *b);
 static bool humans_turn(board_t *b);
 static void register_event(int evid);
-static void apply_move(board_t *b, int move);
-static bool is_game_over(board_t *b);
+static int apply_move(board_t *b, int move);
 void get_possible_moves(board_t *b, possible_moves_t *pm);
+static bool any_possible_moves(board_t *b);
+static bool is_game_over(board_t *b);
 static void draw_board(board_t *b, possible_moves_t *pm);
 
 // -----------------  MAIN  ------------------------------------
@@ -59,6 +61,11 @@ int main(int argc, char **argv)
         printf("ERROR: sdl_init failed\n");
         return 1;
     }
+
+    // init print; 20 chars across display
+    // xxx check that is the default, for both ez_app and !ex_app modes
+    // xxx and maybe remove from here
+    sdl_print_init(20, COLOR_WHITE, COLOR_BLACK);
 
     // loop until end program
     while (true) {
@@ -85,6 +92,8 @@ int main(int argc, char **argv)
                 }
             }
         } else if (game_state == GAME_STATE_OVER) {
+            register_event(EVID_GAME_RESET);
+        } else if (game_state == GAME_STATE_ERROR) {
             register_event(EVID_GAME_RESET);
         }
 
@@ -124,16 +133,22 @@ int main(int argc, char **argv)
         } else if (event.event_id == EVID_GAME_START) {
             game_state = GAME_STATE_ACTIVE;
         } else if (game_state == GAME_STATE_ACTIVE) {
+            int rc = 0;
             if (is_game_over(&board)) {
                 game_state = GAME_STATE_OVER;
             } else if (humans_turn(&board)) {
                 int move = (event.event_id == EVID_MOVE_PASS ? MOVE_PASS : event.event_id);
-                apply_move(&board, move);
+                rc = apply_move(&board, move);
             } else {
                 int move = cpu_get_move(&board);
-                apply_move(&board, move);
+                rc = apply_move(&board, move);
+            }
+            if (rc != 0) {
+                game_state = GAME_STATE_ERROR;
             }
         } else if (game_state == GAME_STATE_OVER) {
+            // nothing to do 
+        } else if (game_state == GAME_STATE_ERROR) {
             // nothing to do 
         }
     }
@@ -147,7 +162,131 @@ int main(int argc, char **argv)
     return 0;
 }
 
-// -----------------  SUPPORT  ------------------------------------
+// -----------------  DRAW BOARD  ---------------------------------
+
+static void rc_to_loc(int r_arg, int c_arg, int *x, int *y, int *w, int *h);
+
+static void draw_board(board_t *b, possible_moves_t *pm)
+{
+    int r, c, x, y, w, h;
+
+    // draw the 64 playing squares
+    for (r = 1; r <= 8; r++) {
+        for (c = 1; c <= 8; c++) {
+            rc_to_loc(r, c, &x, &y, &w, &h);
+            sdl_render_fill_rect(x, y, w, h, COLOR_GREEN);
+        }
+    }
+
+#if 0
+    // draw the black and white pieces 
+    for (r = 1; r <= 8; r++) {
+        for (c = 1; c <= 8; c++) {
+            rect_t loc = *rc_to_loc(r,c);
+            int offset = loc.w/2 - piece_circle_radius;
+            if (gm->board.pos[r][c] == BLACK) {
+                sdl_render_texture(pane, loc.x+offset, loc.y+offset, piece_black_circle);
+            } else if (gm->board.pos[r][c] == WHITE) {
+                sdl_render_texture(pane, loc.x+offset, loc.y+offset, piece_white_circle);
+            }
+        }
+    }
+#endif
+}
+
+static void rc_to_loc(int r_arg, int c_arg, int *x, int *y, int *w, int *h)
+{
+    static struct {
+        int x;
+        int y;
+        int w;
+        int h;
+    } loc[10][10];  // xxx picoc?
+
+    static bool first_call = true;
+
+    if (first_call) {
+        int r, c, i, sq_beg[8], sq_end[8];
+        double tmp;
+        int win_width = 994;
+
+        tmp = (win_width - 2) / 8.;
+        for (i = 0; i < 8; i++) {
+            sq_beg[i] = rint(2 + i * tmp);
+        }
+        for (i = 0; i < 7; i++) {
+            sq_end[i] = sq_beg[i+1] - 3;
+        }
+        sq_end[7] = win_width - 3;
+
+        for (r = 1; r <= 8; r++) {
+            for (c = 1; c <= 8; c++) {
+                loc[r][c].x = sq_beg[c-1];
+                loc[r][c].y = sq_beg[r-1];
+                loc[r][c].w = sq_end[c-1] - sq_beg[c-1] + 1;
+                loc[r][c].h = sq_end[r-1] - sq_beg[r-1] + 1;
+            }
+        }
+
+        first_call = false;
+    }
+
+    *x = loc[r_arg][c_arg].x;
+    *y = loc[r_arg][c_arg].y;
+    *w = loc[r_arg][c_arg].w;
+    *h = loc[r_arg][c_arg].h;
+}
+
+
+// -----------------  SUPPORT ROUTINES  ---------------------------
+
+static int r_incr_tbl[8] = {0, -1, -1, -1,  0,  1, 1, 1};  //xxx does this work in picoc?
+static int c_incr_tbl[8] = {1,  1,  0, -1, -1, -1, 0, 1};
+
+static void move_to_rc(int move, int *r, int *c)
+{
+    *r = move / 10;;
+    *c = move % 10;
+}
+
+static int rc_to_move(int r, int c)
+{
+    return r * 10 + c;
+}
+
+static bool humans_turn(board_t *b)
+{
+    return (b->whose_turn == BLACK && b->black_is_human) ||
+           (b->whose_turn == WHITE && b->white_is_human);
+}
+
+static void register_event(int evid)
+{
+    #define NK2X(n,k) ((sdl_win_width/2/(n)) + (k) * (sdl_win_width/(n)))
+
+    sdl_loc_t *loc;
+
+    switch (evid) {
+    case EVID_GAME_START:
+        loc = sdl_render_text(0, 1100, "START");
+        break;
+    case EVID_GAME_RESET:
+        loc = sdl_render_text(0, 1100, "RESET");
+        break;
+    case EVID_MOVE_PASS:
+        loc = sdl_render_text(0, 1200, "PASS");
+        break;
+    case EVID_END_PROGRAM:
+        sdl_print_init(10, COLOR_WHITE, COLOR_BLACK);
+        loc = sdl_render_printf_xyctr(NK2X(3,2), sdl_win_height-sdl_char_height/2, "%s", "X");
+        sdl_print_init(20, COLOR_WHITE, COLOR_BLACK);
+        break;
+    default:
+        //xxx
+    }
+
+    sdl_register_event(loc, evid);
+}
 
 static void game_init(board_t *b)
 {
@@ -164,41 +303,7 @@ static void game_init(board_t *b)
     b->white_is_human = false;
 }
 
-static bool humans_turn(board_t *b)
-{
-    return (b->whose_turn == BLACK && b->black_is_human) ||
-           (b->whose_turn == WHITE && b->white_is_human);
-}
-
-static void register_event(int evid)
-{
-}
-
-static void apply_move(board_t *b, int move)
-{
-}
-
-static bool is_game_over(board_t *b)
-{
-    return true;
-}
-
-void get_possible_moves(board_t *b, possible_moves_t *pm)
-{
-}
-
-static void draw_board(board_t *b, possible_moves_t *pm)
-{
-}
-
-#if 0
-
-
-//                          0   1   2   3   4   5  6  7
-static int r_incr_tbl[8] = {0, -1, -1, -1,  0,  1, 1, 1};
-static int c_incr_tbl[8] = {1,  1,  0, -1, -1, -1, 0, 1};
-
-void apply_move(board_t *b, int move)
+static int apply_move(board_t *b, int move)
 {
     int  r, c, i, j, my_color, other_color;
     int *my_color_cnt, *other_color_cnt;
@@ -206,16 +311,17 @@ void apply_move(board_t *b, int move)
 
     if (move == MOVE_PASS) {
         b->whose_turn = OTHER_COLOR(b->whose_turn);
-        return;
+        return 0;
     }
 
     my_color = b->whose_turn;
     other_color = OTHER_COLOR(my_color);
 
     succ = false;
-    MOVE_TO_RC(move, r, c);
+    move_to_rc(move, &r, &c);
     if (b->pos[r][c] != NONE) {
-        FATAL("pos[%d][%d] = %d\n", r, c, b->pos[r][c]); //xxx FATAL should be error
+        printf("ERROR: pos[%d][%d] is occupied, color=%d\n", r, c, b->pos[r][c]);
+        return -1;
     }
 
     if (my_color == BLACK) {
@@ -257,21 +363,22 @@ void apply_move(board_t *b, int move)
     }
 
     if (!succ) {
-        FATAL("invalid call to apply_move, move=%d\n", move); //xxx
+        printf("ERROR: invalid call to apply_move, move=%d\n", move);
+        return -1;
     }
 
     b->whose_turn = OTHER_COLOR(b->whose_turn);
+    return 0;
 }
 
 void get_possible_moves(board_t *b, possible_moves_t *pm)
 {
-    int r, c, i, my_color, other_color, move;
+    int r, c, i, my_color, other_color;
 
     my_color = b->whose_turn;
     other_color = OTHER_COLOR(my_color);
 
     pm->max = 0;
-    pm->color = my_color;  // xxx is this needed
 
     for (r = 1; r <= 8; r++) {
         for (c = 1; c <= 8; c++) {
@@ -293,8 +400,7 @@ void get_possible_moves(board_t *b, possible_moves_t *pm)
                 }
 
                 if (cnt > 0 && b->pos[r_next][c_next] == my_color) {
-                    RC_TO_MOVE(r, c, move);
-                    pm->move[pm->max++] = move;
+                    pm->move[pm->max++] = rc_to_move(r, c);
                     break;
                 }
             }
@@ -302,30 +408,59 @@ void get_possible_moves(board_t *b, possible_moves_t *pm)
     }
 }
 
-static bool is_game_over(board_t *b)
+static bool any_possible_moves(board_t *b)
 {
+    int r, c, i, my_color, other_color;
+
+    my_color = b->whose_turn;
+    other_color = OTHER_COLOR(my_color);
+
+    for (r = 1; r <= 8; r++) {
+        for (c = 1; c <= 8; c++) {
+            if (b->pos[r][c] != NONE) {
+                continue;
+            }
+
+            for (i = 0; i < 8; i++) {
+                int r_incr = r_incr_tbl[i];
+                int c_incr = c_incr_tbl[i];
+                int r_next = r + r_incr;
+                int c_next = c + c_incr;
+                int cnt    = 0;
+
+                while (b->pos[r_next][c_next] == other_color) {
+                    r_next += r_incr;
+                    c_next += c_incr;
+                    cnt++;
+                }
+
+                if (cnt > 0 && b->pos[r_next][c_next] == my_color) {
+                    return true;
+                }
+            }
+        }
+    }
+
     return false;
 }
 
-// -----------------  DISPLAY  ------------------------------------
-
-sdl_create_filled_circle_texture
-sdl_create_filled_circle_texture
-sdl_render_fill_rect
-sdl_font_char_height  and width
-
-static void xxx(void)
+static bool is_game_over(board_t *b)
 {
-        piece_circle_radius  = rint(.4*sq_wh);
-        piece_black_circle   = sdl_create_filled_circle_texture(piece_circle_radius, SDL_BLACK);
-        piece_white_circle   = sdl_create_filled_circle_texture(piece_circle_radius, SDL_WHITE);
+    bool apm;
 
-        prompt_circle_radius = rint(.08*sq_wh);
-        prompt_black_circle  = sdl_create_filled_circle_texture(prompt_circle_radius, SDL_BLACK);
-        prompt_white_circle  = sdl_create_filled_circle_texture(prompt_circle_radius, SDL_WHITE);
-}
+    // quick check, if all squares are filled the game is over
+    if (b->black_cnt + b->white_cnt == 64) {
+        return true;
+    }
 
-static void update_display(board_t *b)
-{
+    // if the current player has possible moves then the game is not over
+    if (any_possible_moves(b)) {
+        return false;
+    }
+
+    // if the other player does not have possible moves the game is over
+    b->whose_turn = OTHER_COLOR(b->whose_turn);
+    apm = any_possible_moves(b);
+    b->whose_turn = OTHER_COLOR(b->whose_turn);
+    return !apm;
 }
-#endif
