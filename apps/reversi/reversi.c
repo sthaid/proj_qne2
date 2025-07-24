@@ -194,14 +194,15 @@ static void draw_board(board_t *b, possible_moves_t *pm)
 #endif
 }
 
-static void rc_to_loc(int r_arg, int c_arg, int *x, int *y, int *w, int *h)
-{
-    static struct {
+    static struct { //xxx
         int x;
         int y;
         int w;
         int h;
     } loc[10][10];  // xxx picoc?
+
+static void rc_to_loc(int r_arg, int c_arg, int *x, int *y, int *w, int *h)
+{
 
     static bool first_call = true;
 
@@ -212,7 +213,8 @@ static void rc_to_loc(int r_arg, int c_arg, int *x, int *y, int *w, int *h)
 
         tmp = (win_width - 2) / 8.;
         for (i = 0; i < 8; i++) {
-            sq_beg[i] = rint(2 + i * tmp);
+            //sq_beg[i] = rint(2 + i * tmp);
+            sq_beg[i] = (2 + i * tmp);  //xxx bring in rint?
         }
         for (i = 0; i < 7; i++) {
             sq_end[i] = sq_beg[i+1] - 3;
@@ -260,10 +262,10 @@ static bool humans_turn(board_t *b)
            (b->whose_turn == WHITE && b->white_is_human);
 }
 
+#define NK2X(n,k) ((sdl_win_width/2/(n)) + (k) * (sdl_win_width/(n)))
+
 static void register_event(int evid)
 {
-    #define NK2X(n,k) ((sdl_win_width/2/(n)) + (k) * (sdl_win_width/(n)))
-
     sdl_loc_t *loc;
 
     switch (evid) {
