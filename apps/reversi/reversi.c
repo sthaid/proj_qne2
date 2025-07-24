@@ -257,6 +257,8 @@ static void rc_to_loc(int r_arg, int c_arg, int *x, int *y, int *w, int *h)
     *h = loc[r_arg][c_arg].h;
 }
 
+static void move_to_rc(int move, int *r, int *c);  // xxx move
+
 static void draw_board(board_t *b, possible_moves_t *pm)
 {
     int x1, x2, y1, y2;
@@ -290,8 +292,21 @@ static void draw_board(board_t *b, possible_moves_t *pm)
             }
         }
     }
-}
 
+    // display the human player's possilbe moves as small circles
+    if (pm) {
+        sdl_texture_t *prompt;
+        int r, c, x, y, w, h;
+
+        prompt = (b->whose_turn == BLACK ? prompt_black_circle : prompt_white_circle);
+        for (int i = 0; i < pm->max; i++) {
+            move_to_rc(pm->move[i], &r, &c);
+            rc_to_loc(r, c, &x, &y, &w, &h);
+            offset = w / 2 - prompt_circle_radius;
+            sdl_render_texture(x+offset, y+offset, -1, -1, 0, prompt);
+        }
+    }
+}
 
 // -----------------  SUPPORT ROUTINES  ---------------------------
 
