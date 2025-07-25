@@ -1,17 +1,13 @@
+// xxx rename file
+
 #include <common.h>
 
-int cpu_get_move(board_t *b)
-{
-    return MOVE_PASS;
-}
-
-#if 0
 //
 // defines
 //
 
-#define INFIN INT64_MAX
-#define ONE64 ((int64_t)1)
+#define INFIN 0x7fffffffffffffff
+#define ONE64 ((long)1)
 
 //
 // variables
@@ -21,9 +17,36 @@ int cpu_get_move(board_t *b)
 // prototypes
 //
 
-static int64_t alphabeta(const board_t *b, int depth, int64_t alpha, int64_t beta, bool maximizing_player, int *move);
+static long alphabeta(board_t *b, int depth, long alpha, long beta, bool maximizing_player, int *move);
 static void init_edge_gateway_to_corner(void);
-static int64_t heuristic(const board_t *b, bool maximizing_player, bool game_over, possible_moves_t *pm);
+static long heuristic(board_t *b, bool maximizing_player, bool game_over, possible_moves_t *pm);
+
+static long min64(long a, long b) {
+    return a < b ? a : b;
+}
+
+static long max64(long a, long b) {
+    return a > b ? a : b;
+}
+
+#if 0
+static void setbit(unsigned char *bm, int idx) {
+    bm[idx/8] |= (1 << (idx&7));
+}
+
+static bool getbit(unsigned char *bm, int idx) {
+    return bm[idx/8] & (1 << (idx&7));
+}
+#endif
+
+#if 0
+static void move_to_rc(int move, int *r, int *c)
+{
+    *r = move / 10;
+    *c = move % 10;
+}
+#endif
+
 
 // -----------------  CPU PLAYER - GET_MOVE ---------------------------------
 
@@ -31,7 +54,7 @@ static int  MIN_DEPTH[9]              = {0,  1,  2,  3,  4,  5,  6,  7,  8 };
 static int  PIECECNT_FOR_EOG_DEPTH[9] = {0, 56, 55, 54, 53, 52, 51, 50, 49 };
 static bool initialized               = false;
 
-static inline int get_depth(int level, int piececnt)
+static int get_depth(int level, int piececnt)
 {
     double M, B;
     int depth;
@@ -43,16 +66,18 @@ static inline int get_depth(int level, int piececnt)
     return depth;
 }
 
-static void create_eval_str(int64_t value, char *eval_str);
+static void create_eval_str(long value, char *eval_str);
 
-int cpu_get_move(int level, const board_t *b, char *eval_str)
+int cpu_get_move(int level, board_t *b, char *eval_str)
 {
-    int64_t value;
+    long value;
     int     move, depth, piececnt;
 
     // sanity check level arg
     if (level < 1 || level > 8) {
-        FATAL("invlaid level %d\n", level);
+        // xxx
+        printf("ERROR: invlaid level %d\n", level);
+        return MOVE_PASS;
     }
 
     // initialization
@@ -64,14 +89,10 @@ int cpu_get_move(int level, const board_t *b, char *eval_str)
 
     // get lookahead depth
     depth = get_depth(level, piececnt);
+    printf("depth = %d\n",depth);
 
     // call alphabeta to get the best move, and associated heuristic value
     value = alphabeta(b, depth, -INFIN, +INFIN, true, &move);
-    if (move_cancelled()) {
-        INFO("move_cancelled, returning MOVE_NONE\n");
-        if (eval_str) eval_str[0] = '\0';
-        return MOVE_NONE;
-    }
 
     // create evaluation string, based on value returned from alphabeta;
     // this string can optionally be displayed by caller
@@ -81,7 +102,7 @@ int cpu_get_move(int level, const board_t *b, char *eval_str)
     return move;
 }
 
-static void create_eval_str(int64_t value, char *eval_str)
+static void create_eval_str(long value, char *eval_str)
 {
     // eval_str should not exceed 16 char length, 
     // to avoid characters being off the window
@@ -103,25 +124,20 @@ static void create_eval_str(int64_t value, char *eval_str)
 
 // -----------------  CHOOSE BEST MOVE (RECURSIVE ROUTINE)  -----------------
 
-static int64_t alphabeta(const board_t *b, int depth, int64_t alpha, int64_t beta, bool maximizing_player, int *move)
+static board_t *CHILD(board_t *b, board_t *b_child, int move)
 {
-    #define CHILD(mv) \
-        ({ b_child = *b; \
-           apply_move(&b_child, mv, NULL); \
-           &b_child; })
+    *b_child = *b;
+    apply_move(b_child, move);
+    return b_child;
+}
 
-    int64_t          value, v;
-    int              i, best_move = MOVE_NONE;
+static long alphabeta(board_t *b, int depth, long alpha, long beta, bool maximizing_player, int *move)
+{
+    long          value, v;
+    int              i, best_move = MOVE_PASS;
     board_t          b_child;
     bool             game_over;
     possible_moves_t pm;
-
-    // if move is cancelled then just return, this 
-    // happens when the game is being reset or restarted
-    if (move_cancelled()) {
-        if (move) *move = MOVE_NONE;
-        return 0;
-    }
 
     // determine values for game_over and pm (possible moves)
     //
@@ -135,6 +151,8 @@ static int64_t alphabeta(const board_t *b, int depth, int64_t alpha, int64_t bet
     //    possible moves then the game is over. If the opponent has possible
     //    moves then this player must pass.
     // endif
+    // xxx optimize
+    // XXX
     game_over = false;
     if (b->black_cnt + b->white_cnt == 64) {
         game_over = true;
@@ -142,6 +160,7 @@ static int64_t alphabeta(const board_t *b, int depth, int64_t alpha, int64_t bet
     } else {
         get_possible_moves(b, &pm);
         if (pm.max == 0) {
+#if 0 //xxx
             possible_moves_t other_pm;
             get_possible_moves(CHILD(MOVE_PASS), &other_pm);
             game_over = (other_pm.max == 0);
@@ -149,6 +168,7 @@ static int64_t alphabeta(const board_t *b, int depth, int64_t alpha, int64_t bet
                 pm.max = 1;
                 pm.move[0] = MOVE_PASS;
             }
+#endif
         }
     }
 
@@ -159,14 +179,14 @@ static int64_t alphabeta(const board_t *b, int depth, int64_t alpha, int64_t bet
     // 
 
     if (depth == 0 || game_over) {
-        if (move) *move = (game_over ? MOVE_GAME_OVER : MOVE_NONE);
+        if (move) *move = MOVE_PASS;   // xxx or MOVE_NONE?
         return heuristic(b, maximizing_player, game_over, &pm);
     }
 
     if (maximizing_player) {
         value = -INFIN;
         for (i = 0; i < pm.max; i++) {
-            if ((v = alphabeta(CHILD(pm.move[i]), depth-1, alpha, beta, false, NULL)) > value) {
+            if ((v = alphabeta(CHILD(b, &b_child, pm.move[i]), depth-1, alpha, beta, false, NULL)) > value) {
                 value = v;
                 best_move = pm.move[i];
             }
@@ -178,7 +198,7 @@ static int64_t alphabeta(const board_t *b, int depth, int64_t alpha, int64_t bet
     } else {
         value = +INFIN;
         for (i = 0; i < pm.max; i++) {
-            if ((v = alphabeta(CHILD(pm.move[i]), depth-1, alpha, beta, true, NULL)) < value) {
+            if ((v = alphabeta(CHILD(b, &b_child, pm.move[i]), depth-1, alpha, beta, true, NULL)) < value) {
                 value = v;
                 best_move = pm.move[i];
             }
@@ -195,7 +215,7 @@ static int64_t alphabeta(const board_t *b, int depth, int64_t alpha, int64_t bet
 
 // -----------------  HEURISTIC  ---------------------------------------------------
 
-static inline int64_t corner_count(const board_t *b)
+static long corner_count(board_t *b)
 {
     int cnt = 0;
     int my_color = b->whose_turn;
@@ -212,28 +232,7 @@ static inline int64_t corner_count(const board_t *b)
     return cnt;
 }
 
-static inline int64_t corner_moves(const board_t *b)
-{
-    int cnt = 0;
-    int my_color = b->whose_turn;
-    int other_color = OTHER_COLOR(my_color);
-    int which_corner;
-
-    for (which_corner = 0; which_corner < 4; which_corner++) {
-        if (is_corner_move_possible(b, which_corner)) cnt++;
-    }
-
-    ((board_t*)b)->whose_turn = other_color;
-    for (which_corner = 0; which_corner < 4; which_corner++) {
-        if (is_corner_move_possible(b, which_corner)) cnt--;
-    }
-    ((board_t*)b)->whose_turn = my_color;
-
-    return cnt;
-}
-
-bool is_corner_move_possible(const board_t *b, int which_corner)
-{
+#if 0 //xxx
     static struct {
         int r;
         int c;
@@ -246,6 +245,8 @@ bool is_corner_move_possible(const board_t *b, int which_corner)
         { 8,1, {0,-1,-1}, { 1, 0, 1} },    // 3: bottom left
                     };
 
+static bool is_corner_move_possible(board_t *b, int which_corner)
+{
     int r, c, i, my_color, other_color;
 
     r = tbl[which_corner].r;
@@ -276,8 +277,34 @@ bool is_corner_move_possible(const board_t *b, int which_corner)
 
     return false;
 }
+#else
+static bool is_corner_move_possible(board_t *b, int which_corner)
+{
+    return false;
+}
+#endif
 
-static inline int64_t diagonal_gateways_to_corner(const board_t *b)
+static long corner_moves(board_t *b)
+{
+    int cnt = 0;
+    int my_color = b->whose_turn;
+    int other_color = OTHER_COLOR(my_color);
+    int which_corner;
+
+    for (which_corner = 0; which_corner < 4; which_corner++) {
+        if (is_corner_move_possible(b, which_corner)) cnt++;
+    }
+
+    ((board_t*)b)->whose_turn = other_color;
+    for (which_corner = 0; which_corner < 4; which_corner++) {
+        if (is_corner_move_possible(b, which_corner)) cnt--;
+    }
+    ((board_t*)b)->whose_turn = my_color;
+
+    return cnt;
+}
+
+static long diagonal_gateways_to_corner(board_t *b)
 {
     int cnt = 0;
     int my_color = b->whose_turn;
@@ -303,11 +330,13 @@ static inline int64_t diagonal_gateways_to_corner(const board_t *b)
     return cnt;
 }
 
-static uint8_t black_gateway_to_corner_bitmap[8192];
-static uint8_t white_gateway_to_corner_bitmap[8192];
+//static unsigned char black_gateway_to_corner_bitmap[8192];
+//static unsigned char white_gateway_to_corner_bitmap[8192];
 
-static inline int64_t edge_gateway_to_corner(const board_t *b)
+static long edge_gateway_to_corner(board_t *b)
 {
+return 0;
+#if 0 //xxx
     #define HORIZONTAL_EDGE(b, r) \
         ((b->pos[r][1] << 14) | \
          (b->pos[r][2] << 12) | \
@@ -330,9 +359,9 @@ static inline int64_t edge_gateway_to_corner(const board_t *b)
     int       my_color    = b->whose_turn;
     int       other_color = OTHER_COLOR(my_color);
     int       cnt         = 0;
-    uint16_t  edge;
-    uint8_t  *my_color_gateway_to_corner_bitmap;
-    uint8_t  *other_color_gateway_to_corner_bitmap;
+    unsigned short  edge;
+    unsigned char  *my_color_gateway_to_corner_bitmap;
+    unsigned char  *other_color_gateway_to_corner_bitmap;
 
     my_color_gateway_to_corner_bitmap = (my_color == BLACK 
         ? black_gateway_to_corner_bitmap : white_gateway_to_corner_bitmap);
@@ -356,10 +385,12 @@ static inline int64_t edge_gateway_to_corner(const board_t *b)
     if (getbit(other_color_gateway_to_corner_bitmap,edge)) cnt--;
 
     return cnt;
+#endif
 }
 
 static void init_edge_gateway_to_corner(void)
 {
+#if 0 //xxx
     #define REVERSE(x) \
         ((((x) & 0x0003) << 14) | \
          (((x) & 0x000c) << 10) | \
@@ -391,7 +422,7 @@ static void init_edge_gateway_to_corner(void)
                             };
 
     int i,j;
-    uint16_t edge, edge_reversed;
+    unsigned short edge, edge_reversed;
 
     for (i = 0; i < MAX_BLACK_GATEWAY_TO_CORNER_PATTERNS; i++) {
         char *s = black_gateway_to_corner_patterns[i];
@@ -404,7 +435,7 @@ static void init_edge_gateway_to_corner(void)
             }
         }
         edge_reversed = REVERSE(edge);
-        //INFO("BLACK PATTERN  %04x  %04x\n", edge, edge_reversed);
+        //printf("BLACK PATTERN  %04x  %04x\n", edge, edge_reversed);
         setbit(black_gateway_to_corner_bitmap, edge);
         setbit(black_gateway_to_corner_bitmap, edge_reversed);
     }
@@ -420,19 +451,20 @@ static void init_edge_gateway_to_corner(void)
             }
         }
         edge_reversed = REVERSE(edge);
-        //INFO("WHITE PATTERN  %04x  %04x\n", edge, edge_reversed);
+        //printf("WHITE PATTERN  %04x  %04x\n", edge, edge_reversed);
         setbit(white_gateway_to_corner_bitmap, edge);
         setbit(white_gateway_to_corner_bitmap, edge_reversed);
     }
+#endif
 }
 
-static inline int64_t reasonable_moves(const board_t *b, possible_moves_t *pm)
+static long reasonable_moves(board_t *b, possible_moves_t *pm)
 {
     int i, cnt = pm->max;
 
     for (i = 0; i < pm->max; i++) {
         int r,c;
-        MOVE_TO_RC(pm->move[i],r,c);
+        move_to_rc(pm->move[i], &r, &c);
         if ((r == 2 && c == 2 && b->pos[1][1] == NONE) ||
             (r == 2 && c == 7 && b->pos[1][8] == NONE) ||
             (r == 7 && c == 2 && b->pos[8][1] == NONE) ||
@@ -447,13 +479,13 @@ static inline int64_t reasonable_moves(const board_t *b, possible_moves_t *pm)
 
 // - - - - - - - - - - - - - - - - - - 
 
-static int64_t heuristic(const board_t *b, bool maximizing_player, bool game_over, possible_moves_t *pm)
+static long heuristic(board_t *b, bool maximizing_player, bool game_over, possible_moves_t *pm)
 {
-    int64_t value;
+    long value;
 
     // handle game over case
     if (game_over) {
-        int64_t piece_cnt_diff;
+        long piece_cnt_diff;
 
         // the game is over, return a large positive or negative value, 
         // incorporating by how many pieces the game has been won or lost
@@ -513,4 +545,3 @@ static int64_t heuristic(const board_t *b, bool maximizing_player, bool game_ove
     // for the maximizing player
     return (maximizing_player ? value : -value);
 }
-#endif

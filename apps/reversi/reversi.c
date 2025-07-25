@@ -39,8 +39,8 @@ static void draw_board(board_t *b, possible_moves_t *pm);
 static void game_init(board_t *b);
 static bool humans_turn(board_t *b);
 static void register_event(int evid);
-static int apply_move(board_t *b, int move);
-void get_possible_moves(board_t *b, possible_moves_t *pm);
+//xxx int apply_move(board_t *b, int move);
+//xxx void get_possible_moves(board_t *b, possible_moves_t *pm);
 static bool any_possible_moves(board_t *b);
 static bool is_game_over(board_t *b);
 
@@ -71,6 +71,7 @@ int main(int argc, char **argv)
     // xxx and maybe remove from here
     sdl_print_init(20, COLOR_WHITE, COLOR_BLACK);
 
+    // xxx
     draw_init();
 
     // loop until end program
@@ -130,13 +131,12 @@ int main(int argc, char **argv)
         }
         sdl_get_event(timeout, &event);
 
-        // if no event then continue
-        if (event.event_id == -1) {
-            continue;
-        }
+        // xxx if no event and it is computer move then do that
 
-        // process the event
-        printf("GOT EVENT %d\n", event.event_id);
+        // process the event xxx comment
+        if (event.event_id != -1) {
+            printf("GOT EVENT %d\n", event.event_id);
+        }
         if (event.event_id == EVID_QUIT || event.event_id == EVID_END_PROGRAM) {
             break;
         } else if (event.event_id == EVID_GAME_RESET) {
@@ -152,7 +152,7 @@ int main(int argc, char **argv)
                 int move = (event.event_id == EVID_MOVE_PASS ? MOVE_PASS : event.event_id);
                 rc = apply_move(&board, move);
             } else {
-                int move = cpu_get_move(&board);
+                int move = cpu_get_move(1, &board, NULL);
                 rc = apply_move(&board, move);
             }
             if (rc != 0) {
@@ -201,9 +201,9 @@ static sdl_texture_t *prompt_white_circle;
 //static sdl_texture_t *status_black_circle;
 //static sdl_texture_t *status_white_circle;
 
-//double rint(double x) {  //xxx
-//    return x+.5;
-//}
+double rint(double x) {  //xxx
+    return x+0.5;
+}
 
 static void draw_init(void)
 {
@@ -221,11 +221,11 @@ static void draw_init(void)
 
     int sq_wh = 123;
 
-    piece_circle_radius  = rint(.4*sq_wh);   // xxx need rint
+    piece_circle_radius  = rint(0.4*sq_wh);   // xxx need rint
     piece_black_circle   = sdl_create_filled_circle_texture(piece_circle_radius, COLOR_BLACK);
     piece_white_circle   = sdl_create_filled_circle_texture(piece_circle_radius, COLOR_WHITE);
 
-    prompt_circle_radius = rint(.08*sq_wh);
+    prompt_circle_radius = rint(0.08*sq_wh);
     prompt_black_circle  = sdl_create_filled_circle_texture(prompt_circle_radius, COLOR_BLACK);
     prompt_white_circle  = sdl_create_filled_circle_texture(prompt_circle_radius, COLOR_WHITE);
 
@@ -257,14 +257,16 @@ static void rc_to_loc(int r_arg, int c_arg, int *x, int *y, int *w, int *h)
     *h = loc[r_arg][c_arg].h;
 }
 
-static void move_to_rc(int move, int *r, int *c);  // xxx move
+//void move_to_rc(int move, int *r, int *c);  // xxx move
 
 static void draw_board(board_t *b, possible_moves_t *pm)
 {
     int x1, x2, y1, y2;
-    int i;
+    int i, r, c, x, y, w, h, offset;
+    sdl_texture_t *piece;
+    sdl_texture_t *prompt;
 
-    //sdl_render_fill_rect(0, 0, 1000, 1000, COLOR_GREEN);
+    // xxx comment
     sdl_render_fill_rect(1, 1, 998, 998, COLOR_GREEN);
     for (i = 0; i < 9; i++) {
         x1 = x2 = 125 * i;
@@ -279,9 +281,6 @@ static void draw_board(board_t *b, possible_moves_t *pm)
     }
 
     // draw the black and white pieces 
-    int r, c, x, y, w, h, offset;
-    sdl_texture_t *piece;
-
     for (r = 1; r <= 8; r++) {
         for (c = 1; c <= 8; c++) {
             if (b->pos[r][c] != NONE) {
@@ -295,11 +294,8 @@ static void draw_board(board_t *b, possible_moves_t *pm)
 
     // display the human player's possilbe moves as small circles
     if (pm) {
-        sdl_texture_t *prompt;
-        int r, c, x, y, w, h;
-
         prompt = (b->whose_turn == BLACK ? prompt_black_circle : prompt_white_circle);
-        for (int i = 0; i < pm->max; i++) {
+        for (i = 0; i < pm->max; i++) {
             move_to_rc(pm->move[i], &r, &c);
             rc_to_loc(r, c, &x, &y, &w, &h);
             offset = w / 2 - prompt_circle_radius;
@@ -313,7 +309,7 @@ static void draw_board(board_t *b, possible_moves_t *pm)
 static int r_incr_tbl[8] = {0, -1, -1, -1,  0,  1, 1, 1};  //xxx does this work in picoc?
 static int c_incr_tbl[8] = {1,  1,  0, -1, -1, -1, 0, 1};
 
-static void move_to_rc(int move, int *r, int *c)
+void move_to_rc(int move, int *r, int *c)
 {
     *r = move / 10;
     *c = move % 10;
@@ -384,7 +380,8 @@ static void game_init(board_t *b)
     b->white_is_human = false;
 }
 
-static int apply_move(board_t *b, int move)
+//xxx don't return error, instead call set_game_state_error
+int apply_move(board_t *b, int move)
 {
     int  r, c, i, j, my_color, other_color;
     int *my_color_cnt, *other_color_cnt;

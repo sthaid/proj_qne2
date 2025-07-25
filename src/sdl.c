@@ -251,10 +251,10 @@ try_again:
 
 static void process_sdl_event(SDL_Event *ev, sdl_event_t *event)
 {
-    #define AT_LOC(X,Y,loc) (((X) >= (loc).x - (loc).w / 2)   && \
-                             ((X) <= (loc).x + (loc).w / 2)   && \
-                             ((Y) >= (loc).y - (loc).h / 2)   && \
-                             ((Y) <= (loc).y + (loc).h / 2))
+    #define AT_LOC(X,Y,loc) (((X) >= (loc).x)            && \
+                             ((X) <  (loc).x + (loc).w)  && \
+                             ((Y) >= (loc).y)            && \
+                             ((Y) <  (loc).y + (loc).h))
 
     int i;
 
@@ -460,8 +460,12 @@ void sdl_print_init(double numchars, int fg_color, int bg_color)
     }
 
     text.ptsize      = ptsize;
-    text.fg_color    = *(SDL_Color*)&fg_color;
-    text.bg_color    = *(SDL_Color*)&bg_color;
+    //text.fg_color    = *(SDL_Color*)&fg_color;
+    //text.bg_color    = *(SDL_Color*)&bg_color;
+
+    // xxx  strict-aliasing
+    memcpy(&text.fg_color, &fg_color, 4);
+    memcpy(&text.bg_color, &bg_color, 4);
 
     sdl_char_width  = rint(sdl_win_width / numchars);
     sdl_char_height = rint(sdl_char_width / 0.6);
@@ -513,13 +517,12 @@ static sdl_loc_t *render_text(bool xy_is_ctr, int x, int y, char * str)
     SDL_DestroyTexture(texture);
 
     // return the display location where the text was rendered;
-    // this returned location x,y is the location of the center of
-    // the rendered text
-    loc.x = (pos.x + pos.w / 2) / scale;
-    loc.y = (pos.y + pos.h / 2) / scale;
+    loc.x = pos.x / scale;
+    loc.y = pos.y / scale;
     loc.w = pos.w / scale;
     loc.h = pos.h / scale;
-// xxx enforce minimum w,h in loc
+
+    // xxx enforce minimum w,h in loc
     if (loc.w < loc.h) {
         loc.w = loc.h;
     }
