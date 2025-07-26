@@ -145,6 +145,20 @@ void StdlibLdiv(struct ParseState *Parser, struct Value *ReturnValue,
 }
 #endif
 
+void StdlibRandom(struct ParseState *Parser, struct Value *ReturnValue,
+    struct Value **Param, int NumArgs)
+{
+    ReturnValue->Val->LongInteger = random();
+}
+
+void StdlibSrandom(struct ParseState *Parser, struct Value *ReturnValue,
+    struct Value **Param, int NumArgs)
+{
+    unsigned int seed = Param[0]->Val->UnsignedInteger;
+
+    srandom(seed);
+}
+
 #if 0
 /* handy structure definitions */
 const char StdlibDefs[] = "\
@@ -185,6 +199,8 @@ struct LibraryFunction StdlibFunctions[] =
     {StdlibDiv, "div_t div(int);"},
     {StdlibLdiv, "ldiv_t ldiv(int);"},
 #endif
+    {StdlibRandom,  "long random(void);"},
+    {StdlibSrandom, "void srandom(unsigned int seed);"},
     {NULL, NULL}
 };
 

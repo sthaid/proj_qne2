@@ -3,6 +3,7 @@
 
 #include <stdio.h>
 #include <stdbool.h>
+#include <stdlib.h>
 #include <string.h>
 
 #include <sdl.h>
@@ -30,17 +31,11 @@ typedef struct {
     int max;
 } possible_moves_t;
 
-//int cpu_get_move(board_t *b);
-
-int apply_move(board_t *b, int move);
-
-
-void get_possible_moves(board_t *b, possible_moves_t *pm);
-
 int cpu_get_move(int level, board_t *b, char *eval_str);
-
+void apply_move(board_t *b, int move);
+void get_possible_moves(board_t *b, possible_moves_t *pm);
+bool any_possible_moves(board_t *b);
 void move_to_rc(int move, int *r, int *c);
-
 
 #endif
 

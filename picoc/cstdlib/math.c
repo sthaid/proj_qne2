@@ -159,7 +159,13 @@ void MathFloor(struct ParseState *Parser, struct Value *ReturnValue,
     ReturnValue->Val->FP = floor(Param[0]->Val->FP);
 }
 
-/* all math.h functions */
+void MathNearbyint(struct ParseState *Parser, struct Value *ReturnValue,
+    struct Value **Param, int NumArgs)
+{
+    ReturnValue->Val->FP = nearbyint(Param[0]->Val->FP);
+}
+
+/* all math.h functions */  // xxx should these be double
 struct LibraryFunction MathFunctions[] =
 {
      {MathAcos, "float acos(float);"},
@@ -185,6 +191,7 @@ struct LibraryFunction MathFunctions[] =
      {MathSqrt, "float sqrt(float);"},
      {MathTan,  "float tan(float);"},
      {MathTanh, "float tanh(float);"},
+     {MathNearbyint, "double nearbyint(double);"},
      {NULL,  NULL }
 };
 

@@ -1088,6 +1088,7 @@ void ExpressionInfixOperator(struct ParseState *Parser,
             break;
         case TokenShiftLeft:
             ResultInt = BottomInt << TopInt;
+            //printf("%lx = %lx << %lx\n", ResultInt, BottomInt, TopInt);
             break;
         case TokenShiftRight:
             ResultInt = BottomInt >> TopInt;

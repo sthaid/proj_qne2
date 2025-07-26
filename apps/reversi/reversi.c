@@ -14,6 +14,16 @@
 #define GAME_STATE_OVER    3
 #define GAME_STATE_ERROR   4
 
+char *GAME_STATE_STR(int gs)
+{
+    if (gs == GAME_STATE_READY)  return  "READY";  
+    if (gs == GAME_STATE_ACTIVE) return  "ACTIVE";  
+    if (gs == GAME_STATE_OVER)   return  "OVER";  
+    if (gs == GAME_STATE_ERROR)  return  "ERROR";  
+    return "invalid game_state";
+}
+
+
 #define EVID_GAME_START   201
 #define EVID_GAME_RESET   202
 #define EVID_MOVE_PASS    203
@@ -39,9 +49,9 @@ static void draw_board(board_t *b, possible_moves_t *pm);
 static void game_init(board_t *b);
 static bool humans_turn(board_t *b);
 static void register_event(int evid);
-//xxx int apply_move(board_t *b, int move);
+//xxx void apply_move(board_t *b, int move);
 //xxx void get_possible_moves(board_t *b, possible_moves_t *pm);
-static bool any_possible_moves(board_t *b);
+//xxx bool any_possible_moves(board_t *b);
 static bool is_game_over(board_t *b);
 
 
@@ -59,6 +69,14 @@ int main(int argc, char **argv)
     game_state    = GAME_STATE_READY;
     game_init(&board);
     memset(&possible_moves, 0, sizeof(possible_moves));
+
+    // seed random number generator
+    long t1 = util_microsec_timer();
+    printf("XXXXXXXXXXXX check seed %d\n", (int)t1);
+    printf("XXXXXXXXXXXX check seed %ld\n", t1);
+    printf("XXXXXXXXXXXX check seed %x\n", (int)t1);
+    printf("XXXXXXXXXXXX check seed %lx\n", t1);    //xxx not working
+    srandom(util_microsec_timer());
 
     // if not ez_app then call sdl_init
     if (!is_ez_app && sdl_init() != 0) {
@@ -81,6 +99,7 @@ int main(int argc, char **argv)
 
         // display state
         // xxx todo
+        sdl_render_text_xyctr(sdl_win_width/2, 1000+sdl_char_height/2, GAME_STATE_STR(game_state));
 
         // register for events based on game_state
         register_event(EVID_END_PROGRAM);
@@ -132,6 +151,14 @@ int main(int argc, char **argv)
         sdl_get_event(timeout, &event);
 
         // xxx if no event and it is computer move then do that
+// xxx motion or other unexpected events can be misinterpreted
+
+        if (event.event_id == 9990 ||
+            event.event_id == 9991 ||
+            event.event_id == 9992)
+        {
+            continue;
+        }
 
         // process the event xxx comment
         if (event.event_id != -1) {
@@ -142,26 +169,21 @@ int main(int argc, char **argv)
         } else if (event.event_id == EVID_GAME_RESET) {
             game_state = GAME_STATE_READY;
             game_init(&board);
-        } else if (event.event_id == EVID_GAME_START) { //xxx fix
+        } else if (event.event_id == EVID_GAME_START) { //xxx fix, should depend on game state
             game_state = GAME_STATE_ACTIVE;
         } else if (game_state == GAME_STATE_ACTIVE) {
-            int rc = 0;
+            if (humans_turn(&board)) {
+                int move = (event.event_id == EVID_MOVE_PASS ? MOVE_PASS : event.event_id);
+                apply_move(&board, move);
+            } else {
+                int move = cpu_get_move(2, &board, NULL);
+                printf("XXXXXXXXXX GOT CPU MOVE %d\n", move);
+                apply_move(&board, move);
+            }
+
             if (is_game_over(&board)) {
                 game_state = GAME_STATE_OVER;
-            } else if (humans_turn(&board)) {
-                int move = (event.event_id == EVID_MOVE_PASS ? MOVE_PASS : event.event_id);
-                rc = apply_move(&board, move);
-            } else {
-                int move = cpu_get_move(1, &board, NULL);
-                rc = apply_move(&board, move);
             }
-            if (rc != 0) {
-                game_state = GAME_STATE_ERROR;
-            }
-        } else if (game_state == GAME_STATE_OVER) {
-            //  xxx comment
-        } else if (game_state == GAME_STATE_ERROR) {
-            //  xxx comment
         }
     }
 
@@ -336,13 +358,13 @@ static void register_event(int evid)
 
     switch (evid) {
     case EVID_GAME_START:
-        loc = sdl_render_text(0, 1100, "START");
+        loc = sdl_render_text(0, 1200, "START");
         break;
     case EVID_GAME_RESET:
-        loc = sdl_render_text(0, 1100, "RESET");
+        loc = sdl_render_text(0, 1200, "RESET");
         break;
     case EVID_MOVE_PASS:
-        loc = sdl_render_text(0, 1200, "PASS");
+        loc = sdl_render_text(0, 1350, "PASS");
         break;
     case EVID_END_PROGRAM:
         sdl_print_init(10, COLOR_WHITE, COLOR_BLACK);
@@ -358,7 +380,7 @@ static void register_event(int evid)
         loc2.w = w;
         loc2.h = h;
         loc = &loc2;
-        printf("REGISTER MOVE %d %d %d %d\n", x, y, w, h);
+        //printf("REGISTER MOVE %d %d %d %d\n", x, y, w, h);
         break;
     }
 
@@ -381,17 +403,17 @@ static void game_init(board_t *b)
 }
 
 //xxx don't return error, instead call set_game_state_error
-int apply_move(board_t *b, int move)
+void apply_move(board_t *b, int move)
 {
     int  r, c, i, j, my_color, other_color;
     int *my_color_cnt, *other_color_cnt;
     bool succ;
 
-    printf("apply_move called: move=%d color=%d\n", move, b->whose_turn);
+    //printf("apply_move called: move=%d color=%d\n", move, b->whose_turn);
 
     if (move == MOVE_PASS) {
         b->whose_turn = OTHER_COLOR(b->whose_turn);
-        return 0;
+        return;
     }
 
     my_color = b->whose_turn;
@@ -401,7 +423,8 @@ int apply_move(board_t *b, int move)
     move_to_rc(move, &r, &c);
     if (b->pos[r][c] != NONE) {
         printf("ERROR: pos[%d][%d] is occupied, color=%d\n", r, c, b->pos[r][c]);
-        return -1;
+        // xxx set game state error
+        return;
     }
 
     if (my_color == BLACK) {
@@ -444,11 +467,11 @@ int apply_move(board_t *b, int move)
 
     if (!succ) {
         printf("ERROR: invalid call to apply_move, move=%d\n", move);
-        return -1;
+        // xxx set game state error
+        return;
     }
 
     b->whose_turn = OTHER_COLOR(b->whose_turn);
-    return 0;
 }
 
 void get_possible_moves(board_t *b, possible_moves_t *pm)
@@ -488,7 +511,7 @@ void get_possible_moves(board_t *b, possible_moves_t *pm)
     }
 }
 
-static bool any_possible_moves(board_t *b)
+bool any_possible_moves(board_t *b)
 {
     int r, c, i, my_color, other_color;
 

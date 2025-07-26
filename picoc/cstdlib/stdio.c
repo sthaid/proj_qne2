@@ -266,15 +266,21 @@ int StdioBasePrintf(struct ParseState *Parser, FILE *Stream, char *StrOut,
                     }
                     break;
                 case 'u':
-                    if (ShowLong) {
+                    if (ShowLong) { // xxx if not long
                         ShowLong = 0;
                         ShowType = &pc->UnsignedLongType;
                         break;
                     }
+                    break;
                 case 'o':
                 case 'x':
                 case 'X':
-                    ShowType = &pc->IntType;
+                    if (ShowLong) {
+                        ShowLong = 0;
+                        ShowType = &pc->LongType;
+                    } else {
+                        ShowType = &pc->IntType;
+                    }
                     break; /* integer base conversions */
                 case 'l':
                     ShowLong = 1;
