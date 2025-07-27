@@ -1,3 +1,6 @@
+order the possible moves
+save the old alpha beta code
+control and config
 
 add networking support for apps, test in unit_test
 

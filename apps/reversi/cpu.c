@@ -118,7 +118,7 @@ static void create_eval_str(int value, char *eval_str)
 
 static int alphabeta(board_t *b, int depth, int alpha, int beta, bool maximizing_player, int *move)
 {
-    int             value, v;
+    int              value, old_value;
     int              i, best_move = MOVE_PASS;
     board_t          b_child;
     bool             game_over;
@@ -172,35 +172,31 @@ static int alphabeta(board_t *b, int depth, int alpha, int beta, bool maximizing
         for (i = 0; i < pm.max; i++) {
             b_child = *b;
             apply_move(&b_child, pm.move[i]);
-            if ((v = alphabeta(&b_child, depth-1, alpha, beta, false, NULL)) > value) {
-                value = v;
+            old_value = value;
+            value = max(value, alphabeta(&b_child, depth-1, alpha, beta, false, NULL));
+            if (value > old_value) {
                 best_move = pm.move[i];
-                //printf("MAXIMIZING setting best_move %d\n", best_move);
             }
-            alpha = max(alpha, value);
-            if (alpha >= beta) {
+            if (value >= beta) {
                 break;
             }
+            alpha = max(alpha, value);
         }
+        if (move) *move = best_move;
+        return value;
     } else {
         value = INFIN;
         for (i = 0; i < pm.max; i++) {
             b_child = *b;
             apply_move(&b_child, pm.move[i]);
-            if ((v = alphabeta(&b_child, depth-1, alpha, beta, true, NULL)) < value) {
-                value = v;
-                best_move = pm.move[i];
-                //printf("MINIMIZING setting best_move %d\n", best_move);
-            }
-            beta = min(beta, value);
-            if (beta <= alpha) {
+            value = min(value, alphabeta(&b_child, depth-1, alpha, beta, true, NULL));
+            if (value <= alpha) {
                 break;
             }
+            beta = min(beta, value);
         }
+        return value;
     }
-
-    if (move) *move = best_move;
-    return value;
 }
 
 // -----------------  HEURISTIC  ---------------------------------------------------
@@ -571,7 +567,7 @@ static int heuristic(board_t *b, bool maximizing_player, bool game_over, possibl
     value += (diagonal_gateways_to_corner(b) + 5) * 10000;
     value += (edge_gateway_to_corner(b) + 5)      * 1000;
     value += (reasonable_moves(b, pm)             * 10);
-    value += (random() % 10);
+    //value += (random() % 10);
 
     // xxx also print the components
     //printf("HEURISTIC %d\n", value);

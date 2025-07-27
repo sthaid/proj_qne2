@@ -176,7 +176,7 @@ int main(int argc, char **argv)
                 int move = (event.event_id == EVID_MOVE_PASS ? MOVE_PASS : event.event_id);
                 apply_move(&board, move);
             } else {
-                int move = cpu_get_move(2, &board, NULL);
+                int move = cpu_get_move(1, &board, NULL);
                 printf("XXXXXXXXXX GOT CPU MOVE %d\n", move);
                 apply_move(&board, move);
             }
