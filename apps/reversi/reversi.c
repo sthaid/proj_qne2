@@ -123,6 +123,7 @@ int main(int argc, char **argv)
         }
 
         // process the event
+        printf("GOT EVENT %d\n", event.event_id);
         if (event.event_id == EVID_QUIT || event.event_id == EVID_END_PROGRAM) {
             break;
         } else if (event.event_id == EVID_GAME_RESET) {
@@ -262,7 +263,7 @@ static bool event_id_is_game_move(int evid)
 // variables
 //
 
-sdl_loc_t rc_to_loc[10][10];
+static sdl_loc_t rc_to_loc[10][10];
 
 static int            piece_circle_radius;
 static sdl_texture_t *piece_black_circle;
@@ -323,6 +324,7 @@ static void update_display_and_register_events(board_t *b, int game_state, char 
     possible_moves_t pm;
     sdl_loc_t *ploc;
 
+    printf("update_display-1\n");
     // display game state lines (1 or 2 lines), directly below board
     char *str = "";
     if (game_state == GAME_STATE_READY)  str = "READY";  
@@ -331,6 +333,7 @@ static void update_display_and_register_events(board_t *b, int game_state, char 
     sdl_render_text_xyctr(sdl_win_width/2, 1000+0.5*sdl_char_height, str);
 
     // xxx
+    printf("update_display-2\n");
     if (game_state == GAME_STATE_OVER) {
         if (b->black_cnt > b->white_cnt) {
             sdl_render_printf_xyctr(sdl_win_width/2, 1000+1.5*sdl_char_height,
@@ -345,6 +348,7 @@ static void update_display_and_register_events(board_t *b, int game_state, char 
     }       
 
     // xxx
+    printf("update_display-3\n");
     if (game_state == GAME_STATE_ACTIVE || game_state == GAME_STATE_OVER) {
         sdl_render_text(0, sdl_win_height - 2 * sdl_char_height, eval_str);
     }
@@ -376,6 +380,7 @@ static void update_display_and_register_events(board_t *b, int game_state, char 
             sdl_render_printf(x_origin+100, y_origin, "%c %d", is_turn ? '*' : ' ', piece_cnt);
         }
     }
+    printf("update_display-4\n");
 
     // register for more events:
     // - EVID_END_PROGRAM
@@ -384,6 +389,7 @@ static void update_display_and_register_events(board_t *b, int game_state, char 
     set_print_color(COLOR_LIGHT_BLUE);
     ploc = sdl_render_text_xyctr(NK2X(3,2), sdl_win_height-sdl_char_height/2, "X");
     sdl_register_event(ploc, EVID_END_PROGRAM);
+    printf("update_display-5\n");
 
     if (game_state == GAME_STATE_READY) {
         ploc = sdl_render_text(0, 1600, "START");
@@ -393,6 +399,7 @@ static void update_display_and_register_events(board_t *b, int game_state, char 
         sdl_register_event(ploc, EVID_GAME_RESET);
     }
     set_print_default();
+    printf("update_display-6\n");
 
     // if the game is in progress and it is the humans turn then
     // register events for the human players possible moves
@@ -414,6 +421,7 @@ static void update_display_and_register_events(board_t *b, int game_state, char 
             }
         }
     }
+    printf("update_display-7\n");
 
     // draw the empty board, using green background and 
     // lines to separate the squares
@@ -431,6 +439,7 @@ static void update_display_and_register_events(board_t *b, int game_state, char 
         y1 = y2 = 125 * i;
         sdl_render_line(x1, y1, x2, y2, COLOR_BLACK);
     }
+    printf("update_display-8\n");
 
     // draw the black and white pieces 
     for (int r = 1; r <= 8; r++) {
@@ -447,6 +456,7 @@ static void update_display_and_register_events(board_t *b, int game_state, char 
             }
         }
     }
+    printf("update_display-9\n");
 
     // display the human player's possilbe moves as small circles
     if (game_state == GAME_STATE_ACTIVE && humans_turn(b)) {
@@ -461,6 +471,7 @@ static void update_display_and_register_events(board_t *b, int game_state, char 
             sdl_render_texture(loc.x+offset, loc.y+offset, -1, -1, 0, prompt);
         }
     }
+    printf("update_display-en\n");
 }
 
 // -----------------  COMMON SUPPORT ROUTINES  ---------------------------
@@ -548,7 +559,7 @@ void apply_move(board_t *b, int move)
     b->whose_turn = OTHER_COLOR(b->whose_turn);
 }
 
-static int possible_move_tbl[] = {
+int possible_move_tbl[] = {
     11, 18, 81, 88, 
     33, 34, 35, 36, 
     43, 44, 45, 46, 

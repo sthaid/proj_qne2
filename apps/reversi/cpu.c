@@ -43,6 +43,7 @@ int  MIN_DEPTH[9]              = {0,  1,  2,  3,  4,  5,  6,  7,  8 };
 int  PIECECNT_FOR_EOG_DEPTH[9] = {0, 56, 55, 54, 53, 52, 51, 50, 49 };
 bool initialized               = false;
 
+// xxx simplify
 static int get_depth(int level, int piececnt)
 {
     double M, B;
@@ -50,7 +51,7 @@ static int get_depth(int level, int piececnt)
 
     M = 1.0;
     B = (64 - PIECECNT_FOR_EOG_DEPTH[level]) - M * PIECECNT_FOR_EOG_DEPTH[level];
-    depth = rint(M * piececnt + B);
+    depth = nearbyint(M * piececnt + B);
     if (depth < MIN_DEPTH[level]) depth = MIN_DEPTH[level];
     return depth;
 }
