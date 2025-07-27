@@ -14,7 +14,6 @@
 // prototypes
 //
 
-static int get_depth(int level, int piececnt);
 static int min(int a, int b);
 static int max(int a, int b);
 static void setbit(unsigned char *bm, int idx);
@@ -28,7 +27,7 @@ static int heuristic(board_t *b, bool maximizing_player, bool game_over, possibl
 
 int cpu_get_move(int level, board_t *b, char *eval_str)
 {
-    int value, best_move, depth, piececnt;
+    int value, best_move, depth;
 
     char *my_color = (b->whose_turn == BLACK ? "BLACK" : "WHITE");
     char *other_color = (b->whose_turn == BLACK ? "WHITE" : "BLACK");
@@ -43,8 +42,8 @@ int cpu_get_move(int level, board_t *b, char *eval_str)
     init_edge_gateway_to_corner();
 
     // get lookahead depth
-    piececnt = b->black_cnt + b->white_cnt;
-    depth = get_depth(level, piececnt);
+    depth = ((b->black_cnt + b->white_cnt) >= (56 - level)) ? 20 : level;
+    //printf("level=%d  piececnt=%d  DEPTH %d\n", level, b->black_cnt+b->white_cnt, depth);
 
     // call alphabeta to get the best move, and associated heuristic value
     value = alphabeta(b, depth, -INFIN, INFIN, true, &best_move);
@@ -75,23 +74,6 @@ static void setbit(unsigned char *bm, int idx) {
 
 static bool getbit(unsigned char *bm, int idx) {
     return bm[idx/8] & (1 << (idx&7));
-}
-
-int  MIN_DEPTH[9]              = {0,  1,  2,  3,  4,  5,  6,  7,  8 };
-int  PIECECNT_FOR_EOG_DEPTH[9] = {0, 56, 55, 54, 53, 52, 51, 50, 49 };
-bool initialized               = false;
-
-// xxx simplify
-static int get_depth(int level, int piececnt)
-{
-    double M, B;
-    int depth;
-
-    M = 1.0;
-    B = (64 - PIECECNT_FOR_EOG_DEPTH[level]) - M * PIECECNT_FOR_EOG_DEPTH[level];
-    depth = nearbyint(M * piececnt + B);
-    if (depth < MIN_DEPTH[level]) depth = MIN_DEPTH[level];
-    return depth;
 }
 
 // -----------------  CHOOSE BEST MOVE - ALPHA / BETA  ----------------------
