@@ -28,8 +28,7 @@ static int heuristic(board_t *b, bool maximizing_player, bool game_over, possibl
 
 int cpu_get_move(int level, board_t *b, char *eval_str)
 {
-    int value;
-    int     move, depth, piececnt;
+    int value, best_move, depth, piececnt;
 
     char *my_color = (b->whose_turn == BLACK ? "BLACK" : "WHITE");
     char *other_color = (b->whose_turn == BLACK ? "WHITE" : "BLACK");
@@ -46,13 +45,11 @@ int cpu_get_move(int level, board_t *b, char *eval_str)
     // get lookahead depth
     piececnt = b->black_cnt + b->white_cnt;
     depth = get_depth(level, piececnt);
-    printf("depth = %d\n", depth);
 
     // call alphabeta to get the best move, and associated heuristic value
-    value = alphabeta(b, depth, -INFIN, INFIN, true, &move);
-    printf("HEURISTIC %d\n", value);
+    value = alphabeta(b, depth, -INFIN, INFIN, true, &best_move);
 
-    // eval str
+    // create eval str, to be returned below
     eval_str[0] = '\0';
     if (value < -10000000) {
         sprintf(eval_str, "%s to win by %d", other_color, value / -10000000);
@@ -61,7 +58,7 @@ int cpu_get_move(int level, board_t *b, char *eval_str)
     }
 
     // return the move, that was obtained by call to alphabeta
-    return move;
+    return best_move;
 }
 
 static int min(int a, int b) {
@@ -80,7 +77,6 @@ static bool getbit(unsigned char *bm, int idx) {
     return bm[idx/8] & (1 << (idx&7));
 }
 
-// xxx was static
 int  MIN_DEPTH[9]              = {0,  1,  2,  3,  4,  5,  6,  7,  8 };
 int  PIECECNT_FOR_EOG_DEPTH[9] = {0, 56, 55, 54, 53, 52, 51, 50, 49 };
 bool initialized               = false;
@@ -99,6 +95,12 @@ static int get_depth(int level, int piececnt)
 }
 
 // -----------------  CHOOSE BEST MOVE - ALPHA / BETA  ----------------------
+
+// 
+// The following is the alpha-beta pruning algorithm, ported from
+//  https://en.wikipedia.org/wiki/Alpha%E2%80%93beta_pruning
+// The algorithm has been updated to return the best_move along with the value.
+// 
 
 static int alphabeta(board_t *b, int depth, int alpha, int beta, bool maximizing_player, int *move)
 {
@@ -122,16 +124,8 @@ static int alphabeta(board_t *b, int depth, int alpha, int beta, bool maximizing
         b->whose_turn = OTHER_COLOR(b->whose_turn);
     }
 
-    // 
-    // The following is the alpha-beta pruning algorithm, ported from
-    //  https://en.wikipedia.org/wiki/Alpha%E2%80%93beta_pruning
-    // The algorithm has been updated to return the best_move along with the value.
-    // 
-
     if (depth == 0 || game_over) {
-        if (move) {
-            *move = MOVE_PASS;   // xxx or MOVE_NONE?
-        }
+        if (move) *move = MOVE_PASS;
         return heuristic(b, maximizing_player, game_over, &pm);
     }
 
@@ -169,6 +163,8 @@ static int alphabeta(board_t *b, int depth, int alpha, int beta, bool maximizing
 
 // -----------------  HEURISTIC  ---------------------------------------------------
 
+// - - - - - - corner_count - - - - - - -
+
 static int corner_count(board_t *b)
 {
     int cnt = 0;
@@ -186,14 +182,16 @@ static int corner_count(board_t *b)
     return cnt;
 }
 
-struct tbl_s {
+// - - - - - - corner_moves - - - - - - -
+
+struct corner_move_tbl_s {
     int r;
     int c;
-    int r_incr_tbl[3];
-    int c_incr_tbl[3];
+    int r_incr[3];
+    int c_incr[3];
 };
 
-int tbl_data[] = {
+int corner_move_tbl_data[] = {
         1,1,  0, 1, 1,   1, 0, 1,    // 0: top left
         1,8,  0, 1, 1,  -1, 0,-1,    // 1: top right
         8,8,  0,-1,-1,  -1, 0,-1,    // 2: bottom right
@@ -203,10 +201,10 @@ int tbl_data[] = {
 static bool is_corner_move_possible(board_t *b, int which_corner)
 {
     int r, c, i, my_color, other_color;
-    struct tbl_s *tbl = (void*)tbl_data;
+    struct corner_move_tbl_s *corner_move_tbl = (void*)corner_move_tbl_data;
 
-    r = tbl[which_corner].r;
-    c = tbl[which_corner].c;
+    r = corner_move_tbl[which_corner].r;
+    c = corner_move_tbl[which_corner].c;
     if (b->pos[r][c] != NONE) {
         return false;
     }
@@ -214,8 +212,8 @@ static bool is_corner_move_possible(board_t *b, int which_corner)
     my_color    = b->whose_turn;
     other_color = OTHER_COLOR(my_color);
     for (i = 0; i < 3; i++) {
-        int r_incr = tbl[which_corner].r_incr_tbl[i];
-        int c_incr = tbl[which_corner].c_incr_tbl[i];
+        int r_incr = corner_move_tbl[which_corner].r_incr[i];
+        int c_incr = corner_move_tbl[which_corner].c_incr[i];
         int r_next = r + r_incr;
         int c_next = c + c_incr;
         int cnt    = 0;
@@ -254,6 +252,8 @@ static int corner_moves(board_t *b)
     return cnt;
 }
 
+// - - - - - - diagonal_gateway_to_corner  - - - - - - -
+
 static int diagonal_gateways_to_corner(board_t *b)
 {
     int cnt = 0;
@@ -280,10 +280,12 @@ static int diagonal_gateways_to_corner(board_t *b)
     return cnt;
 }
 
+// - - - - - - edge_gateway_to_corner  - - - - - - -
+
 unsigned char black_gateway_to_corner_bitmap[8192];
 unsigned char white_gateway_to_corner_bitmap[8192];
 
-int HORIZONTAL_EDGE(board_t *b, int r)
+static int HORIZONTAL_EDGE(board_t *b, int r)
 {
     return ((b->pos[r][1] << 14) |
             (b->pos[r][2] << 12) | 
@@ -295,7 +297,7 @@ int HORIZONTAL_EDGE(board_t *b, int r)
             (b->pos[r][8] <<  0));
 }
 
-int VERTICAL_EDGE(board_t *b, int c)
+static int VERTICAL_EDGE(board_t *b, int c)
 {
     return ((b->pos[1][c] << 14) | 
             (b->pos[2][c] << 12) | 
@@ -305,6 +307,18 @@ int VERTICAL_EDGE(board_t *b, int c)
             (b->pos[6][c] <<  4) | 
             (b->pos[7][c] <<  2) | 
             (b->pos[8][c] <<  0));
+}
+
+static int REVERSE(int x)
+{
+    return ((((x) & 0x0003) << 14) | 
+            (((x) & 0x000c) << 10) | 
+            (((x) & 0x0030) <<  6) | 
+            (((x) & 0x00c0) <<  2) | 
+            (((x) & 0x0300) >>  2) | 
+            (((x) & 0x0c00) >>  6) | 
+            (((x) & 0x3000) >> 10) | 
+            (((x) & 0xc000) >> 14));
 }
 
 static int edge_gateway_to_corner(board_t *b)
@@ -345,18 +359,6 @@ static int edge_gateway_to_corner(board_t *b)
     if (getbit(other_color_gateway_to_corner_bitmap,edge)) cnt--;
 
     return cnt;
-}
-
-int REVERSE(int x)
-{
-    return ((((x) & 0x0003) << 14) | 
-            (((x) & 0x000c) << 10) | 
-            (((x) & 0x0030) <<  6) | 
-            (((x) & 0x00c0) <<  2) | 
-            (((x) & 0x0300) >>  2) | 
-            (((x) & 0x0c00) >>  6) | 
-            (((x) & 0x3000) >> 10) | 
-            (((x) & 0xc000) >> 14));
 }
 
 char *black_gateway_to_corner_patterns[] = {
@@ -452,7 +454,7 @@ static int reasonable_moves(board_t *b, possible_moves_t *pm)
     return cnt;
 }
 
-// - - - - - - - - - - - - - - - - - - 
+// - - - - - - heuristic   - - - - - - -
 
 static int heuristic(board_t *b, bool maximizing_player, bool game_over, possible_moves_t *pm)
 {
@@ -481,6 +483,7 @@ static int heuristic(board_t *b, bool maximizing_player, bool game_over, possibl
 
     // game is not over ...
 
+    // xxx udate
     // The following board characteristics are utilized to generate the heuristic value.
     //
     // These are listed in order of importance / numeric weight.
