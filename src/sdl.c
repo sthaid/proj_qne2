@@ -487,6 +487,12 @@ static sdl_loc_t *render_text(bool xy_is_ctr, int x, int y, char * str)
         return &loc;
     }
 
+    // if zero len str then return
+    if (str[0] == '\0') {
+        memset(&loc, 0, sizeof(loc));
+        return &loc;
+    }
+
     // render the string to a surface
     surface = TTF_RenderText_Shaded(font[text.ptsize], str, text.fg_color, text.bg_color);
     if (surface == NULL) {

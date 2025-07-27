@@ -39,7 +39,7 @@
 
 static void draw_init(void);
 static void draw_unload(void);
-static void update_display_and_register_events(board_t *b, int game_state);
+static void update_display_and_register_events(board_t *b, int game_state, char *eval_str);
 
 //xxx check these
 static void game_init(board_t *b);
@@ -67,11 +67,13 @@ int main(int argc, char **argv)
     bool    is_ez_app;
     int     game_state;
     board_t board;
+    char    eval_str[100];
 
     // init variables
     is_ez_app = (argc > 0 && strcmp(argv[0], "ez_app") == 0);
     game_state = GAME_STATE_READY;
     game_init(&board);
+    eval_str[0] = '\0';
 
     // seed random number generator
     long t1 = util_microsec_timer();
@@ -101,7 +103,7 @@ int main(int argc, char **argv)
         sdl_display_init(COLOR_BLACK);
 
         // update the display and register events
-        update_display_and_register_events(&board, game_state);
+        update_display_and_register_events(&board, game_state, eval_str);
 
         // present display
         sdl_display_present();
@@ -145,13 +147,10 @@ int main(int argc, char **argv)
             game_init(&board);
         } else if (event.event_id == EVID_PLAYER_BLACK) {
             board.player_black++;
-            if (board.player_black > CPU(3)) board.player_black = HUMAN;
+            if (board.player_black > CPU(6)) board.player_black = HUMAN;  // xxx 2 on Android
         } else if (event.event_id == EVID_PLAYER_WHITE) {
             board.player_white++;
-            if (board.player_white > CPU(3)) board.player_white = HUMAN;
-
-
-
+            if (board.player_white > CPU(6)) board.player_white = HUMAN;  // xxx 2 on Android
         } else if (event.event_id == EVID_GAME_START) { //xxx fix, should depend on game state
             game_state = GAME_STATE_ACTIVE;
         } else if (game_state == GAME_STATE_ACTIVE) {
@@ -160,9 +159,9 @@ int main(int argc, char **argv)
                 apply_move(&board, move);
             } else {
                 int level = (board.whose_turn == BLACK ? board.player_black : board.player_white);
-                printf("level %d\n", level);
-                int move  = cpu_get_move(level, &board, NULL);
-                printf("XXXXXXXXXX GOT CPU MOVE %d\n", move);
+                printf("---------------- level %d -----------------\n", level);
+                int move  = cpu_get_move(level, &board, eval_str);
+                printf("GOT CPU MOVE %d\n", move);
                 apply_move(&board, move);
             }
 
@@ -326,7 +325,7 @@ static void register_event(int evid)
 }
 #endif
 
-static void update_display_and_register_events(board_t *b, int game_state)
+static void update_display_and_register_events(board_t *b, int game_state, char *eval_str)
 {
     //int x1, x2, y1, y2;
     //int i, r, c, x, y, w, h, offset;
@@ -357,13 +356,18 @@ static void update_display_and_register_events(board_t *b, int game_state)
         }
     }       
 
+    // xxx
+    if (game_state == GAME_STATE_ACTIVE || game_state == GAME_STATE_OVER) {
+        sdl_render_text(0, sdl_win_height - 2 * sdl_char_height, eval_str);
+    }
+
     // display player info, and register for events to change the players
     for (int i = 0; i < 2; i++) {
         int player                 = (i == 0 ? b->player_black : b->player_white);
         int evid                   = (i == 0 ? EVID_PLAYER_BLACK : EVID_PLAYER_WHITE);
         sdl_texture_t *info_circle = (i == 0 ? info_black_circle : info_white_circle);
         int x_origin               = (i == 0 ? 0 : 500);
-        int y_origin               = 1200;
+        int y_origin               = 1300;
         int piece_cnt              = (i == 0 ? b->black_cnt : b->white_cnt);
         bool is_turn               = (i == 0 ? b->whose_turn == BLACK : b->whose_turn == WHITE);
 
@@ -379,7 +383,8 @@ static void update_display_and_register_events(board_t *b, int game_state)
             set_print_default();
         }
 
-        if (game_state == GAME_STATE_ACTIVE) {
+        if (game_state == GAME_STATE_ACTIVE || game_state == GAME_STATE_OVER) {
+            if (game_state == GAME_STATE_OVER) is_turn = false;
             sdl_render_printf(x_origin+100, y_origin, "%c %d", is_turn ? '*' : ' ', piece_cnt);
         }
     }
@@ -489,8 +494,18 @@ static bool humans_turn(board_t *b)
 
 static void game_init(board_t *b)
 {
-    int player_black = b->player_black;
-    int player_white = b->player_white;
+    int player_black, player_white;
+
+    static int first_call = 1;
+    if (first_call) {
+        first_call = false;
+        player_black = HUMAN;
+        player_white = CPU(1);
+    } else {
+        player_black = b->player_black;
+        player_white = b->player_white;
+    }
+
     memset(b, 0, sizeof(board_t));
 
     b->pos[4][4]      = WHITE;
@@ -575,39 +590,58 @@ void apply_move(board_t *b, int move)
 
     b->whose_turn = OTHER_COLOR(b->whose_turn);
 }
+int pm_search[] = {
+11, 18, 81, 88, 
+33, 34, 35, 36, 
+43, 44, 45, 46, 
+53, 54, 55, 56, 
+63, 64, 65, 66, 
+23, 24, 25, 26, 
+73, 74, 75, 76, 
+32, 42, 52, 62, 
+37, 47, 57, 67, 
+13, 14, 15, 16, 
+83, 84, 85, 86, 
+31, 41, 51, 61, 
+38, 48, 58, 68, 
+12, 21, 17, 28,
+71, 82, 78, 87, 
+22, 27, 72, 77 };
+
 
 void get_possible_moves(board_t *b, possible_moves_t *pm)
 {
-    int r, c, i, my_color, other_color;
+    int r, c, i, k, move, my_color, other_color;
 
     my_color = b->whose_turn;
     other_color = OTHER_COLOR(my_color);
 
     pm->max = 0;
 
-    for (r = 1; r <= 8; r++) {
-        for (c = 1; c <= 8; c++) {
-            if (b->pos[r][c] != NONE) {
-                continue;
+    for (k = 0; k < 64; k++) {
+        move = pm_search[k];
+        move_to_rc(move, &r, &c);
+
+        if (b->pos[r][c] != NONE) {
+            continue;
+        }
+
+        for (i = 0; i < 8; i++) {
+            int r_incr = r_incr_tbl[i];
+            int c_incr = c_incr_tbl[i];
+            int r_next = r + r_incr;
+            int c_next = c + c_incr;
+            int cnt    = 0;
+
+            while (b->pos[r_next][c_next] == other_color) {
+                r_next += r_incr;
+                c_next += c_incr;
+                cnt++;
             }
 
-            for (i = 0; i < 8; i++) {
-                int r_incr = r_incr_tbl[i];
-                int c_incr = c_incr_tbl[i];
-                int r_next = r + r_incr;
-                int c_next = c + c_incr;
-                int cnt    = 0;
-
-                while (b->pos[r_next][c_next] == other_color) {
-                    r_next += r_incr;
-                    c_next += c_incr;
-                    cnt++;
-                }
-
-                if (cnt > 0 && b->pos[r_next][c_next] == my_color) {
-                    pm->move[pm->max++] = rc_to_move(r, c);
-                    break;
-                }
+            if (cnt > 0 && b->pos[r_next][c_next] == my_color) {
+                pm->move[pm->max++] = rc_to_move(r, c);
+                break;
             }
         }
     }

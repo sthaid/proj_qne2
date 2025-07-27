@@ -1,3 +1,7 @@
+reversi
+- undo
+- print score when known to win
+
 order the possible moves
 save the old alpha beta code
 control and config

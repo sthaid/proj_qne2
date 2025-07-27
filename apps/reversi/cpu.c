@@ -55,12 +55,13 @@ static int get_depth(int level, int piececnt)
     return depth;
 }
 
-static void create_eval_str(int value, char *eval_str);
-
 int cpu_get_move(int level, board_t *b, char *eval_str)
 {
     int value;
     int     move, depth, piececnt;
+
+    char *my_color = (b->whose_turn == BLACK ? "BLACK" : "WHITE");
+    char *other_color = (b->whose_turn == BLACK ? "WHITE" : "BLACK");
 
     // sanity check level arg
     if (level < 1 || level > 8) {
@@ -78,40 +79,22 @@ int cpu_get_move(int level, board_t *b, char *eval_str)
 
     // get lookahead depth
     depth = get_depth(level, piececnt);
+    printf("depth = %d\n", depth);
 
     // call alphabeta to get the best move, and associated heuristic value
     value = alphabeta(b, depth, -INFIN, INFIN, true, &move);
     printf("HEURISTIC %d\n", value);
 
-    // create evaluation string, based on value returned from alphabeta;
-    // this string can optionally be displayed by caller
-    create_eval_str(value, eval_str);
+    // eval str
+    eval_str[0] = '\0';
+    if (value < -10000000) {
+        sprintf(eval_str, "%s to win by %d", other_color, value / -10000000);
+    } else if (value > 10000000) {
+        sprintf(eval_str, "%s to win by %d", my_color, value / 10000000);
+    }
 
     // return the move, that was obtained by call to alphabeta
     return move;
-}
-
-static void create_eval_str(int value, char *eval_str)
-{
-#if 0
-    // eval_str should not exceed 16 char length, 
-    // to avoid characters being off the window
-
-    if (eval_str == NULL) {
-        return;
-    }
-
-    if (value == (ONE64 << 56)) {
-        sprintf(eval_str, "TIE");
-    } else if (value > (ONE64 << 56)) {
-        sprintf(eval_str, "CPU TO WIN BY %d", (int)((value >> 56) - 1));
-    } else if (value < -(ONE64 << 56)) {
-        sprintf(eval_str, "HUMAN CAN WIN BY %d", (int)(-(value >> 56) - 1));
-    } else {
-        eval_str[0] = '\0';
-    }
-#endif
-    eval_str = "XXX TBD";
 }
 
 // -----------------  CHOOSE BEST MOVE (RECURSIVE ROUTINE)  -----------------
@@ -145,7 +128,6 @@ static int alphabeta(board_t *b, int depth, int alpha, int beta, bool maximizing
     if (pm.max == 0) {
         b->whose_turn = OTHER_COLOR(b->whose_turn);
         if (!any_possible_moves(b)) {
-            printf("GAME IS OVER\n");
             game_over = true;
         } else {
             pm.max = 1;
@@ -189,12 +171,17 @@ static int alphabeta(board_t *b, int depth, int alpha, int beta, bool maximizing
         for (i = 0; i < pm.max; i++) {
             b_child = *b;
             apply_move(&b_child, pm.move[i]);
+            old_value = value;  //xxx not needed?
             value = min(value, alphabeta(&b_child, depth-1, alpha, beta, true, NULL));
+            if (value < old_value) {
+                best_move = pm.move[i];
+            }
             if (value <= alpha) {
                 break;
             }
             beta = min(beta, value);
         }
+        if (move) *move = best_move;
         return value;
     }
 }
@@ -426,6 +413,14 @@ int REVERSE(int x)
                 ".W..B...",
                 ".WW..B..",
                 ".W.B.B..",
+                ".W.BBBW.",  //xxx check these
+                ".W.BBW..",
+                ".W.BBWW.",
+                ".W.BWW..",
+                ".W.BWWW.",
+                ".W.BW...",
+                ".W.BW.W.",
+                ".WBBBBB."
                             };
 
     #define MAX_BLACK_GATEWAY_TO_CORNER_PATTERNS (sizeof(black_gateway_to_corner_patterns)/sizeof(char*))
@@ -433,9 +428,9 @@ int REVERSE(int x)
 static void init_edge_gateway_to_corner(void)
 {
 
+    printf("XXXXXXXXXXXXXXXXXXXXXX MAX_BLACK_GATEWAY_TO_CORNER_PATTERNS = %d\n",
+       (int)MAX_BLACK_GATEWAY_TO_CORNER_PATTERNS);
 #if 0
-//  printf("XXXXXXXXXXXXXXXXXXXXXX MAX_BLACK_GATEWAY_TO_CORNER_PATTERNS = %d\n",
-//     (int)MAX_BLACK_GATEWAY_TO_CORNER_PATTERNS);
 //  for (int i = 0; i < 14; i++) {
 //      printf("[%d] = '%s'\n", i, black_gateway_to_corner_patterns[i]);
 //  }
@@ -510,14 +505,14 @@ static int heuristic(board_t *b, bool maximizing_player, bool game_over, possibl
         // incorporating by how many pieces the game has been won or lost
         piece_cnt_diff = (b->whose_turn == BLACK ? b->black_cnt - b->white_cnt
                                                  : b->white_cnt - b->black_cnt);
-        value = (piece_cnt_diff+65) * 10000000;
+        value = (piece_cnt_diff) * 10000000;
 
         // the returned heuristic value measures the favorability 
         // for the maximizing player
         //printf("EOG HEURISTIC = %d\n", (maximizing_player ? value : -value));
 
         if (!maximizing_player) {
-            value = -value;
+              value = -value;
         }
 
         return value;
@@ -562,12 +557,12 @@ static int heuristic(board_t *b, bool maximizing_player, bool game_over, possibl
 // random                       0 .. 9
 
     value = 0;
-    value += (corner_count(b) + 5)                * 1000000;
-    value += (corner_moves(b) + 5)                * 100000;
-    value += (diagonal_gateways_to_corner(b) + 5) * 10000;
-    value += (edge_gateway_to_corner(b) + 5)      * 1000;
+    value += (corner_count(b))                * 1000000;
+    value += (corner_moves(b))                * 100000;
+    value += (diagonal_gateways_to_corner(b)) * 10000;
+    value += (edge_gateway_to_corner(b))      * 1000;
     value += (reasonable_moves(b, pm)             * 10);
-    //value += (random() % 10);
+    value += (random() % 10);
 
     // xxx also print the components
     //printf("HEURISTIC %d\n", value);
