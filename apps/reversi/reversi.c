@@ -14,20 +14,14 @@
 #define GAME_STATE_OVER    3
 #define GAME_STATE_ERROR   4
 
-char *GAME_STATE_STR(int gs)
-{
-    if (gs == GAME_STATE_READY)  return  "READY";  
-    if (gs == GAME_STATE_ACTIVE) return  "ACTIVE";  
-    if (gs == GAME_STATE_OVER)   return  "OVER";  
-    if (gs == GAME_STATE_ERROR)  return  "ERROR";  
-    return "invalid game_state";
-}
-
 
 #define EVID_GAME_START   201
 #define EVID_GAME_RESET   202
 #define EVID_MOVE_PASS    203
 #define EVID_END_PROGRAM  204
+
+#define EVID_PLAYER_BLACK 205
+#define EVID_PLAYER_WHITE 206
 
 //
 // typedefs
@@ -37,38 +31,47 @@ char *GAME_STATE_STR(int gs)
 // variables
 //
 
+// xxx static ?
+
 //
 // prototypes
 //
 
 static void draw_init(void);
 static void draw_unload(void);
-static void draw_board(board_t *b, possible_moves_t *pm);
+static void update_display_and_register_events(board_t *b, int game_state);
 
 //xxx check these
 static void game_init(board_t *b);
 static bool humans_turn(board_t *b);
-static void register_event(int evid);
+//static void register_event(int evid);
 //xxx void apply_move(board_t *b, int move);
 //xxx void get_possible_moves(board_t *b, possible_moves_t *pm);
 //xxx bool any_possible_moves(board_t *b);
 static bool is_game_over(board_t *b);
 
+static void set_print_color(int color)
+{
+    sdl_print_init(20, color, COLOR_BLACK);
+}
+
+static void set_print_default(void)
+{
+    sdl_print_init(20, COLOR_WHITE, COLOR_BLACK);
+}
 
 // -----------------  MAIN  ------------------------------------
 
 int main(int argc, char **argv)
 {
-    bool             is_ez_app;
-    int              game_state;
-    board_t          board;
-    possible_moves_t possible_moves;
+    bool    is_ez_app;
+    int     game_state;
+    board_t board;
 
     // init variables
     is_ez_app = (argc > 0 && strcmp(argv[0], "ez_app") == 0);
-    game_state    = GAME_STATE_READY;
+    game_state = GAME_STATE_READY;
     game_init(&board);
-    memset(&possible_moves, 0, sizeof(possible_moves));
 
     // seed random number generator
     long t1 = util_microsec_timer();
@@ -87,47 +90,18 @@ int main(int argc, char **argv)
     // init print; 20 chars across display
     // xxx check that is the default, for both ez_app and !ex_app modes
     // xxx and maybe remove from here
-    sdl_print_init(20, COLOR_WHITE, COLOR_BLACK);
+    set_print_default();
 
     // xxx
     draw_init();
 
     // loop until end program
     while (true) {
-        // init display
+        // init display to black
         sdl_display_init(COLOR_BLACK);
 
-        // display state
-        // xxx todo
-        sdl_render_text_xyctr(sdl_win_width/2, 1000+sdl_char_height/2, GAME_STATE_STR(game_state));
-
-        // register for events based on game_state
-        register_event(EVID_END_PROGRAM);
-        if (game_state == GAME_STATE_READY) {
-            register_event(EVID_GAME_START);
-        } else if (game_state == GAME_STATE_ACTIVE) {
-            register_event(EVID_GAME_RESET);
-            if (humans_turn(&board)) {
-                get_possible_moves(&board, &possible_moves);
-                if (possible_moves.max == 0) {
-                    register_event(EVID_MOVE_PASS);
-                } else {
-                    for (int i = 0; i < possible_moves.max; i++) {
-                        register_event(possible_moves.move[i]);
-                    }
-                }
-            }
-        } else if (game_state == GAME_STATE_OVER) {
-            register_event(EVID_GAME_RESET);
-        } else if (game_state == GAME_STATE_ERROR) {
-            register_event(EVID_GAME_RESET);
-        }
-
-        // draw the board
-        draw_board(
-            &board, 
-            ((game_state == GAME_STATE_ACTIVE && humans_turn(&board)) 
-             ? &possible_moves : NULL));
+        // update the display and register events
+        update_display_and_register_events(&board, game_state);
 
         // present display
         sdl_display_present();
@@ -169,6 +143,15 @@ int main(int argc, char **argv)
         } else if (event.event_id == EVID_GAME_RESET) {
             game_state = GAME_STATE_READY;
             game_init(&board);
+        } else if (event.event_id == EVID_PLAYER_BLACK) {
+            board.player_black++;
+            if (board.player_black > CPU(3)) board.player_black = HUMAN;
+        } else if (event.event_id == EVID_PLAYER_WHITE) {
+            board.player_white++;
+            if (board.player_white > CPU(3)) board.player_white = HUMAN;
+
+
+
         } else if (event.event_id == EVID_GAME_START) { //xxx fix, should depend on game state
             game_state = GAME_STATE_ACTIVE;
         } else if (game_state == GAME_STATE_ACTIVE) {
@@ -176,7 +159,9 @@ int main(int argc, char **argv)
                 int move = (event.event_id == EVID_MOVE_PASS ? MOVE_PASS : event.event_id);
                 apply_move(&board, move);
             } else {
-                int move = cpu_get_move(1, &board, NULL);
+                int level = (board.whose_turn == BLACK ? board.player_black : board.player_white);
+                printf("level %d\n", level);
+                int move  = cpu_get_move(level, &board, NULL);
                 printf("XXXXXXXXXX GOT CPU MOVE %d\n", move);
                 apply_move(&board, move);
             }
@@ -219,9 +204,9 @@ static int            prompt_circle_radius;
 static sdl_texture_t *prompt_black_circle;
 static sdl_texture_t *prompt_white_circle;
 
-//static int            status_circle_radius;
-//static sdl_texture_t *status_black_circle;
-//static sdl_texture_t *status_white_circle;
+static int            info_circle_radius;
+static sdl_texture_t *info_black_circle;
+static sdl_texture_t *info_white_circle;
 
 double rint(double x) {  //xxx
     return x+0.5;
@@ -240,10 +225,9 @@ static void draw_init(void)
         }
     }
 
+    int sq_wh = 123;  // xxx is this correct
 
-    int sq_wh = 123;
-
-    piece_circle_radius  = rint(0.4*sq_wh);   // xxx need rint
+    piece_circle_radius  = rint(0.4*sq_wh);   // xxx need rint,  use nearybint
     piece_black_circle   = sdl_create_filled_circle_texture(piece_circle_radius, COLOR_BLACK);
     piece_white_circle   = sdl_create_filled_circle_texture(piece_circle_radius, COLOR_WHITE);
 
@@ -251,9 +235,9 @@ static void draw_init(void)
     prompt_black_circle  = sdl_create_filled_circle_texture(prompt_circle_radius, COLOR_BLACK);
     prompt_white_circle  = sdl_create_filled_circle_texture(prompt_circle_radius, COLOR_WHITE);
 
-    //status_circle_radius = rint(.36*FONTSZ);
-    //status_black_circle  = sdl_create_filled_circle_texture(status_circle_radius, COLOR_BLACK);
-    //status_white_circle  = sdl_create_filled_circle_texture(status_circle_radius, COLOR_WHITE);
+    info_circle_radius = rint(0.3*sq_wh);
+    info_black_circle  = sdl_create_filled_circle_texture(info_circle_radius, COLOR_BLACK);
+    info_white_circle  = sdl_create_filled_circle_texture(info_circle_radius, COLOR_WHITE);
 }
 
 static void draw_unload(void)
@@ -279,18 +263,168 @@ static void rc_to_loc(int r_arg, int c_arg, int *x, int *y, int *w, int *h)
     *h = loc[r_arg][c_arg].h;
 }
 
-//void move_to_rc(int move, int *r, int *c);  // xxx move
+#define NK2X(n,k) ((sdl_win_width/2/(n)) + (k) * (sdl_win_width/(n)))
 
-static void draw_board(board_t *b, possible_moves_t *pm)
+static char *player_name(int p)
 {
-    int x1, x2, y1, y2;
-    int i, r, c, x, y, w, h, offset;
-    sdl_texture_t *piece;
-    sdl_texture_t *prompt;
+    static char str[20];
 
-    // xxx comment
+    if (p == HUMAN) {
+        sprintf(str, "HUMAN");
+    } else {
+        sprintf(str, "CPU%d", p);
+    }
+    return str;
+}
+
+#if 0
+static void register_event(int evid)
+{
+    sdl_loc_t *loc = NULL;
+    sdl_loc_t loc2;
+    int move, r, c, x, y, w, h;
+
+    switch (evid) {
+    case EVID_GAME_START:
+        loc = sdl_render_text(0, 1600, "START");
+        break;
+    case EVID_GAME_RESET:
+        loc = sdl_render_text(0, 1600, "RESET");
+        break;
+    case EVID_MOVE_PASS:
+        loc = sdl_render_text(0, 1750, "PASS");
+        break;
+    case EVID_END_PROGRAM:
+        sdl_print_init(10, COLOR_WHITE, COLOR_BLACK);
+        loc = sdl_render_printf_xyctr(NK2X(3,2), sdl_win_height-sdl_char_height/2, "%s", "X");
+        sdl_print_init(20, COLOR_WHITE, COLOR_BLACK);
+        break;
+    case EVID_PLAYER_BLACK:
+        loc = sdl_render_text(50, 1300, player_name(b->player_black));
+        break;
+    case EVID_PLAYER_WHITE:
+        loc = sdl_render_text(550, 1300, player_name(b->player_white));
+        break;
+    default:
+        move = evid;
+        move_to_rc(move, &r, &c);
+        if (r < 1 || r > 8 || c < 1 || c > 8) {
+            printf("ERROR: register_event, invalid evid %d\n", evid);
+            break;
+        }
+        rc_to_loc(r, c, &x, &y, &w, &h);
+        loc2.x = x;
+        loc2.y = y;
+        loc2.w = w;
+        loc2.h = h;
+        loc = &loc2;
+        //printf("REGISTER MOVE %d %d %d %d\n", x, y, w, h);
+        break;
+    }
+
+    sdl_register_event(loc, evid);
+}
+#endif
+
+static void update_display_and_register_events(board_t *b, int game_state)
+{
+    //int x1, x2, y1, y2;
+    //int i, r, c, x, y, w, h, offset;
+    //sdl_texture_t *piece;
+    //sdl_texture_t *prompt;
+    possible_moves_t pm;
+    sdl_loc_t *ploc, loc;;
+
+    // display game state lines (1 or 2 lines), directly below board
+    char *str = "";
+    if (game_state == GAME_STATE_READY)  str = "READY";  
+    if (game_state == GAME_STATE_ACTIVE) str = "IN PROGRESS";  
+    if (game_state == GAME_STATE_OVER)   str = "GAME OVER";  
+    if (game_state == GAME_STATE_ERROR)  str = "ERROR";  
+    sdl_render_text_xyctr(sdl_win_width/2, 1000+0.5*sdl_char_height, str);
+
+    // xxx
+    if (game_state == GAME_STATE_OVER) {
+        if (b->black_cnt > b->white_cnt) {
+            sdl_render_printf_xyctr(sdl_win_width/2, 1000+1.5*sdl_char_height,
+                "BLACK WINS BY %d", b->black_cnt - b->white_cnt);
+        } else if (b->white_cnt > b->black_cnt) {
+            sdl_render_printf_xyctr(sdl_win_width/2, 1000+1.5*sdl_char_height,
+                "WHITE WINS BY %d", b->white_cnt - b->black_cnt);
+        } else {
+            sdl_render_printf_xyctr(sdl_win_width/2, 1000+1.5*sdl_char_height,
+                "TIE");
+        }
+    }       
+
+    // display player info, and register for events to change the players
+    for (int i = 0; i < 2; i++) {
+        int player                 = (i == 0 ? b->player_black : b->player_white);
+        int evid                   = (i == 0 ? EVID_PLAYER_BLACK : EVID_PLAYER_WHITE);
+        sdl_texture_t *info_circle = (i == 0 ? info_black_circle : info_white_circle);
+        int x_origin               = (i == 0 ? 0 : 500);
+        int y_origin               = 1200;
+        int piece_cnt              = (i == 0 ? b->black_cnt : b->white_cnt);
+        bool is_turn               = (i == 0 ? b->whose_turn == BLACK : b->whose_turn == WHITE);
+
+        sdl_render_fill_rect(x_origin, y_origin, info_circle_radius*2, info_circle_radius*2, COLOR_GREEN);
+        sdl_render_texture(x_origin, y_origin, -1, -1, 0, info_circle);
+
+        if (game_state == GAME_STATE_ACTIVE) {
+            sdl_render_text(x_origin, y_origin+100, player_name(player));
+        } else {
+            set_print_color(COLOR_LIGHT_BLUE);
+            ploc = sdl_render_text(x_origin, y_origin+100, player_name(player));
+            sdl_register_event(ploc, evid);
+            set_print_default();
+        }
+
+        if (game_state == GAME_STATE_ACTIVE) {
+            sdl_render_printf(x_origin+100, y_origin, "%c %d", is_turn ? '*' : ' ', piece_cnt);
+        }
+    }
+
+    // register for events:
+    // - EVID_END_PROGRAM
+    // - EVID_GAME_START
+    // - EVID_GAME_RESET
+    set_print_color(COLOR_LIGHT_BLUE);
+    ploc = sdl_render_text_xyctr(NK2X(3,2), sdl_win_height-sdl_char_height/2, "X");
+    sdl_register_event(ploc, EVID_END_PROGRAM);
+
+    if (game_state == GAME_STATE_READY) {
+        ploc = sdl_render_text(0, 1600, "START");
+        sdl_register_event(ploc, EVID_GAME_START);
+    } else {
+        ploc = sdl_render_text(0, 1600, "RESET");
+        sdl_register_event(ploc, EVID_GAME_RESET);
+    }
+
+    // if the game is in progress and it is the humans turn then
+    // register events for the human players possible moves
+    if (game_state == GAME_STATE_ACTIVE && humans_turn(b)) {
+        get_possible_moves(b, &pm);
+        if (pm.max == 0) {
+            ploc = sdl_render_text(0, 1750, "PASS");
+            sdl_register_event(ploc, EVID_MOVE_PASS);
+        } else {
+            for (int i = 0; i < pm.max; i++) {
+                int r, c;
+
+                move_to_rc(pm.move[i], &r, &c);
+                rc_to_loc(r, c, &loc.x, &loc.y, &loc.w, &loc.h);  //xxx rename rc_to_xywh
+                sdl_register_event(&loc, pm.move[i]);
+            }
+        }
+    }
+    set_print_default();
+
+    // draw the empty board, using green background and 
+    // lines to separate the squares
     sdl_render_fill_rect(1, 1, 998, 998, COLOR_GREEN);
-    for (i = 0; i < 9; i++) {
+    for (int i = 0; i < 9; i++) {
+        int x1, y1, x2, y2;
+
         x1 = x2 = 125 * i;
         y1 = 0;
         y2 = 999;
@@ -303,9 +437,12 @@ static void draw_board(board_t *b, possible_moves_t *pm)
     }
 
     // draw the black and white pieces 
-    for (r = 1; r <= 8; r++) {
-        for (c = 1; c <= 8; c++) {
+    for (int r = 1; r <= 8; r++) {
+        for (int c = 1; c <= 8; c++) {
             if (b->pos[r][c] != NONE) {
+                int x, y, w, h, offset;
+                sdl_texture_t *piece;
+
                 piece = (b->pos[r][c] == BLACK ? piece_black_circle : piece_white_circle);
                 rc_to_loc(r, c, &x, &y, &w, &h);
                 offset = w / 2 - piece_circle_radius;
@@ -315,10 +452,12 @@ static void draw_board(board_t *b, possible_moves_t *pm)
     }
 
     // display the human player's possilbe moves as small circles
-    if (pm) {
-        prompt = (b->whose_turn == BLACK ? prompt_black_circle : prompt_white_circle);
-        for (i = 0; i < pm->max; i++) {
-            move_to_rc(pm->move[i], &r, &c);
+    if (game_state == GAME_STATE_ACTIVE && humans_turn(b)) {
+        sdl_texture_t *prompt = (b->whose_turn == BLACK ? prompt_black_circle : prompt_white_circle);
+        for (int i = 0; i < pm.max; i++) {
+            int r, c, x, y, w, h, offset;
+
+            move_to_rc(pm.move[i], &r, &c);
             rc_to_loc(r, c, &x, &y, &w, &h);
             offset = w / 2 - prompt_circle_radius;
             sdl_render_texture(x+offset, y+offset, -1, -1, 0, prompt);
@@ -344,51 +483,14 @@ static int rc_to_move(int r, int c)
 
 static bool humans_turn(board_t *b)
 {
-    return (b->whose_turn == BLACK && b->black_is_human) ||
-           (b->whose_turn == WHITE && b->white_is_human);
-}
-
-#define NK2X(n,k) ((sdl_win_width/2/(n)) + (k) * (sdl_win_width/(n)))
-
-static void register_event(int evid)
-{
-    sdl_loc_t *loc;
-    sdl_loc_t loc2;
-    int move, r, c, x, y, w, h;
-
-    switch (evid) {
-    case EVID_GAME_START:
-        loc = sdl_render_text(0, 1200, "START");
-        break;
-    case EVID_GAME_RESET:
-        loc = sdl_render_text(0, 1200, "RESET");
-        break;
-    case EVID_MOVE_PASS:
-        loc = sdl_render_text(0, 1350, "PASS");
-        break;
-    case EVID_END_PROGRAM:
-        sdl_print_init(10, COLOR_WHITE, COLOR_BLACK);
-        loc = sdl_render_printf_xyctr(NK2X(3,2), sdl_win_height-sdl_char_height/2, "%s", "X");
-        sdl_print_init(20, COLOR_WHITE, COLOR_BLACK);
-        break;
-    default:
-        move = evid;
-        move_to_rc(move, &r, &c);
-        rc_to_loc(r, c, &x, &y, &w, &h);
-        loc2.x = x;
-        loc2.y = y;
-        loc2.w = w;
-        loc2.h = h;
-        loc = &loc2;
-        //printf("REGISTER MOVE %d %d %d %d\n", x, y, w, h);
-        break;
-    }
-
-    sdl_register_event(loc, evid);
+    return (b->whose_turn == BLACK && b->player_black == HUMAN) ||
+           (b->whose_turn == WHITE && b->player_white == HUMAN);
 }
 
 static void game_init(board_t *b)
 {
+    int player_black = b->player_black;
+    int player_white = b->player_white;
     memset(b, 0, sizeof(board_t));
 
     b->pos[4][4]      = WHITE;
@@ -398,8 +500,8 @@ static void game_init(board_t *b)
     b->black_cnt      = 2;
     b->white_cnt      = 2;
     b->whose_turn     = BLACK;
-    b->black_is_human = true;
-    b->white_is_human = false;
+    b->player_black   = player_black;  // xxx get from config file
+    b->player_white   = player_white;  // xxx get from config file
 }
 
 //xxx don't return error, instead call set_game_state_error

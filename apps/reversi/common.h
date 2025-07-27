@@ -17,13 +17,16 @@
 
 #define MOVE_PASS -1
 
+#define HUMAN 0
+#define CPU(level)  (level)
+
 typedef struct {
     unsigned char pos[10][10];
     int black_cnt;
     int white_cnt;
     int whose_turn;
-    bool black_is_human;
-    bool white_is_human;
+    int player_black;
+    int player_white;
 } board_t;
 
 typedef struct {
