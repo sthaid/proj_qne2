@@ -1,5 +1,3 @@
-// xxx rename file
-
 #include <common.h>
 
 //
@@ -16,45 +14,17 @@
 // prototypes
 //
 
+static int get_depth(int level, int piececnt);
+static int min(int a, int b);
+static int max(int a, int b);
+static void setbit(unsigned char *bm, int idx);
+static bool getbit(unsigned char *bm, int idx);
+
 static int alphabeta(board_t *b, int depth, int alpha, int beta, bool maximizing_player, int *move);
 static void init_edge_gateway_to_corner(void);
 static int heuristic(board_t *b, bool maximizing_player, bool game_over, possible_moves_t *pm);
 
-static int min(int a, int b) {
-    return a < b ? a : b;
-}
-
-static int max(int a, int b) {
-    return a > b ? a : b;
-}
-
-static void setbit(unsigned char *bm, int idx) {
-    bm[idx/8] |= (1 << (idx&7));
-}
-
-static bool getbit(unsigned char *bm, int idx) {
-    return bm[idx/8] & (1 << (idx&7));
-}
-
 // -----------------  CPU PLAYER - GET_MOVE ---------------------------------
-
-// xxx was static
-int  MIN_DEPTH[9]              = {0,  1,  2,  3,  4,  5,  6,  7,  8 };
-int  PIECECNT_FOR_EOG_DEPTH[9] = {0, 56, 55, 54, 53, 52, 51, 50, 49 };
-bool initialized               = false;
-
-// xxx simplify
-static int get_depth(int level, int piececnt)
-{
-    double M, B;
-    int depth;
-
-    M = 1.0;
-    B = (64 - PIECECNT_FOR_EOG_DEPTH[level]) - M * PIECECNT_FOR_EOG_DEPTH[level];
-    depth = nearbyint(M * piececnt + B);
-    if (depth < MIN_DEPTH[level]) depth = MIN_DEPTH[level];
-    return depth;
-}
 
 int cpu_get_move(int level, board_t *b, char *eval_str)
 {
@@ -66,19 +36,15 @@ int cpu_get_move(int level, board_t *b, char *eval_str)
 
     // sanity check level arg
     if (level < 1 || level > 8) {
-        // xxx
         printf("ERROR: invlaid level %d\n", level);
         return MOVE_PASS;
     }
 
     // initialization
-    if (initialized == false) {
-        init_edge_gateway_to_corner();
-        initialized = true;
-    }
-    piececnt = b->black_cnt + b->white_cnt;
+    init_edge_gateway_to_corner();
 
     // get lookahead depth
+    piececnt = b->black_cnt + b->white_cnt;
     depth = get_depth(level, piececnt);
     printf("depth = %d\n", depth);
 
@@ -98,7 +64,41 @@ int cpu_get_move(int level, board_t *b, char *eval_str)
     return move;
 }
 
-// -----------------  CHOOSE BEST MOVE (RECURSIVE ROUTINE)  -----------------
+static int min(int a, int b) {
+    return a < b ? a : b;
+}
+
+static int max(int a, int b) {
+    return a > b ? a : b;
+}
+
+static void setbit(unsigned char *bm, int idx) {
+    bm[idx/8] |= (1 << (idx&7));
+}
+
+static bool getbit(unsigned char *bm, int idx) {
+    return bm[idx/8] & (1 << (idx&7));
+}
+
+// xxx was static
+int  MIN_DEPTH[9]              = {0,  1,  2,  3,  4,  5,  6,  7,  8 };
+int  PIECECNT_FOR_EOG_DEPTH[9] = {0, 56, 55, 54, 53, 52, 51, 50, 49 };
+bool initialized               = false;
+
+// xxx simplify
+static int get_depth(int level, int piececnt)
+{
+    double M, B;
+    int depth;
+
+    M = 1.0;
+    B = (64 - PIECECNT_FOR_EOG_DEPTH[level]) - M * PIECECNT_FOR_EOG_DEPTH[level];
+    depth = nearbyint(M * piececnt + B);
+    if (depth < MIN_DEPTH[level]) depth = MIN_DEPTH[level];
+    return depth;
+}
+
+// -----------------  CHOOSE BEST MOVE - ALPHA / BETA  ----------------------
 
 static int alphabeta(board_t *b, int depth, int alpha, int beta, bool maximizing_player, int *move)
 {
@@ -108,22 +108,7 @@ static int alphabeta(board_t *b, int depth, int alpha, int beta, bool maximizing
     bool             game_over;
     possible_moves_t pm;
 
-    //printf("alpha=%d beta=%d\n", alpha, beta);
-
-    // determine values for game_over and pm (possible moves)
-    //
-    // if all squares are filled then
-    //   the game is over and there are no possible moves
-    // else
-    //   Call get_possible_moves to obtain a list of the possible moves.
-    //   If there are no possible moves this means that either the game is
-    //    over or the player must pass. The determination of which is made by
-    //    checking if the opponent has possible moves. If the oppenent has no
-    //    possible moves then the game is over. If the opponent has possible
-    //    moves then this player must pass.
-    // endif
-    // xxx optimize
-    // XXX
+    // xxx new comment
     game_over = false;
     get_possible_moves(b, &pm);
     if (pm.max == 0) {
@@ -172,17 +157,12 @@ static int alphabeta(board_t *b, int depth, int alpha, int beta, bool maximizing
         for (i = 0; i < pm.max; i++) {
             b_child = *b;
             apply_move(&b_child, pm.move[i]);
-            old_value = value;  //xxx not needed?
             value = min(value, alphabeta(&b_child, depth-1, alpha, beta, true, NULL));
-            if (value < old_value) {
-                best_move = pm.move[i];
-            }
             if (value <= alpha) {
                 break;
             }
             beta = min(beta, value);
         }
-        if (move) *move = best_move;
         return value;
     }
 }
@@ -225,22 +205,6 @@ static bool is_corner_move_possible(board_t *b, int which_corner)
     int r, c, i, my_color, other_color;
     struct tbl_s *tbl = (void*)tbl_data;
 
-    if (sizeof(tbl_data) != sizeof(struct tbl_s) * 4) {
-        printf("ERROR: XXXXXXXXXXXXXXXXXXXXX\n");
-        return false;
-    }
-//#if 0
-//  printf("XXXXXX tbl[1] = %d %d   %d %d %d   %d %d %d\n",
-//      tbl[1].r, 
-//      tbl[1].c, 
-//      tbl[1].r_incr_tbl[0], 
-//      tbl[1].r_incr_tbl[1], 
-//      tbl[1].r_incr_tbl[2], 
-//      tbl[1].c_incr_tbl[0], 
-//      tbl[1].c_incr_tbl[1], 
-//      tbl[1].c_incr_tbl[2]);
-//#endif
-
     r = tbl[which_corner].r;
     c = tbl[which_corner].c;
     if (b->pos[r][c] != NONE) {
@@ -249,7 +213,6 @@ static bool is_corner_move_possible(board_t *b, int which_corner)
 
     my_color    = b->whose_turn;
     other_color = OTHER_COLOR(my_color);
-    //printf("my_color = %d other_color = %d\n", my_color, other_color);
     for (i = 0; i < 3; i++) {
         int r_incr = tbl[which_corner].r_incr_tbl[i];
         int c_incr = tbl[which_corner].c_incr_tbl[i];
@@ -381,8 +344,6 @@ static int edge_gateway_to_corner(board_t *b)
     if (getbit(my_color_gateway_to_corner_bitmap,edge)) cnt++;
     if (getbit(other_color_gateway_to_corner_bitmap,edge)) cnt--;
 
-    //printf("EDGE GATEWAY TO CORNER cnt %d\n", cnt);
-
     return cnt;
 }
 
@@ -398,12 +359,7 @@ int REVERSE(int x)
             (((x) & 0xc000) >> 14));
 }
 
-
-//.W.Wxxxx
-//.WW.Wxxx
-//.WWW.Wxx
-//.WWWW.Wx
-    char *black_gateway_to_corner_patterns[] = {
+char *black_gateway_to_corner_patterns[] = {
                 ".W.W....",
                 ".W.WW...",
                 ".W.WWW..",
@@ -429,18 +385,19 @@ int REVERSE(int x)
                 ".WBBBB.."
                             };
 
-    #define MAX_BLACK_GATEWAY_TO_CORNER_PATTERNS (sizeof(black_gateway_to_corner_patterns)/sizeof(char*))
+#define MAX_BLACK_GATEWAY_TO_CORNER_PATTERNS (sizeof(black_gateway_to_corner_patterns)/sizeof(char*))
 
 static void init_edge_gateway_to_corner(void)
 {
+    static bool initialized;
 
+    if (initialized == true) {
+        return;
+    }
+    initialized = true;
+        
     printf("XXXXXXXXXXXXXXXXXXXXXX MAX_BLACK_GATEWAY_TO_CORNER_PATTERNS = %d\n",
-       (int)MAX_BLACK_GATEWAY_TO_CORNER_PATTERNS);
-#if 0
-//  for (int i = 0; i < 14; i++) {
-//      printf("[%d] = '%s'\n", i, black_gateway_to_corner_patterns[i]);
-//  }
-#endif
+           (int)MAX_BLACK_GATEWAY_TO_CORNER_PATTERNS);
 
     int i,j;
     unsigned short edge, edge_reversed;
@@ -456,7 +413,6 @@ static void init_edge_gateway_to_corner(void)
             }
         }
         edge_reversed = REVERSE(edge);
-        //printf("BLACK PATTERN  %04x  %04x\n", edge, edge_reversed);
         setbit(black_gateway_to_corner_bitmap, edge);
         setbit(black_gateway_to_corner_bitmap, edge_reversed);
     }
@@ -472,7 +428,6 @@ static void init_edge_gateway_to_corner(void)
             }
         }
         edge_reversed = REVERSE(edge);
-        //printf("WHITE PATTERN  %04x  %04x\n", edge, edge_reversed);
         setbit(white_gateway_to_corner_bitmap, edge);
         setbit(white_gateway_to_corner_bitmap, edge_reversed);
     }
@@ -555,13 +510,6 @@ static int heuristic(board_t *b, bool maximizing_player, bool game_over, possibl
     //   case where heuristic value calculated from the above characteristics are the
     //   same for differnent board inputs
 
-// corner_count  -4 .. +4
-// corner_moves  -4 .. + 4
-// diagonal_gateway_to_corner  -4 .. +4
-// edge_gateway_to_corner      -4 .. +4
-// reasonable_moves             0 .. 60  approx
-// random                       0 .. 9
-
     value = 0;
     value += (corner_count(b))                * 1000000;
     value += (corner_moves(b))                * 100000;
@@ -570,9 +518,6 @@ static int heuristic(board_t *b, bool maximizing_player, bool game_over, possibl
     value += (reasonable_moves(b, pm)             * 10);
     value += (random() % 10);
 
-    // xxx also print the components
-    //printf("HEURISTIC %d\n", value);
-
     // the returned heuristic value measures the favorability 
     // for the maximizing player
     if (!maximizing_player) {
@@ -580,13 +525,4 @@ static int heuristic(board_t *b, bool maximizing_player, bool game_over, possibl
     }
 
     return value;
-
-//  printf("HEURISTIC %d\n", (maximizing_player ? value : 0-value));
-//  return (maximizing_player ? value : -value);
 }
-
-// maybe dont work
-// ?:
-// expressions that yield long
-// static variable declarations
-// struct init, using {}
