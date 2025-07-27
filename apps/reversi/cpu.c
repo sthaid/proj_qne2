@@ -398,6 +398,10 @@ int REVERSE(int x)
 }
 
 
+//.W.Wxxxx
+//.WW.Wxxx
+//.WWW.Wxx
+//.WWWW.Wx
     char *black_gateway_to_corner_patterns[] = {
                 ".W.W....",
                 ".W.WW...",
@@ -420,7 +424,8 @@ int REVERSE(int x)
                 ".W.BWWW.",
                 ".W.BW...",
                 ".W.BW.W.",
-                ".WBBBBB."
+                ".WBBBBB.",
+                ".WBBBB.."
                             };
 
     #define MAX_BLACK_GATEWAY_TO_CORNER_PATTERNS (sizeof(black_gateway_to_corner_patterns)/sizeof(char*))

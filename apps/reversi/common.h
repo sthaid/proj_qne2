@@ -5,6 +5,7 @@
 #include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
+#include <math.h>
 
 #include <sdl.h>
 #include <utils.h>
@@ -34,11 +35,16 @@ typedef struct {
     int max;
 } possible_moves_t;
 
+// this routine utilizes the Alpha-beta pruning algorithm to 
+// determine the CPU move
 int cpu_get_move(int level, board_t *b, char *eval_str);
+
+// support routines provied in reversi.c
+void move_to_rc(int move, int *r, int *c);
+int rc_to_move(int r, int c);
 void apply_move(board_t *b, int move);
 void get_possible_moves(board_t *b, possible_moves_t *pm);
 bool any_possible_moves(board_t *b);
-void move_to_rc(int move, int *r, int *c);
 
 #endif
 
