@@ -129,6 +129,7 @@ int main(int argc, char **argv)
         } else if (event.event_id == EVID_GAME_RESET) {
             game_state = GAME_STATE_READY;
             game_init(&board);
+            eval_str[0] = '\0';
         } else if (event.event_id == EVID_PLAYER_BLACK_SELECT) {
             board.player_black++;
             if (board.player_black > CPU(6)) board.player_black = HUMAN;  // xxx 3 on Android
