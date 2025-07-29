@@ -114,6 +114,9 @@ void sdl_render_texture(int x, int y, int w, int h, double angle, sdl_texture_t 
 void sdl_destroy_texture(sdl_texture_t *texture);
 void sdl_query_texture(sdl_texture_t *texture, int *w, int *h);
 sdl_pixels_t *sdl_read_display_pixels(int x, int y, int w, int h);
-
-
 // xxx maybe void sdl_update_texture(sdl_texture_t *texture, int *pixels);  //xxx add region
+
+
+// audio xxx
+void sdl_audio(void);
+

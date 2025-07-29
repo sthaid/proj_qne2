@@ -4,7 +4,11 @@ TARGET=/tmp/ez_$(basename $PWD)
 CFLAGS="-Wall -Werror -Wno-unused-result -O2 -g -I. -I$QNE_TOP/src $(sdl2-config --cflags)"
 SRCS=$(echo *.c)
 
-gcc -o $TARGET $CFLAGS $SRCS $QNE_TOP/src/sdl.c $QNE_TOP/src/utils.c $QNE_TOP/src/logging.c  -lSDL2 -lSDL2_ttf -lm
+gcc -o $TARGET $CFLAGS \
+    $SRCS \
+    $QNE_TOP/src/sdl.c $QNE_TOP/src/sdl_audio.c $QNE_TOP/src/utils.c $QNE_TOP/src/logging.c \
+   -lSDL2 -lSDL2_ttf -lm
+
 if [ $? -ne 0 ]; then
   exit 1
 fi

@@ -14,7 +14,7 @@ long util_microsec_timer(void)
     return  ((long)ts.tv_sec * 1000000) + ((long)ts.tv_nsec / 1000);
 }
 
-long util_get_real_time_us(void)
+long util_get_real_time_us(void)  // xxx use microsec instead of us?
 {
     struct timespec ts;
 
