@@ -291,12 +291,15 @@ static void render_page_3(bool init)
         test_v1 = !test_v1;
     }
 
+    sdl_register_event(NULL, EVID_MOTION);
+
     if (test_v1) {
         sdl_render_multiline_text(y_top, y_display_begin, y_display_end, lines);
     } else {
         sdl_render_multiline_text_2(y_top, y_display_begin, y_display_end, lines_2, 100);
     }
 
+    // xxx does this belong here?
     if (event.event_id == EVID_MOTION) {
         y_top += event.u.motion.yrel;
         if (y_top >= y_display_begin) {

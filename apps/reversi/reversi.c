@@ -36,6 +36,7 @@ static void game_init(board_t *b);
 static bool is_game_over(board_t *b);
 static bool humans_turn(board_t *b);
 static void set_print_color(int color);
+static void set_print_size(int numchar);
 static void set_print_default(void);
 static char *player_name(int p);
 static bool event_id_is_game_move(int evid);
@@ -123,6 +124,7 @@ int main(int argc, char **argv)
         }
 
         // process the event
+        // xxx need a way to interrupt a long running cpu_get_move
         printf("GOT EVENT %d\n", event.event_id);
         if (event.event_id == EVID_QUIT || event.event_id == EVID_END_PROGRAM) {
             break;
@@ -133,9 +135,11 @@ int main(int argc, char **argv)
         } else if (event.event_id == EVID_PLAYER_BLACK_SELECT) {
             board.player_black++;
             if (board.player_black > CPU(6)) board.player_black = HUMAN;  // xxx 3 on Android
+            util_set_int_param("player_black", board.player_black);
         } else if (event.event_id == EVID_PLAYER_WHITE_SELECT) {
             board.player_white++;
             if (board.player_white > CPU(6)) board.player_white = HUMAN;  // xxx 3 on Android
+            util_set_int_param("player_white", board.player_white);
         } else if (event.event_id == EVID_GAME_START) {
             game_state = GAME_STATE_ACTIVE;
         } else if (game_state == GAME_STATE_ACTIVE && 
@@ -166,18 +170,6 @@ int main(int argc, char **argv)
 
 static void game_init(board_t *b)
 {
-    int player_black, player_white;
-
-    static int first_call = 1;
-    if (first_call) {
-        first_call = false;
-        player_black = HUMAN;
-        player_white = CPU(1);
-    } else {
-        player_black = b->player_black;
-        player_white = b->player_white;
-    }
-
     memset(b, 0, sizeof(board_t));
 
     b->pos[4][4]      = WHITE;
@@ -187,8 +179,8 @@ static void game_init(board_t *b)
     b->black_cnt      = 2;
     b->white_cnt      = 2;
     b->whose_turn     = BLACK;
-    b->player_black   = player_black;  // xxx get from config file
-    b->player_white   = player_white;  // xxx get from config file
+    b->player_black   = util_get_int_param("player_black", HUMAN);
+    b->player_white   = util_get_int_param("player_white", CPU(2));
 }
 
 static bool is_game_over(board_t *b)
@@ -216,6 +208,11 @@ static bool humans_turn(board_t *b)
 {
     return (b->whose_turn == BLACK && b->player_black == HUMAN) ||
            (b->whose_turn == WHITE && b->player_white == HUMAN);
+}
+
+static void set_print_size(int numchar)
+{
+    sdl_print_init(numchar, COLOR_WHITE, COLOR_BLACK);
 }
 
 static void set_print_color(int color)
@@ -348,7 +345,7 @@ static void update_display_and_register_events(board_t *b, int game_state, char 
 
     // xxx
     if (game_state == GAME_STATE_ACTIVE || game_state == GAME_STATE_OVER) {
-        sdl_render_text(0, sdl_win_height - 2 * sdl_char_height, eval_str);
+        sdl_render_text(0, sdl_win_height - 3 * sdl_char_height, eval_str);  //xxx need char height of font 10
     }
 
     // display player info, and register for events to change the players
@@ -383,10 +380,12 @@ static void update_display_and_register_events(board_t *b, int game_state, char 
     // - EVID_END_PROGRAM
     // - EVID_GAME_START
     // - EVID_GAME_RESET
-    set_print_color(COLOR_LIGHT_BLUE);
+    set_print_size(10);
     ploc = sdl_render_text_xyctr(NK2X(3,2), sdl_win_height-sdl_char_height/2, "X");
     sdl_register_event(ploc, EVID_END_PROGRAM);
+    set_print_default();
 
+    set_print_color(COLOR_LIGHT_BLUE);
     if (game_state == GAME_STATE_READY) {
         ploc = sdl_render_text(0, 1600, "START");
         sdl_register_event(ploc, EVID_GAME_START);

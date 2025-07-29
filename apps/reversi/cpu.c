@@ -4,7 +4,7 @@
 // defines
 //
 
-#define INFINITY  0x7fffffff
+#define INFIN  0x7fffffff
 
 //
 // variables
@@ -46,7 +46,7 @@ int cpu_get_move(int level, board_t *b, char *eval_str)
     printf("xxx level=%d  piececnt=%d  DEPTH %d\n", level, b->black_cnt+b->white_cnt, depth);
 
     // call alphabeta to get the best move, and associated heuristic value
-    value = alphabeta(b, depth, -INFINITY, INFINITY, true, &best_move);
+    value = alphabeta(b, depth, -INFIN, INFIN, true, &best_move);
 
     // create eval str, to be returned below
     eval_str[0] = '\0';
@@ -112,7 +112,7 @@ static int alphabeta(board_t *b, int depth, int alpha, int beta, bool maximizing
     }
 
     if (maximizing_player) {
-        value = -INFINITY;
+        value = -INFIN;
         for (i = 0; i < pm.max; i++) {
             b_child = *b;
             apply_move(&b_child, pm.move[i]);
@@ -129,7 +129,7 @@ static int alphabeta(board_t *b, int depth, int alpha, int beta, bool maximizing
         if (move) *move = best_move;
         return value;
     } else {
-        value = INFINITY;
+        value = INFIN;
         for (i = 0; i < pm.max; i++) {
             b_child = *b;
             apply_move(&b_child, pm.move[i]);

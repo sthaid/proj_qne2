@@ -65,6 +65,9 @@ static TTF_Font        *font[MAX_FONT_PTSIZE];
 
 static event_t          event_tbl[100];
 static int              max_event;
+static bool             evid_swipe_right_registered;
+static bool             evid_swipe_left_registered;
+static bool             evid_motion_registered;
 
 //
 // prototypes
@@ -182,6 +185,9 @@ void sdl_exit(void)
 void sdl_display_init(int color)
 {
     max_event = 0;
+    evid_swipe_right_registered = false;
+    evid_swipe_left_registered = false;
+    evid_motion_registered = false;
 
     set_render_draw_color(color);
     SDL_RenderClear(renderer);
@@ -196,6 +202,19 @@ void sdl_display_present(void)
 
 void sdl_register_event(sdl_loc_t *loc, int event_id)
 {
+    if (event_id == EVID_SWIPE_RIGHT) {
+        evid_swipe_right_registered = true;
+        return;
+    }
+    if (event_id == EVID_SWIPE_LEFT) {
+        evid_swipe_left_registered = true;
+        return;
+    }
+    if (event_id == EVID_MOTION) {
+        evid_motion_registered = true;
+        return;
+    }
+
     if (loc == NULL || loc->w == 0 || loc->h == 0) {
         ERROR("invalid loc, event_id=%d\n", event_id);
         return;
@@ -286,11 +305,11 @@ static void process_sdl_event(SDL_Event *ev, sdl_event_t *event)
 
             INFO("button released xy = %d %d, delta xy = %d %d\n", x, y, delta_x, delta_y);
 
-            if (delta_x > 500) {
+            if (delta_x > 500 && evid_swipe_right_registered) {
                 INFO("got EVID_SWIPE_RIGHT %d %d\n", delta_x, delta_y);
                 event->event_id = EVID_SWIPE_RIGHT;
                 break;
-            } else if (delta_x < -500) {
+            } else if (delta_x < -500 && evid_swipe_left_registered) {
                 INFO("got EVID_SWIPE_LEFT %d %d\n", delta_x, delta_y);
                 event->event_id = EVID_SWIPE_LEFT;
                 break;
@@ -309,7 +328,7 @@ static void process_sdl_event(SDL_Event *ev, sdl_event_t *event)
         }
         break; }
     case SDL_MOUSEMOTION: {
-        if (ev->motion.state == SDL_PRESSED) {
+        if (ev->motion.state == SDL_PRESSED && evid_motion_registered) {
             INFO("MOUSEMOTION state=%s x=%d y=%d xrel=%d yrel=%d\n",
                 (ev->motion.state == SDL_PRESSED  ? "PRESSED" :
                  ev->motion.state == SDL_RELEASED ? "RELEASED" : "???"),
@@ -529,8 +548,15 @@ static sdl_loc_t *render_text(bool xy_is_ctr, int x, int y, char * str)
     loc.h = pos.h / scale;
 
     // xxx enforce minimum w,h in loc
-    if (loc.w < loc.h) {
-        loc.w = loc.h;
+    if (loc.w < 150) {
+        int delta = 150 - loc.w;
+        loc.w += delta;
+        loc.x -= delta/2;
+    }
+    if (loc.h < 150) {
+        int delta = 150 - loc.h;
+        loc.h += delta;
+        loc.y -= delta/2;
     }
     return &loc;
 }
@@ -625,8 +651,6 @@ sdl_loc_t *sdl_render_printf_xyctr(int x, int y, char * fmt, ...)
 
     return sdl_render_text_xyctr(x, y, str);
 }
-
-
 
 // -----------------  RENDER RECTANGLES, LINES, CIRCLES, POINTS  --------------------
 

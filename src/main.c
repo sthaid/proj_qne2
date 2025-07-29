@@ -355,7 +355,7 @@ static void display_menu(void)
         y = (sdl_win_height/6/2) + (id/3) * (sdl_win_height/6);
 
         // display the menu item
-        sdl_render_texture(x-RADIUS, y-RADIUS, 2*RADIUS, 2*RADIUS, 0, circle);
+        sdl_render_texture(x-RADIUS, y-RADIUS, -1, -1,  0, circle);
 
         sdl_print_init(numchars, COLOR_WHITE, COLOR_BLUE);
         if (len2 == 0) {
@@ -366,8 +366,8 @@ static void display_menu(void)
         }
 
         // register event
-        loc.x = x;
-        loc.y = y;
+        loc.x = x - RADIUS;
+        loc.y = y - RADIUS;
         loc.w = 2 * RADIUS;
         loc.h = 2 * RADIUS;
         sdl_register_event(&loc, page * MAX_MENU + id);
@@ -376,14 +376,13 @@ static void display_menu(void)
     // xxx
     sdl_print_init(10, COLOR_WHITE, MENU_BG_COLOR);
 
-    // xxx use loc returned by print
     #define DISPLAY_CONTROL_ITEM(col,str,evid) \
         do { \
+            sdl_loc_t *loc; \
             int x = (sdl_win_width/3/2) + (col) * (sdl_win_width/3); \
             int y = sdl_win_height - sdl_char_height/2; \
-            sdl_loc_t loc = {x, y, 2*RADIUS, 2*RADIUS}; \
-            sdl_render_text_xyctr(x, y, str); \
-            sdl_register_event(&loc, evid); \
+            loc = sdl_render_text_xyctr(x, y, str); \
+            sdl_register_event(loc, evid); \
         } while (0)
 
     // xxx no arrows if not needed
@@ -395,9 +394,6 @@ static void display_menu(void)
 
     // init print xxx needed ?  maybe do at top
     //sdl_print_init(20, COLOR_WHITE, MENU_BG_COLOR, &chw, &chh, NULL, NULL);
-
-    // xxx display "Menu" as title
-    //sdl_render_printf(true, sdl_win_width-chw/2, chh/2, "%d", page);
 }
 
 static void read_menu(void)
@@ -724,7 +720,7 @@ done:
 static void process_req_using_android_sh(int sockfd, char *cmd)
 {
     char *argv[10];
-    char cmd2[1000];
+    char cmd2[1100];
 
     // execute the cmd
     close(0);
@@ -759,11 +755,13 @@ static char * sock_addr_to_str(char * s, int slen, struct sockaddr * addr)
                   &((struct sockaddr_in*)addr)->sin_addr,
                   addr_str, sizeof(addr_str));
         port2 = ((struct sockaddr_in*)addr)->sin_port;
+#if 0 //xxx
     } else if (addr->sa_family == AF_INET6) {
         inet_ntop(AF_INET6,
                   &((struct sockaddr_in6*)addr)->sin6_addr,
                  addr_str, sizeof(addr_str));
         port2 = ((struct sockaddr_in6*)addr)->sin6_port;
+#endif
     } else {
         snprintf(s,slen,"Invalid AddrFamily %d", addr->sa_family);
         return s;

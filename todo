@@ -1,4 +1,15 @@
+
+keep bottom row ctrls bg black, and x10                DONE
+motion  and swipe                                      DONE
+loc_t                                                  DONE
+params,  new utils to get and set
+add params to unit_test, reversi, and contoller
+
+cleanup git files
+
+
 reversi
+- edge improvement
 - undo
 - print score when known to win
 
