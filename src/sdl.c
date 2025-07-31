@@ -6,6 +6,7 @@
 // xxx landscape
 // xxx keyboard events for < > END and up/down
 // xxx read pixels routien
+// xxx use of rint vs nearbyint
 
 //
 // logging
@@ -30,7 +31,8 @@
     #define FONT_FILE_PATH "/home/haid/proj/proj_qne2/linux/assets/FreeMonoBold.ttf" //xxx
 #endif
 
-#define DEFAULT_NUMCHARS 20
+#define DEFAULT_FONTSZ 20
+
 #define MIN_FONT_PTSIZE  10
 #define MAX_FONT_PTSIZE  200
 
@@ -138,11 +140,11 @@ int sdl_init(void)
     }
 #endif
 
-    // init default fontsize, where DEFAULT_NUMCHARS is num chars across display;
+    // init default fontsize, where DEFAULT_FONTSZ is num chars across display;
     // and validate expected character size and columns
-    sdl_print_init(DEFAULT_NUMCHARS, COLOR_WHITE, COLOR_BLACK);
+    sdl_print_init(DEFAULT_FONTSZ, COLOR_WHITE, COLOR_BLACK);
     INFO("sdl_print_init(%d) sdl_char_width=%d sdl_char_height=%d\n", 
-         DEFAULT_NUMCHARS, sdl_char_width, sdl_char_height);
+         DEFAULT_FONTSZ, sdl_char_width, sdl_char_height);
     if (sdl_char_width != 50 || sdl_char_height != 83) {
         ERROR("chw,chh, expected = 50,83  actual = %d,%d\n", sdl_char_width, sdl_char_height);
         return -1;
@@ -452,24 +454,25 @@ static struct {
 void sdl_print_init(double numchars, int fg_color, int bg_color)
 {
     int ptsize;
+    double chw_fp, chh_fp;
+
+    // if numchars is -1 then the font size is not being changed 
+    if (numchars == -1) {
+        goto change_font_color;
+    }
 
     // determine real font ptsize to use;
     // note: rint() not used here so ptsize will round down
-    {
-    double chw_fp, chh_fp;
     chw_fp = (sdl_win_width / numchars) * scale;
     chh_fp = chw_fp / 0.6;
     ptsize = chh_fp;
-    }
 
-    // xxx comments
-    if (ptsize < MIN_FONT_PTSIZE) {
-        ptsize = MIN_FONT_PTSIZE;
-    }
-    if (ptsize >= MAX_FONT_PTSIZE) {
-        ptsize = MAX_FONT_PTSIZE-1;
-    }
+    // ensure ptiszie is in range
+    if (ptsize < MIN_FONT_PTSIZE) ptsize = MIN_FONT_PTSIZE;
+    if (ptsize >= MAX_FONT_PTSIZE) ptsize = MAX_FONT_PTSIZE-1;
 
+    // if the requested font pointsize has not yet been opened
+    // then do so
     if (font[ptsize] == NULL) {
         font[ptsize] = TTF_OpenFont(FONT_FILE_PATH, ptsize);
         if (font[ptsize] == NULL) {
@@ -478,16 +481,15 @@ void sdl_print_init(double numchars, int fg_color, int bg_color)
         }
     }
 
-    text.ptsize      = ptsize;
-    //text.fg_color    = *(SDL_Color*)&fg_color;
-    //text.bg_color    = *(SDL_Color*)&bg_color;
-
-    // xxx  strict-aliasing
-    memcpy(&text.fg_color, &fg_color, 4);
-    memcpy(&text.bg_color, &bg_color, 4);
-
+    // save new point size and character width/height
+    text.ptsize = ptsize;
     sdl_char_width  = rint(sdl_win_width / numchars);
     sdl_char_height = rint(sdl_char_width / 0.6);
+
+change_font_color:
+    // save new font color
+    memcpy(&text.fg_color, &fg_color, 4);
+    memcpy(&text.bg_color, &bg_color, 4);
 }
 
 static sdl_loc_t *render_text(bool xy_is_ctr, int x, int y, char * str)

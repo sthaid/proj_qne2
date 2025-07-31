@@ -20,7 +20,10 @@
 #define EVID_PAGE_DECREMENT 1000
 #define EVID_PAGE_INCREMENT 1001
 
-#define MENU_BG_COLOR (!params.devel_mode ? COLOR_TEAL : COLOR_VIOLET)
+#define BG_COLOR (!params.devel_mode ? COLOR_TEAL : COLOR_VIOLET)
+
+#define DEFAULT_FONTSZ  20
+#define LARGE_FONTSZ    10
 
 //
 // typedefs
@@ -183,7 +186,10 @@ static void controller(void)
 
     while (true) {
         // xxx reset other stuff here too, fontsz, color
-        sdl_display_init(MENU_BG_COLOR);
+        sdl_display_init(BG_COLOR);
+
+        // xxx comment
+        sdl_print_init(DEFAULT_FONTSZ, COLOR_WHITE, BG_COLOR);
 
         // display menu, and register for sdl events
         display_menu();
@@ -225,8 +231,8 @@ static void controller(void)
                 INFO("done Settings\n");
             } else {
                 char working_dir[100];
-                // xxx do print init here
                 INFO("running %s\n", menu[pg][id].name);
+                sdl_print_init(DEFAULT_FONTSZ, COLOR_WHITE, COLOR_BLACK);
                 sprintf(working_dir, "apps/%s", menu[pg][id].dir);
                 chdir(working_dir);
                 rc = picoc_fg(menu[pg][id].args);
@@ -329,8 +335,9 @@ static void display_menu(void)
     }
 
     // xxx
-    sdl_print_init(10, COLOR_WHITE, MENU_BG_COLOR);
+    sdl_print_init(LARGE_FONTSZ, COLOR_WHITE, BG_COLOR);
 
+    // xxx move this
     #define DISPLAY_CONTROL_ITEM(col,str,evid) \
         do { \
             sdl_loc_t *loc; \
@@ -347,8 +354,7 @@ static void display_menu(void)
     }
     DISPLAY_CONTROL_ITEM(2,"X",EVID_QUIT);
 
-    // init print xxx needed ?  maybe do at top
-    //sdl_print_init(20, COLOR_WHITE, MENU_BG_COLOR, &chw, &chh, NULL, NULL);
+    sdl_print_init(DEFAULT_FONTSZ, COLOR_WHITE, BG_COLOR);
 }
 
 static void read_menu(void)
@@ -473,10 +479,8 @@ static void settings(void)
     #define EVID_RESET_APPS_CANCEL  1003
 
     while (true) {
-        sdl_print_init(20, COLOR_WHITE, MENU_BG_COLOR);
-
-        sdl_display_init(MENU_BG_COLOR);
-
+        sdl_display_init(BG_COLOR);
+        sdl_print_init(DEFAULT_FONTSZ, COLOR_WHITE, BG_COLOR);
         sdl_render_text_xyctr(sdl_win_width/2, sdl_char_height/2, "Settings");
 
         if (!reset_apps_confirm) {
@@ -484,30 +488,32 @@ static void settings(void)
 
             sdl_render_printf(0, ROW2Y(4), "Copyright");
 
-            sdl_print_init(20, COLOR_LIGHT_BLUE, MENU_BG_COLOR);
+            sdl_print_init(-1, COLOR_LIGHT_BLUE, BG_COLOR);
             loc = sdl_render_printf(0, ROW2Y(6), "Devel_Mode = %d", params.devel_mode);
             sdl_register_event(loc, EVID_DEVEL_MODE);
-            sdl_print_init(20, COLOR_WHITE, MENU_BG_COLOR);
+            sdl_print_init(-1, COLOR_WHITE, BG_COLOR);
 
-            sdl_print_init(20, COLOR_LIGHT_BLUE, MENU_BG_COLOR);
+            sdl_print_init(-1, COLOR_LIGHT_BLUE, BG_COLOR);
             loc = sdl_render_printf(0, ROW2Y(8), "Reset_Apps");
             sdl_register_event(loc, EVID_RESET_APPS);
-            sdl_print_init(20, COLOR_WHITE, MENU_BG_COLOR);
+            sdl_print_init(-1, COLOR_WHITE, BG_COLOR);
         } else {
             sdl_render_printf(0, ROW2Y(8), "Reset_Apps?");
 
-            sdl_print_init(20, COLOR_LIGHT_BLUE, MENU_BG_COLOR);
+            sdl_print_init(-1, COLOR_LIGHT_BLUE, BG_COLOR);
             loc = sdl_render_printf(0, ROW2Y(10), "Confirm");
             sdl_register_event(loc, EVID_RESET_APPS_CONFIRM);
+            sdl_print_init(-1, COLOR_WHITE, BG_COLOR);
 
+            sdl_print_init(-1, COLOR_LIGHT_BLUE, BG_COLOR);
             loc = sdl_render_printf(sdl_win_width/2, ROW2Y(10), "Cancel");
             sdl_register_event(loc, EVID_RESET_APPS_CANCEL);
-            sdl_print_init(20, COLOR_WHITE, MENU_BG_COLOR);
+            sdl_print_init(-1, COLOR_WHITE, BG_COLOR);
         }
 
-        sdl_print_init(10, COLOR_WHITE, MENU_BG_COLOR);
+        sdl_print_init(LARGE_FONTSZ, COLOR_WHITE, BG_COLOR);
         DISPLAY_CONTROL_ITEM(2,"X",EVID_QUIT);
-        sdl_print_init(20, COLOR_WHITE, MENU_BG_COLOR);
+        sdl_print_init(DEFAULT_FONTSZ, COLOR_WHITE, BG_COLOR);
 
         sdl_display_present();
 
