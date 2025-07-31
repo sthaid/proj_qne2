@@ -1,3 +1,24 @@
+AUDIO API
+
+sdl_audio_play
+sdl_audio_play_tone(int freq, int duration_ms)
+sdl_audio_play_file(file, mono/stereo)
+
+
+play_buff(buff, samples, mono/stereo)
+
+- returns immedeately
+- can be cancelled
+
+
+
+
+https://freepd.com/
+https://en.wikipedia.org/wiki/WAV
+
+
+xxxxxxxxxxxxxxxx
+
 why isnt printf working             OKAY
 turn off O2, for now                OKAY
 add params: linux                   DONE
