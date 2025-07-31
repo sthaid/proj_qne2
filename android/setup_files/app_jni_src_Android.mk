@@ -10,6 +10,8 @@ SDL_TTF_PATH := ../SDL2_ttf-2.0.15
 LOCAL_C_INCLUDES := $(LOCAL_PATH)/$(SDL_PATH)/include \
                     $(LOCAL_PATH)/$(SDL_TTF_PATH) 
 
+# xxx LOCAL_C_FLAGS -O2  xxx confirm this works
+
 # Add your application source files here...
 LOCAL_SRC_FILES :=  \
   main.c sdl.c utils.c \

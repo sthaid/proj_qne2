@@ -28,7 +28,7 @@ void init_logging(char *logfile)
             return;
         }
         rc = dup2(fileno(stdout), fileno(stderr));
-        if (rc != 0) {
+        if (rc < 0) {
             ERROR("failed to dup stdout to stderr, %s\n", strerror(errno));
             return;
         }

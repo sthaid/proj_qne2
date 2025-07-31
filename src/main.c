@@ -1,6 +1,7 @@
 #include <std_hdrs.h>
+#include <signal.h>  //xxx add to std_hdrs
 
-#include <sdl.h>
+#include <sdl.h>   // xxx does this bring in SDL.h?
 #include <utils.h>
 #include <logging.h>
 
@@ -8,6 +9,7 @@
 // defines
 //
 
+#define VERSION "0.0"
 
 #ifdef ANDROID
 #define MAIN SDL_main
@@ -15,30 +17,29 @@
 #define MAIN main
 #endif
 
-#define VERSION 1
-
 #define EVID_PAGE_DECREMENT 1000
 #define EVID_PAGE_INCREMENT 1001
 
-#define MENU_BG_COLOR (!settings.devel_mode ? COLOR_TEAL : COLOR_VIOLET)
+#define MENU_BG_COLOR (!params.devel_mode ? COLOR_TEAL : COLOR_VIOLET)
 
 //
 // typedefs
 //
 
 typedef struct {
-    long version;
-    long devel_mode;
-} settings_t;
+    bool devel_mode;
+} params_t;
 
 //
 // variables
 //
 
+// xxx are all these needed
 static const char *storage_path;
-static bool        server_thread_running;
+static bool        server_thread_running;  
 static char        log_file_pathname[100];
-static settings_t  settings;
+static params_t    params;
+static pthread_t   server_tid;
 
 //
 // prototypes 
@@ -62,9 +63,6 @@ void picoc_bg(char *args);
 
 static void init(void);
 static void create_default_apps(void);
-static void read_settings(void);
-static void write_settings(void);
-static void print_settings(void);
 
 int MAIN(int argc, char **argv)
 {
@@ -79,9 +77,12 @@ int MAIN(int argc, char **argv)
     return 0;
 }
 
+static void sigusr1_hndlr(int signum)
+{
+}
+
 static void init(void)
 {
-    pthread_t tid;
     int rc;
     struct stat statbuf;
 
@@ -98,15 +99,15 @@ static void init(void)
 #ifdef ANDROID
     init_logging("log");
 #else
-    init_logging(NULL);
+    //init_logging(NULL);  xxx
+    init_logging("log");
 #endif
 
-    // read settings, if file deosn't exist it will be created
-    read_settings();
-
     // print startup messages
-    INFO("========== STARTING: VERSION=%ld ==========\n", settings.version);
-    print_settings();
+    INFO("========== STARTING: VERSION=%s ==========\n", VERSION);
+
+    // get params, if they don't exist, set to default value
+    params.devel_mode = util_get_int_param("devel_mode", 0);
 
     // if apps dir doesn't exist then create it
     rc = stat("apps", &statbuf);
@@ -114,8 +115,14 @@ static void init(void)
         create_default_apps();
     }
 
+    // xxx
+    struct sigaction action;
+    memset(&action, 0, sizeof(action));
+    action.sa_handler = sigusr1_hndlr;
+    sigaction(SIGUSR1, &action, NULL);
+
     // create server thread
-    pthread_create(&tid, NULL, server_thread, NULL);
+    pthread_create(&server_tid, NULL, server_thread, NULL);
 //  while (server_thread_running == false) {
 //      usleep(10000);
 //  }
@@ -124,78 +131,26 @@ static void init(void)
 static void create_default_apps(void)
 {
     INFO("creating default apps\n");
+#if 0
     system("rm -rf apps");
     system("tar -xvf ../assets/apps.tar");
-}
+#else
+    SDL_RWops* file = SDL_RWFromFile("apps.tar", "rb");
+    char *ptr = malloc(1000000);
+    int len, rc;
 
-static void read_settings(void)
-{
-    #define UPDATE_SETTING(which) \
-        if (strcmp(name, #which) == 0) { \
-            settings.which = value; \
-            continue; \
-        }
-
-    FILE *fp;
-    char s[100];
-    int cnt;
-    char name[100];
-    long value;
-
-    // open settings file
-    fp = fopen("settings", "r");
-
-    // if failed to open settings file then create default settings file
-    if (fp == NULL) {
-        static settings_t default_settings = { VERSION };
-        settings = default_settings;
-        write_settings();
-        return;
+    if (file) {
+        INFO("xxxxxxxxxxx okay\n");
+        len = SDL_RWread(file, ptr, 1, 1000000);
+        INFO("len %d\n", len);
+        rc = util_write_file("apps.tar", ptr, len);
+        INFO("util_write_file rc %d\n", rc);
+        rc = system("tar -xvf apps.tar");
+        INFO("tar xvf rc %d\n", rc);
+    } else {
+        INFO("xxxxxxxxxxx failed, %s\n", SDL_GetError());
     }
-
-    // read settings
-    while (fgets(s, sizeof(s), fp) != NULL) {
-        remove_trailing_newline(s);
-
-        cnt = sscanf(s, "%s %ld", name, &value);
-        if (cnt != 2) {
-            ERROR("invalid line in settings file '%s'\n", s);
-            break;
-        }
-
-        UPDATE_SETTING(version);
-        UPDATE_SETTING(devel_mode);
-    }
-
-    // close 
-    fclose(fp);
-
-}
-
-static void write_settings(void)
-{
-    FILE *fp;
-
-    fp = fopen("settings", "w");
-    if (fp == NULL) {
-        ERROR("failed to open 'settings' for writing, %s\n", strerror(errno));
-        return;
-    }
-
-    fprintf(fp, "version    %ld\n", settings.version);
-    fprintf(fp, "devel_mode %ld\n", settings.devel_mode);
-
-    fclose(fp);
-}
-
-static void print_settings(void)
-{
-    #define PRINT_SETTING(which) \
-        INFO("  %-16s = %ld\n", #which, settings.which)
-
-    INFO("settings ...\n");
-    PRINT_SETTING(version);
-    PRINT_SETTING(devel_mode);
+#endif
 }
 
 // -----------------  CONTROLLER  ------------------------------------
@@ -215,7 +170,7 @@ static menu_t menu[MAX_PAGE][MAX_MENU];
 
 static void display_menu(void);
 static void read_menu(void);
-static void settings_proc(void); //xxx
+static void settings(void);
 
 static void controller(void)
 {
@@ -266,10 +221,11 @@ static void controller(void)
 
             if (pg == 0 && id == MAX_MENU-1) {
                 INFO("running Settings\n");
-                settings_proc();
+                settings();
                 INFO("done Settings\n");
             } else {
                 char working_dir[100];
+                // xxx do print init here
                 INFO("running %s\n", menu[pg][id].name);
                 sprintf(working_dir, "apps/%s", menu[pg][id].dir);
                 chdir(working_dir);
@@ -282,7 +238,6 @@ static void controller(void)
 
     sdl_exit();
 }
-
 
 static void display_menu(void)
 {
@@ -503,7 +458,7 @@ static void read_menu(void)
 #define ROW2Y_CTR(r) ((r) * sdl_char_height + sdl_char_height/2)
 #define NK2X(n,k) ((sdl_win_width/2/(n)) + (k) * (sdl_win_width/(n)))
 
-static void settings_proc(void)
+static void settings(void)
 {
     sdl_event_t event;
     sdl_loc_t *loc;
@@ -518,40 +473,41 @@ static void settings_proc(void)
     #define EVID_RESET_APPS_CANCEL  1003
 
     while (true) {
-        sdl_print_init(20, COLOR_WHITE, COLOR_BLACK);
+        sdl_print_init(20, COLOR_WHITE, MENU_BG_COLOR);
 
-        sdl_display_init(COLOR_BLACK);
+        sdl_display_init(MENU_BG_COLOR);
 
         sdl_render_text_xyctr(sdl_win_width/2, sdl_char_height/2, "Settings");
 
         if (!reset_apps_confirm) {
-            loc = sdl_render_printf(0, ROW2Y(2), "Devel_Mode = %ld", settings.devel_mode);
+            sdl_render_printf(0, ROW2Y(2), "Version = %s", VERSION);
+
+            sdl_render_printf(0, ROW2Y(4), "Copyright");
+
+            sdl_print_init(20, COLOR_LIGHT_BLUE, MENU_BG_COLOR);
+            loc = sdl_render_printf(0, ROW2Y(6), "Devel_Mode = %d", params.devel_mode);
             sdl_register_event(loc, EVID_DEVEL_MODE);
+            sdl_print_init(20, COLOR_WHITE, MENU_BG_COLOR);
 
-            loc = sdl_render_printf(0, ROW2Y(4), "Reset_Apps");
+            sdl_print_init(20, COLOR_LIGHT_BLUE, MENU_BG_COLOR);
+            loc = sdl_render_printf(0, ROW2Y(8), "Reset_Apps");
             sdl_register_event(loc, EVID_RESET_APPS);
-
-//xxx version 1st?
-            sdl_render_printf(0, ROW2Y(6), "Version = %ld", settings.version);
-
-            sdl_render_printf(0, ROW2Y(8), "Copyright");
-
-            sdl_print_init(40, COLOR_WHITE, COLOR_BLACK);
-            sdl_render_printf(0, sdl_win_height-100, 
-"123456789 123456789 123456789 123456789 123456789 123456789 123456789 123456789 ");
-
+            sdl_print_init(20, COLOR_WHITE, MENU_BG_COLOR);
         } else {
-            sdl_render_printf(0, ROW2Y(4), "Reset_Apps?");
+            sdl_render_printf(0, ROW2Y(8), "Reset_Apps?");
 
-            loc = sdl_render_printf(0, ROW2Y(6), "Confirm");
+            sdl_print_init(20, COLOR_LIGHT_BLUE, MENU_BG_COLOR);
+            loc = sdl_render_printf(0, ROW2Y(10), "Confirm");
             sdl_register_event(loc, EVID_RESET_APPS_CONFIRM);
 
-            loc = sdl_render_printf(sdl_win_width/2, ROW2Y(6), "Cancel");
+            loc = sdl_render_printf(sdl_win_width/2, ROW2Y(10), "Cancel");
             sdl_register_event(loc, EVID_RESET_APPS_CANCEL);
+            sdl_print_init(20, COLOR_WHITE, MENU_BG_COLOR);
         }
 
-        //int chh = sdl_char_height;
+        sdl_print_init(10, COLOR_WHITE, MENU_BG_COLOR);
         DISPLAY_CONTROL_ITEM(2,"X",EVID_QUIT);
+        sdl_print_init(20, COLOR_WHITE, MENU_BG_COLOR);
 
         sdl_display_present();
 
@@ -564,8 +520,12 @@ static void settings_proc(void)
         INFO("proc event_id %d\n", event.event_id);
         switch (event.event_id) {
         case EVID_DEVEL_MODE:
-            settings.devel_mode = (settings.devel_mode ? 0 : 1);
-            write_settings();
+            params.devel_mode = (params.devel_mode ? 0 : 1);
+            util_set_int_param("devel_mode", params.devel_mode);
+            if (!params.devel_mode) {
+                INFO("sending SIGUSR1 to server_thread\n");
+                pthread_kill(server_tid, SIGUSR1);
+            }
             break;
         case EVID_RESET_APPS:
             reset_apps_confirm = true;
@@ -601,7 +561,14 @@ static void *server_thread(void *cx)
     int                listen_sockfd, ret;
     pthread_t          tid;
 
+again:
+    // wait for developer mode to be enabled
     sleep(1);
+    while (params.devel_mode == false) {
+        printf("xxx waiting for devl mode0\n");
+        sleep(1);
+    }
+
     INFO("SERVER_THREAD STARTING\n");
 
     // create listen socket
@@ -654,8 +621,9 @@ static void *server_thread(void *cx)
         sockfd = accept(listen_sockfd, (struct sockaddr *) &peer_addr, &peer_addr_len);
         if (sockfd == -1) {
             ERROR("accept, %s\n", strerror(errno));
-            sleep(1);
-            continue;
+            break;
+            //sleep(1);
+            //continue;
         }
         sock_addr_to_str(peer_addr_str, sizeof(peer_addr_str), (struct sockaddr *)&peer_addr);
         //INFO("accepted connection from %s, sockfd=%d\n", peer_addr_str, sockfd);
@@ -663,6 +631,10 @@ static void *server_thread(void *cx)
         // create thread to process the client request
         pthread_create(&tid, NULL, process_req_thread, (void*)(long)sockfd);
     }
+
+    // xxx
+    close(listen_sockfd);
+    goto again;
 
     INFO("SERVER_THREAD TERMINATING\n");
     return NULL;
@@ -695,10 +667,12 @@ static void *process_req_thread(void *cx)
 
     // some cmds are handled here, without using android /bin/sh
     if (strcmp(cmd, "log_mark") == 0) {
+        // xxx maybe not needed
         INFO("---------- log_mark ----------\n");
         goto done;
     }
     if (strcmp(cmd, "log_clear") == 0) {
+        // xxx use logging.c
         freopen(log_file_pathname, "w", stdout);
         freopen(log_file_pathname, "w", stderr);
         setlinebuf(stdout);
@@ -731,7 +705,7 @@ static void process_req_using_android_sh(int sockfd, char *cmd)
     dup2(sockfd, 1);
     dup2(sockfd, 2);
 
-    sprintf(cmd2, "cd %s; %s", storage_path, cmd);
+    sprintf(cmd2, "cd %s; %s", storage_path, cmd);  // xxx aren't we already in storage_path
     argv[0] = "/bin/sh";
     argv[1] = "-c";
     argv[2] = cmd2;

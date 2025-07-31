@@ -30,7 +30,9 @@ SRCS :=  \
 
 TARGET = app
 
-CFLAGS = -Wall -Werror -Wno-unused-result -O2 -g -I../src $(shell sdl2-config --cflags)
+# xxx add -O2
+
+CFLAGS = -Wall -Werror -Wno-unused-result -g -I../src $(shell sdl2-config --cflags)
 
 $(TARGET):
 	gcc -o $@ $(CFLAGS) $(SRCS) -lSDL2 -lSDL2_ttf -lm
