@@ -134,17 +134,17 @@ static void init(void)
 static void create_default_apps(void)
 {
     INFO("creating default apps\n");
-#if 0
+#ifndef ANDROID
     system("rm -rf apps");
     system("tar -xvf ../assets/apps.tar");
 #else
     SDL_RWops* file = SDL_RWFromFile("apps.tar", "rb");
-    char *ptr = malloc(1000000);
+    char *ptr = malloc(50000000);
     int len, rc;
 
     if (file) {
         INFO("xxxxxxxxxxx okay\n");
-        len = SDL_RWread(file, ptr, 1, 1000000);
+        len = SDL_RWread(file, ptr, 1, 50000000);
         INFO("len %d\n", len);
         rc = util_write_file("apps.tar", ptr, len);
         INFO("util_write_file rc %d\n", rc);

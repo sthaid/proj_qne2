@@ -1,5 +1,6 @@
 #include <std_hdrs.h>
 #include <math.h>
+#include <sys/mman.h>
 
 #include <sdl.h>
 #include <utils.h>
@@ -190,6 +191,45 @@ void sdl_audio_play_tone(int freq, int duration_ms)
 
     play_proc(buff, n, total_frames, false);
 }
+
+void sdl_audio_play_file(char *filename) 
+{
+    int rc, file_size, fd, total_frames;
+    struct stat statbuf;
+    int *buff;
+
+    // open file, and get its size
+    fd = open(filename, O_RDONLY);
+    if (fd < 0) {
+        ERROR("failed to oen file, %s\n", strerror(errno));
+        return;
+    }
+
+    rc = fstat(fd, &statbuf);
+    if (rc < 0) {
+        printf("fstat failed, %s\n", strerror(errno));
+        return;
+    }
+    file_size = statbuf.st_size;
+    printf("file_size %d\n", file_size);
+
+    // map file contents to buffer
+    buff = mmap(NULL, file_size, PROT_READ, MAP_PRIVATE, fd, 0);
+    if (buff == MAP_FAILED) {
+        printf("mmap failed, %s\n", strerror(errno));
+        return;
+    } else {
+        printf("buff %p\n", buff);
+        printf("buff[0] = %x\n", buff[0]);
+    }
+    //close(fd);
+
+    total_frames = file_size / 2;
+    play_proc(buff, total_frames, total_frames, false);
+
+    // xxx need to unmap
+}
+
 
 void sdl_audio_wait(void)
 {

@@ -2,6 +2,7 @@
 SRCS :=  \
   ../src/main.c \
   ../src/sdl.c \
+  ../src/sdl_audio.c \
   ../src/utils.c \
   ../src/logging.c \
   picoc/clibrary.c \

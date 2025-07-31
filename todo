@@ -16,6 +16,18 @@ play_buff(buff, samples, mono/stereo)
 https://freepd.com/
 https://en.wikipedia.org/wiki/WAV
 
+aplay -t raw -f S16 -r 22050 ./proj_sdr/devel/wav_files/super_critical.wav
+
+
+
+void *mmap(void addr[.length], size_t length, int prot, int flags,
+                  int fd, off_t offset);
+
+buff = mmap(NULL, file_size, PROT_READ, 0, fd, 0);
+
+
+
+
 
 xxxxxxxxxxxxxxxx
 

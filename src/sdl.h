@@ -121,5 +121,9 @@ sdl_pixels_t *sdl_read_display_pixels(int x, int y, int w, int h);
 int sdl_audio_open(int frames_per_sec, int channels);
 void sdl_audio_close(void);
 void sdl_audio_print_devices_info(void);
+
 void sdl_audio_play_tone(int freq, int duration_ms);
+void sdl_audio_play_file(char *filename);
+
 void sdl_audio_wait(void);
+
