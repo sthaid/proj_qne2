@@ -381,6 +381,13 @@ void Sdl_read_display_pixels (struct ParseState *Parser, struct Value *ReturnVal
     ReturnValue->Val->Pointer = (char*)pixels; 
 }
 
+// xxx audio
+void Sdl_audio (struct ParseState *Parser, struct Value *ReturnValue,
+	struct Value **Param, int NumArgs)
+{
+    sdl_audio();
+}
+
 //
 // SDL REGISTRATION
 //
@@ -443,6 +450,9 @@ struct LibraryFunction SdlFunctions[] = {
     { Sdl_destroy_texture,              "void sdl_destroy_texture(sdl_texture_t *texture);" },
     { Sdl_query_texture,                "void sdl_query_texture(sdl_texture_t *texture, int *width, int *height);" },
     { Sdl_read_display_pixels,          "void *sdl_read_display_pixels(int x, int y, int w, int h);" },
+
+    // xxx audio
+    { Sdl_audio,                        "void sdl_audio(void);" },
 
     { NULL, NULL } };
 

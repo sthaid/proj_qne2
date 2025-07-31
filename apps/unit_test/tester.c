@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <stdbool.h>   //xxx why needed
 
 #include <sdl.h>
 #include <utils.h>

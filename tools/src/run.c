@@ -12,8 +12,8 @@
 #include <arpa/inet.h>
 
 #define PORTNUM 9000
-//#define IP_ADDR "192.168.1.243"  //xxx
-#define IP_ADDR "127.0.0.1"
+#define IP_ADDR "192.168.1.243"  //xxx
+//#define IP_ADDR "127.0.0.1"
 
 void set_fd_non_blocking(int fd);
 

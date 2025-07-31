@@ -3,18 +3,16 @@ turn off O2, for now                OKAY
 add params: linux                   DONE
 in main/settings, display clickable in light blue DONE
 - and display backgroundk                         DONE
-sdl_print_init ?
-- set indiviudally: size, color
+sdl_print_init ?                                   DONE
+
+audio ..
 get runp working for unit_test,  add api for audio(dur, freq)
+
 api for audio play
 api for audio record
 get the tar file from assets
 increase size of text in menu items
 
-
-add to picoc
-void sdl_print_init_size(double numchars)
-void sdl_print_init_color(int fg_color, int bg_color)
 
 
 xxxxxxxxxxxx
