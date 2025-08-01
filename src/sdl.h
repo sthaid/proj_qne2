@@ -116,7 +116,11 @@ void sdl_query_texture(sdl_texture_t *texture, int *w, int *h);
 sdl_pixels_t *sdl_read_display_pixels(int x, int y, int w, int h);
 // xxx maybe void sdl_update_texture(sdl_texture_t *texture, int *pixels);  //xxx add region
 
+void sdl_audio_print_devices_info(void);
+void sdl_audio_create_test_file(void);
+int sdl_audio_play(char *filename);
 
+#if 0
 // audio xxx
 int sdl_audio_open(int frames_per_sec, int channels, bool record);
 void sdl_audio_close(void);
@@ -133,3 +137,4 @@ void sdl_audio_play(void *buff, int buff_frames, int total_frames);
 
 void sdl_audio_record(void *buff, int buff_frames);
 
+#endif

@@ -26,7 +26,75 @@ void *mmap(void addr[.length], size_t length, int prot, int flags,
 buff = mmap(NULL, file_size, PROT_READ, 0, fd, 0);
 
 
+audio API, part 2 ...
+just one op at a time
 
+* open play tone
+* play tone -  ms, freq   - call the seq routine
+* play tone sequence
+    time_unit
+    ptr to array of tones, 2 bytes per entry, which is the freq, and 2 bytes for the num time units
+       terminated by 0,0
+             and terminate at end of sine wave
+
+      play_tone_sequence(100 ms, tones)
+           tones[0].freq = 1000
+           tones[0].ms   = 1000
+              followed by 0,0 terminateor
+              use freq = 0 for no tone
+           tone
+
+* close play tone
+
+* play file,  returns immedeately
+    create play thread
+       open audio     - before thread
+       map the file     - before thread
+       play it,  using queue
+       if cancel, pause and close OR just close
+       unmap
+       close audio
+       clear active flag
+    - file is 1 channel 48000
+    . playback 2 channels
+    . gain control, param
+
+* create test file
+
+* record to a file,  ,  returns immedeately
+     - 1 channel
+     - 48000
+  - options
+     - duration
+     - auto detect end
+     - gain control, param
+
+* is complete
+    - return if not active
+
+* cancel
+   - closes the audio
+
+
+----
+event hndling ...
+if (playing) {
+  
+- play(filename);
+- 
+
+
+
+
+xxxxxxxxxx morse code xxxxxxxxxxxxx
+
+In Morse code, a dash is three times the length of a dot, and the gap between elements within a character is the same length as a dot. The gap between letters in a word is typically three times the length of a dot, while the gap between words is seven times the length of a dot,
+
+Dot (dit): One unit of time.
+Dash (dah): Three units of time.
+Gap between elements within a character: One unit of time (same as a dot).
+Gap between letters: Three units of time.
+Gap between words: Seven units of time.
 
 
 xxxxxxxxxxxxxxxx

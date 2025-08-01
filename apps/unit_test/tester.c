@@ -9,9 +9,11 @@
 
 void tester_proc(void)
 {
-    int rc;
-
     printf("verified call between 2 source files\n");
+
+    sdl_audio_print_devices_info();
+    sdl_audio_create_test_file();
+    sdl_audio_play("audio_test");
 
 #if 0
     printf("calling open\n");
@@ -31,6 +33,7 @@ void tester_proc(void)
     return;
 #endif
 
+#if 0
     static short buff[480000];
 
     sdl_audio_print_devices_info();
@@ -52,4 +55,5 @@ void tester_proc(void)
     sdl_audio_wait();
     printf("playing done..\n");
     sdl_audio_close();
+#endif
 }
