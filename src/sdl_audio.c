@@ -183,8 +183,8 @@ void sdl_audio_create_test_file(void)
 
 int sdl_audio_play(char *filename)
 {
-    int rc, fd;
-    void *buff;
+    int rc, fd=-1;
+    void *buff=MAP_FAILED;
     struct stat statbuf;
     pthread_t tid;
 
@@ -198,36 +198,33 @@ int sdl_audio_play(char *filename)
     rc = stat(filename, &statbuf);
     if (rc < 0) {
         ERROR("failed to stat '%s', %s\n", filename, strerror(errno));
-        return -1;
+        goto error;
     }
     fd = open(filename, O_RDONLY);
     if (fd < 0) {
         ERROR("failed to open '%s', %s\n", filename, strerror(errno));
-        return -1;
+        goto error;
     }
     buff = mmap(NULL, statbuf.st_size, PROT_READ, MAP_PRIVATE, fd, 0);
     close(fd);
+    fd = -1;
     if (buff == MAP_FAILED) {
         ERROR("failed to map '%s', %s\n", filename, strerror(errno));
-        return -1;
+        goto error;
     }
 
     // open audio for playback
     rc = audio_open(PLAYBACK);
     if (rc < 0) {
         ERROR("failed to open audio for playback\n");
-        munmap(buff, statbuf.st_size);
-        audio_close();
-        return -1;
+        goto error;
     }
 
     // queue playback 
     rc = SDL_QueueAudio(device_id, buff, statbuf.st_size);
     if (rc < 0) {
         ERROR("failed to queue playback, rc=%d, %s\n", rc, SDL_GetError());
-        munmap(buff, statbuf.st_size);
-        audio_close();
-        return -1;
+        goto error;
     }
     INFO("QUEUED %d\n", SDL_GetQueuedAudioSize(device_id));
 
@@ -236,6 +233,7 @@ int sdl_audio_play(char *filename)
 
     // unmap
     munmap(buff, statbuf.st_size);
+    buff = MAP_FAILED;
 
     // create thread to wait for completion, upon completion the thread will
     // - close audio
@@ -243,6 +241,17 @@ int sdl_audio_play(char *filename)
 
     // success
     return 0;
+
+error:
+    // error cleanup and return
+    audio_close();
+    if (buff != MAP_FAILED) {
+        munmap(buff, statbuf.st_size);
+    }
+    if (fd >= 0) {
+        close(fd);
+    }
+    return -1;
 }
 
 static void *play_thread(void *cx)
