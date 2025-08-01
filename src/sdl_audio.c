@@ -24,7 +24,7 @@
 //
 
 #define PLAYBACK 0
-#define CAPTURE  1
+#define RECORD   1
 
 #define PAUSE_OFF 0
 #define PAUSE_ON  1
@@ -42,6 +42,14 @@ typedef struct play_t {
     int    played;
 } play_t;
 
+typedef struct record_t {
+    bool   recording;
+    short *buff_short;
+    int   *buff_int;
+    int    total_frames;
+    int    recorded;
+} record_t;
+
 //
 // variables
 //
@@ -49,20 +57,23 @@ typedef struct play_t {
 static SDL_AudioDeviceID device_id;
 static SDL_AudioSpec     obtained;
 static play_t            play;
+static record_t          record;
 
 //
 // prototypes
 //
 
 static void print_sdl_audio_spec(char *hdr, SDL_AudioSpec *spec);
-static int play_proc(void *buff, int buff_frames, int total_frames, bool wait);
 static void play_cb(void *userdata, unsigned char *buff, int len_bytes);
+static void record_cb(void *userdata, unsigned char *buff, int len_bytes);
 
 // -----------------  OPEN / CLOSE  -----------------------
 
-int sdl_audio_open(int frames_per_sec, int channels)
+int sdl_audio_open(int frames_per_sec, int channels, bool record)
 {
     SDL_AudioSpec desired;
+
+    INFO("called, frames_per_sec=%d channels=%d record=%d\n", frames_per_sec, channels, record); 
 
     memset(&desired, 0, sizeof(desired));
     memset(&obtained, 0, sizeof(obtained));
@@ -74,13 +85,17 @@ int sdl_audio_open(int frames_per_sec, int channels)
     desired.silence  = 0;     // calculated in the obtained return
     desired.samples  = 4096;  // frames
     desired.size     = 0;     // calculated in the obtained return
-    desired.callback = play_cb;
+    desired.callback = record ? record_cb : play_cb;
     desired.userdata = NULL;
 
     // open the audio device
     device_id = SDL_OpenAudioDevice(
+#ifdef ANDROID
                     NULL,  // request default device
-                    PLAYBACK,
+#else
+                    record ? "USB PnP Audio Device Mono" : NULL,
+#endif
+                    record ? RECORD : PLAYBACK,
                     &desired,
                     &obtained,
                     0);    // no changes allowd
@@ -118,10 +133,10 @@ void sdl_audio_print_devices_info(void)
     }
 
     // print list of capture devices
-    num = SDL_GetNumAudioDevices(CAPTURE);
+    num = SDL_GetNumAudioDevices(RECORD);
     INFO("recording devices: num=%d\n", num);
     for (i = 0; i < num; i++) {
-        INFO("  %d: %s\n", i, SDL_GetAudioDeviceName(i, CAPTURE));
+        INFO("  %d: %s\n", i, SDL_GetAudioDeviceName(i, RECORD));
     }
 }
 
@@ -147,15 +162,17 @@ static void print_sdl_audio_spec(char *hdr, SDL_AudioSpec *spec)
 
 // -----------------  PLAY  -------------------------------
 
-static int play_proc(void *buff, int buff_frames, int total_frames, bool wait)
+void sdl_audio_play(void *buff, int buff_frames, int total_frames)
 {
+    // xxx use duration instead of total_frames
+
     // if device is not open, or play is in progress then return error
     if (device_id == 0 || play.playing == true) {
         ERROR("device either not open or busy\n");
-        return -1;
     }
 
     // init play state
+//xxx memset
     play.playing       = true;
     play.buff_short    = buff;
     play.buff_int      = buff;
@@ -166,14 +183,6 @@ static int play_proc(void *buff, int buff_frames, int total_frames, bool wait)
 
     // unpause
     SDL_PauseAudioDevice(device_id, PAUSE_OFF);
-
-    // if wait flag then poll for completion
-    if (wait) {
-        sdl_audio_wait();
-    }
-
-    // return success
-    return 0;
 }
 
 void sdl_audio_play_tone(int freq, int duration_ms)
@@ -189,7 +198,7 @@ void sdl_audio_play_tone(int freq, int duration_ms)
 
     total_frames = (duration_ms / 1000.) * frames_per_sec;
 
-    play_proc(buff, n, total_frames, false);
+    sdl_audio_play(buff, n, total_frames);
 }
 
 void sdl_audio_play_file(char *filename) 
@@ -225,13 +234,12 @@ void sdl_audio_play_file(char *filename)
     //close(fd);
 
     total_frames = file_size / 2;
-    play_proc(buff, total_frames, total_frames, false);
+    sdl_audio_play(buff, total_frames, total_frames);
 
     // xxx need to unmap
 }
 
-
-void sdl_audio_wait(void)
+void sdl_audio_wait(void)  // xxx make this common for play and record?
 {
     while (play.playing) {
         usleep(10000);
@@ -243,6 +251,8 @@ static void play_cb(void *userdata, unsigned char *buff, int len_bytes)
     play_t *x = &play;
     bool  mono = true;
     int i;
+
+    INFO("len_bytes= %d\n", len_bytes);
 
     if (mono) {
         short *buff_short = (short*)buff;
@@ -264,8 +274,93 @@ static void play_cb(void *userdata, unsigned char *buff, int len_bytes)
         }
         return;
     } else {
-
         return;
     }
 }
 
+// -----------------  RECORD  -----------------------------
+
+void sdl_audio_record(void *buff, int buff_frames)
+{
+    record.recording    = true;
+    record.buff_short   = buff;  //xxx just one of these
+    record.buff_int     = buff;
+    record.total_frames = buff_frames;
+    record.recorded     = 0;
+
+    SDL_PauseAudioDevice(device_id, PAUSE_OFF);
+}
+
+static void record_cb(void *userdata, unsigned char *buff, int len_bytes)
+{
+    record_t *x = &record;
+
+    INFO("X50  len_bytes %d  total_frames=%d  recorded=%d\n", len_bytes, 
+           x->total_frames, x->recorded);
+
+    bool  mono = true;
+    int i;
+
+    if (mono) {
+        short *buff_short = (short*)buff;
+        for (i = 0; i < len_bytes/sizeof(short); i++) {
+            x->buff_short[x->recorded] = 50*buff_short[i];  //xxx
+            x->recorded++;
+            if (x->recorded == x->total_frames) {
+                INFO("pausing record\n");
+                SDL_PauseAudioDevice(device_id, PAUSE_ON);
+                INFO("after pausing record\n");
+                record.recording = false;
+                INFO("after2 pausing record\n");
+                return;
+            }
+        }
+        return;
+    } else {
+        return;
+    }
+}
+
+#if 0
+typedef struct record_t {
+    bool   recording;
+    short *buff_short;
+    int   *buff_int;
+    int    total_frames;
+    int    recorded;
+} record_t;
+
+
+static int record_proc(void *buff, int buff_frames, int total_frames, bool wait)
+{
+    // unpause
+    SDL_PauseAudioDevice(device_id, PAUSE_OFF);
+#if 0
+    // if device is not open, or play is in progress then return error
+    if (device_id == 0 || play.playing == true) {
+        ERROR("device either not open or busy\n");
+        return -1;
+    }
+
+    // init play state
+    play.playing       = true;
+    play.buff_short    = buff;
+    play.buff_int      = buff;
+    play.buff_frames   = buff_frames;
+    play.total_frames  = total_frames;
+    play.idx           = 0;
+    play.played        = 0;
+
+    // unpause
+    SDL_PauseAudioDevice(device_id, PAUSE_OFF);
+
+    // if wait flag then poll for completion
+    if (wait) {
+        sdl_audio_wait();
+    }
+
+    // return success
+    return 0;
+#endif
+}
+#endif

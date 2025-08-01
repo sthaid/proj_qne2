@@ -113,10 +113,14 @@ static void init(void)
     params.devel_mode = util_get_int_param("devel_mode", 0);
 
     // if apps dir doesn't exist then create it
+#if 0
     rc = stat("apps", &statbuf);
     if (rc != 0 || !S_ISDIR(statbuf.st_mode)) {
         create_default_apps();
     }
+#else
+    create_default_apps();  //xxx
+#endif
 
     // xxx
     struct sigaction action;

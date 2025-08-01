@@ -118,12 +118,18 @@ sdl_pixels_t *sdl_read_display_pixels(int x, int y, int w, int h);
 
 
 // audio xxx
-int sdl_audio_open(int frames_per_sec, int channels);
+int sdl_audio_open(int frames_per_sec, int channels, bool record);
 void sdl_audio_close(void);
-void sdl_audio_print_devices_info(void);
+
+void sdl_audio_print_devices_info(void);  // xxx order 
+void sdl_audio_wait(void);
 
 void sdl_audio_play_tone(int freq, int duration_ms);
 void sdl_audio_play_file(char *filename);
 
-void sdl_audio_wait(void);
+
+// xxxxxxxxxxxx
+void sdl_audio_play(void *buff, int buff_frames, int total_frames);
+
+void sdl_audio_record(void *buff, int buff_frames);
 

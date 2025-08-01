@@ -387,9 +387,10 @@ void Sdl_audio_open (struct ParseState *Parser, struct Value *ReturnValue,
 {
     int frames_per_sec = Param[0]->Val->Integer;
     int channels       = Param[1]->Val->Integer;
+    int record         = Param[2]->Val->Integer;
     int rc;
 
-    rc = sdl_audio_open(frames_per_sec, channels);
+    rc = sdl_audio_open(frames_per_sec, channels, record);
     ReturnValue->Val->Integer = rc;
 }
 
@@ -426,6 +427,25 @@ void Sdl_audio_wait (struct ParseState *Parser, struct Value *ReturnValue,
 	struct Value **Param, int NumArgs)
 {
     sdl_audio_wait();
+}
+
+void Sdl_audio_record (struct ParseState *Parser, struct Value *ReturnValue,
+	struct Value **Param, int NumArgs)
+{
+    void *buff        = (char*)Param[0]->Val->Pointer;
+    int   buff_frames = Param[1]->Val->Integer;
+
+    sdl_audio_record(buff, buff_frames);
+}
+
+void Sdl_audio_play (struct ParseState *Parser, struct Value *ReturnValue,
+	struct Value **Param, int NumArgs)
+{
+    void *buff        = (char*)Param[0]->Val->Pointer;
+    int   buff_frames = Param[1]->Val->Integer;
+    int   total_frames = Param[2]->Val->Integer;
+
+    sdl_audio_play(buff, buff_frames, total_frames);
 }
 
 //
@@ -492,12 +512,14 @@ struct LibraryFunction SdlFunctions[] = {
     { Sdl_read_display_pixels,          "void *sdl_read_display_pixels(int x, int y, int w, int h);" },
 
     // xxx audio
-    { Sdl_audio_open,                   "int sdl_audio_open(int frames_per_sec, int channels);" },
+    { Sdl_audio_open,                   "int sdl_audio_open(int frames_per_sec, int channels, bool record);" },
     { Sdl_audio_close,                  "void sdl_audio_close(void);" },
     { Sdl_audio_print_devices_info,     "void sdl_audio_print_devices_info(void);" },
     { Sdl_audio_play_tone,              "void sdl_audio_play_tone(int freq, int duration_ms);" },
     { Sdl_audio_play_file,              "void sdl_audio_play_file(char *filename);" },
     { Sdl_audio_wait,                   "void sdl_audio_wait(void);" },
+    { Sdl_audio_record,                 "void sdl_audio_record(void *buff, int buff_frames);" },
+    { Sdl_audio_play,                   "void sdl_audio_play(void *buff, int buff_frames, int total_frames);" },
 
     { NULL, NULL } };
 
