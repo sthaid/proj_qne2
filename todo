@@ -1,3 +1,7 @@
+unit test for audio
+
+-------
+
 AUDIO API
 
 sdl_audio_play
@@ -9,9 +13,6 @@ play_buff(buff, samples, mono/stereo)
 
 - returns immedeately
 - can be cancelled
-
-
-
 
 https://freepd.com/
 https://en.wikipedia.org/wiki/WAV
@@ -37,6 +38,9 @@ just one op at a time
        terminated by 0,0
              and terminate at end of sine wave
 
+      loop over each tone, and queue it
+      wait for done or cancel
+
       play_tone_sequence(100 ms, tones)
            tones[0].freq = 1000
            tones[0].ms   = 1000
@@ -51,6 +55,7 @@ just one op at a time
        open audio     - before thread
        map the file     - before thread
        play it,  using queue
+       wait for done
        if cancel, pause and close OR just close
        unmap
        close audio
@@ -65,14 +70,22 @@ just one op at a time
      - 1 channel
      - 48000
   - options
+     use pthread
+
      - duration
      - auto detect end
      - gain control, param
 
 * is complete
-    - return if not active
+    - return if no active play or record
 
 * cancel
+   if acctive
+      pause
+      clear queuing audio
+
+   - set cancel flag to kill play and record and xxx
+   - and cancel f
    - closes the audio
 
 

@@ -12,8 +12,21 @@ void tester_proc(void)
     printf("verified call between 2 source files\n");
 
     sdl_audio_print_devices_info();
+
+#if 1
+    printf("Recording ...\n");
+    sdl_audio_record("audio_record", 10, false);
+    while (sdl_audio_busy()) usleep(10000);
+
+    printf("Playing ...\n");
+    sdl_audio_play("audio_record");
+    while (sdl_audio_busy()) usleep(10000);
+#endif
+
+#if 1
     sdl_audio_create_test_file();
     sdl_audio_play("audio_test");
+#endif
 
 #if 0
     printf("calling open\n");

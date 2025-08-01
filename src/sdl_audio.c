@@ -51,6 +51,7 @@ static int audio_open(int record);
 static void audio_close(void);
 static void print_sdl_audio_spec(char *hdr, SDL_AudioSpec *spec);
 static void *play_thread(void *cx);
+static void *record_thread(void *cx_arg);
 
 // -----------------  OPEN / CLOSE  -----------------------
 
@@ -66,7 +67,7 @@ static int audio_open(int record)
     // init desired format
     desired.freq     = FRAMES_PER_SEC;
     desired.format   = AUDIO_S16SYS;
-    desired.channels = (record ? 1 : 2);
+    desired.channels = 1;
     desired.silence  = 0;     // calculated in the obtained return
     desired.samples  = 4096;  // frames
     desired.size     = 0;     // calculated in the obtained return
@@ -117,10 +118,10 @@ static void print_sdl_audio_spec(char *hdr, SDL_AudioSpec *spec)
     INFO("%s\n", hdr);
     INFO("  freq     = %d\n", spec->freq);
     INFO("  format   = 0x%x\n", spec->format);
-    INFO("               %s\n", ((spec->format & BIT15) ? "signed" : "unsigned"));
-    INFO("               %s\n", ((spec->format & BIT12) ? "big_endian" : "little_endian"));
-    INFO("               %s\n", ((spec->format & BIT8) ? "float" : "integer"));
-    INFO("               %d bits\n", spec->format & 0xff);
+    INFO("             %s\n", ((spec->format & BIT15) ? "signed" : "unsigned"));
+    INFO("             %s\n", ((spec->format & BIT12) ? "big_endian" : "little_endian"));
+    INFO("             %s\n", ((spec->format & BIT8) ? "float" : "integer"));
+    INFO("             %d bits\n", spec->format & 0xff);
     INFO("  channels = %d\n", spec->channels);
     INFO("  silence  = %d\n", spec->silence);
     INFO("  samples  = %d\n", spec->samples);
@@ -150,7 +151,6 @@ void sdl_audio_print_devices_info(void)
     }
 }
 
-// xxx this can return status
 void sdl_audio_create_test_file(void)
 {
     int    duration_ms = 10000;
@@ -159,27 +159,29 @@ void sdl_audio_create_test_file(void)
 
     int    frames = duration_ms * FRAMES_PER_SEC / 1000;
     int    n = FRAMES_PER_SEC / freq;
-    int    i, j, fd;
-    short *buff, value;
+    int    i, fd;
+    short *buff;
 
     // allocate and init buffer, that will be written to the test file
-    buff = malloc(frames*4);
-    for (i = 0, j = 0; i < frames; i++) {
-        value = 30000 * sin((2*M_PI) * ((double)i / n));
-        buff[j++] = value;      // left
-        buff[j++] = value;      // right 
+    buff = malloc(frames*2);
+    for (i = 0; i < frames; i++) {
+        buff[i] = 30000 * sin((2*M_PI) * ((double)i / n));
     }
 
     // write the buffer to test file
     fd = open(filename, O_WRONLY|O_CREAT|O_TRUNC, 0666);
-    write(fd, buff, frames*4);
+    if (fd < 0) {
+        ERROR("failed to create '%s', %s\n", filename, strerror(errno));
+        return;
+    }
+    write(fd, buff, frames*2);
     close(fd);
 
-    // free buffer0
+    // free buffer
     free(buff);
 }
 
-// -----------------  PLAY  -------------------------------
+// -----------------  PLAY FILE ---------------------------
 
 int sdl_audio_play(char *filename)
 {
@@ -235,8 +237,8 @@ int sdl_audio_play(char *filename)
     munmap(buff, statbuf.st_size);
     buff = MAP_FAILED;
 
-    // create thread to wait for completion, upon completion the thread will
-    // - close audio
+    // create thread to wait for completion
+    // upon completion the thread will close audio
     pthread_create(&tid, NULL, play_thread, NULL);
 
     // success
@@ -261,9 +263,108 @@ static void *play_thread(void *cx)
     while (SDL_GetQueuedAudioSize(device_id) > 0) {
         usleep(10000);  // 10 ms
     }
-    INFO("play completed\n");
 
+    INFO("completed\n");
     audio_close();
     return NULL;
+}
+
+// -----------------  RECORD TO FILE ----------------------
+
+typedef struct {
+    int fd;
+    int duration_secs;
+    bool auto_stop;
+} record_cx_t;
+
+int sdl_audio_record(char *filename, int duration_secs, bool auto_stop)
+{
+    int rc, fd;
+    record_cx_t *cx;
+    pthread_t tid;
+
+    // if busy then return error
+    if (device_id > 0) {
+        ERROR("audio is inuse\n");
+        return -1;
+    }
+
+    // open audio to record
+    rc = audio_open(RECORD);
+    if (rc < 0) {
+        ERROR("failed to open audio for record\n");
+        return -1;
+    }
+
+    // create empty file that will be used to store the recorded data
+    fd = open(filename, O_WRONLY|O_CREAT|O_TRUNC, 0666);
+    if (fd < 0) {
+        ERROR("failed to create '%s', %s\n", filename, strerror(errno));
+        return -1;
+    }
+
+    // create thread xfer the record data to a file
+    cx = malloc(sizeof(record_cx_t));
+    cx->fd            = fd;
+    cx->duration_secs = duration_secs;
+    cx->auto_stop     = auto_stop;
+    pthread_create(&tid, NULL, record_thread, cx);
+
+    // success
+    return 0;
+}
+
+// xxx auto_stop is todo
+static void *record_thread(void *cx_arg)
+{
+    record_cx_t *cx = (record_cx_t*)cx_arg;
+    short buff[4096];
+    int  bytes, rc, frames = 0;
+    int max_frames = cx->duration_secs * FRAMES_PER_SEC;
+
+    INFO("starting\n");
+
+    SDL_PauseAudioDevice(device_id, PAUSE_OFF);
+
+    while (true) {
+        // get audio data, if non available then short sleep and try again
+        bytes = SDL_DequeueAudio(device_id, buff, sizeof(buff));
+        if (bytes == 0) {
+            usleep(10000);  // 10 ms
+            continue;
+        }
+        INFO("got bytes %d\n", bytes);
+
+        // write the data to the file
+        rc = write(cx->fd, buff, bytes);
+        if (rc != bytes) {
+            ERROR("write failed, rc=%d, %s\n", rc, strerror(errno));
+            break;
+        }
+
+        // if have captured frames for the desired time interval then break
+        frames += bytes / 2;
+        //INFO("frames = %d max = %d\n", frames, max_frames);
+        if (frames > max_frames) {
+            break;
+        }
+
+        // short sleep
+        usleep(10000);  // 10 ms
+    }
+
+    // cleanup and return
+    INFO("completed\n");
+    SDL_PauseAudioDevice(device_id, PAUSE_ON);
+    audio_close();
+    close(cx->fd);
+    free(cx);
+    return NULL;
+}
+
+// xxx where to put this
+bool sdl_audio_busy(void)
+{
+    return device_id > 0; 
 }
 

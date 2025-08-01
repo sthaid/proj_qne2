@@ -119,6 +119,10 @@ sdl_pixels_t *sdl_read_display_pixels(int x, int y, int w, int h);
 void sdl_audio_print_devices_info(void);
 void sdl_audio_create_test_file(void);
 int sdl_audio_play(char *filename);
+int sdl_audio_record(char *filename, int duration_secs, bool auto_stop);
+
+bool sdl_audio_busy(void);
+
 
 #if 0
 // audio xxx
