@@ -116,29 +116,20 @@ void sdl_query_texture(sdl_texture_t *texture, int *w, int *h);
 sdl_pixels_t *sdl_read_display_pixels(int x, int y, int w, int h);
 // xxx maybe void sdl_update_texture(sdl_texture_t *texture, int *pixels);  //xxx add region
 
+// --------------------
+// audio
+// --------------------
 void sdl_audio_print_devices_info(void);
 void sdl_audio_create_test_file(void);
 int sdl_audio_play(char *filename);
 int sdl_audio_record(char *filename, int duration_secs, bool auto_stop);
-
 bool sdl_audio_busy(void);
 
+typedef struct {
+    short freq;
+    short intvl;
+} tone_t; //xxx name
 
-#if 0
-// audio xxx
-int sdl_audio_open(int frames_per_sec, int channels, bool record);
-void sdl_audio_close(void);
-
-void sdl_audio_print_devices_info(void);  // xxx order 
-void sdl_audio_wait(void);
-
-void sdl_audio_play_tone(int freq, int duration_ms);
-void sdl_audio_play_file(char *filename);
-
-
-// xxxxxxxxxxxx
-void sdl_audio_play(void *buff, int buff_frames, int total_frames);
-
-void sdl_audio_record(void *buff, int buff_frames);
-
-#endif
+int sdl_audio_play_tone_open(void);
+void sdl_audio_play_tone_close(void);
+void sdl_audio_play_tone(int time_units_ms, tone_t *tones);
