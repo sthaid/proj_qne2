@@ -14,7 +14,7 @@
 // defines
 //
 
-#define MAX_PAGE 7
+#define MAX_PAGE 8
 
 // xxx check these
 #define ROW2Y(r) ((r) * sdl_char_height)  // xxx ctr vs ...
@@ -25,6 +25,11 @@
 #define EVID_PREV_PAGE   1
 #define EVID_NEXT_PAGE   2
 #define EVID_END_PROGRAM 3
+
+#define EVID_AUDIO_PLAY_TEST_FILE 70
+#define EVID_AUDIO_STOP           71
+#define EVID_AUDIO_PAUSE          72
+#define EVID_AUDIO_CONT           73
 
 //
 // variables
@@ -46,6 +51,8 @@ static void render_page_3(bool init);
 static void render_page_4(bool init);
 static void render_page_5(bool init);
 static void render_page_6(bool init);
+static void render_page_7(bool init);
+static void handle_page_7_events(sdl_event_t *ev);
 
 // -----------------  MAIN  ------------------------------------------
 
@@ -101,6 +108,7 @@ int main(int argc, char **argv)
 
         // process event
         // note that EVID_QUIT is always provided xxx?
+        // xxx add event routines for pages that support events
         switch (event.event_id) {
         case EVID_QUIT:
         case EVID_END_PROGRAM:
@@ -119,10 +127,16 @@ int main(int argc, char **argv)
                 pagenum = 0;
             }
             init = true;
+#if 0 //xxx todo
         case EVID_MOTION:
             // motion events are handled in the pagges that
             // utilize motion events; 'event' is a global variable
             break;
+#endif
+        }
+
+        if (pagenum == 7) {
+            handle_page_7_events(&event);
         }
 
         // if end_program flag is set then break
@@ -155,6 +169,7 @@ char *title[] = {       // Page
         "Drawing",      //   4
         "Textures",     //   5
         "Colors",       //   6
+        "Audio",        //   7
             };
 
 static void render_page(int pagenum, bool init)
@@ -186,6 +201,7 @@ static void render_page(int pagenum, bool init)
     case 4: render_page_4(init); break;
     case 5: render_page_5(init); break;
     case 6: render_page_6(init); break;
+    case 7: render_page_7(init); break;
     }
 }
 
@@ -483,3 +499,60 @@ static void color_test(int idx, char *color_name, int color)
     sdl_render_fill_rect(500, y, 500, sdl_char_height, color);
 }
 
+// -----------------  PAGE 7: AUDIO  --------------------------
+
+static void render_page_7(bool init)
+{
+    sdl_loc_t *loc;
+    int secs_processed, secs_total;
+    bool busy;
+
+    if (init) {
+        sdl_audio_print_devices_info();
+    }
+
+    sdl_render_text_xyctr(NK2X(1,0), 600, "--- PLAY ---");
+
+    loc = sdl_render_text(0, 700, "TEST_FILE");
+    sdl_register_event(loc, EVID_AUDIO_PLAY_TEST_FILE);
+
+    busy = sdl_audio_busy(&secs_processed, &secs_total);
+    if (busy) {
+        sdl_render_printf(0, sdl_win_height-500, "%d / %d", secs_processed, secs_total);
+    }
+
+    loc = sdl_render_text(0, sdl_win_height-300, "STOP");
+    sdl_register_event(loc, EVID_AUDIO_STOP);
+
+    loc = sdl_render_text(sdl_win_width/2-2.5*sdl_char_width, sdl_win_height-300, "PAUSE");
+    sdl_register_event(loc, EVID_AUDIO_PAUSE);
+
+    loc = sdl_render_text(sdl_win_width-4*sdl_char_width, sdl_win_height-300, "CONT");
+    sdl_register_event(loc, EVID_AUDIO_CONT);
+}
+
+static void handle_page_7_events(sdl_event_t *ev)
+{
+    int rc;
+
+    switch (ev->event_id) {
+    case EVID_AUDIO_PLAY_TEST_FILE: {
+        char *test_file_name = "audio_test";
+
+        sdl_audio_create_test_file();
+        rc = sdl_audio_play(test_file_name);
+        if (rc != 0) {
+            printf("sdl_audio_play %s, rc %d\n", test_file_name, rc);
+        }
+        break; }
+    case EVID_AUDIO_STOP:
+        sdl_audio_ctl(AUDIO_REQ_STOP);
+        break;
+    case EVID_AUDIO_PAUSE:
+        sdl_audio_ctl(AUDIO_REQ_PAUSE);
+        break;
+    case EVID_AUDIO_CONT:
+        sdl_audio_ctl(AUDIO_REQ_UNPAUSE);
+        break;
+    }
+}

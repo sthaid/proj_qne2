@@ -55,6 +55,9 @@
 static SDL_AudioDeviceID device_id;
 static SDL_AudioSpec     obtained;
 static bool              busy;
+static int               ctl_req;
+static int               secs_total;
+static int               secs_processed;
 
 //
 // prototypes
@@ -68,9 +71,22 @@ static void *record_thread(void *cx);
 static void *tones_thread(void *cx);
 
 // xxx where to put this
-bool sdl_audio_busy(void)
+bool sdl_audio_busy(int *secs_processed_arg, int *secs_total_arg)
 {
+    *secs_processed_arg = secs_processed;
+    *secs_total_arg = secs_total;
+
     return busy;
+}
+
+void sdl_audio_ctl(int req)
+{
+    if (!busy) {
+        ctl_req = 0;
+        return;
+    }
+
+    ctl_req = req;
 }
 
 // -----------------  OPEN / CLOSE  -----------------------
@@ -228,9 +244,6 @@ int sdl_audio_play(char *filename)
         goto error;
     }
 
-    // set busy flag
-    busy = true;
-
     // obtain size of file, and map it
     rc = stat(filename, &statbuf);
     if (rc < 0) {
@@ -287,18 +300,44 @@ error:
 
 static void *play_thread(void *cx)
 {
+    int bytes_remaining;
+    int secs_remaining;
+
     INFO("starting\n");
 
     // unpause
+    busy = true;
+    bytes_remaining = SDL_GetQueuedAudioSize(device_id);
+    secs_total = bytes_remaining / 2 / FRAMES_PER_SEC;
     SDL_PauseAudioDevice(device_id, PAUSE_OFF);
 
-    while (SDL_GetQueuedAudioSize(device_id) > 0) {
+    while (true) {
         usleep(10000);  // 10 ms
+
+        bytes_remaining = SDL_GetQueuedAudioSize(device_id);
+        secs_remaining = bytes_remaining / 2 / FRAMES_PER_SEC;
+        secs_processed = secs_total - secs_remaining;
+
+        if (bytes_remaining == 0) {
+            break;
+        }
+        
+        if (ctl_req == AUDIO_REQ_STOP) {
+            ctl_req = 0;
+            break;
+        } else if (ctl_req == AUDIO_REQ_PAUSE) {
+            SDL_PauseAudioDevice(device_id, PAUSE_ON);
+            ctl_req = 0;
+        } else if (ctl_req == AUDIO_REQ_UNPAUSE) {
+            SDL_PauseAudioDevice(device_id, PAUSE_OFF);
+            ctl_req = 0;
+        }
     }
 
     INFO("completed\n");
     audio_close();
     busy = false;
+    ctl_req = 0;
     return NULL;
 }
 

@@ -123,7 +123,7 @@ void sdl_audio_print_devices_info(void);
 void sdl_audio_create_test_file(void);
 int sdl_audio_play(char *filename);
 int sdl_audio_record(char *filename, int duration_secs, bool auto_stop);
-bool sdl_audio_busy(void);
+bool sdl_audio_busy(int *secs_processed, int *secs_total);
 
 typedef struct {
     short freq;
@@ -133,3 +133,9 @@ typedef struct {
 int sdl_audio_play_tone_open(void);
 void sdl_audio_play_tone_close(void);
 void sdl_audio_play_tone(int time_units_ms, tone_t *tones);
+
+#define AUDIO_REQ_STOP     1
+#define AUDIO_REQ_PAUSE    2
+#define AUDIO_REQ_UNPAUSE  3
+
+void sdl_audio_ctl(int req);
