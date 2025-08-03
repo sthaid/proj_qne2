@@ -26,10 +26,13 @@
 #define EVID_NEXT_PAGE   2
 #define EVID_END_PROGRAM 3
 
-#define EVID_AUDIO_PLAY_TEST_FILE 70
-#define EVID_AUDIO_STOP           71
-#define EVID_AUDIO_PAUSE          72
-#define EVID_AUDIO_CONT           73
+#define EVID_AUDIO_PLAY_TONE        10
+#define EVID_AUDIO_PLAY_TONES_1     11
+#define EVID_AUDIO_PLAY_RECORDING   12
+#define EVID_AUDIO_RECORD           20
+#define EVID_AUDIO_STOP             30
+#define EVID_AUDIO_PAUSE            31
+#define EVID_AUDIO_CONT             32
 
 //
 // variables
@@ -59,7 +62,7 @@ static void handle_page_7_events(sdl_event_t *ev);
 int main(int argc, char **argv)
 {
     int  i;
-    int  pagenum = 0;
+    int  pagenum = 7;  //xxx 0
     bool end_program = false;
     bool is_ez_app = (argc > 0 && strcmp(argv[0], "ez_app") == 0);
     bool init = true;
@@ -501,25 +504,52 @@ static void color_test(int idx, char *color_name, int color)
 
 // -----------------  PAGE 7: AUDIO  --------------------------
 
+// xxx use light blue and RED
 static void render_page_7(bool init)
 {
     sdl_loc_t *loc;
-    int secs_processed, secs_total;
-    bool busy;
+    sdl_audio_state_t x;
 
     if (init) {
         sdl_audio_print_devices_info();
     }
 
+    sdl_audio_state(&x);
+
+    //
+    // record section
+    //
+
+    loc = sdl_render_text(0, 200, "RECORD");
+    sdl_register_event(loc, EVID_AUDIO_RECORD);
+
+    //
+    // play section
+    //
+
     sdl_render_text_xyctr(NK2X(1,0), 600, "--- PLAY ---");
 
-    loc = sdl_render_text(0, 700, "TEST_FILE");
-    sdl_register_event(loc, EVID_AUDIO_PLAY_TEST_FILE);
+    loc = sdl_render_text(0, 700, "TONE");
+    sdl_register_event(loc, EVID_AUDIO_PLAY_TONE);
 
-    busy = sdl_audio_busy(&secs_processed, &secs_total);
-    if (busy) {
-        sdl_render_printf(0, sdl_win_height-500, "%d / %d", secs_processed, secs_total);
+    loc = sdl_render_text(0, 850, "RECORDING");
+    sdl_register_event(loc, EVID_AUDIO_PLAY_RECORDING);
+
+    loc = sdl_render_text(0, 1000, "TONES_1");
+    sdl_register_event(loc, EVID_AUDIO_PLAY_TONES_1);
+
+    //
+    // state section
+    //
+
+    if (x.state != AUDIO_STATE_IDLE) {
+        sdl_render_printf(0, sdl_win_height-500, "%d / %d", x.processed_secs, x.total_secs);
+        // xxx also display filename and state
     }
+
+    //
+    // stop, pause, cont controls section
+    //
 
     loc = sdl_render_text(0, sdl_win_height-300, "STOP");
     sdl_register_event(loc, EVID_AUDIO_STOP);
@@ -533,18 +563,46 @@ static void render_page_7(bool init)
 
 static void handle_page_7_events(sdl_event_t *ev)
 {
-    int rc;
+    int rc, i, freq;
+    tone_t tones[100];
+    char *fn;
 
     switch (ev->event_id) {
-    case EVID_AUDIO_PLAY_TEST_FILE: {
-        char *test_file_name = "audio_test";
-
-        sdl_audio_create_test_file();
-        rc = sdl_audio_play(test_file_name);
-        if (rc != 0) {
-            printf("sdl_audio_play %s, rc %d\n", test_file_name, rc);
+    case EVID_AUDIO_PLAY_TONE:
+    case EVID_AUDIO_PLAY_RECORDING:
+        fn = (ev->event_id == EVID_AUDIO_PLAY_TONE) ? "test_tone.raw" :
+                                                      "recording.raw";
+        if (ev->event_id == EVID_AUDIO_PLAY_TONE) {
+            sdl_audio_create_test_file(fn, 60, 1000);
         }
-        break; }
+        rc = sdl_audio_play(fn);
+        if (rc != 0) {
+            printf("ERROR: sdl_audio_play %s failed\n", fn);
+        }
+        break;
+    case EVID_AUDIO_RECORD:
+        char *record_file_name = "recording.raw";
+        rc = sdl_audio_record(record_file_name, 30, false);
+        if (rc != 0) {
+            printf("ERROR: sdl_audio_record %s failed\n", record_file_name);
+        }
+        break;
+    case EVID_AUDIO_PLAY_TONES_1:
+        for (freq = 100, i = 0; freq <= 2000; freq += 100, i++) {
+            tones[i].freq = freq;
+            tones[i].intvl = 1;
+        }
+        tones[i].freq = 0;
+        tones[i].intvl = 0;
+        rc = sdl_audio_play_tones_open();
+        if (rc != 0) {
+            printf("ERROR: sdl_audio_play_tones_open failed\n");
+            break;
+        }
+        sdl_audio_play_tones(1000, tones);
+// xxx wait
+        //sdl_audio_play_tones_close();
+        break;
     case EVID_AUDIO_STOP:
         sdl_audio_ctl(AUDIO_REQ_STOP);
         break;
