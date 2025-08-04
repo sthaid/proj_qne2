@@ -119,24 +119,20 @@ sdl_pixels_t *sdl_read_display_pixels(int x, int y, int w, int h);
 // --------------------
 // audio
 // --------------------
-void sdl_audio_print_devices_info(void);
-void sdl_audio_create_test_file(char *filename, int duration_secs, int freq);
-int sdl_audio_play(char *filename);
-int sdl_audio_record(char *filename, int duration_secs, bool auto_stop);
-bool sdl_audio_busy(int *secs_processed, int *secs_total);
+
+#define AUDIO_REQ_STOP     1
+#define AUDIO_REQ_PAUSE    2
+#define AUDIO_REQ_UNPAUSE  3
+
+#define AUDIO_STATE_IDLE        0
+#define AUDIO_STATE_PLAY_FILE   1
+#define AUDIO_STATE_PLAY_TONES  2
+#define AUDIO_STATE_RECORD      3
 
 typedef struct {
     short freq;
     short intvl;
 } tone_t; //xxx name
-
-int sdl_audio_play_tones_open(void);
-void sdl_audio_play_tones_close(void);
-void sdl_audio_play_tones(int time_units_ms, tone_t *tones);
-
-#define AUDIO_REQ_STOP     1
-#define AUDIO_REQ_PAUSE    2
-#define AUDIO_REQ_UNPAUSE  3
 
 typedef struct {
     int state;
@@ -145,10 +141,13 @@ typedef struct {
     char filename[100];
 } sdl_audio_state_t;
 
-#define AUDIO_STATE_IDLE        0
-#define AUDIO_STATE_PLAY_FILE   1
-#define AUDIO_STATE_PLAY_TONES  2
-#define AUDIO_STATE_RECORD      3
+int sdl_audio_play(char *filename);
+int sdl_audio_record(char *filename, int duration_secs, bool auto_stop);
+int sdl_audio_play_tones(int time_units_ms, tone_t *tones);
 
 void sdl_audio_ctl(int req);
 void sdl_audio_state(sdl_audio_state_t * state);
+
+void sdl_audio_print_devices_info(void);
+void sdl_audio_create_test_file(char *filename, int duration_secs, int freq);
+

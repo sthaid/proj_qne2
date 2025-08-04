@@ -8,15 +8,16 @@
 #include <logging.h>
 
 // xxx todo
-// - state should include PAUSED status
+// - state should include PAUSED status     <=====
+// - what is best place to unpause    <=====
+// - add timeouts to the threads    <=====
+// - add timeouts to usleep loops
+// - test pause and unpause of al modes
 // - record auto stop
-// - add amplitude to play_tones
-// - what is best place to unpause
-// - add timeouts to the threads
-// - move sdl_audio_ctl and status routines
 // - search for usleep loops that could have a timeout
 // - add FRAME_SIZE macro
 // - 30000 amplitude ?
+// - why is record not reliable
 
 //
 // logging
@@ -31,12 +32,14 @@
         logmsg("ERROR", __func__, fmt, ## args); \
     } while (0)
 
+#define TEN_MS 10000
+
 //
 // defines
 //
 
-#define PLAYBACK 0
-#define RECORD   1
+#define PLAYBACK false
+#define RECORD   true
 
 #define PAUSE_OFF 0
 #define PAUSE_ON  1
@@ -60,6 +63,7 @@
 //
 
 static SDL_AudioDeviceID device_id;
+static bool              recording;
 static SDL_AudioSpec     obtained;
 static int               ctl_req;
 static sdl_audio_state_t state;
@@ -68,54 +72,38 @@ static sdl_audio_state_t state;
 // prototypes
 //
 
-static int audio_open(int record);
-static void audio_close(void);
+static int audio_open(bool record);
 static void print_sdl_audio_spec(char *hdr, SDL_AudioSpec *spec);
 static void *play_thread(void *cx);
 static void *record_thread(void *cx);
 static void *tones_thread(void *cx);
 
-
-// xxx move
-
-void sdl_audio_state(sdl_audio_state_t *x)
-{
-    *x = state;
-}
-
-void sdl_audio_ctl(int req)
-{
-    if (state.state == AUDIO_STATE_IDLE) {
-        ctl_req = 0;
-        return;
-    }
-
-    ctl_req = req;
-
-    // xxx add timeout
-    while (ctl_req != 0) {
-        usleep(10000);  // 10 ms
-    }
-}
-
-
 // -----------------  OPEN / CLOSE  -----------------------
 
-static int audio_open(int record)
+static int audio_open(bool record)
 {
     SDL_AudioSpec desired;
 
     INFO("called to %s\n", record ? "RECORD" : "PLAYBACK");
 
-    if (device_id > 0) {
-        ERROR("already open\n");
-        return -1;
+    // if audio is active then stop it
+    sdl_audio_ctl(AUDIO_REQ_STOP);
+
+    // if audio is already open, and in the correct mode, then return
+    if (device_id > 0 && recording == record) {
+        INFO("already open\n");
+        return 0;
     }
 
-    memset(&desired, 0, sizeof(desired));
+    // need to reopen
+    SDL_CloseAudioDevice(device_id);
+    device_id = 0;
+
+    // init the obtained format to zero
     memset(&obtained, 0, sizeof(obtained));
 
     // init desired format
+    memset(&desired, 0, sizeof(desired));
     desired.freq     = FRAMES_PER_SEC;
     desired.format   = AUDIO_S16SYS;
     desired.channels = 1;
@@ -128,7 +116,7 @@ static int audio_open(int record)
     // open the audio device
     device_id = SDL_OpenAudioDevice(
                     DEVICE,
-                    record ? RECORD : PLAYBACK,
+                    record,
                     &desired,
                     &obtained,
                     //0);    // no changes allowd
@@ -137,26 +125,14 @@ static int audio_open(int record)
         ERROR("SDL_OpenAudioDevice failed, %s\n", SDL_GetError());
         return -1;
     }
-    INFO("device_id = %d\n", device_id);
+    recording = record;
+    INFO("device_id = %d recording = %d\n", device_id, recording);
 
     // print the obtained output format
     print_sdl_audio_spec("obtained", &obtained);
 
     // return success
     return 0;
-}
-
-static void audio_close(void)
-{
-    INFO("called\n");
-
-    if (device_id == 0) {
-        ERROR("not open\n");
-        return;
-    }
-
-    SDL_CloseAudioDevice(device_id);
-    device_id = 0;
 }
 
 static void print_sdl_audio_spec(char *hdr, SDL_AudioSpec *spec)
@@ -190,14 +166,14 @@ void sdl_audio_print_devices_info(void)
     num = SDL_GetNumAudioDevices(PLAYBACK);
     INFO("playback devices: num=%d\n", num);
     for (i = 0; i < num; i++) {
-        INFO("  %d: %s\n", i, SDL_GetAudioDeviceName(i, PLAYBACK));
+        INFO("  %d: %s\n", i, SDL_GetAudioDeviceName(i, false));
     }
 
-    // print list of capture devices
+    // print list of recording devices
     num = SDL_GetNumAudioDevices(RECORD);
     INFO("recording devices: num=%d\n", num);
     for (i = 0; i < num; i++) {
-        INFO("  %d: %s\n", i, SDL_GetAudioDeviceName(i, RECORD));
+        INFO("  %d: %s\n", i, SDL_GetAudioDeviceName(i, true));
     }
 }
 
@@ -227,11 +203,31 @@ void sdl_audio_create_test_file(char *filename, int duration_secs, int freq)
     free(buff);
 }
 
+// -----------------  CONTROL AND GET STATE  --------------
+
+void sdl_audio_ctl(int req)
+{
+    if (state.state == AUDIO_STATE_IDLE) {
+        ctl_req = 0;
+        return;
+    }
+
+    ctl_req = req;
+
+    while (ctl_req != 0) {
+        usleep(TEN_MS);
+    }
+}
+
+void sdl_audio_state(sdl_audio_state_t *x)
+{
+    *x = state;
+}
+
 // -----------------  PLAY FILE ---------------------------
 
 typedef struct {
-    int file_size;
-    char file_name[100];
+    int not_used;
 } play_file_cx_t;
 
 int sdl_audio_play(char *filename)
@@ -241,13 +237,6 @@ int sdl_audio_play(char *filename)
     struct stat statbuf;
     pthread_t tid;
     play_file_cx_t *cx=NULL;
-
-    // if device_id is already open then return error;
-    // this can not goto error because that would close the device
-    if (device_id > 0) {
-        ERROR("already open\n");
-        return -1;
-    }
 
     // open audio for playback
     rc = audio_open(PLAYBACK);
@@ -276,7 +265,6 @@ int sdl_audio_play(char *filename)
     }
 
     // queue playback 
-    // xxx does this work for big files
     rc = SDL_QueueAudio(device_id, buff, statbuf.st_size);
     if (rc < 0) {
         ERROR("failed to queue playback, rc=%d, %s\n", rc, SDL_GetError());
@@ -288,10 +276,15 @@ int sdl_audio_play(char *filename)
     munmap(buff, statbuf.st_size);
     buff = MAP_FAILED;
 
+    // init state
+    state.state          = AUDIO_STATE_PLAY_FILE;
+    state.processed_secs = 0;
+    state.total_secs     = BYTES_TO_SECS(statbuf.st_size);
+    strcpy(state.filename, filename);
+
     // create thread to monitor and process completion
     cx = malloc(sizeof(play_file_cx_t));
-    cx->file_size = statbuf.st_size;
-    strcpy(cx->file_name, filename);
+    cx->not_used = 0;
     pthread_create(&tid, NULL, play_thread, cx);
 
     // success
@@ -299,9 +292,6 @@ int sdl_audio_play(char *filename)
 
 error:
     // error cleanup and return
-    if (device_id > 0) {
-        audio_close();
-    }
     if (buff != MAP_FAILED) {
         munmap(buff, statbuf.st_size);
     }
@@ -311,6 +301,7 @@ error:
     if (cx != NULL) {
         free(cx);
     }
+    memset(&state, 0, sizeof(state));
     return -1;
 }
 
@@ -321,18 +312,12 @@ static void *play_thread(void *cx_arg)
 
     INFO("starting\n");
 
-    // init state
-    state.state          = AUDIO_STATE_PLAY_FILE;
-    state.processed_secs = 0;
-    state.total_secs     = BYTES_TO_SECS(cx->file_size);
-    strcpy(state.filename, cx->file_name);
-
     // unpause
     SDL_PauseAudioDevice(device_id, PAUSE_OFF);
 
     // wait for play to complete, and process control requests
     while (true) {
-        usleep(10000);  // 10 ms
+        usleep(TEN_MS);
 
         bytes_remaining = SDL_GetQueuedAudioSize(device_id);
         state.processed_secs = state.total_secs - BYTES_TO_SECS(bytes_remaining);
@@ -353,14 +338,12 @@ static void *play_thread(void *cx_arg)
         }
     }
 
-    // pause
-    SDL_PauseAudioDevice(device_id, PAUSE_ON);
-
     // cleanup and return
     INFO("completed\n");
-    audio_close();
+    SDL_PauseAudioDevice(device_id, PAUSE_ON);
+    SDL_ClearQueuedAudio(device_id);
     free(cx);
-    memset(&state, 0, sizeof(state));  // xxx macro
+    memset(&state, 0, sizeof(state));
     return NULL;
 }
 
@@ -370,7 +353,6 @@ typedef struct {
     int  fd;
     int  duration_secs;
     bool auto_stop;
-    char filename[100];
 } record_cx_t;
 
 int sdl_audio_record(char *filename, int duration_secs, bool auto_stop)
@@ -378,13 +360,6 @@ int sdl_audio_record(char *filename, int duration_secs, bool auto_stop)
     int rc, fd=-1;
     record_cx_t *cx=NULL;
     pthread_t tid;
-
-    // if device_id is already open then return error;
-    // this can not goto error because that would close the device
-    if (device_id > 0) {
-        ERROR("already open\n");
-        return -1;
-    }
 
     // open audio to record
     rc = audio_open(RECORD);
@@ -400,12 +375,17 @@ int sdl_audio_record(char *filename, int duration_secs, bool auto_stop)
         goto error;
     }
 
+    // init state
+    state.state          = AUDIO_STATE_RECORD;
+    state.processed_secs = 0;
+    state.total_secs     = duration_secs;
+    strcpy(state.filename, filename);
+
     // create thread to xfer the record data to a file
     cx = malloc(sizeof(record_cx_t));
     cx->fd            = fd;
     cx->duration_secs = duration_secs;
     cx->auto_stop     = auto_stop;
-    strcpy(cx->filename, filename);
     pthread_create(&tid, NULL, record_thread, cx);
 
     // success
@@ -413,16 +393,13 @@ int sdl_audio_record(char *filename, int duration_secs, bool auto_stop)
 
 error:
     // error cleanup and return
-    if (device_id > 0) {
-        audio_close();
-    }
     if (fd >= 0) {
         close(fd);
     }
     if (cx != NULL) {
         free(cx);
     }
-    //xxx busy = false;
+    memset(&state, 0, sizeof(state));
     return -1;
 }
 
@@ -435,21 +412,14 @@ static void *record_thread(void *cx_arg)
 
     INFO("starting\n");
 
-    // init state
-    state.state          = AUDIO_STATE_RECORD;
-    state.processed_secs = 0;
-    state.total_secs     = cx->duration_secs;
-    strcpy(state.filename, cx->filename);
-
     // unpause
     SDL_PauseAudioDevice(device_id, PAUSE_OFF);
 
     while (true) {
         // get audio data, if non available then short sleep and try again
-        // xxx timeout, could be muted
         bytes = SDL_DequeueAudio(device_id, buff, sizeof(buff));
         if (bytes == 0) {
-            usleep(10000);  // 10 ms
+            usleep(TEN_MS);
             continue;
         }
         INFO("got bytes %d\n", bytes);
@@ -477,57 +447,26 @@ static void *record_thread(void *cx_arg)
         } else if (ctl_req == AUDIO_REQ_PAUSE) {
             SDL_PauseAudioDevice(device_id, PAUSE_ON);
             ctl_req = 0;
-        } else if (ctl_req == AUDIO_REQ_UNPAUSE) { // xxx wont work
+        } else if (ctl_req == AUDIO_REQ_UNPAUSE) {
             SDL_PauseAudioDevice(device_id, PAUSE_OFF);
             ctl_req = 0;
         }
 
         // short sleep
-        usleep(10000);  // 10 ms
+        usleep(TEN_MS);
     }
-
-    // pause
-    SDL_PauseAudioDevice(device_id, PAUSE_ON);
 
     // cleanup and return
     INFO("completed\n");
-    audio_close();
+    SDL_PauseAudioDevice(device_id, PAUSE_ON);
+    SDL_ClearQueuedAudio(device_id);
     close(cx->fd);
     free(cx);
-    memset(&state, 0, sizeof(state));  // xxx macro
+    memset(&state, 0, sizeof(state));
     return NULL;
 }
 
 // -----------------  PLAY TONE  --------------------------
-
-int sdl_audio_play_tones_open(void)
-{
-    int rc;
-
-    INFO("called\n");
-
-    // if device_id is already open then return error;
-    // this can not goto error because that would close the device
-    if (device_id > 0) {
-        ERROR("already open\n");
-        return -1;
-    }
-
-    // open audio for playback
-    rc = audio_open(PLAYBACK);
-    if (rc < 0) {
-        return -1;
-    }
-
-    // return success
-    return 0;
-}
-
-void sdl_audio_play_tones_close(void)
-{
-    INFO("called\n");
-    audio_close();
-}
 
 typedef struct {
     int n;
@@ -535,22 +474,32 @@ typedef struct {
 } sine_wave_t;
 
 typedef struct {
-    int duration_secs;
     int time_units_ms;
+    int num_tones;
     tone_t tones[0];
 } play_tones_cx_t;
 
-static sine_wave_t *sine_waves[5000]; // xxx error check on freq
+#define MIN_TONE_FREQ 20
+#define MAX_TONE_FREQ 5000
 
-void sdl_audio_play_tones(int time_units_ms, tone_t *tones)
+// xxx malloc this ?
+static sine_wave_t *sine_waves[MAX_TONE_FREQ+1];
+
+int sdl_audio_play_tones(int time_units_ms, tone_t *tones)
 {
-    int num_tones, duration_ms, i;
+    int num_tones, duration_ms, i, rc;
     pthread_t tid;
     play_tones_cx_t *cx;
 
-    // xxx make sure playtones is open
+    // open audio for playback
+    rc = audio_open(PLAYBACK);
+    if (rc < 0) {
+        ERROR("failed to open audio for playback\n");
+        return -1; 
+    }
 
     // loop over tones arg to determine total duration and num_tones
+    // xxx comment
     num_tones = 0;
     duration_ms = 0;
     for (i = 0; tones[i].intvl > 0; i++) {
@@ -559,47 +508,63 @@ void sdl_audio_play_tones(int time_units_ms, tone_t *tones)
         num_tones++;
     }
 
+    // init state
+    state.state          = AUDIO_STATE_PLAY_TONES; 
+    state.processed_secs = 0;
+    state.total_secs     = duration_ms / 1000 + 1;
+    strcpy(state.filename, "");
+
     // create thread to play the tones
     cx = malloc(sizeof(play_tones_cx_t) + num_tones * sizeof(tone_t));
-    cx->duration_secs  = duration_ms / 1000 + 1;
     cx->time_units_ms  = time_units_ms;
+    cx->num_tones = num_tones;
     memcpy(cx->tones, tones, num_tones * sizeof(tone_t));
     pthread_create(&tid, NULL, tones_thread, cx);
+
+    // success
+    return 0;
 }
 
 static void *tones_thread(void *cx_arg)
 {
     play_tones_cx_t *cx = (play_tones_cx_t*)cx_arg;
-    char *buff;
+    char *buff = NULL;
+    int queued_bytes = 0;
+    int buff_len;
+    bool do_once;
 
     INFO("starting\n");
 
     // allocate buff to handle a tone or gap of up to 30 secs
-    // xxx check for overflow
-    // xxx check for malloc failed
+    buff_len = 30 * FRAMES_PER_SEC * sizeof(short);
     buff = malloc(30 * FRAMES_PER_SEC * sizeof(short));
-
-    // init state
-    state.state          = AUDIO_STATE_PLAY_TONES; 
-    state.processed_secs = 0;
-    state.total_secs     = cx->duration_secs;
-    strcpy(state.filename, "");
+    if (buff == NULL) {
+        ERROR("malloc %d failed\n", buff_len);
+        goto done;
+    }
 
     // pre calculate the sine waves for the frequency(s) requested
-    for (int i = 0; cx->tones[i].intvl > 0; i++) {
-        tone_t *x = &cx->tones[i];
+    for (int i = 0; i < cx->num_tones; i++) {
+        tone_t *t = &cx->tones[i];
         int n, j;
         sine_wave_t *sw;
 
-        if (x->freq && sine_waves[x->freq] == NULL) {
-            n = FRAMES_PER_SEC / x->freq;
+        if (t->freq != 0 && t->freq < MIN_TONE_FREQ) {
+            t->freq = MIN_TONE_FREQ;
+        }
+        if (t->freq > MAX_TONE_FREQ) {
+            t->freq = MAX_TONE_FREQ;
+        }
+
+        if (t->freq && sine_waves[t->freq] == NULL) {
+            n = FRAMES_PER_SEC / t->freq;
             sw = malloc(sizeof(int) + n * sizeof(short));
             sw->n = n;
-            INFO("creating sine wave at freq %d  n=%d\n", x->freq, n);
+            INFO("creating sine wave at freq %d  n=%d\n", t->freq, n);
             for (j = 0; j < n; j++) {
                 sw->data[j] = 30000 * sin((2*M_PI) * ((double)j / n));
             }
-            sine_waves[x->freq] = sw;
+            sine_waves[t->freq] = sw;
         }
     }
 
@@ -607,22 +572,29 @@ static void *tones_thread(void *cx_arg)
     SDL_PauseAudioDevice(device_id, PAUSE_OFF);
 
     // xxx comment
-    for (int i = 0; cx->tones[i].intvl > 0; i++) {
+    for (int i = 0; i < cx->num_tones; i++) {
         tone_t *t = &cx->tones[i];
         int tone_intvl_ms = t->intvl * cx->time_units_ms;
         int len;
 
+        INFO("tone[%d] freq=%d millisecs=%d\n", i, t->freq, tone_intvl_ms);
+
         // xxx comment
         if (t->freq == 0) {
-            printf("%d: gap\n", i);
             len = FRAMES_PER_SEC * tone_intvl_ms / 1000 * sizeof(short);
+            if (len > buff_len) {
+                len = buff_len;
+            }
             memset(buff, 0, len);
         } else {
             sine_wave_t *sw = sine_waves[t->freq];
             int num_sine_waves = tone_intvl_ms * t->freq / 1000;
             char *buff_ptr = buff;
 
-            printf("%d: freq %d  nsw=%d\n", i, t->freq, num_sine_waves);
+            if (num_sine_waves * sw->n * sizeof(short) > buff_len) {
+                num_sine_waves = buff_len / (sw->n * sizeof(short));
+            }
+
             for (int j = 0; j < num_sine_waves; j++) {
                 memcpy(buff_ptr, sw->data, sw->n * sizeof(short));
                 buff_ptr += sw->n * sizeof(short);
@@ -630,12 +602,19 @@ static void *tones_thread(void *cx_arg)
             len = buff_ptr - buff;
         }
 
-        // xxx comment
-        printf("queing len %d\n", len);
+        // queue the gap or tone
         SDL_QueueAudio(device_id, buff, len);
+        queued_bytes += len;
 
-        // while there is more than 100 ms queued, process control requests
-        while (SDL_GetQueuedAudioSize(device_id) > FRAMES_PER_SEC / 10 * sizeof(short)) {
+        // while there is more than 100 ms queued OR do_once 
+        // - process control requests
+        // - publish amount played
+        // - short sleep
+        do_once = true;
+        while ((SDL_GetQueuedAudioSize(device_id) > FRAMES_PER_SEC / 10 * sizeof(short)) ||
+               (do_once))
+        {
+            // process control requests
             if (ctl_req == AUDIO_REQ_STOP) {
                 ctl_req = 0;
                 goto done;
@@ -647,58 +626,29 @@ static void *tones_thread(void *cx_arg)
                 ctl_req = 0;
             }
 
-            // xxx publish amount played
-            usleep(10000);
+            // publish amount played
+            state.processed_secs = BYTES_TO_SECS(queued_bytes - SDL_GetQueuedAudioSize(device_id));
+
+            // short sleep
+            usleep(TEN_MS);
+
+            // clear flag that ensures this code block is executed at leas once
+            do_once = false;
         }
     }
 
-    // xxx wait for queued to go to 0
-    printf("waiting for flush\n");
+    // wait for all queued audio to be played
     while (SDL_GetQueuedAudioSize(device_id) > 0) {
-        usleep(10000);
+        usleep(TEN_MS);
     }
 
-    printf("done\n");
 done:
-    // pause and clear queued audio
+    // cleanup and return
+    INFO("completed\n");
     SDL_PauseAudioDevice(device_id, PAUSE_ON);
     SDL_ClearQueuedAudio(device_id);
-
-    // cleanup and return
     free(cx);
     free(buff);
-    memset(&state, 0, sizeof(state));  // xxx macro
+    memset(&state, 0, sizeof(state));
     return NULL;
 }
-
-
-#if 0
-        // fill buffer with either sine waves or zeros (for gap)
-        if (x->freq == 0) {
-            frames = FRAMES_PER_SEC * x->intvl * time_units_ms / 1000;
-            zero_len =  frames * sizeof(short);
-
-
-
-            INFO("playing gap %d ms\n", x->intvl * time_units_ms);
-            frames = FRAMES_PER_SEC * x->intvl * time_units_ms / 1000;
-            zero_len =  frames * sizeof(short);
-            while (zero_len) {
-                xfer_len = (zero_len > sizeof(zero_buff) ? sizeof(zero_buff) : zero_len);
-                SDL_QueueAudio(device_id, zero_buff, xfer_len);  // len is bytes
-                zero_len -= xfer_len;
-                bytes_processed += xfer_len;
-                state.processed_secs = BYTES_TO_SECS(processed_bytes);
-            }
-        } else {
-            INFO("playing freq %d, duration %d ms\n", x->freq, x->intvl * time_units_ms);
-            num_sine_waves = x->intvl * time_units_ms * x->freq / 1000;
-            for (j = 0; j < num_sine_waves; j++) {
-                SDL_QueueAudio(device_id, 
-                               sine_waves[x->freq]->data,
-                               sine_waves[x->freq]->n * sizeof(short));
-                bytes_processed += sine_waves[x->freq]->n * sizeof(short);
-                state.processed_secs = BYTES_TO_SECS(processed_bytes);
-            }
-        }
-#endif

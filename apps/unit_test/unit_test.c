@@ -106,7 +106,7 @@ int main(int argc, char **argv)
         // if no event then redraw display
         sdl_get_event(100000, &event);
         if (event.event_id == -1) {
-            continue;
+            goto xyz;  //xxx
         }
 
         // process event
@@ -138,6 +138,7 @@ int main(int argc, char **argv)
 #endif
         }
 
+xyz:
         if (pagenum == 7) {
             handle_page_7_events(&event);
         }
@@ -594,14 +595,7 @@ static void handle_page_7_events(sdl_event_t *ev)
         }
         tones[i].freq = 0;
         tones[i].intvl = 0;
-        rc = sdl_audio_play_tones_open();
-        if (rc != 0) {
-            printf("ERROR: sdl_audio_play_tones_open failed\n");
-            break;
-        }
         sdl_audio_play_tones(1000, tones);
-// xxx wait
-        //sdl_audio_play_tones_close();
         break;
     case EVID_AUDIO_STOP:
         sdl_audio_ctl(AUDIO_REQ_STOP);
