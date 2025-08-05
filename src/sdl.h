@@ -136,8 +136,10 @@ typedef struct {
 
 typedef struct {
     int state;
+    bool paused;
     int processed_secs;
     int total_secs;
+    int volume;
     char filename[100];
 } sdl_audio_state_t;
 

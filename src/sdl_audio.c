@@ -18,6 +18,7 @@
 // - add FRAME_SIZE macro
 // - 30000 amplitude ?
 // - why is record not reliable
+// - record append option
 
 //
 // logging
@@ -77,6 +78,8 @@ static void print_sdl_audio_spec(char *hdr, SDL_AudioSpec *spec);
 static void *play_thread(void *cx);
 static void *record_thread(void *cx);
 static void *tones_thread(void *cx);
+
+void calc_volume(void *buff, int bytes);
 
 // -----------------  OPEN / CLOSE  -----------------------
 
@@ -277,8 +280,9 @@ int sdl_audio_play(char *filename)
     buff = MAP_FAILED;
 
     // init state
+    memset(&state, 0, sizeof(state));
     state.state          = AUDIO_STATE_PLAY_FILE;
-    state.processed_secs = 0;
+    state.paused         = true;
     state.total_secs     = BYTES_TO_SECS(statbuf.st_size);
     strcpy(state.filename, filename);
 
@@ -314,6 +318,7 @@ static void *play_thread(void *cx_arg)
 
     // unpause
     SDL_PauseAudioDevice(device_id, PAUSE_OFF);
+    state.paused = false;
 
     // wait for play to complete, and process control requests
     while (true) {
@@ -331,9 +336,11 @@ static void *play_thread(void *cx_arg)
             break;
         } else if (ctl_req == AUDIO_REQ_PAUSE) {
             SDL_PauseAudioDevice(device_id, PAUSE_ON);
+            state.paused = true;
             ctl_req = 0;
         } else if (ctl_req == AUDIO_REQ_UNPAUSE) {
             SDL_PauseAudioDevice(device_id, PAUSE_OFF);
+            state.paused = false;
             ctl_req = 0;
         }
     }
@@ -376,8 +383,9 @@ int sdl_audio_record(char *filename, int duration_secs, bool auto_stop)
     }
 
     // init state
+    memset(&state, 0, sizeof(state));
     state.state          = AUDIO_STATE_RECORD;
-    state.processed_secs = 0;
+    state.paused         = true;
     state.total_secs     = duration_secs;
     strcpy(state.filename, filename);
 
@@ -414,6 +422,7 @@ static void *record_thread(void *cx_arg)
 
     // unpause
     SDL_PauseAudioDevice(device_id, PAUSE_OFF);
+    state.paused = false;
 
     while (true) {
         // get audio data, if non available then short sleep and try again
@@ -431,6 +440,9 @@ static void *record_thread(void *cx_arg)
             break;
         }
 
+        // xxx volume
+        calc_volume(buff, bytes);
+
         // keep track of how long the recording has been in progress
         processed_bytes += bytes;
         state.processed_secs = BYTES_TO_SECS(processed_bytes);
@@ -446,9 +458,11 @@ static void *record_thread(void *cx_arg)
             break;
         } else if (ctl_req == AUDIO_REQ_PAUSE) {
             SDL_PauseAudioDevice(device_id, PAUSE_ON);
+            state.paused = true;
             ctl_req = 0;
         } else if (ctl_req == AUDIO_REQ_UNPAUSE) {
             SDL_PauseAudioDevice(device_id, PAUSE_OFF);
+            state.paused = false;
             ctl_req = 0;
         }
 
@@ -509,8 +523,9 @@ int sdl_audio_play_tones(int time_units_ms, tone_t *tones)
     }
 
     // init state
+    memset(&state, 0, sizeof(state));
     state.state          = AUDIO_STATE_PLAY_TONES; 
-    state.processed_secs = 0;
+    state.paused         = true;
     state.total_secs     = duration_ms / 1000 + 1;
     strcpy(state.filename, "");
 
@@ -570,6 +585,7 @@ static void *tones_thread(void *cx_arg)
 
     // unpause
     SDL_PauseAudioDevice(device_id, PAUSE_OFF);
+    state.paused = false;
 
     // xxx comment
     for (int i = 0; i < cx->num_tones; i++) {
@@ -620,9 +636,11 @@ static void *tones_thread(void *cx_arg)
                 goto done;
             } else if (ctl_req == AUDIO_REQ_PAUSE) {
                 SDL_PauseAudioDevice(device_id, PAUSE_ON);
+                state.paused = true;
                 ctl_req = 0;
             } else if (ctl_req == AUDIO_REQ_UNPAUSE) {
                 SDL_PauseAudioDevice(device_id, PAUSE_OFF);
+                state.paused = false;
                 ctl_req = 0;
             }
 
@@ -651,4 +669,32 @@ done:
     free(buff);
     memset(&state, 0, sizeof(state));
     return NULL;
+}
+
+// xxxxxxxxxxxxxxxxxxxxxxxx
+
+// xxx update display every 50 ms
+
+void calc_volume(void *buff, int bytes)
+{
+    short *samples = (short*)buff;
+    int    n = bytes/2;
+    int    sum = 0;
+    int    average;
+
+    // discard if number of samples not 4096
+    if (n != 4096) {
+        INFO("discarding n=%d\n", n);
+        return;
+    }
+
+    // calculate average of the absolute value of the samples;
+    // note: duration = 4096 / 48000 = 85 ms
+    for (int i = 0; i < n; i++) {
+        sum += abs(samples[i]);
+    }
+    average = nearbyint((double)sum / n * (100. / 32768.));
+
+    // publish volume
+    state.volume = average;
 }

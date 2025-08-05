@@ -102,9 +102,9 @@ int main(int argc, char **argv)
         // present the display
         sdl_display_present();
 
-        // wait for an event with 100 ms timeout;
+        // wait for an event with 50 ms timeout;
         // if no event then redraw display
-        sdl_get_event(100000, &event);
+        sdl_get_event(50000, &event);
         if (event.event_id == -1) {
             goto xyz;  //xxx
         }
@@ -505,24 +505,35 @@ static void color_test(int idx, char *color_name, int color)
 
 // -----------------  PAGE 7: AUDIO  --------------------------
 
+static char *audio_state_str(int x)
+{
+    if (x == AUDIO_STATE_IDLE)       return "IDLE";
+    if (x == AUDIO_STATE_PLAY_FILE)  return "PLAY_FILE";
+    if (x == AUDIO_STATE_PLAY_TONES) return "PLAY_TONES";
+    if (x == AUDIO_STATE_RECORD)     return "RECORD";
+    return "INVLD_STATE";
+}
+
 // xxx use light blue and RED
 static void render_page_7(bool init)
 {
     sdl_loc_t *loc;
-    sdl_audio_state_t x;
+    sdl_audio_state_t state;
 
     if (init) {
         sdl_audio_print_devices_info();
     }
 
-    sdl_audio_state(&x);
+    sdl_audio_state(&state);
 
     //
     // record section
     //
 
+    sdl_print_init(-1, state.state == AUDIO_STATE_RECORD ? COLOR_RED : COLOR_WHITE, COLOR_BLACK);
     loc = sdl_render_text(0, 200, "RECORD");
     sdl_register_event(loc, EVID_AUDIO_RECORD);
+    sdl_print_init(-1, COLOR_WHITE, COLOR_BLACK);
 
     //
     // play section
@@ -530,11 +541,11 @@ static void render_page_7(bool init)
 
     sdl_render_text_xyctr(NK2X(1,0), 600, "--- PLAY ---");
 
-    loc = sdl_render_text(0, 700, "TONE");
-    sdl_register_event(loc, EVID_AUDIO_PLAY_TONE);
-
-    loc = sdl_render_text(0, 850, "RECORDING");
+    loc = sdl_render_text(0, 700, "RECORDING");
     sdl_register_event(loc, EVID_AUDIO_PLAY_RECORDING);
+
+    loc = sdl_render_text(0, 850, "TONE");
+    sdl_register_event(loc, EVID_AUDIO_PLAY_TONE);
 
     loc = sdl_render_text(0, 1000, "TONES_1");
     sdl_register_event(loc, EVID_AUDIO_PLAY_TONES_1);
@@ -543,9 +554,23 @@ static void render_page_7(bool init)
     // state section
     //
 
-    if (x.state != AUDIO_STATE_IDLE) {
-        sdl_render_printf(0, sdl_win_height-500, "%d / %d", x.processed_secs, x.total_secs);
-        // xxx also display filename and state
+    if (state.state != AUDIO_STATE_IDLE) {
+        int y = sdl_win_height-800;
+
+        sdl_render_printf(0, y, "%s %d / %d", 
+                          audio_state_str(state.state), state.processed_secs, state.total_secs);
+        if (state.paused) {
+            sdl_render_printf(sdl_win_width-sdl_char_width, y, "%s", "P");
+        }
+        y += sdl_char_height;
+
+        if (state.filename[0]) {
+            sdl_render_printf(0, y, "%s", state.filename);
+            y += sdl_char_height;
+        }
+
+        sdl_render_printf(0, y, "VOL %d", state.volume);  // xxx make a bar
+        y += sdl_char_height;
     }
 
     //
