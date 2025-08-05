@@ -230,7 +230,8 @@ void sdl_audio_state(sdl_audio_state_t *x)
 // -----------------  PLAY FILE ---------------------------
 
 typedef struct {
-    int not_used;
+    char *buff;
+    int   buff_len;
 } play_file_cx_t;
 
 int sdl_audio_play(char *filename)
@@ -267,18 +268,6 @@ int sdl_audio_play(char *filename)
         goto error;
     }
 
-    // queue playback 
-    rc = SDL_QueueAudio(device_id, buff, statbuf.st_size);
-    if (rc < 0) {
-        ERROR("failed to queue playback, rc=%d, %s\n", rc, SDL_GetError());
-        goto error;
-    }
-    INFO("QUEUED %d\n", SDL_GetQueuedAudioSize(device_id));
-
-    // unmap
-    munmap(buff, statbuf.st_size);
-    buff = MAP_FAILED;
-
     // init state
     memset(&state, 0, sizeof(state));
     state.state          = AUDIO_STATE_PLAY_FILE;
@@ -288,7 +277,8 @@ int sdl_audio_play(char *filename)
 
     // create thread to monitor and process completion
     cx = malloc(sizeof(play_file_cx_t));
-    cx->not_used = 0;
+    cx->buff = buff;
+    cx->buff_len = statbuf.st_size;
     pthread_create(&tid, NULL, play_thread, cx);
 
     // success
@@ -311,8 +301,10 @@ error:
 
 static void *play_thread(void *cx_arg)
 {
-    int bytes_remaining;
     play_file_cx_t *cx = (play_file_cx_t*)cx_arg;
+    char           *buff_ptr = cx->buff;
+    int             xfer_len, rc, remaining;
+    bool            do_once;
 
     INFO("starting\n");
 
@@ -320,35 +312,69 @@ static void *play_thread(void *cx_arg)
     SDL_PauseAudioDevice(device_id, PAUSE_OFF);
     state.paused = false;
 
-    // wait for play to complete, and process control requests
     while (true) {
-        usleep(TEN_MS);
-
-        bytes_remaining = SDL_GetQueuedAudioSize(device_id);
-        state.processed_secs = state.total_secs - BYTES_TO_SECS(bytes_remaining);
-
-        if (bytes_remaining == 0) {
-            break;
+        // get audio data, if non available then short sleep and try again
+        remaining = cx->buff_len - (buff_ptr - cx->buff);
+        xfer_len = (remaining > 8192 ? 8192 : remaining);
+        rc = SDL_QueueAudio(device_id, buff_ptr, xfer_len);
+        if (rc < 0) {
+            ERROR("SDL_QueueAudio failed, %s\n", SDL_GetError());
+            goto done;
         }
-        
-        if (ctl_req == AUDIO_REQ_STOP) {
-            ctl_req = 0;
-            break;
-        } else if (ctl_req == AUDIO_REQ_PAUSE) {
-            SDL_PauseAudioDevice(device_id, PAUSE_ON);
-            state.paused = true;
-            ctl_req = 0;
-        } else if (ctl_req == AUDIO_REQ_UNPAUSE) {
-            SDL_PauseAudioDevice(device_id, PAUSE_OFF);
-            state.paused = false;
-            ctl_req = 0;
+
+        // xxx volume
+        calc_volume(buff_ptr, xfer_len);
+
+        // queue the audio buffer
+        SDL_QueueAudio(device_id, buff_ptr, xfer_len);
+
+        // while there is more than 100 ms queued OR do_once   xxx maybe 200
+        // - process control requests
+        // - publish amount played
+        // - short sleep
+        do_once = true;
+        while ((SDL_GetQueuedAudioSize(device_id) > FRAMES_PER_SEC / 10 * sizeof(short)) ||
+               (do_once))
+        {
+            // process control requests
+            if (ctl_req == AUDIO_REQ_STOP) {
+                ctl_req = 0;
+                goto done;
+            } else if (ctl_req == AUDIO_REQ_PAUSE) {
+                SDL_PauseAudioDevice(device_id, PAUSE_ON);
+                state.paused = true;
+                ctl_req = 0;
+            } else if (ctl_req == AUDIO_REQ_UNPAUSE) {
+                SDL_PauseAudioDevice(device_id, PAUSE_OFF);
+                state.paused = false;
+                ctl_req = 0;
+            }
+
+            // publish amount played
+            state.processed_secs = BYTES_TO_SECS((buff_ptr - cx->buff) - SDL_GetQueuedAudioSize(device_id));
+
+            // short sleep
+            usleep(TEN_MS);
+
+            // clear flag that ensures this code block is executed at leas once
+            do_once = false;
         }
+
+        // advance buff_ptr
+        buff_ptr += xfer_len;
     }
 
+    // wait for all queued audio to be played
+    while (SDL_GetQueuedAudioSize(device_id) > 0) {
+        usleep(TEN_MS);
+    }
+
+done:
     // cleanup and return
     INFO("completed\n");
     SDL_PauseAudioDevice(device_id, PAUSE_ON);
     SDL_ClearQueuedAudio(device_id);
+    munmap(cx->buff, cx->buff_len);
     free(cx);
     memset(&state, 0, sizeof(state));
     return NULL;
