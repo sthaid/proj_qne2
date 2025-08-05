@@ -27,8 +27,9 @@
 #define EVID_END_PROGRAM 3
 
 #define EVID_AUDIO_PLAY_TONE        10
-#define EVID_AUDIO_PLAY_TONES_1     11
-#define EVID_AUDIO_PLAY_RECORDING   12
+#define EVID_AUDIO_PLAY_SWEEP       11
+#define EVID_AUDIO_PLAY_SQWV        12
+#define EVID_AUDIO_PLAY_RECORDING   19
 #define EVID_AUDIO_RECORD           20
 #define EVID_AUDIO_STOP             30
 #define EVID_AUDIO_PAUSE            31
@@ -547,8 +548,11 @@ static void render_page_7(bool init)
     loc = sdl_render_text(0, 850, "TONE");
     sdl_register_event(loc, EVID_AUDIO_PLAY_TONE);
 
-    loc = sdl_render_text(0, 1000, "TONES_1");
-    sdl_register_event(loc, EVID_AUDIO_PLAY_TONES_1);
+    loc = sdl_render_text(0, 1000, "TONES_SWEEP");
+    sdl_register_event(loc, EVID_AUDIO_PLAY_SWEEP);
+
+    loc = sdl_render_text(0, 1150, "TONES_SQWV");
+    sdl_register_event(loc, EVID_AUDIO_PLAY_SQWV);
 
     //
     // state section
@@ -589,8 +593,8 @@ static void render_page_7(bool init)
 
 static void handle_page_7_events(sdl_event_t *ev)
 {
-    int rc, i, freq;
-    tone_t tones[100];
+    int rc, i, j, freq;
+    tone_t tones[5000];
     char *fn;
 
     switch (ev->event_id) {
@@ -599,7 +603,7 @@ static void handle_page_7_events(sdl_event_t *ev)
         fn = (ev->event_id == EVID_AUDIO_PLAY_TONE) ? "test_tone.raw" :
                                                       "recording.raw";
         if (ev->event_id == EVID_AUDIO_PLAY_TONE) {
-            sdl_audio_create_test_file(fn, 60, 1000);
+            sdl_audio_create_test_file(fn, 10, 1000);
         }
         rc = sdl_audio_play(fn);
         if (rc != 0) {
@@ -613,14 +617,29 @@ static void handle_page_7_events(sdl_event_t *ev)
             printf("ERROR: sdl_audio_record %s failed\n", record_file_name);
         }
         break;
-    case EVID_AUDIO_PLAY_TONES_1:
-        for (freq = 100, i = 0; freq <= 2000; freq += 100, i++) {
+    case EVID_AUDIO_PLAY_SWEEP:
+        for (freq = 100, i = 0; freq <= 3000; freq += 100, i++) {
             tones[i].freq = freq;
             tones[i].intvl = 1;
         }
         tones[i].freq = 0;
         tones[i].intvl = 0;
-        sdl_audio_play_tones(1000, tones);
+        sdl_audio_play_tones(500, tones);
+        break;
+    case EVID_AUDIO_PLAY_SQWV:
+        for (i = 0, j = 0; i < 10; i++) {
+            // 500 hz tone
+            tones[j].freq = 500;
+            tones[j].intvl = 1;
+            j++;
+            // gap
+            tones[j].freq = 0;  
+            tones[j].intvl = 1;
+            j++;
+        }
+        tones[j].freq = 0;
+        tones[j].intvl = 0;
+        sdl_audio_play_tones(500, tones);
         break;
     case EVID_AUDIO_STOP:
         sdl_audio_ctl(AUDIO_REQ_STOP);
