@@ -10,6 +10,8 @@
 
 #include "tester.h"
 
+// xxx each page should have, init, render, and events
+
 //
 // defines
 //
@@ -561,6 +563,7 @@ static void render_page_7(bool init)
     if (state.state != AUDIO_STATE_IDLE) {
         int y = sdl_win_height-800;
 
+        // state, processed/total time, and paused
         sdl_render_printf(0, y, "%s %d / %d", 
                           audio_state_str(state.state), state.processed_secs, state.total_secs);
         if (state.paused) {
@@ -568,13 +571,17 @@ static void render_page_7(bool init)
         }
         y += sdl_char_height;
 
+        // volume
+        sdl_render_fill_rect(0, y, sdl_win_width * state.volume / 100, sdl_char_height, COLOR_RED);
+        sdl_render_rect(0, y, sdl_win_width, sdl_char_height, 2, COLOR_WHITE);
+        y += sdl_char_height;
+
+        // filename
         if (state.filename[0]) {
             sdl_render_printf(0, y, "%s", state.filename);
             y += sdl_char_height;
         }
 
-        sdl_render_printf(0, y, "VOL %d", state.volume);  // xxx make a bar
-        y += sdl_char_height;
     }
 
     //
