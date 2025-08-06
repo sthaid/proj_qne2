@@ -57,6 +57,10 @@ static void page_5_exit(void);
 
 static void page_6_draw(void);
 
+static void page_7_init(void);
+static void page_7_draw(void);
+static void page_7_process_event(sdl_event_t *event);
+
 // -----------------  MAIN  ------------------------------------------
 
 int main(int argc, char **argv)
@@ -129,6 +133,7 @@ static void common_page_hndlr()
     switch (pagenum) {
     case 3: page_3_init(); break;
     case 5: page_5_init(); break;
+    case 7: page_7_init(); break;
     }
 
     while (true) {
@@ -161,6 +166,7 @@ static void common_page_hndlr()
         case 4: page_4_draw(); break;
         case 5: page_5_draw(); break;
         case 6: page_6_draw(); break;
+        case 7: page_7_draw(); break;
         default:
             printf("ERROR invalid pagenum %d\n", pagenum);
             end_program = true;
@@ -206,6 +212,7 @@ static void common_page_hndlr()
         // call the page specific event hndlr, if provided
         switch (pagenum) {
         case 3: page_3_process_event(&event); break;
+        case 7: page_7_process_event(&event); break;
         }
     }
 
@@ -519,89 +526,38 @@ static void color_test(int idx, char *color_name, int color)
     sdl_render_fill_rect(500, y, 500, sdl_char_height, color);
 }
 
-#if 0
-
 // -----------------  PAGE 7: AUDIO  --------------------------
 
 #define EVID_AUDIO_PLAY_TONE        10
-#define EVID_AUDIO_PLAY_FREQ_SWEEP       11
-#define EVID_AUDIO_PLAY_SQUARE_WAVE        12
-#define EVID_AUDIO_PLAY_MORSE_CODE         13
+#define EVID_AUDIO_PLAY_FREQ_SWEEP  11
+#define EVID_AUDIO_PLAY_SQUARE_WAVE 12
+#define EVID_AUDIO_PLAY_MORSE_CODE  13
 #define EVID_AUDIO_PLAY_RECORDING   19
 #define EVID_AUDIO_RECORD           20
 #define EVID_AUDIO_STOP             30
 #define EVID_AUDIO_PAUSE            31
 #define EVID_AUDIO_CONT             32
-static char *audio_state_str(int x)
+
+static void add_tone(tone_t **t, int freq, int intvl);
+static void add_gap(tone_t **t, int intvl);
+static void add_terminator(tone_t **t);
+static char *audio_state_str(int x);
+static void generate_morse_code_tones(tone_t **t, char *letters);
+       
+static void page_7_init(void)
 {
-    if (x == AUDIO_STATE_IDLE)       return "IDLE";
-    if (x == AUDIO_STATE_PLAY_FILE)  return "PLAY_FILE";
-    if (x == AUDIO_STATE_PLAY_TONES) return "PLAY_TONES";
-    if (x == AUDIO_STATE_RECORD)     return "RECORD";
-    return "INVLD_STATE";
+    sdl_audio_print_devices_info();
+    sdl_audio_create_test_file("audio_test.raw", 10, 1000);
 }
 
-static char *morse_chars[] = {
-    ".-",
-    "-...",
-    "-.-."
-                };
-
-#define MORSE_FREQ 1000
-#define GAP_FREQ 0
-
-static void morse_code(char *letters)
-{
-    tone_t tones[1000];
-    tone_t *t = tones;
-
-    #define ADD_TONE(_freq, _intvl) \
-        do { \
-            t->freq = _freq; \
-            t->intvl = _intvl; \
-            t++; \
-        } while (0)
-
-    for (int i = 0; letters[i]; i++) {
-        int ch = letters[i];
-        if (ch >= 'A' && ch <='Z') {
-            for (int j = 0; morse_chars[ch-'A'][j]; j++) {
-                int intvl = (morse_chars[ch-'A'][j] == '.') ? 1 : 3;
-                ADD_TONE(MORSE_FREQ, intvl);
-                ADD_TONE(GAP_FREQ, 1);
-            }
-            ADD_TONE(GAP_FREQ, 2);
-        } else if (ch == ' ') {
-            ADD_TONE(GAP_FREQ, 4);
-        }
-    }
-    ADD_TONE(0, 0);
-
-    sdl_audio_play_tones(100, tones);  // intvl = 1s xxx
-}
-            
-/*
-const MorseCode morse_table[] = {
-    {'a', ".-"}, {'b', "-..."}, {'c', "-.-."}, {'d', "-.."}, {'e', "."},
-    {'f', "..-."}, {'g', "--."}, {'h', "...."}, {'i', ".."}, {'j', ".---"},
-    {'k', "-.-"}, {'l', ".-.."}, {'m', "--"}, {'n', "-."}, {'o', "---"},
-    {'p', ".--."}, {'q', "--.-"}, {'r', ".-."}, {'s', "..."}, {'t', "-"},
-    {'u', "..-"}, {'v', "...-"}, {'w', ".--"}, {'x', "-..-"}, {'y', "-.--"},
-    {'z', "--.."}, {'1', ".----"}, {'2', "..---"}, {'3', "...--"}, {'4', "....-"},
-    {'5', "....."}, {'6', "-...."}, {'7', "--..."}, {'8', "---.."}, {'9', "----."},
-    {'0', "-----"}, {' ', " "} // Space is included for readability
-};
-*/
-
-// xxx use light blue and RED
-static void render_page_7(bool init)
+static void page_7_draw(void)
 {
     sdl_loc_t *loc;
     sdl_audio_state_t state;
 
-    if (init) {
-        sdl_audio_print_devices_info();
-    }
+    //
+    // get audio state
+    //
 
     sdl_audio_state(&state);
 
@@ -677,20 +633,17 @@ static void render_page_7(bool init)
     sdl_register_event(loc, EVID_AUDIO_CONT);
 }
 
-static void handle_page_7_events(sdl_event_t *ev)
+static void page_7_process_event(sdl_event_t *ev)
 {
-    int rc, i, j, freq;
+    int rc, i, freq;
     tone_t tones[5000];
+    tone_t *t;
     char *fn;
 
     switch (ev->event_id) {
     case EVID_AUDIO_PLAY_TONE:
     case EVID_AUDIO_PLAY_RECORDING:
-        fn = (ev->event_id == EVID_AUDIO_PLAY_TONE) ? "test_tone.raw" :
-                                                      "recording.raw";
-        if (ev->event_id == EVID_AUDIO_PLAY_TONE) {
-            sdl_audio_create_test_file(fn, 10, 1000);
-        }
+        fn = (ev->event_id == EVID_AUDIO_PLAY_TONE) ? "audio_test.raw" : "recording.raw";
         rc = sdl_audio_play(fn);
         if (rc != 0) {
             printf("ERROR: sdl_audio_play %s failed\n", fn);
@@ -704,31 +657,26 @@ static void handle_page_7_events(sdl_event_t *ev)
         }
         break;
     case EVID_AUDIO_PLAY_FREQ_SWEEP:
-        for (freq = 100, i = 0; freq <= 3000; freq += 100, i++) {
-            tones[i].freq = freq;
-            tones[i].intvl = 1;
+        t = tones;
+        for (freq = 100; freq <= 3000; freq += 100) {
+            add_tone(&t, freq, 1);
         }
-        tones[i].freq = 0;
-        tones[i].intvl = 0;
-        sdl_audio_play_tones(500, tones);
+        add_terminator(&t);
+        sdl_audio_play_tones(500, tones); // intvl=500 ms
         break;
     case EVID_AUDIO_PLAY_SQUARE_WAVE:
-        for (i = 0, j = 0; i < 10; i++) {
-            // 500 hz tone
-            tones[j].freq = 500;
-            tones[j].intvl = 1;
-            j++;
-            // gap
-            tones[j].freq = 0;  
-            tones[j].intvl = 1;
-            j++;
+        t = tones;
+        for (i = 0; i < 10; i++) {
+            add_tone(&t, 500, 1);
+            add_gap(&t, 1);
         }
-        tones[j].freq = 0;
-        tones[j].intvl = 0;
+        add_terminator(&t);
         sdl_audio_play_tones(500, tones);
         break;
     case EVID_AUDIO_PLAY_MORSE_CODE:
-        morse_code("ABC ABC ABC ABC ABC ABC ABC ");
+        t = tones;
+        generate_morse_code_tones(&t, "CQ CQ HELLO WORLD CQ CQ");
+        sdl_audio_play_tones(100, tones); // intvl = 100 ms
         break;
     case EVID_AUDIO_STOP:
         sdl_audio_ctl(AUDIO_REQ_STOP);
@@ -741,4 +689,64 @@ static void handle_page_7_events(sdl_event_t *ev)
         break;
     }
 }
-#endif
+
+static char *audio_state_str(int x)
+{
+    if (x == AUDIO_STATE_IDLE)       return "IDLE";
+    if (x == AUDIO_STATE_PLAY_FILE)  return "PLAY_FILE";
+    if (x == AUDIO_STATE_PLAY_TONES) return "PLAY_TONES";
+    if (x == AUDIO_STATE_RECORD)     return "RECORD";
+    return "INVLD_STATE";
+}
+
+static void add_tone(tone_t **t, int freq, int intvl)
+{
+    (*t)->freq = freq;
+    (*t)->intvl = intvl;
+    *t = *t + 1;
+}
+
+static void add_gap(tone_t **t, int intvl)
+{
+    (*t)->freq = 0;
+    (*t)->intvl = intvl;
+    *t = *t + 1;
+}
+
+static void add_terminator(tone_t **t)
+{
+    (*t)->freq = 0;
+    (*t)->intvl = 0;
+    *t = *t + 1;
+}
+
+static void generate_morse_code_tones(tone_t **t, char *letters)
+{
+    #define MORSE_FREQ 1000
+
+    static char *morse_chars[] = {
+                    /* A */ ".-",      /* B */ "-...",    /* C */ "-.-.",
+                    /* D */ "-..",     /* E */ ".",       /* F */ "..-.",
+                    /* G */ "--.",     /* H */ "....",    /* I */ "..",
+                    /* J */ ".---",    /* K */ "-.-",     /* L */ ".-..",
+                    /* M */ "--",      /* N */ "-.",      /* O */ "---",
+                    /* P */ ".--.",    /* Q */ "--.-",    /* R */ ".-.",
+                    /* S */ "...",     /* T */ "-",       /* U */ "..-",
+                    /* V */ "...-",    /* W */ ".--",     /* X */ "-..-",
+                    /* Y */ "-.--",    /* Z */ "--..", };
+
+    for (int i = 0; letters[i]; i++) {
+        int ch = letters[i];
+        if (ch >= 'A' && ch <='Z') {
+            for (int j = 0; morse_chars[ch-'A'][j]; j++) {
+                int intvl = (morse_chars[ch-'A'][j] == '.') ? 1 : 3;
+                add_tone(t, MORSE_FREQ, intvl);
+                add_gap(t, 1);
+            }
+            add_gap(t, 2);  // xxx update_gap
+        } else if (ch == ' ') {
+            add_gap(t, 4);
+        }
+    }
+    add_terminator(t);
+}
