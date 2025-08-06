@@ -29,8 +29,9 @@
 #define EVID_END_PROGRAM 3
 
 #define EVID_AUDIO_PLAY_TONE        10
-#define EVID_AUDIO_PLAY_SWEEP       11
-#define EVID_AUDIO_PLAY_SQWV        12
+#define EVID_AUDIO_PLAY_FREQ_SWEEP       11
+#define EVID_AUDIO_PLAY_SQUARE_WAVE        12
+#define EVID_AUDIO_PLAY_MORSE_CODE         13
 #define EVID_AUDIO_PLAY_RECORDING   19
 #define EVID_AUDIO_RECORD           20
 #define EVID_AUDIO_STOP             30
@@ -517,6 +518,58 @@ static char *audio_state_str(int x)
     return "INVLD_STATE";
 }
 
+static char *morse_chars[] = {
+    ".-",
+    "-...",
+    "-.-."
+                };
+
+#define MORSE_FREQ 1000
+#define GAP_FREQ 0
+
+static void morse_code(char *letters)
+{
+    tone_t tones[1000];
+    tone_t *t = tones;
+
+    #define ADD_TONE(_freq, _intvl) \
+        do { \
+            t->freq = _freq; \
+            t->intvl = _intvl; \
+            t++; \
+        } while (0)
+
+    for (int i = 0; letters[i]; i++) {
+        int ch = letters[i];
+        if (ch >= 'A' && ch <='Z') {
+            for (int j = 0; morse_chars[ch-'A'][j]; j++) {
+                int intvl = (morse_chars[ch-'A'][j] == '.') ? 1 : 3;
+                ADD_TONE(MORSE_FREQ, intvl);
+                ADD_TONE(GAP_FREQ, 1);
+            }
+            ADD_TONE(GAP_FREQ, 2);
+        } else if (ch == ' ') {
+            ADD_TONE(GAP_FREQ, 4);
+        }
+    }
+    ADD_TONE(0, 0);
+
+    sdl_audio_play_tones(100, tones);  // intvl = 1s xxx
+}
+            
+/*
+const MorseCode morse_table[] = {
+    {'a', ".-"}, {'b', "-..."}, {'c', "-.-."}, {'d', "-.."}, {'e', "."},
+    {'f', "..-."}, {'g', "--."}, {'h', "...."}, {'i', ".."}, {'j', ".---"},
+    {'k', "-.-"}, {'l', ".-.."}, {'m', "--"}, {'n', "-."}, {'o', "---"},
+    {'p', ".--."}, {'q', "--.-"}, {'r', ".-."}, {'s', "..."}, {'t', "-"},
+    {'u', "..-"}, {'v', "...-"}, {'w', ".--"}, {'x', "-..-"}, {'y', "-.--"},
+    {'z', "--.."}, {'1', ".----"}, {'2', "..---"}, {'3', "...--"}, {'4', "....-"},
+    {'5', "....."}, {'6', "-...."}, {'7', "--..."}, {'8', "---.."}, {'9', "----."},
+    {'0', "-----"}, {' ', " "} // Space is included for readability
+};
+*/
+
 // xxx use light blue and RED
 static void render_page_7(bool init)
 {
@@ -550,18 +603,21 @@ static void render_page_7(bool init)
     loc = sdl_render_text(0, 850, "TONE");
     sdl_register_event(loc, EVID_AUDIO_PLAY_TONE);
 
-    loc = sdl_render_text(0, 1000, "TONES_SWEEP");
-    sdl_register_event(loc, EVID_AUDIO_PLAY_SWEEP);
+    loc = sdl_render_text(0, 1000, "FREQ_SWEEP");
+    sdl_register_event(loc, EVID_AUDIO_PLAY_FREQ_SWEEP);
 
-    loc = sdl_render_text(0, 1150, "TONES_SQWV");
-    sdl_register_event(loc, EVID_AUDIO_PLAY_SQWV);
+    loc = sdl_render_text(0, 1150, "SQUARE_WAVE");
+    sdl_register_event(loc, EVID_AUDIO_PLAY_SQUARE_WAVE);
+
+    loc = sdl_render_text(0, 1300, "MORSE_CODE");
+    sdl_register_event(loc, EVID_AUDIO_PLAY_MORSE_CODE);
 
     //
     // state section
     //
 
     if (state.state != AUDIO_STATE_IDLE) {
-        int y = sdl_win_height-800;
+        int y = sdl_win_height-650;
 
         // state, processed/total time, and paused
         sdl_render_printf(0, y, "%s %d / %d", 
@@ -624,7 +680,7 @@ static void handle_page_7_events(sdl_event_t *ev)
             printf("ERROR: sdl_audio_record %s failed\n", record_file_name);
         }
         break;
-    case EVID_AUDIO_PLAY_SWEEP:
+    case EVID_AUDIO_PLAY_FREQ_SWEEP:
         for (freq = 100, i = 0; freq <= 3000; freq += 100, i++) {
             tones[i].freq = freq;
             tones[i].intvl = 1;
@@ -633,7 +689,7 @@ static void handle_page_7_events(sdl_event_t *ev)
         tones[i].intvl = 0;
         sdl_audio_play_tones(500, tones);
         break;
-    case EVID_AUDIO_PLAY_SQWV:
+    case EVID_AUDIO_PLAY_SQUARE_WAVE:
         for (i = 0, j = 0; i < 10; i++) {
             // 500 hz tone
             tones[j].freq = 500;
@@ -647,6 +703,9 @@ static void handle_page_7_events(sdl_event_t *ev)
         tones[j].freq = 0;
         tones[j].intvl = 0;
         sdl_audio_play_tones(500, tones);
+        break;
+    case EVID_AUDIO_PLAY_MORSE_CODE:
+        morse_code("ABC ABC ABC ABC ABC ABC ABC ");
         break;
     case EVID_AUDIO_STOP:
         sdl_audio_ctl(AUDIO_REQ_STOP);
