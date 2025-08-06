@@ -528,6 +528,8 @@ static void color_test(int idx, char *color_name, int color)
 
 // -----------------  PAGE 7: AUDIO  --------------------------
 
+// xxx stop audio when exit page
+
 #define EVID_AUDIO_PLAY_TONE        10
 #define EVID_AUDIO_PLAY_FREQ_SWEEP  11
 #define EVID_AUDIO_PLAY_SQUARE_WAVE 12
@@ -538,11 +540,11 @@ static void color_test(int idx, char *color_name, int color)
 #define EVID_AUDIO_PAUSE            31
 #define EVID_AUDIO_CONT             32
 
-static void add_tone(tone_t **t, int freq, int intvl);
-static void add_gap(tone_t **t, int intvl);
-static void add_terminator(tone_t **t);
+static void add_tone(sdl_tone_t **t, int freq, int intvl);
+static void add_gap(sdl_tone_t **t, int intvl);
+static void add_terminator(sdl_tone_t **t);
 static char *audio_state_str(int x);
-static void generate_morse_code_tones(tone_t **t, char *letters);
+static void generate_morse_code_tones(sdl_tone_t **t, char *letters);
        
 static void page_7_init(void)
 {
@@ -636,8 +638,8 @@ static void page_7_draw(void)
 static void page_7_process_event(sdl_event_t *ev)
 {
     int rc, i, freq;
-    tone_t tones[5000];
-    tone_t *t;
+    sdl_tone_t tones[5000];
+    sdl_tone_t *t;
     char *fn;
 
     switch (ev->event_id) {
@@ -699,32 +701,32 @@ static char *audio_state_str(int x)
     return "INVLD_STATE";
 }
 
-static void add_tone(tone_t **t, int freq, int intvl)
+static void add_tone(sdl_tone_t **t, int freq, int intvl)
 {
     (*t)->freq = freq;
     (*t)->intvl = intvl;
     *t = *t + 1;
 }
 
-static void add_gap(tone_t **t, int intvl)
+static void add_gap(sdl_tone_t **t, int intvl)
 {
     (*t)->freq = 0;
     (*t)->intvl = intvl;
     *t = *t + 1;
 }
 
-static void add_terminator(tone_t **t)
+static void add_terminator(sdl_tone_t **t)
 {
     (*t)->freq = 0;
     (*t)->intvl = 0;
     *t = *t + 1;
 }
 
-static void generate_morse_code_tones(tone_t **t, char *letters)
-{
-    #define MORSE_FREQ 1000
+#define MORSE_FREQ 1000
 
-    static char *morse_chars[] = {
+static void generate_morse_code_tones(sdl_tone_t **t, char *letters)
+{
+    char *morse_chars[] = {
                     /* A */ ".-",      /* B */ "-...",    /* C */ "-.-.",
                     /* D */ "-..",     /* E */ ".",       /* F */ "..-.",
                     /* G */ "--.",     /* H */ "....",    /* I */ "..",

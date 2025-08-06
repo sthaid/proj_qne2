@@ -381,71 +381,73 @@ void Sdl_read_display_pixels (struct ParseState *Parser, struct Value *ReturnVal
     ReturnValue->Val->Pointer = (char*)pixels; 
 }
 
-// xxx audio
-void Sdl_audio_open (struct ParseState *Parser, struct Value *ReturnValue,
+//
+// audio
+//
+
+void Sdl_audio_play (struct ParseState *Parser, struct Value *ReturnValue,
 	struct Value **Param, int NumArgs)
 {
-    int frames_per_sec = Param[0]->Val->Integer;
-    int channels       = Param[1]->Val->Integer;
-    int record         = Param[2]->Val->Integer;
+    char *filename = Param[0]->Val->Pointer;
     int rc;
 
-    rc = sdl_audio_open(frames_per_sec, channels, record);
-    ReturnValue->Val->Integer = rc;
-}
-
-void Sdl_audio_close (struct ParseState *Parser, struct Value *ReturnValue,
-	struct Value **Param, int NumArgs)
-{
-    sdl_audio_close();
-}
-
-void Sdl_audio_print_devices_info (struct ParseState *Parser, struct Value *ReturnValue,
-	struct Value **Param, int NumArgs)
-{
-    sdl_audio_print_devices_info();
-}
-
-void Sdl_audio_play_tone (struct ParseState *Parser, struct Value *ReturnValue,
-	struct Value **Param, int NumArgs)
-{
-    int freq        = Param[0]->Val->Integer;
-    int duration_ms = Param[1]->Val->Integer;
-
-    sdl_audio_play_tone(freq, duration_ms);
-}
-
-void Sdl_audio_play_file (struct ParseState *Parser, struct Value *ReturnValue,
-	struct Value **Param, int NumArgs)
-{
-    char *filename = (char*)Param[0]->Val->Pointer;
-
-    sdl_audio_play_file(filename);
-}
-
-void Sdl_audio_wait (struct ParseState *Parser, struct Value *ReturnValue,
-	struct Value **Param, int NumArgs)
-{
-    sdl_audio_wait();
+    rc = sdl_audio_play(filename);
+    ReturnValue->Val->Integer = rc; 
 }
 
 void Sdl_audio_record (struct ParseState *Parser, struct Value *ReturnValue,
 	struct Value **Param, int NumArgs)
 {
-    void *buff        = (char*)Param[0]->Val->Pointer;
-    int   buff_frames = Param[1]->Val->Integer;
+    char *filename      = Param[0]->Val->Pointer;
+    int   duration_secs = Param[1]->Val->Integer;
+    bool  auto_stop     = Param[2]->Val->Integer;
+    int   rc;
 
-    sdl_audio_record(buff, buff_frames);
+    rc = sdl_audio_record(filename, duration_secs, auto_stop);
+    ReturnValue->Val->Integer = rc; 
 }
 
-void Sdl_audio_play (struct ParseState *Parser, struct Value *ReturnValue,
+void Sdl_audio_play_tones (struct ParseState *Parser, struct Value *ReturnValue,
 	struct Value **Param, int NumArgs)
 {
-    void *buff        = (char*)Param[0]->Val->Pointer;
-    int   buff_frames = Param[1]->Val->Integer;
-    int   total_frames = Param[2]->Val->Integer;
+    int         time_units_ms = Param[0]->Val->Integer;
+    sdl_tone_t *tones         = Param[1]->Val->Pointer;
+    int         rc;
 
-    sdl_audio_play(buff, buff_frames, total_frames);
+    rc = sdl_audio_play_tones(time_units_ms, tones);
+    ReturnValue->Val->Integer = rc; 
+}
+
+void Sdl_audio_ctl (struct ParseState *Parser, struct Value *ReturnValue,
+	struct Value **Param, int NumArgs)
+{
+    int req = Param[0]->Val->Integer;
+
+    sdl_audio_ctl(req);
+}
+
+void Sdl_audio_state (struct ParseState *Parser, struct Value *ReturnValue,
+	struct Value **Param, int NumArgs)
+{
+    sdl_audio_state_t *state = Param[0]->Val->Pointer;
+
+    sdl_audio_state(state);
+}
+
+void Sdl_audio_print_device_info (struct ParseState *Parser, struct Value *ReturnValue,
+	struct Value **Param, int NumArgs)
+{
+    sdl_audio_print_devices_info();
+}
+
+void Sdl_audio_create_test_file (struct ParseState *Parser, struct Value *ReturnValue,
+	struct Value **Param, int NumArgs)
+{
+    char *filename      = Param[0]->Val->Pointer;
+    int   duration_secs = Param[1]->Val->Integer;
+    int   freq          = Param[2]->Val->Integer;
+
+    sdl_audio_create_test_file(filename, duration_secs, freq);
 }
 
 //
@@ -511,23 +513,29 @@ struct LibraryFunction SdlFunctions[] = {
     { Sdl_query_texture,                "void sdl_query_texture(sdl_texture_t *texture, int *width, int *height);" },
     { Sdl_read_display_pixels,          "void *sdl_read_display_pixels(int x, int y, int w, int h);" },
 
-    // xxx audio
-    { Sdl_audio_open,                   "int sdl_audio_open(int frames_per_sec, int channels, bool record);" },
-    { Sdl_audio_close,                  "void sdl_audio_close(void);" },
-    { Sdl_audio_print_devices_info,     "void sdl_audio_print_devices_info(void);" },
-    { Sdl_audio_play_tone,              "void sdl_audio_play_tone(int freq, int duration_ms);" },
-    { Sdl_audio_play_file,              "void sdl_audio_play_file(char *filename);" },
-    { Sdl_audio_wait,                   "void sdl_audio_wait(void);" },
-    { Sdl_audio_record,                 "void sdl_audio_record(void *buff, int buff_frames);" },
-    { Sdl_audio_play,                   "void sdl_audio_play(void *buff, int buff_frames, int total_frames);" },
+    // audio
+    { Sdl_audio_play,                   "int sdl_audio_play(char *filename);" },
+    { Sdl_audio_record,                 "int sdl_audio_record(char *filename, int duration_secs, bool auto_stop);" },
+    { Sdl_audio_play_tones,             "int sdl_audio_play_tones(int time_units_ms, sdl_tone_t *tones);" },
+    { Sdl_audio_ctl,                    "void sdl_audio_ctl(int req);" },
+    { Sdl_audio_state,                  "void sdl_audio_state(sdl_audio_state_t * state);" },
+    { Sdl_audio_print_device_info,      "void sdl_audio_print_devices_info(void);" },
+    { Sdl_audio_create_test_file,        "void sdl_audio_create_test_file(char *filename, int duration_secs, int freq);" },
 
     { NULL, NULL } };
 
-// xxx reformat
 const char SdlDefs[] = "\
-typedef struct { int x; int y; int w; int h; } sdl_loc_t; \n\
-typedef struct { int x; int y; } sdl_point_t; \n\
 typedef struct sdl_texture sdl_texture_t; \n\
+typedef struct { \n\
+    int x; \n\
+    int y; \n\
+    int w; \n\
+    int h; \n\
+} sdl_loc_t; \n\
+typedef struct { \n\
+    int x; \n\
+    int y; \n\
+} sdl_point_t; \n\
 typedef struct { \n\
     int event_id; \n\
     union { \n\
@@ -543,6 +551,18 @@ typedef struct { \n\
     int h; \n\
     int pixels[0]; \n\
 } sdl_pixels_t; \n\
+typedef struct { \n\
+    short freq; \n\
+    short intvl; \n\
+} sdl_tone_t; \n\
+typedef struct { \n\
+    int  state; \n\
+    bool paused; \n\
+    int  processed_secs; \n\
+    int  total_secs; \n\
+    int  volume; \n\
+    char filename[100]; \n\
+} sdl_audio_state_t; \n\
 \n\
 #define PIXELS_MAGIC 0x11223344 \n\
 \n\
@@ -568,6 +588,11 @@ typedef struct { \n\
 #define EVID_SWIPE_LEFT        9991 \n\
 #define EVID_MOTION            9992 \n\
 #define EVID_QUIT              9999 \n\
+\n\
+#define AUDIO_STATE_IDLE        0 \n\
+#define AUDIO_STATE_PLAY_FILE   1 \n\
+#define AUDIO_STATE_PLAY_TONES  2 \n\
+#define AUDIO_STATE_RECORD      3 \n\
 ";
 
 // -----------------  UTILS PLATFORM ROUTINES  --------------------------

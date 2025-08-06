@@ -9,6 +9,7 @@ CC=gcc
 # -std=gnu11
 CFLAGS=-Wall -O2 -g -std=gnu11 -DUNIX_HOST -DVER=\"a97d94fa\" -DTAG=\"v3.2.2\"
 CFLAGS+=-I/usr/include/SDL2 -D_REENTRANT -I../src
+CFLAGS+=-Wno-unused-result
 LIBS=-lm -lreadline -lSDL2 -lSDL2_ttf
 
 TARGET	= picoc

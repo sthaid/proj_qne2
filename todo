@@ -1,3 +1,14 @@
+work on compass and other sensors
+- lat/long
+- flashlight
+- acceleration
+
+record
+- add append
+- add auto quiet stop
+
+-----------
+
 page3 multi line test
 
 cleanup unit_test.c

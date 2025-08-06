@@ -132,20 +132,20 @@ sdl_pixels_t *sdl_read_display_pixels(int x, int y, int w, int h);
 typedef struct {
     short freq;
     short intvl;
-} tone_t; //xxx name
+} sdl_tone_t;
 
 typedef struct {
-    int state;
+    int  state;
     bool paused;
-    int processed_secs;
-    int total_secs;
-    int volume;
+    int  processed_secs;
+    int  total_secs;
+    int  volume;
     char filename[100];
 } sdl_audio_state_t;
 
 int sdl_audio_play(char *filename);
 int sdl_audio_record(char *filename, int duration_secs, bool auto_stop);
-int sdl_audio_play_tones(int time_units_ms, tone_t *tones);
+int sdl_audio_play_tones(int time_units_ms, sdl_tone_t *tones);
 
 void sdl_audio_ctl(int req);
 void sdl_audio_state(sdl_audio_state_t * state);

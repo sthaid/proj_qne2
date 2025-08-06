@@ -553,7 +553,7 @@ typedef struct {
 typedef struct {
     int time_units_ms;
     int num_tones;
-    tone_t tones[0];
+    sdl_tone_t tones[0];
 } play_tones_cx_t;
 
 #define MIN_TONE_FREQ 100
@@ -561,7 +561,7 @@ typedef struct {
 
 static sine_wave_t *sine_waves[MAX_TONE_FREQ+1];
 
-int sdl_audio_play_tones(int time_units_ms, tone_t *tones)
+int sdl_audio_play_tones(int time_units_ms, sdl_tone_t *tones)
 {
     int num_tones, duration_ms, i, rc;
     pthread_t tid;
@@ -578,7 +578,7 @@ int sdl_audio_play_tones(int time_units_ms, tone_t *tones)
     num_tones = 0;
     duration_ms = 0;
     for (i = 0; tones[i].intvl > 0; i++) {
-        tone_t *t = &tones[i];
+        sdl_tone_t *t = &tones[i];
         duration_ms += (t->intvl * time_units_ms);
         num_tones++;
     }
@@ -591,10 +591,10 @@ int sdl_audio_play_tones(int time_units_ms, tone_t *tones)
     strcpy(state.filename, "");
 
     // create thread to play the tones
-    cx = malloc(sizeof(play_tones_cx_t) + num_tones * sizeof(tone_t));
+    cx = malloc(sizeof(play_tones_cx_t) + num_tones * sizeof(sdl_tone_t));
     cx->time_units_ms  = time_units_ms;
     cx->num_tones = num_tones;
-    memcpy(cx->tones, tones, num_tones * sizeof(tone_t));
+    memcpy(cx->tones, tones, num_tones * sizeof(sdl_tone_t));
     pthread_create(&tid, NULL, tones_thread, cx);
 
     // success
@@ -623,7 +623,7 @@ static void *tones_thread(void *cx_arg)
 
     // pre calculate the sine waves for the frequency(s) requested
     for (int i = 0; i < cx->num_tones; i++) {
-        tone_t *t = &cx->tones[i];
+        sdl_tone_t *t = &cx->tones[i];
         int n, j;
         sine_wave_t *sw;
 
@@ -652,7 +652,7 @@ static void *tones_thread(void *cx_arg)
 
     // loop over the tones
     for (int i = 0; i < cx->num_tones; i++) {
-        tone_t *t = &cx->tones[i];
+        sdl_tone_t *t = &cx->tones[i];
         int tone_intvl_ms = t->intvl * cx->time_units_ms;
         int len;
 
