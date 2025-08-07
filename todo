@@ -1,3 +1,122 @@
+Upgrade to Ubuntu 24.10:
+- Check for updates: Open a terminal and run sudo apt update && sudo apt upgrade -y 
+  to ensure your system is up to date. 
+- Modify the upgrade settings: Edit the /etc/update-manager/release-upgrades file 
+  and set Prompt=normal to allow upgrades to non-LTS releases. 
+- Start the upgrade: Run sudo do-release-upgrade to begin the upgrade process. 
+- Follow the prompts: The command will guide you through the upgrade process,
+  prompting you to confirm actions and potentially disable third-party repositories. 
+- Reboot: After the upgrade is complete, reboot your system. 
+
+==========================================
+
+continue understand android version
+
+update to 2504 and SDL3
+- ubuntu update
+- sdl3 dirs
+
+update sdk 
+
+
+
+
+=============================================
+
+https://wiki.libsdl.org/SDL2/Android
+https://wiki.libsdl.org/SDL3/Android
+
+Terms
+- platform version == android version  ???
+- from platform/android version you can obtain the API level
+
+My device:
+  Android Version   15      => API Level 35
+  Knox Version      3.11
+  Knox API Level    38     provided by Samsung as part of their Know security platform
+
+- Regarding SDL3 ...
+  - Android SDK (version 35 or later)    https://developer.android.com/sdk/index.html
+  - Android NDK r15c or later            https://developer.android.com/tools/sdk/ndk/index.html
+  - Minimum API level supported by SDL: 21 (Android 5.0)
+
+app/build.gradle
+    compileSdkVersion 34             means app is built with against API 34
+    defaultConfig {
+        minSdkVersion 19             means app can run on API 19 and above
+        targetSdkVersion 34          means app has been tested on API levels up through 34
+        versionCode 1
+        versionName "1.0"
+        externalNativeBuild {
+            ndkBuild {
+                arguments "APP_PLATFORM=android-19"
+                abiFilters 'armeabi-v7a', 'arm64-v8a', 'x86', 'x86_64'
+
+
+app/jni/Application.mk
+    APP_ABI := armeabi-v7a arm64-v8a x86 x86_64
+    # Min runtime API level
+    APP_PLATFORM=android-16         API 36
+            In essence, APP_PLATFORM acts as the minSdkVersion for your native code,
+            ensuring compatibility and proper API usage within the NDK build process.
+
+app/jni/src/Android/mk
+   SRCs, etc
+
+app/src/main/AndroidManifest.xml
+    <!-- Allow access to the vibrator -->
+    <uses-permission android:name="android.permission.INTERNET" />
+    <!-- if you want to capture audio, uncomment this. -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO" /
+
+app/src/main/res/values/strings.xml
+    app_name
+
+android_sdk/platforms
+  android-30
+  android-34
+
+android_sdk/ndk
+  21.3.6528147
+  25.1.8937393
+  26.3.11579264
+
+export ANDROID_NDK_HOME=$ANDROID_HOME/ndk/26.3.11579264
+
+
+[HOME2 | android_sdk]$ sdkmanager --list
+[=======================================] 100% Computing updates...             
+Installed packages:
+  Path                 | Version       | Description                      | Location            
+  -------              | -------       | -------                          | -------             
+  build-tools;30.0.2   | 30.0.2        | Android SDK Build-Tools 30.0.2   | build-tools/30.0.2  
+  build-tools;33.0.1   | 33.0.1        | Android SDK Build-Tools 33.0.1   | build-tools/33.0.1  
+  ndk;21.3.6528147     | 21.3.6528147  | NDK (Side by side) 21.3.6528147  | ndk/21.3.6528147    
+  ndk;25.1.8937393     | 25.1.8937393  | NDK (Side by side) 25.1.8937393  | ndk/25.1.8937393    
+  ndk;26.3.11579264    | 26.3.11579264 | NDK (Side by side) 26.3.11579264 | ndk/26.3.11579264   
+  platform-tools       | 36.0.0        | Android SDK Platform-Tools       | platform-tools      
+  platforms;android-30 | 3             | Android SDK Platform 30          | platforms/android-30
+  platforms;android-34 | 3             | Android SDK Platform 34          | platforms/android-34
+
+
+=====================================================================
+=====================================================================
+=====================================================================
+=====================================================================
+
+
+audio record volume
+https://github.com/libsdl-org/sdl/issues/13402
+
+Modify the sdl code as follows for testing, and the sound recording is correct now:
+SDL_PROC_UNUSED(void, AAudioStreamBuilder_setInputPreset,
+to:
+SDL_PROC(void, AAudioStreamBuilder_setInputPreset,
+Add before opening:
+ctx.AAudioStreamBuilder_setInputPreset(builder, AAUDIO_INPUT_PRESET_CAMCORDER);
+
+=======================
+
 work on compass and other sensors
 - lat/long
 - flashlight
@@ -40,8 +159,6 @@ https://freepd.com/
 https://en.wikipedia.org/wiki/WAV
 
 aplay -t raw -f S16 -r 22050 ./proj_sdr/devel/wav_files/super_critical.wav
-
-
 
 void *mmap(void addr[.length], size_t length, int prot, int flags,
                   int fd, off_t offset);

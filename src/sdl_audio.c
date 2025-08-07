@@ -496,6 +496,13 @@ static void *record_thread(void *cx_arg)
         }
         INFO("got bytes %d\n", bytes);
 
+#if 0  //xxx
+        short *samples = (short*)buff;
+        for (int i = 0; i < bytes/2; i++) {
+            samples[i] *= 100;
+        }
+#endif
+
         // write the data to the file
         rc = write(cx->fd, buff, bytes);
         if (rc != bytes) {
