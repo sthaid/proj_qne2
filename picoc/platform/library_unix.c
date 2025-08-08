@@ -593,6 +593,10 @@ typedef struct { \n\
 #define AUDIO_STATE_PLAY_FILE   1 \n\
 #define AUDIO_STATE_PLAY_TONES  2 \n\
 #define AUDIO_STATE_RECORD      3 \n\
+\n\
+#define AUDIO_REQ_STOP     1 \n\
+#define AUDIO_REQ_PAUSE    2 \n\
+#define AUDIO_REQ_UNPAUSE  3 \n\
 ";
 
 // -----------------  UTILS PLATFORM ROUTINES  --------------------------

@@ -8,6 +8,8 @@
 // xxx read pixels routien
 // xxx use of rint vs nearbyint
 
+// xxx try SDL_SetRenderLogicalPresentation
+
 //
 // logging
 //
@@ -94,7 +96,7 @@ int sdl_init(void)
     }
 
     // initialize Simple DirectMedia Layer  (SDL)
-    if (SDL_Init(SDL_INIT_VIDEO|SDL_INIT_AUDIO) < 0) {  // xxx audio?
+    if (!SDL_Init(SDL_INIT_VIDEO|SDL_INIT_AUDIO)) {
         ERROR("SDL_Init failed\n");
         return -1;
     }
@@ -107,7 +109,7 @@ int sdl_init(void)
     }
 #else
     // xxx test with larger win width
-    if (SDL_CreateWindowAndRenderer(450, 975, 0, &window, &renderer) != 0) {
+    if (!SDL_CreateWindowAndRenderer("xxxxx", 450, 975, 0, &window, &renderer)) {
         ERROR("SDL_CreateWindowAndRenderer failed\n");
         return -1;
     }
@@ -125,7 +127,7 @@ int sdl_init(void)
     INFO("logical sdl_win_width x height = %d %d  scale = %f\n", sdl_win_width, sdl_win_height, scale);
 
     // initialize True Type Font
-    if (TTF_Init() < 0) {
+    if (!TTF_Init()) {
         ERROR("TTF_Init failed\n");
         return -1;
     }
@@ -150,8 +152,11 @@ int sdl_init(void)
         return -1;
     }
 
+#if 0
     // SDL Text Input is not being used 
+    // xxx try SDL_StartTextInput
     SDL_StopTextInput();
+#endif
 
     // this is needed so that the first actual display present works
     sdl_display_init(COLOR_BLACK);
@@ -234,18 +239,18 @@ void sdl_register_event(sdl_loc_t *loc, int event_id)
 void sdl_get_event(long timeout_us, sdl_event_t *event)
 {
     SDL_Event ev;
-    int ret;
     long waited = 0;
+    bool got_event;
 
     memset(event, 0, sizeof(*event));
     event->event_id = -1;
 
 try_again:
     // get event
-    ret = SDL_PollEvent(&ev);
+    got_event = SDL_PollEvent(&ev);
 
     // no event available, either return error or try again to get event
-    if (ret == 0) {
+    if (!got_event) {
         if (timeout_us == 0) {
             // dont wait
             return;
@@ -280,8 +285,8 @@ static void process_sdl_event(SDL_Event *ev, sdl_event_t *event)
     int i;
 
     switch (ev->type) {
-    case SDL_MOUSEBUTTONDOWN:
-    case SDL_MOUSEBUTTONUP: {
+    case SDL_EVENT_MOUSE_BUTTON_DOWN:
+    case SDL_EVENT_MOUSE_BUTTON_UP: {
         static int last_pressed_x = -1;
         static int last_pressed_y = -1;
         int x, y;
@@ -290,18 +295,17 @@ static void process_sdl_event(SDL_Event *ev, sdl_event_t *event)
                (ev->button.button == SDL_BUTTON_LEFT   ? "LEFT" :
                 ev->button.button == SDL_BUTTON_MIDDLE ? "MIDDLE" :
                 ev->button.button == SDL_BUTTON_RIGHT  ? "RIGHT" : "???"),
-               (ev->button.state == SDL_PRESSED  ? "PRESSED" :
-                ev->button.state == SDL_RELEASED ? "RELEASED" : "???"),
+               (ev->button.down ? "DOWN" : "UP"),
                ev->button.x,
                ev->button.y);
 #endif
         x = ev->button.x / scale;
         y = ev->button.y / scale;
 
-        if (ev->button.state == SDL_PRESSED) {
+        if (ev->button.down) {
             last_pressed_x = x;
             last_pressed_y = y;
-        } else if (ev->button.state == SDL_RELEASED) {
+        } else {
             int delta_x = x - last_pressed_x;
             int delta_y = y - last_pressed_y;
 
@@ -329,11 +333,9 @@ static void process_sdl_event(SDL_Event *ev, sdl_event_t *event)
             }
         }
         break; }
-    case SDL_MOUSEMOTION: {
-        if (ev->motion.state == SDL_PRESSED && evid_motion_registered) {
-            INFO("MOUSEMOTION state=%s x=%d y=%d xrel=%d yrel=%d\n",
-                (ev->motion.state == SDL_PRESSED  ? "PRESSED" :
-                 ev->motion.state == SDL_RELEASED ? "RELEASED" : "???"),
+    case SDL_EVENT_MOUSE_MOTION: {
+        if ((ev->motion.state & SDL_BUTTON_LMASK) && evid_motion_registered) {
+            INFO("MOUSEMOTION x=%f y=%f xrel=%f yrel=%f\n",
                 ev->motion.x,
                 ev->motion.y,
                 ev->motion.xrel,
@@ -346,12 +348,12 @@ static void process_sdl_event(SDL_Event *ev, sdl_event_t *event)
             event->u.motion.yrel = ev->motion.yrel;
         }
         break; }
-    case SDL_FINGERDOWN:
-    case SDL_FINGERUP:
-    case SDL_FINGERMOTION: {
+    case SDL_EVENT_FINGER_DOWN:
+    case SDL_EVENT_FINGER_UP:
+    case SDL_EVENT_FINGER_MOTION: {
         // not used
         break; }
-    case SDL_QUIT: {
+    case SDL_EVENT_QUIT: {
         event->event_id = EVID_QUIT;
         break; }
 
@@ -496,7 +498,7 @@ static sdl_loc_t *render_text(bool xy_is_ctr, int x, int y, char * str)
 {
     SDL_Surface *surface;
     SDL_Texture *texture;
-    SDL_Rect     pos;
+    SDL_FRect     pos;
     static sdl_loc_t loc;
 
     //printf("xy_is_ctr = %d x=%d y=%d str='%s'\n", xy_is_ctr, x, y, str);
@@ -515,7 +517,7 @@ static sdl_loc_t *render_text(bool xy_is_ctr, int x, int y, char * str)
     }
 
     // render the string to a surface
-    surface = TTF_RenderText_Shaded(font[text.ptsize], str, text.fg_color, text.bg_color);
+    surface = TTF_RenderText_Shaded(font[text.ptsize], str, 0, text.fg_color, text.bg_color);
     if (surface == NULL) {
         ERROR("TTF_RenderText_Shaded returned NULL\n");
         memset(&loc, 0, sizeof(loc));
@@ -523,24 +525,25 @@ static sdl_loc_t *render_text(bool xy_is_ctr, int x, int y, char * str)
     }
 
     // determine the real display position to render the text
+    // xxx dont need rint now
     if (!xy_is_ctr) {
-        pos.x = rint(x*scale);
-        pos.y = rint(y*scale);
+        pos.x = x*scale;
+        pos.y = y*scale;
         pos.w = surface->w;
         pos.h = surface->h;
     } else {
-        pos.x = rint(x*scale - surface->w/2.);
-        pos.y = rint(y*scale - surface->h/2.);
+        pos.x = x*scale - surface->w/2.;
+        pos.y = y*scale - surface->h/2.;
         pos.w = surface->w;
         pos.h = surface->h;
     }
 
     // create texture from the surface, and render the texture
     texture = SDL_CreateTextureFromSurface(renderer, surface);
-    SDL_RenderCopy(renderer, texture, NULL, &pos);
+    SDL_RenderTexture(renderer, texture, NULL, &pos);
 
     // clean up
-    SDL_FreeSurface(surface);
+    SDL_DestroySurface(surface);
     SDL_DestroyTexture(texture);
 
     // return the display location where the text was rendered;
@@ -658,18 +661,18 @@ sdl_loc_t *sdl_render_printf_xyctr(int x, int y, char * fmt, ...)
 
 void sdl_render_rect(int x, int y, int w, int h, int line_width, int color)
 {
-    SDL_Rect rect;
+    SDL_FRect rect;
     int i;
 
-    rect.x = rint(x * scale);
-    rect.y = rint(y * scale);
-    rect.w = rint(w * scale);
-    rect.h = rint(h * scale);
+    rect.x = x * scale;
+    rect.y = y * scale;
+    rect.w = w * scale;
+    rect.h = h * scale;
 
     set_render_draw_color(color);
 
     for (i = 0; i < line_width; i++) {
-        SDL_RenderDrawRect(renderer, &rect);
+        SDL_RenderRect(renderer, &rect);
         if (rect.w < 2 || rect.h < 2) {
             break;
         }
@@ -682,12 +685,12 @@ void sdl_render_rect(int x, int y, int w, int h, int line_width, int color)
 
 void sdl_render_fill_rect(int x, int y, int w, int h, int color)
 {
-    SDL_Rect rect;
+    SDL_FRect rect;
 
-    rect.x = rint(x * scale);
-    rect.y = rint(y * scale);
-    rect.w = rint(w * scale);
-    rect.h = rint(h * scale);
+    rect.x = x * scale;
+    rect.y = y * scale;
+    rect.w = w * scale;
+    rect.h = h * scale;
 
     set_render_draw_color(color);
     SDL_RenderFillRect(renderer, &rect);
@@ -701,20 +704,20 @@ void sdl_render_line(int x1, int y1, int x2, int y2, int color)
 
 void sdl_render_lines(sdl_point_t *points, int count, int color)
 {
-    SDL_Point scaled_points[100];  // xxx malloc this
+    SDL_FPoint scaled_points[100];  // xxx malloc this
 
     if (count <= 1) {
         return;
     }
 
     for (int i = 0; i < count; i++) {
-        scaled_points[i].x = rint(points[i].x * scale);
-        scaled_points[i].y = rint(points[i].y * scale);
+        scaled_points[i].x = points[i].x * scale;
+        scaled_points[i].y = points[i].y * scale;
     }
 
     set_render_draw_color(color);
 
-    SDL_RenderDrawLines(renderer, scaled_points, count);
+    SDL_RenderLines(renderer, scaled_points, count);
 }
 
 // xxx change args to x_ctr_arg ..
@@ -722,7 +725,7 @@ void sdl_render_circle(int x_ctr_arg, int y_ctr_arg, int radius, int line_width,
 {
     int count = 0, i, angle, x, y;
     int x_center, y_center;
-    SDL_Point points[370];
+    SDL_FPoint points[370];
 
     static int sin_table[370];
     static int cos_table[370];
@@ -755,7 +758,7 @@ void sdl_render_circle(int x_ctr_arg, int y_ctr_arg, int radius, int line_width,
             points[count].y = y;
             count++;
         }
-        SDL_RenderDrawLines(renderer, points, count);
+        SDL_RenderLines(renderer, points, count);
         count = 0;
 
         // reduce radius by 1
@@ -907,7 +910,7 @@ void sdl_render_points(sdl_point_t *points, int count, int color, int point_size
                 };
 
     int i, j, x, y;
-    SDL_Point sdl_points[MAX_SDL_POINTS];
+    SDL_FPoint sdl_points[MAX_SDL_POINTS];
     int sdl_points_count = 0;
     struct point_extend_s * pe = &point_extend[point_size];
     struct point_extend_offset_s * peo = pe->offset;
@@ -933,14 +936,14 @@ void sdl_render_points(sdl_point_t *points, int count, int color, int point_size
             sdl_points_count++;
 
             if (sdl_points_count == MAX_SDL_POINTS) {
-                SDL_RenderDrawPoints(renderer, sdl_points, sdl_points_count);
+                SDL_RenderPoints(renderer, sdl_points, sdl_points_count);
                 sdl_points_count = 0;
             }
         }
     }
 
     if (sdl_points_count > 0) {
-        SDL_RenderDrawPoints(renderer, sdl_points, sdl_points_count);
+        SDL_RenderPoints(renderer, sdl_points, sdl_points_count);
         sdl_points_count = 0;
     }
 }
@@ -1039,7 +1042,7 @@ sdl_texture_t *sdl_create_text_texture(char * str)
     // render the text to a surface,
     // create a texture from the surface
     // free the surface
-    surface = TTF_RenderText_Shaded(font[text.ptsize], str, text.fg_color, text.bg_color);
+    surface = TTF_RenderText_Shaded(font[text.ptsize], str, 0, text.fg_color, text.bg_color);
     if (surface == NULL) {
         ERROR("failed to allocate surface\n");
         return NULL;
@@ -1047,10 +1050,10 @@ sdl_texture_t *sdl_create_text_texture(char * str)
     texture = SDL_CreateTextureFromSurface(renderer, surface);
     if (texture == NULL) {
         ERROR("failed to allocate texture\n");
-        SDL_FreeSurface(surface);
+        SDL_DestroySurface(surface);
         return NULL;
     }
-    SDL_FreeSurface(surface);
+    SDL_DestroySurface(surface);
 
     // return the texture which contains the text
     return (sdl_texture_t*)texture;
@@ -1058,26 +1061,27 @@ sdl_texture_t *sdl_create_text_texture(char * str)
 
 void sdl_render_texture(int x, int y, int w, int h, double angle, sdl_texture_t *texture)
 {
-    SDL_Rect dest;
+    SDL_FRect dest;
+    float w_float, h_float;
 
     if (texture == NULL) {
         return;
     }
 
     if (w == -1 || h == -1) {  // xxx check these both yield the same result
-        SDL_QueryTexture((SDL_Texture *)texture, NULL, NULL, &w, &h);
-        dest.x = rint(x * scale);
-        dest.y = rint(y * scale);
-        dest.w = w;
-        dest.h = h;
+        SDL_GetTextureSize((SDL_Texture *)texture, &w_float, &h_float);
+        dest.x = x * scale;
+        dest.y = y * scale;
+        dest.w = w_float;
+        dest.h = h_float;
     } else {
-        dest.x = rint(x * scale);
-        dest.y = rint(y * scale);
-        dest.w = rint(w * scale);
-        dest.h = rint(h * scale);
+        dest.x = x * scale;
+        dest.y = y * scale;
+        dest.w = w * scale;
+        dest.h = h * scale;
     }
 
-    SDL_RenderCopyEx(renderer, (SDL_Texture*)texture, NULL, &dest, angle, NULL, false);
+    SDL_RenderTextureRotated(renderer, (SDL_Texture*)texture, NULL, &dest, angle, NULL, false);
 }
 
 void sdl_destroy_texture(sdl_texture_t *texture)
@@ -1091,7 +1095,7 @@ void sdl_destroy_texture(sdl_texture_t *texture)
 
 void sdl_query_texture(sdl_texture_t *texture, int * width, int * height)
 {
-    int w, h;
+    float w_float, h_float;
 
     if (texture == NULL) {
         *width = 0;
@@ -1099,50 +1103,57 @@ void sdl_query_texture(sdl_texture_t *texture, int * width, int * height)
         return;
     }
 
-    SDL_QueryTexture((SDL_Texture *)texture, NULL, NULL, &w, &h);
-    *width = rint(w / scale);
-    *height = rint(h / scale);
+    SDL_GetTextureSize((SDL_Texture *)texture, &w_float, &h_float);
+    *width = rint(w_float / scale);
+    *height = rint(h_float / scale);
 }
 
 // caller must free pixels
 sdl_pixels_t *sdl_read_display_pixels(int x, int y, int w, int h)
 {
     sdl_pixels_t *pixels;
-    SDL_Rect loc;
-    int ret, malloc_len;
+    SDL_Rect      loc;
+    int           malloc_len;
+    SDL_Surface  *surface;
 
     loc.x = x * scale; // xxx rint
     loc.y = y * scale;
     loc.w = w * scale;
     loc.h = h * scale;
 
+    // read the pixels  xxx check all rets
+    surface = SDL_RenderReadPixels(renderer, &loc);
+    if (surface == NULL) {
+        ERROR("SDL_RenderReadPixels, %s\n", SDL_GetError());
+        return NULL;
+    }
+
     // allocate memory for the pixels
     malloc_len = sizeof(sdl_pixels_t) + loc.w * loc.h * BYTES_PER_PIXEL;
     pixels = malloc(malloc_len);
     if (pixels == NULL) {
         ERROR("allocate pixels failed\n");
+        SDL_DestroySurface(surface);
         return NULL;
     }
 
-    // init pixels header fields
+    // init return pixels struct
     pixels->magic      = PIXELS_MAGIC;
     pixels->struct_len = malloc_len;
     pixels->w          = loc.w;
     pixels->h          = loc.h;
-
-    // read the pixels
-    ret = SDL_RenderReadPixels(renderer, 
-                               &loc,
-                               SDL_PIXELFORMAT_ABGR8888, 
-                               pixels->pixels,
-                               loc.w * BYTES_PER_PIXEL);
-    if (ret < 0) {
-        ERROR("SDL_RenderReadPixels, %s\n", SDL_GetError());
-        free(pixels);
-        return NULL;
+    void *pxls = pixels->pixels;
+    for (int row = 0; row < loc.h; row++) {
+        memcpy(pxls, 
+               surface->pixels + (row * surface->pitch), 
+               loc.w * BYTES_PER_PIXEL);
+        pxls += (loc.w * BYTES_PER_PIXEL);
     }
 
-    // success
+    // destroy surface
+    SDL_DestroySurface(surface);
+
+    // success, return allocated sdl_pixels_t   
     return pixels;
 }
 
