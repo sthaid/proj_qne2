@@ -57,9 +57,9 @@ static void page_5_exit(void);
 
 static void page_6_draw(void);
 
-//static void page_7_init(void);
-//static void page_7_draw(void);
-//static void page_7_process_event(sdl_event_t *event);
+static void page_7_init(void);
+static void page_7_draw(void);
+static void page_7_process_event(sdl_event_t *event);
 
 // -----------------  MAIN  ------------------------------------------
 
@@ -133,7 +133,7 @@ static void common_page_hndlr()
     switch (pagenum) {
     case 3: page_3_init(); break;
     case 5: page_5_init(); break;
-    //case 7: page_7_init(); break;
+    case 7: page_7_init(); break;
     }
 
     while (true) {
@@ -166,7 +166,7 @@ static void common_page_hndlr()
         case 4: page_4_draw(); break;
         case 5: page_5_draw(); break;
         case 6: page_6_draw(); break;
-        //case 7: page_7_draw(); break;
+        case 7: page_7_draw(); break;
         default:
             printf("ERROR invalid pagenum %d\n", pagenum);
             end_program = true;
@@ -212,7 +212,7 @@ static void common_page_hndlr()
         // call the page specific event hndlr, if provided
         switch (pagenum) {
         case 3: page_3_process_event(&event); break;
-        //case 7: page_7_process_event(&event); break;
+        case 7: page_7_process_event(&event); break;
         }
     }
 
@@ -528,7 +528,6 @@ static void color_test(int idx, char *color_name, int color)
 
 // -----------------  PAGE 7: AUDIO  --------------------------
 
-#if 0
 // xxx stop audio when exit page
 
 #define EVID_AUDIO_PLAY_TONE        10
@@ -753,4 +752,3 @@ static void generate_morse_code_tones(sdl_tone_t **t, char *letters)
     }
     add_terminator(t);
 }
-#endif

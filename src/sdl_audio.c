@@ -15,6 +15,9 @@
 // - add FRAME_SIZE macro
 // - why is record not reliable
 // - record append option
+// - the state.processed is a little off
+// - which mic was it using
+// - check rets
 
 //
 // logging
@@ -35,21 +38,12 @@
 // defines
 //
 
-#define PLAYBACK false
-#define RECORD   true
-
-#define PAUSE_OFF 0
-#define PAUSE_ON  1
-
 #define FRAMES_PER_SEC 48000
 
-#ifdef ANDROID
-    #define DEVICE NULL  // request default device
-#else
-    #define DEVICE (record ? "USB PnP Audio Device Mono" : NULL)
-#endif
-
 #define BYTES_TO_SECS(b) ((b) / 2 / FRAMES_PER_SEC)
+
+#define RECORD true
+#define PLAYBACK false
 
 //
 // typedefs
@@ -59,9 +53,8 @@
 // variables
 //
 
-static SDL_AudioDeviceID device_id;
-static bool              recording;
-static SDL_AudioSpec     obtained;
+static SDL_AudioStream  *playback_stream;
+static SDL_AudioStream  *record_stream;
 static int               ctl_req;
 static sdl_audio_state_t state;
 
@@ -70,7 +63,6 @@ static sdl_audio_state_t state;
 //
 
 static int audio_open(bool record);
-static void print_sdl_audio_spec(char *hdr, SDL_AudioSpec *spec);
 static void calc_volume(void *buff, int bytes);
 
 static void *play_file_thread(void *cx);
@@ -78,89 +70,52 @@ static void play_buff(char *buff, int buff_len, bool *stop_req, int *queued_byte
 static void *record_thread(void *cx);
 static void *tones_thread(void *cx);
 
-
 // -----------------  OPEN / CLOSE  -----------------------
 
 static int audio_open(bool record)
 {
-    SDL_AudioSpec desired;
+    const SDL_AudioSpec spec = { SDL_AUDIO_S16, 1, FRAMES_PER_SEC };
 
-    INFO("called to %s\n", record ? "RECORD" : "PLAYBACK");
-
-    // if audio is active then stop it
+    // if either playback or record is active then
+    // it will be stopped
     sdl_audio_ctl(AUDIO_REQ_STOP);
 
-    // if audio is already open, and in the correct mode, then return
-    if (device_id > 0 && recording == record) {
-        INFO("already open\n");
+    // open playback audio stream
+    if (!record) {
+        if (playback_stream != NULL) {
+            return 0;
+        }
+        playback_stream = SDL_OpenAudioDeviceStream(SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK, &spec, NULL, NULL);
+        if (playback_stream == NULL) {
+            ERROR("SDL_OpenAudioDeviceStream failed for playback\n");
+            return -1;
+        }
+        INFO("opened playback stream\n");
         return 0;
     }
 
-    // need to reopen
-    SDL_CloseAudioDevice(device_id);
-    device_id = 0;
-
-    // init the obtained format to zero
-    memset(&obtained, 0, sizeof(obtained));
-
-    // init desired format
-    memset(&desired, 0, sizeof(desired));
-    desired.freq     = FRAMES_PER_SEC;
-    desired.format   = AUDIO_S16SYS;
-    desired.channels = 1;
-    desired.silence  = 0;     // calculated in the obtained return
-    desired.samples  = 4096;  // frames
-    desired.size     = 0;     // calculated in the obtained return
-    desired.callback = NULL;
-    desired.userdata = NULL;
-
-    // open the audio device
-    device_id = SDL_OpenAudioDevice(
-                    DEVICE,
-                    record,
-                    &desired,
-                    &obtained,
-                    //0);    // no changes allowd
-                    SDL_AUDIO_ALLOW_ANY_CHANGE);
-    if (device_id == 0) {
-        ERROR("SDL_OpenAudioDevice failed, %s\n", SDL_GetError());
-        return -1;
+    // open record audio stream
+    if (record) {
+        if (record_stream != NULL) {
+            return 0;
+        }
+        record_stream = SDL_OpenAudioDeviceStream(SDL_AUDIO_DEVICE_DEFAULT_RECORDING, &spec, NULL, NULL);
+        if (record_stream == NULL) {
+            ERROR("SDL_OpenAudioDeviceStream failed for record\n");
+            return -1;
+        }
+        INFO("opened recording stream\n");
+        return 0;
     }
-    recording = record;
-    INFO("device_id = %d recording = %d\n", device_id, recording);
 
-    // print the obtained output format
-    print_sdl_audio_spec("obtained", &obtained);
-
-    // return success
     return 0;
-}
-
-static void print_sdl_audio_spec(char *hdr, SDL_AudioSpec *spec)
-{
-    #define BIT15 0x8000
-    #define BIT12 0x1000
-    #define BIT8  0x0100
-
-    INFO("%s\n", hdr);
-    INFO("  freq     = %d\n", spec->freq);
-    INFO("  format   = 0x%x\n", spec->format);
-    INFO("             %s\n", ((spec->format & BIT15) ? "signed" : "unsigned"));
-    INFO("             %s\n", ((spec->format & BIT12) ? "big_endian" : "little_endian"));
-    INFO("             %s\n", ((spec->format & BIT8) ? "float" : "integer"));
-    INFO("             %d bits\n", spec->format & 0xff);
-    INFO("  channels = %d\n", spec->channels);
-    INFO("  silence  = %d\n", spec->silence);
-    INFO("  samples  = %d\n", spec->samples);
-    INFO("  size     = %d\n", spec->size);
-    INFO("  callback = %p\n", spec->callback);
-    INFO("  userdata = %p\n", spec->userdata);
 }
 
 // -----------------  DEBUG & SUPPORT ROUTINES  -----------
 
 void sdl_audio_print_devices_info(void)
 {
+#if 0 //xxx todo
     int num, i;
 
     // print list of playback devices
@@ -176,6 +131,7 @@ void sdl_audio_print_devices_info(void)
     for (i = 0; i < num; i++) {
         INFO("  %d: %s\n", i, SDL_GetAudioDeviceName(i, true));
     }
+#endif
 }
 
 void sdl_audio_create_test_file(char *filename, int duration_secs, int freq)
@@ -329,8 +285,8 @@ static void *play_file_thread(void *cx_arg)
 
     INFO("starting\n");
 
-    // unpause
-    SDL_PauseAudioDevice(device_id, PAUSE_OFF);
+    // resume audio playback
+    SDL_ResumeAudioDevice(SDL_GetAudioStreamDevice(playback_stream));
     state.paused = false;
 
     // play the buffer
@@ -340,15 +296,15 @@ static void *play_file_thread(void *cx_arg)
     }
 
     // wait for all queued audio to be played
-    while (SDL_GetQueuedAudioSize(device_id) > 0) {
+    while (SDL_GetAudioStreamQueued(playback_stream) > 0) {
         usleep(TEN_MS);
     }
 
 done:
     // cleanup and return
     INFO("completed\n");
-    SDL_PauseAudioDevice(device_id, PAUSE_ON);
-    SDL_ClearQueuedAudio(device_id);
+    SDL_PauseAudioDevice(SDL_GetAudioStreamDevice(playback_stream));
+    SDL_ClearAudioStream(playback_stream);
     munmap(cx->buff, cx->buff_len);
     free(cx);
     memset(&state, 0, sizeof(state));
@@ -358,7 +314,7 @@ done:
 static void play_buff(char *buff, int buff_len, bool *stop_req, int *queued_bytes)
 {
     char  *buff_ptr = buff;
-    int    xfer_len, rc, remaining;
+    int    xfer_len, remaining;
     bool   do_once;
 
     *stop_req = false;
@@ -370,12 +326,7 @@ static void play_buff(char *buff, int buff_len, bool *stop_req, int *queued_byte
             break;
         }
         xfer_len = (remaining > 8192 ? 8192 : remaining);
-        rc = SDL_QueueAudio(device_id, buff_ptr, xfer_len);
-        if (rc < 0) {
-            ERROR("SDL_QueueAudio failed, %s\n", SDL_GetError());
-            *stop_req = true;
-            return;
-        }
+        SDL_PutAudioStreamData(playback_stream, buff_ptr, xfer_len);
 
         // calculate volume for the samples just queued
         calc_volume(buff_ptr, xfer_len);
@@ -385,18 +336,18 @@ static void play_buff(char *buff, int buff_len, bool *stop_req, int *queued_byte
         // - publish amount played
         // - short sleep
         do_once = true;
-        while ((SDL_GetQueuedAudioSize(device_id) > FRAMES_PER_SEC / 5 * sizeof(short)) || (do_once)) {
+        while ((SDL_GetAudioStreamQueued(playback_stream) > FRAMES_PER_SEC / 5 * sizeof(short)) || (do_once)) {
             // process control requests
             if (ctl_req == AUDIO_REQ_STOP) {
                 *stop_req = true;
                 ctl_req = 0;
                 return;
             } else if (ctl_req == AUDIO_REQ_PAUSE) {
-                SDL_PauseAudioDevice(device_id, PAUSE_ON);
+                SDL_PauseAudioDevice(SDL_GetAudioStreamDevice(playback_stream));
                 state.paused = true;
                 ctl_req = 0;
             } else if (ctl_req == AUDIO_REQ_UNPAUSE) {
-                SDL_PauseAudioDevice(device_id, PAUSE_OFF);
+                SDL_ResumeAudioDevice(SDL_GetAudioStreamDevice(playback_stream));
                 state.paused = false;
                 ctl_req = 0;
             }
@@ -483,25 +434,22 @@ static void *record_thread(void *cx_arg)
 
     INFO("starting\n");
 
-    // unpause
-    SDL_PauseAudioDevice(device_id, PAUSE_OFF);
+    // start recording
+    SDL_ResumeAudioDevice(SDL_GetAudioStreamDevice(record_stream));
     state.paused = false;
 
     while (true) {
         // get audio data, if non available then short sleep and try again
-        bytes = SDL_DequeueAudio(device_id, buff, sizeof(buff));
+        bytes = SDL_GetAudioStreamData(record_stream, buff, sizeof(buff));
+        if (bytes == -1) {
+            ERROR("SDL_GetAudioStreamData failed, %s\n", SDL_GetError());
+            break;
+        }
         if (bytes == 0) {
             usleep(TEN_MS);
             continue;
         }
         INFO("got bytes %d\n", bytes);
-
-#if 0  //xxx
-        short *samples = (short*)buff;
-        for (int i = 0; i < bytes/2; i++) {
-            samples[i] *= 100;
-        }
-#endif
 
         // write the data to the file
         rc = write(cx->fd, buff, bytes);
@@ -527,11 +475,11 @@ static void *record_thread(void *cx_arg)
             ctl_req = 0;
             break;
         } else if (ctl_req == AUDIO_REQ_PAUSE) {
-            SDL_PauseAudioDevice(device_id, PAUSE_ON);
+            SDL_PauseAudioDevice(SDL_GetAudioStreamDevice(record_stream));
             state.paused = true;
             ctl_req = 0;
         } else if (ctl_req == AUDIO_REQ_UNPAUSE) {
-            SDL_PauseAudioDevice(device_id, PAUSE_OFF);
+            SDL_ResumeAudioDevice(SDL_GetAudioStreamDevice(record_stream));
             state.paused = false;
             ctl_req = 0;
         }
@@ -542,8 +490,8 @@ static void *record_thread(void *cx_arg)
 
     // cleanup and return
     INFO("completed\n");
-    SDL_PauseAudioDevice(device_id, PAUSE_ON);
-    SDL_ClearQueuedAudio(device_id);
+    SDL_PauseAudioDevice(SDL_GetAudioStreamDevice(record_stream));
+    SDL_ClearAudioStream(record_stream);
     close(cx->fd);
     free(cx);
     memset(&state, 0, sizeof(state));
@@ -653,8 +601,8 @@ static void *tones_thread(void *cx_arg)
         }
     }
 
-    // unpause
-    SDL_PauseAudioDevice(device_id, PAUSE_OFF);
+    // start playing tones
+    SDL_ResumeAudioDevice(SDL_GetAudioStreamDevice(playback_stream));
     state.paused = false;
 
     // loop over the tones
@@ -698,15 +646,15 @@ static void *tones_thread(void *cx_arg)
     }
 
     // wait for all queued audio to be played
-    while (SDL_GetQueuedAudioSize(device_id) > 0) {
+    while (SDL_GetAudioStreamQueued(playback_stream) > 0) {
         usleep(TEN_MS);
     }
 
 done:
     // cleanup and return
     INFO("completed\n");
-    SDL_PauseAudioDevice(device_id, PAUSE_ON);
-    SDL_ClearQueuedAudio(device_id);
+    SDL_PauseAudioDevice(SDL_GetAudioStreamDevice(playback_stream));
+    SDL_ClearAudioStream(playback_stream);
     free(cx);
     free(buff);
     memset(&state, 0, sizeof(state));

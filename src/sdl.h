@@ -119,7 +119,6 @@ void sdl_query_texture(sdl_texture_t *texture, int *w, int *h);
 sdl_pixels_t *sdl_read_display_pixels(int x, int y, int w, int h);
 // xxx maybe void sdl_update_texture(sdl_texture_t *texture, int *pixels);  //xxx add region
 
-#if 0
 // --------------------
 // audio
 // --------------------
@@ -157,4 +156,3 @@ void sdl_audio_state(sdl_audio_state_t * state);
 void sdl_audio_print_devices_info(void);
 void sdl_audio_create_test_file(char *filename, int duration_secs, int freq);
 
-#endif
