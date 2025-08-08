@@ -8,12 +8,9 @@
 #include <logging.h>
 
 // xxx todo
-// - what is best place to unpause    <=====
 // - add timeouts to the threads, and sleep loops <=======
-// - test pause and unpause of al modes
+// - test pause and unpause of all modes
 // - record auto stop
-// - add FRAME_SIZE macro
-// - why is record not reliable
 // - record append option
 // - the state.processed is a little off
 // - which mic was it using
@@ -115,23 +112,23 @@ static int audio_open(bool record)
 
 void sdl_audio_print_devices_info(void)
 {
-#if 0 //xxx todo
-    int num, i;
+    SDL_AudioDeviceID *devid;
+    int i, count;
+    const char *name;
 
-    // print list of playback devices
-    num = SDL_GetNumAudioDevices(PLAYBACK);
-    INFO("playback devices: num=%d\n", num);
-    for (i = 0; i < num; i++) {
-        INFO("  %d: %s\n", i, SDL_GetAudioDeviceName(i, false));
+    devid = SDL_GetAudioPlaybackDevices(&count);
+    INFO("num playback devices = %d\n", count);
+    for (i = 0; i < count; i++) {
+        name = SDL_GetAudioDeviceName(devid[i]);
+        INFO("  playback dev %d = %s\n", devid[i], name);
     }
 
-    // print list of recording devices
-    num = SDL_GetNumAudioDevices(RECORD);
-    INFO("recording devices: num=%d\n", num);
-    for (i = 0; i < num; i++) {
-        INFO("  %d: %s\n", i, SDL_GetAudioDeviceName(i, true));
+    devid = SDL_GetAudioRecordingDevices(&count);
+    INFO("num recording devices = %d\n", count);
+    for (i = 0; i < count; i++) {
+        name = SDL_GetAudioDeviceName(devid[i]);
+        INFO("  recording dev %d = %s\n", devid[i], name);
     }
-#endif
 }
 
 void sdl_audio_create_test_file(char *filename, int duration_secs, int freq)
@@ -166,11 +163,6 @@ static void calc_volume(void *buff, int bytes)
     int    n = bytes/2;
     int    sum = 0;
     int    average;
-
-    // discard if number of samples not 4096
-    if (n != 4096) {
-        return;
-    }
 
     // calculate average of the absolute value of the samples;
     // note: duration = 4096 / 48000 = 85 ms
@@ -449,7 +441,6 @@ static void *record_thread(void *cx_arg)
             usleep(TEN_MS);
             continue;
         }
-        INFO("got bytes %d\n", bytes);
 
         // write the data to the file
         rc = write(cx->fd, buff, bytes);
@@ -570,7 +561,6 @@ static void *tones_thread(void *cx_arg)
     // allocate buff to handle a tone or gap of up to 30 secs
     buff_len = 30 * FRAMES_PER_SEC * sizeof(short);
     buff = malloc(30 * FRAMES_PER_SEC * sizeof(short));
-    INFO("XXXX allocated buff %p %d\n", buff, buff_len);
     if (buff == NULL) {
         ERROR("malloc %d failed\n", buff_len);
         goto done;

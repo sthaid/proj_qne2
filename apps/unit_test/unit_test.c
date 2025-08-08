@@ -556,6 +556,7 @@ static void page_7_draw(void)
 {
     sdl_loc_t *loc;
     sdl_audio_state_t state;
+    int y;
 
     //
     // get audio state
@@ -576,29 +577,37 @@ static void page_7_draw(void)
     // play section
     //
 
-    sdl_render_text_xyctr(NK2X(1,0), 600, "--- PLAY ---");
+    y = 400;
 
-    loc = sdl_render_text(0, 700, "RECORDING");
+    sdl_render_text_xyctr(NK2X(1,0), y, "--- PLAY ---");
+    y += 150;
+
+    loc = sdl_render_text(0, y, "RECORDING");
     sdl_register_event(loc, EVID_AUDIO_PLAY_RECORDING);
+    y += 150;
 
-    loc = sdl_render_text(0, 850, "TONE");
+    loc = sdl_render_text(0, y, "TONE");
     sdl_register_event(loc, EVID_AUDIO_PLAY_TONE);
+    y += 150;
 
-    loc = sdl_render_text(0, 1000, "FREQ_SWEEP");
+    loc = sdl_render_text(0, y, "FREQ_SWEEP");
     sdl_register_event(loc, EVID_AUDIO_PLAY_FREQ_SWEEP);
+    y += 150;
 
-    loc = sdl_render_text(0, 1150, "SQUARE_WAVE");
+    loc = sdl_render_text(0, y, "SQUARE_WAVE");
     sdl_register_event(loc, EVID_AUDIO_PLAY_SQUARE_WAVE);
+    y += 150;
 
-    loc = sdl_render_text(0, 1300, "MORSE_CODE");
+    loc = sdl_render_text(0, y, "MORSE_CODE");
     sdl_register_event(loc, EVID_AUDIO_PLAY_MORSE_CODE);
+    y += 150;
 
     //
     // state section
     //
 
     if (state.state != AUDIO_STATE_IDLE) {
-        int y = sdl_win_height-650;
+        y = sdl_win_height-650;
 
         // state, processed/total time, and paused
         sdl_render_printf(0, y, "%s %d / %d", 
@@ -651,13 +660,6 @@ static void page_7_process_event(sdl_event_t *ev)
             printf("ERROR: sdl_audio_play %s failed\n", fn);
         }
         break;
-    case EVID_AUDIO_RECORD:
-        char *record_file_name = "recording.raw";
-        rc = sdl_audio_record(record_file_name, 30, false);
-        if (rc != 0) {
-            printf("ERROR: sdl_audio_record %s failed\n", record_file_name);
-        }
-        break;
     case EVID_AUDIO_PLAY_FREQ_SWEEP:
         t = tones;
         for (freq = 100; freq <= 3000; freq += 100) {
@@ -680,6 +682,20 @@ static void page_7_process_event(sdl_event_t *ev)
         generate_morse_code_tones(&t, "CQ CQ HELLO WORLD CQ CQ");
         sdl_audio_play_tones(100, tones); // intvl = 100 ms
         break;
+    case EVID_AUDIO_RECORD: {
+        char *record_file_name = "recording.raw";
+        sdl_audio_state_t state;
+
+        sdl_audio_state(&state);
+        if (state.state != AUDIO_STATE_RECORD) {  //xxx add ING to name end
+            rc = sdl_audio_record(record_file_name, 30, false);
+            if (rc != 0) {
+                printf("ERROR: sdl_audio_record %s failed\n", record_file_name);
+            }
+        } else {
+            sdl_audio_ctl(AUDIO_REQ_STOP);
+        }
+        break; }
     case EVID_AUDIO_STOP:
         sdl_audio_ctl(AUDIO_REQ_STOP);
         break;
