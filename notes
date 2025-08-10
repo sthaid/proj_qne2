@@ -1,0 +1,29 @@
+[=======================================] 100% Fetch remote repository...
+Installed packages:
+  Path                 | Version       | Description                      | Location            
+  -------              | -------       | -------                          | -------
+  build-tools;30.0.2   | 30.0.2        | Android SDK Build-Tools 30.0.2   | build-tools/30.0.2
+  build-tools;33.0.1   | 33.0.1        | Android SDK Build-Tools 33.0.1   | build-tools/33.0.1
+  ndk;21.3.6528147     | 21.3.6528147  | NDK (Side by side) 21.3.6528147  | ndk/21.3.6528147
+  ndk;25.1.8937393     | 25.1.8937393  | NDK (Side by side) 25.1.8937393  | ndk/25.1.8937393
+  ndk;26.3.11579264    | 26.3.11579264 | NDK (Side by side) 26.3.11579264 | ndk/26.3.11579264
+  platform-tools       | 36.0.0        | Android SDK Platform-Tools       | platform-tools
+  platforms;android-30 | 3             | Android SDK Platform 30          | platforms/android-30
+  platforms;android-34 | 3             | Android SDK Platform 34          | platforms/android-34
+
+
+
+sdkmanager --install "build-tools;36.0.0"
+
+sdkmanager --install "platforms;android-35"
+sdkmanager --install "ndk;29.0.13846066"   this is beta3
+sdkmanager --install "ndk;28.2.13676358"
+
+
+=================================================================
+=================================================================
+=================================================================
+=================================================================
+
+
+web links
