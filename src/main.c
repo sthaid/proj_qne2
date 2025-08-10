@@ -92,7 +92,7 @@ static void init(void)
     // determine storage_path, and 
     // set current working directory to storage_path
 #ifdef ANDROID
-    storage_path = SDL_AndroidGetInternalStoragePath();
+    storage_path = SDL_GetAndroidInternalStoragePath();
 #else
     storage_path = "/home/haid/proj/proj_qne2/linux/files";  //xxx
 #endif
@@ -111,6 +111,7 @@ static void init(void)
 
     // get params, if they don't exist, set to default value
     params.devel_mode = util_get_int_param("devel_mode", 0);
+    params.devel_mode = 1; //xxx
 
     // if apps dir doesn't exist then create it
 #if 0
@@ -142,6 +143,7 @@ static void create_default_apps(void)
     system("rm -rf apps");
     system("tar -xvf ../assets/apps.tar");
 #else
+#if 0  //xxx
     SDL_RWops* file = SDL_RWFromFile("apps.tar", "rb");
     char *ptr = malloc(50000000);
     int len, rc;
@@ -157,6 +159,23 @@ static void create_default_apps(void)
     } else {
         INFO("xxxxxxxxxxx failed, %s\n", SDL_GetError());
     }
+#else
+    void *ptr;
+    int rc;
+    size_t len;
+
+    // xxx check if file exists
+    ptr = SDL_LoadFile("apps.tar", &len);
+    INFO("ptr=%p len %zd\n", ptr, len);
+
+    rc = util_write_file("apps.tar", ptr, len);
+    INFO("util_write_file rc %d\n", rc);
+
+    rc = system("tar -xvf apps.tar");
+    INFO("tar xvf rc %d\n", rc);
+
+    SDL_free(ptr);
+#endif
 #endif
 }
 

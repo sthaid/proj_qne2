@@ -1,3 +1,26 @@
+audio recording file is not saved
+check all calls to SDL, for ret value handling
+
+try using SDL link
+ttf, get packags
+checkin new files,
+get updated Android.mk
+
+rename to ez
+
+
+========================
+
+ANDROID
+- Android.mk
+# xxx LOCAL_C_FLAGS -O2  xxx confirm this works
+
+
+apt-get install libfreetype-dev libharfbuzz-dev
+
+
+=================================
+
 Upgrade to Ubuntu 24.10:
 - Check for updates: Open a terminal and run sudo apt update && sudo apt upgrade -y 
   to ensure your system is up to date. 

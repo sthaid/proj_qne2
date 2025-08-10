@@ -103,7 +103,7 @@ int sdl_init(void)
 
     // create SDL Window and Renderer
 #ifdef ANDROID
-    if (SDL_CreateWindowAndRenderer(0, 0, SDL_WINDOW_FULLSCREEN, &window, &renderer) != 0) {
+    if (!SDL_CreateWindowAndRenderer("xxxxx", 0, 0, SDL_WINDOW_FULLSCREEN, &window, &renderer)) {
         ERROR("SDL_CreateWindowAndRenderer failed\n");
         return -1;
     }
