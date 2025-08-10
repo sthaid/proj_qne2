@@ -1,3 +1,19 @@
+top level Makefile
+- picoc
+- android
+- linux
+- each app build for linux
+    copy apps to apps_test
+    
+
+fix picoc problems and document
+===============
+
+
+
+
+get rid of .o files
+
 auto pull the SDL src files in do_setup
 review defines in do_setup
 review diff of xxx files ith .orig

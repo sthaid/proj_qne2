@@ -1,16 +1,13 @@
 CC=gcc
 
-
 # Use $ xxd -i ./LICENSE > LICENSE.h
 # to create the license info file. Should be signed char, add a
 # null character to the end of the array.
 
-# -O3 -g
-# -std=gnu11
-CFLAGS=-Wall -O2 -g -std=gnu11 -DUNIX_HOST -DVER=\"a97d94fa\" -DTAG=\"v3.2.2\"
-CFLAGS+=-I/usr/include/SDL2 -D_REENTRANT -I../src
-CFLAGS+=-Wno-unused-result
-LIBS=-lm -lreadline -lSDL2 -lSDL2_ttf
+CFLAGS=  -Wall -Wno-unused-result -Werror -O2 -g -std=gnu11 
+CFLAGS+= -DVER=\"a97d94fa\" -DTAG=\"v3.2.2\" -DUNIX_HOST
+CFLAGS+= -I../src $(shell pkg-config sdl3--cflags)
+LIBS=    -lm -lreadline -lSDL3 -lSDL3_ttf
 
 TARGET	= picoc
 SRCS	= picoc.c table.c lex.c parse.c expression.c heap.c type.c \
