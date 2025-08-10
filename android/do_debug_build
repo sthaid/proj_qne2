@@ -3,7 +3,7 @@
 rm -f assets/apps.tar
 tar -cvf assets/apps.tar -C .. apps
 
-cd SDL2/build/org.sthaid.qne2
+cd SDL/build/org.sthaid.ezApp
 
 echo "char *version = \"`git log -1 --format=%h`\";" > app/jni/src/version.c
 

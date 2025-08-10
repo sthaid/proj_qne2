@@ -12,39 +12,51 @@ update_build_file()
 
 # ######### MAIN ##########
 
-# set directory variables
-PACKAGE_NAME=org.sthaid.qne2
+# set variables
 TOP=`pwd`
-SDL_DIR=$TOP/SDL2
+PACKAGE_NAME=org.sthaid.ezApp
+SDL_DIR=$TOP/SDL3-3.2.20
+SDL_TTF_DIR=$SDL_DIR/build/$PACKAGE_NAME/app/jni/SDL3_ttf-3.2.2
+
+# init 
+SDL_TAR_FILE=$(basename $SDL_DIR).tar.gz
+SDL_TTF_TAR_FILE=$(basename $SDL_TTF_DIR).tar.gz
 BUILD=$SDL_DIR/build/$PACKAGE_NAME
 RES_PATH=$BUILD/app/src/main/res
 
-# if SDL_DIR exists it must be removed
-if [ -d $SDL_DIR ]; then
-  echo "Remove existing $SDL_DIR"
-  rm -rf $SDL_DIR
-fi
+# remove existing SDL directory tree
+echo "Remove existing $SDL_DIR"
+rm -rf $SDL_DIR
+rm -f SDL
 
-# extract the SDL2 src from tar file
-echo "Extracting SDL2.tar.gz"
-tar -xf setup_files/SDL2.tar.gz
+# extract the SDL3 src from tar file
+echo "Extracting $SDL_TAR_FILE"
+tar -xf setup_files/$SDL_TAR_FILE
+ln -s $(basename $SDL_DIR) SDL
 echo
 
 # create template build directory
 echo "Creating template build directory"
 touch stub.c
-$SDL_DIR/build-scripts/androidbuild.sh $PACKAGE_NAME stub.c
+$SDL_DIR/build-scripts/create-android-project.py $PACKAGE_NAME stub.c
 rm stub.c
 echo
 
-# extract SDL2_ttf source code to build dir
-echo "Extractng SDL2_ttf-2.0.18.tar.gz"
+# extract SDL3_ttf source code to build dir
+echo "Extractng $SDL_TTF_TAR_FILE"
 cd $BUILD/app/jni
-tar -xf $TOP/setup_files/SDL2_ttf-2.0.18.tar.gz
+tar -xf $TOP/setup_files/$SDL_TTF_TAR_FILE
+echo
+
+# download external SDL3_ttf packages
+echo "Downloading external SDL3_ttf required packages"
+cd $SDL_TTF_DIR/external
+./download.sh
 echo
 
 # update some build files in $BUILD
 echo "Updating files in $BUILD"
+cd $BUILD
 update_build_file app_jni_src_Android.mk app/jni/src/Android.mk
 update_build_file app_src_main_res_values_strings.xml app/src/main/res/values/strings.xml
 update_build_file app_src_main_AndroidManifest.xml app/src/main/AndroidManifest.xml
@@ -65,9 +77,11 @@ ln -s ../../../../../../assets/ .
 echo
 
 # create the launcher icon
+# xxx update to SDL3
+if false; then
 echo "Creating launcher icons"
 cd $TOP/setup_files
-gcc -Wall -g `sdl2-config --cflags` -o create_ic_launcher create_ic_launcher.c -lSDL2 -lSDL2_ttf -lpng
+gcc -Wall -g `sdl2-config --cflags` -o create_ic_launcher create_ic_launcher.c -lSDL3 -lSDL2_ttf -lpng
 ./create_ic_launcher  $RES_PATH/mipmap-mdpi/ic_launcher.png      48
 ./create_ic_launcher  $RES_PATH/mipmap-hdpi/ic_launcher.png      72
 ./create_ic_launcher  $RES_PATH/mipmap-xhdpi/ic_launcher.png     96
@@ -76,5 +90,8 @@ gcc -Wall -g `sdl2-config --cflags` -o create_ic_launcher create_ic_launcher.c -
 #xxx ./create_ic_launcher  google_play_store/icon_512x512.png        512
 rm create_ic_launcher
 echo
+else
+echo "xxx Skipping launcher iconds"
+fi
 
 echo "SETUP COMPLETE"

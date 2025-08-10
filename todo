@@ -8,6 +8,16 @@ get updated Android.mk
 
 rename to ez
 
+include version.c info in STARTING line and Settings
+
+
+why is NDK 27 used, and not 29?
+questions on SDK API version, etc
+
+either make new repo or rename it to ezApp
+
+search for qne
+
 
 ========================
 

@@ -549,7 +549,6 @@ static void generate_morse_code_tones(sdl_tone_t **t, char *letters);
 static void page_7_init(void)
 {
     sdl_audio_print_devices_info();
-    sdl_audio_create_test_file("audio_test.raw", 10, 1000);
 }
 
 static void page_7_draw(void)
@@ -649,15 +648,20 @@ static void page_7_process_event(sdl_event_t *ev)
     int rc, i, freq;
     sdl_tone_t tones[5000];
     sdl_tone_t *t;
-    char *fn;
 
     switch (ev->event_id) {
     case EVID_AUDIO_PLAY_TONE:
-    case EVID_AUDIO_PLAY_RECORDING:
-        fn = (ev->event_id == EVID_AUDIO_PLAY_TONE) ? "audio_test.raw" : "recording.raw";
-        rc = sdl_audio_play(fn);
+        sdl_audio_create_test_file("audio_test.raw", 10, 1000);
+        rc = sdl_audio_play("audio_test.raw");
         if (rc != 0) {
-            printf("ERROR: sdl_audio_play %s failed\n", fn);
+            printf("ERROR: sdl_audio_play audio_test.raw failed\n");
+        }
+        unlink("audio_test.raw");
+        break;
+    case EVID_AUDIO_PLAY_RECORDING:
+        rc = sdl_audio_play("recording.raw");
+        if (rc != 0) {
+            printf("ERROR: sdl_audio_play recording.raw failed\n");
         }
         break;
     case EVID_AUDIO_PLAY_FREQ_SWEEP:

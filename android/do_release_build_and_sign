@@ -1,6 +1,6 @@
 #!/bin/bash
 
-cd SDL2/build/org.sthaid.qne2
+cd SDL/build/org.sthaid.ezApp
 
 echo "CREATE VERSION FILE app/jni/src/version.c"
 echo "char *version = \"`git log -1 --format=%h`\";" > app/jni/src/version.c
@@ -22,7 +22,7 @@ $ANDROID_HOME/build-tools/30.0.2/zipalign \
 echo
 
 echo "SIGN"
-$ANDROID_HOME/build-tools/30.0.2/apksigner sign --ks ../../../qne2.keystore \
+$ANDROID_HOME/build-tools/30.0.2/apksigner sign --ks ../../../ezApp.keystore \
    ./app/build/outputs/apk/release/app-release-aligned.apk 
 if [ $? -ne 0 ]; then
   echo "*** ERROR SIGN FAILED ***"

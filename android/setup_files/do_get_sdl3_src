@@ -1,0 +1,6 @@
+#!/bin/bash
+
+rm *.tar.gz
+wget https://github.com/libsdl-org/SDL/releases/download/release-3.2.20/SDL3-3.2.20.tar.gz
+wget https://www.libsdl.org/projects/SDL_ttf/release/SDL3_ttf-3.2.2.tar.gz
+

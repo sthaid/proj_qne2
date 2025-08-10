@@ -3,13 +3,13 @@
 #
 # Notes:
 # - to list the keystore contents:
-#     keytool -list -v -keystore qne2.keystore
+#     keytool -list -v -keystore ezApp.keystore
 #
 
-if [ -e qne2.keystore ]; then
-  echo "*** ERROR qne2.keystore exists ***"
+if [ -e ezApp.keystore ]; then
+  echo "*** ERROR ezApp.keystore exists ***"
   exit 1
 fi
 
-keytool -genkey -v -keystore qne2.keystore -keyalg RSA -keysize 2048 -validity 10000 -alias qne2
+keytool -genkey -v -keystore ezApp.keystore -keyalg RSA -keysize 2048 -validity 10000 -alias ezApp
 

@@ -99,29 +99,19 @@ static void init(void)
     chdir(storage_path);
 
     // init logging
-#ifdef ANDROID
     init_logging("log");
-#else
-    //init_logging(NULL);  xxx
-    init_logging("log");
-#endif
 
     // print startup messages
     INFO("========== STARTING: VERSION=%s ==========\n", VERSION);
 
     // get params, if they don't exist, set to default value
     params.devel_mode = util_get_int_param("devel_mode", 0);
-    params.devel_mode = 1; //xxx
 
     // if apps dir doesn't exist then create it
-#if 0
     rc = stat("apps", &statbuf);
     if (rc != 0 || !S_ISDIR(statbuf.st_mode)) {
         create_default_apps();
     }
-#else
-    create_default_apps();  //xxx
-#endif
 
     // xxx
     struct sigaction action;
@@ -143,39 +133,34 @@ static void create_default_apps(void)
     system("rm -rf apps");
     system("tar -xvf ../assets/apps.tar");
 #else
-#if 0  //xxx
-    SDL_RWops* file = SDL_RWFromFile("apps.tar", "rb");
-    char *ptr = malloc(50000000);
-    int len, rc;
-
-    if (file) {
-        INFO("xxxxxxxxxxx okay\n");
-        len = SDL_RWread(file, ptr, 1, 50000000);
-        INFO("len %d\n", len);
-        rc = util_write_file("apps.tar", ptr, len);
-        INFO("util_write_file rc %d\n", rc);
-        rc = system("tar -xvf apps.tar");
-        INFO("tar xvf rc %d\n", rc);
-    } else {
-        INFO("xxxxxxxxxxx failed, %s\n", SDL_GetError());
-    }
-#else
     void *ptr;
     int rc;
     size_t len;
 
-    // xxx check if file exists
+    system("rm -rf apps");
+
     ptr = SDL_LoadFile("apps.tar", &len);
-    INFO("ptr=%p len %zd\n", ptr, len);
+    if (ptr == NULL ) {
+        ERROR("failed to read apps.tar");
+        return;
+    }
 
-    rc = util_write_file("apps.tar", ptr, len);
-    INFO("util_write_file rc %d\n", rc);
-
-    rc = system("tar -xvf apps.tar");
-    INFO("tar xvf rc %d\n", rc);
-
+    rc = util_write_file("tmp_apps.tar", ptr, len);
     SDL_free(ptr);
-#endif
+    if (rc != 0) {
+        ERROR("failed to write tmp_apps.tar\n");
+        return;
+    }
+
+    rc = system("tar -xvf tmp_apps.tar");  // xxx would just the tar work
+    if (rc != 0) {
+        ERROR("tar -xvf tmp_apps.tar, failed\n");
+    }
+
+    rc = unlink("tmp_apps.tar");
+    if (rc != 0) {
+        ERROR("failed to unlink tmp_apps.tar, %s\n", strerror(errno));
+    }
 #endif
 }
 
@@ -231,17 +216,14 @@ static void controller(void)
         if (event.event_id == EVID_QUIT) {
             break;
         } else if (event.event_id == EVID_PAGE_DECREMENT) {
-            INFO("XXX GOT PAGE LEFT XXX\n");
             if (--page < 0) {
                 page = last_page;
             }
         } else if (event.event_id == EVID_PAGE_INCREMENT) {
-            INFO("XXX GOT PAGE RIGHT XXX\n");
             if (++page > last_page) {
                 page = 0;
             }
         } else if (event.event_id == EVID_QUIT) {
-            INFO("XXX GOT QUIT XXX\n");
             break;
         } else {
             // xxx check that menu entry is defined
@@ -734,7 +716,7 @@ static void process_req_using_android_sh(int sockfd, char *cmd)
     dup2(sockfd, 1);
     dup2(sockfd, 2);
 
-    sprintf(cmd2, "cd %s; %s", storage_path, cmd);  // xxx aren't we already in storage_path
+    sprintf(cmd2, "cd %s; %s", storage_path, cmd);
     argv[0] = "/bin/sh";
     argv[1] = "-c";
     argv[2] = cmd2;

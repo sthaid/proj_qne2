@@ -5,7 +5,7 @@
 #ifdef ANDROID
     //#define USE_ANDROID_LOGGING
     #ifdef USE_ANDROID_LOGGING
-        #include <SDL.h>
+        #include <SDL3/SDL.h>
     #endif
 #endif
 
