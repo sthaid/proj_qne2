@@ -9,3 +9,6 @@ build:
 clean:
 	for d in $(SUBDIRS) ; do echo; make -C $$d clean || exit 1; done
 
+install:
+	cd android; ./do_debug_install
+
