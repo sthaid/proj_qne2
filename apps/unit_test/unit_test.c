@@ -467,7 +467,7 @@ static void page_5_draw(void)
     free(pixels);
     pixels = NULL;
 
-    // read the unit_test_pixels file that as created in the page init routine,
+    // read the unit_test_pixels file that as created above
     // create a texture from the pixels, and
     // display the texture
     pixels = util_read_file("unit_test_pixels", &file_length);
@@ -485,6 +485,9 @@ static void page_5_draw(void)
     }
     free(pixels);
     pixels = NULL;
+
+    // delete unit_test_pixels
+    unlink("unit_test_pixels");
 }
 
 static void page_5_exit(void)
