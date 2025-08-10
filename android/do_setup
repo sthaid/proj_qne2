@@ -6,28 +6,38 @@ update_build_file()
   dest=$2
 
   echo "- updating $src to $dest"
-  cp $BUILD/$dest $TOP/setup_files/${src}.orig
-  cp $TOP/setup_files/${src} $BUILD/$dest 
+  cp $BUILD_DIR/$dest $TOP/setup_files/${src}.orig
+  cp $TOP/setup_files/${src} $BUILD_DIR/$dest 
 }
 
 # ######### MAIN ##########
 
 # set variables
-TOP=`pwd`
 PACKAGE_NAME=org.sthaid.ezApp
-SDL_DIR=$TOP/SDL3-3.2.20
-SDL_TTF_DIR=$SDL_DIR/build/$PACKAGE_NAME/app/jni/SDL3_ttf-3.2.2
+SDL_VER=SDL3-3.2.20
+SDL_TTF_VER=SDL3_ttf-3.2.2
 
-# init 
-SDL_TAR_FILE=$(basename $SDL_DIR).tar.gz
-SDL_TTF_TAR_FILE=$(basename $SDL_TTF_DIR).tar.gz
-BUILD=$SDL_DIR/build/$PACKAGE_NAME
-RES_PATH=$BUILD/app/src/main/res
+# init more variables
+TOP=`pwd`
+SDL_DIR=$TOP/$SDL_VER
+SDL_TTF_DIR=$SDL_DIR/build/$PACKAGE_NAME/app/jni/$SDL_TTF_VER
+SDL_TAR_FILE=$SDL_VER.tar.gz
+SDL_TTF_TAR_FILE=$SDL_TTF_VER.tar.gz
+BUILD_DIR=$SDL_DIR/build/$PACKAGE_NAME
+RES_DIR=$BUILD_DIR/app/src/main/res
 
 # remove existing SDL directory tree
 echo "Remove existing $SDL_DIR"
 rm -rf $SDL_DIR
 rm -f SDL
+
+# if SDL src tar files are not in the setup_files dir, then download them
+if [ ! -f setup_files/$SDL_TAR_FILE -o ! -f setup_files/SDL_TTF_TAR_FILE ]; then
+  echo "Downloading SDL3 source tar files"
+  cd setup_files
+  ./do_get_sdl3_src
+  cd ..
+fi
 
 # extract the SDL3 src from tar file
 echo "Extracting $SDL_TAR_FILE"
@@ -44,7 +54,7 @@ echo
 
 # extract SDL3_ttf source code to build dir
 echo "Extractng $SDL_TTF_TAR_FILE"
-cd $BUILD/app/jni
+cd $BUILD_DIR/app/jni
 tar -xf $TOP/setup_files/$SDL_TTF_TAR_FILE
 echo
 
@@ -54,9 +64,9 @@ cd $SDL_TTF_DIR/external
 ./download.sh
 echo
 
-# update some build files in $BUILD
-echo "Updating files in $BUILD"
-cd $BUILD
+# update some build files in $BUILD_DIR
+echo "Updating files in $BUILD_DIR"
+cd $BUILD_DIR
 update_build_file app_jni_src_Android.mk app/jni/src/Android.mk
 update_build_file app_src_main_res_values_strings.xml app/src/main/res/values/strings.xml
 update_build_file app_src_main_AndroidManifest.xml app/src/main/AndroidManifest.xml
@@ -64,7 +74,7 @@ echo
 
 # add symbolic links to the source code
 echo "Creating symbolic links to source code"
-cd $BUILD/app/jni/src
+cd $BUILD_DIR/app/jni/src
 rm stub.c
 ln -s ../../../../../../../src/ .
 ln -s ../../../../../../../picoc/ .
@@ -72,7 +82,7 @@ echo
 
 # create assets dir, and create symbolic links to assets
 echo "Creating assets directory"
-cd $BUILD/app/src/main
+cd $BUILD_DIR/app/src/main
 ln -s ../../../../../../assets/ .
 echo
 
@@ -82,11 +92,11 @@ if false; then
 echo "Creating launcher icons"
 cd $TOP/setup_files
 gcc -Wall -g `sdl2-config --cflags` -o create_ic_launcher create_ic_launcher.c -lSDL3 -lSDL2_ttf -lpng
-./create_ic_launcher  $RES_PATH/mipmap-mdpi/ic_launcher.png      48
-./create_ic_launcher  $RES_PATH/mipmap-hdpi/ic_launcher.png      72
-./create_ic_launcher  $RES_PATH/mipmap-xhdpi/ic_launcher.png     96
-./create_ic_launcher  $RES_PATH/mipmap-xxhdpi/ic_launcher.png   144
-./create_ic_launcher  $RES_PATH/mipmap-xxxhdpi/ic_launcher.png  192
+./create_ic_launcher  $RES_DIR/mipmap-mdpi/ic_launcher.png      48
+./create_ic_launcher  $RES_DIR/mipmap-hdpi/ic_launcher.png      72
+./create_ic_launcher  $RES_DIR/mipmap-xhdpi/ic_launcher.png     96
+./create_ic_launcher  $RES_DIR/mipmap-xxhdpi/ic_launcher.png   144
+./create_ic_launcher  $RES_DIR/mipmap-xxxhdpi/ic_launcher.png  192
 #xxx ./create_ic_launcher  google_play_store/icon_512x512.png        512
 rm create_ic_launcher
 echo

@@ -1,3 +1,12 @@
+auto pull the SDL src files in do_setup
+review defines in do_setup
+review diff of xxx files ith .orig
+cleanup src dir
+cleanup apps
+create launcher icon
+
+xxxxxxxxxxxxxxxxxxxxxx
+
 audio recording file is not saved
 check all calls to SDL, for ret value handling
 
