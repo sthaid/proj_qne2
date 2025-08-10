@@ -38,7 +38,7 @@ CFLAGS = -Wall -Werror -Wno-unused-result -g -I../src $(shell pkg-config sdl3--c
 $(TARGET):
 	gcc -o $@ $(CFLAGS) $(SRCS) -lSDL3 -lSDL3_ttf -lm
 	cd ../apps; git clean -fdx
-	tar -cf assets/apps.tar -C .. apps
+	tar -cf assets/apps.tar --exclude apps/*/Makefile -C .. apps
 
 clean:
 	rm $(TARGET)

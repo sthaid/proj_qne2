@@ -1,3 +1,6 @@
+remove Makefile from apps.tar
+
+
 top level Makefile
 - picoc
 - android
