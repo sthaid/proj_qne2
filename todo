@@ -4,6 +4,9 @@ top level Makefile
 - linux
 - each app build for linux
     copy apps to apps_test
+
+remove view private files befoe creating apps.tar
+
     
 
 fix picoc problems and document

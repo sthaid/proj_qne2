@@ -1,12 +1,12 @@
 #!/bin/bash
 
+# remove and reconstruct assets/apps.tar
 rm -f assets/apps.tar
-tar -cvf assets/apps.tar -C .. apps
+cd ../apps; git clean -fdx; cd ../android
+tar -cf assets/apps.tar -C .. apps
 
+# construct version, and rebuild
 cd SDL/build/org.sthaid.ezApp
-
 echo "char *version = \"`git log -1 --format=%h`\";" > app/jni/src/version.c
-
 ./gradlew assembleDebug
-
 
