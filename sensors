@@ -1,0 +1,121 @@
+
+how to read android sensors using sdl2
+
+Reading Android sensor data with SDL2
+SDL2 provides a way to access device sensors like accelerometers and gyroscopes on Android 
+(and other platforms). Here's how to approach it:
+
+1. Initializing SDL's sensor subsystem
+  Before accessing sensors, you need to initialize SDL's sensor subsystem.
+  You can do this by using the SDL_INIT_SENSOR flag when calling SDL_Init(),
+  according to a GitHub issue discussion.
+
+2. Opening sensors
+  To read data from a specific sensor, first identify it by type (e.g., accelerometer, gyroscope).
+  You can use SDL_SensorGetType and other related functions to query available sensors on the device.
+  Once you identify the desired sensor, open it using SDL_SensorOpen().
+
+3. Reading sensor data
+  After opening the sensor, you can read its current state using SDL_SensorGetData().
+  The interpretation of the data array will depend on the specific sensor type. For example:
+  - Accelerometer: Provides acceleration values (including gravity) along the X, Y, and Z 
+    axes in SI meters per second squared.
+  - Gyroscope: Provides angular speed in radians per second along the X, Y, and Z axes.
+  - According to the SDL3 wiki, for phones and tablets held in their natural orientation,
+    the axes are defined as follows:
+      X-axis: Left to right
+      Y-axis: Bottom to top
+      Z-axis: Farther to closer
+
+4. Processing sensor events (optional)
+  Alternatively, you can use SDL's event system to receive sensor events.
+  Sensor events are pushed onto the event queue, similar to other input events.
+  You can then process these events in your event loop to react to sensor changes.
+  Important considerations
+  - Sensor availability: Not all devices have all sensor types. Check for sensor availability
+    before attempting to open them.
+  - Data interpretation: Understand the specific data format and units for each sensor
+    type according to the SDL Wiki.
+  - Continuous vs. event-driven: Choose the approach (continuous polling with
+    SDL_SensorGetData or event-driven processing) that best suits your application's needs.
+  - Gravity: Remember that accelerometer readings include the force of gravity.
+    You may need to subtract it out if you only need linear acceleration data.
+  - Accuracy & calibration: Sensor data might require calibration or filtering to 
+    be useful in some applications.
+  - Performance: Be mindful of the frequency of sensor updates, as 
+    frequent polling can impact performance.
+
+-------------------
+
+https://github.com/revery-ui/esy-sdl2/blob/master/test/testsensor.c
+
+how to read android compass sensor uisng sdl2
+
+Accessing Sensor Data: The SDL_ControllerSensorEvent structure contains the sensor data,
+including the type of sensor and an array of values representing the sensor's readings.
+The magnetometer data, from which you can derive compass heading, is typically among these values.
+
+
+---------------
+
+SDL_Init(SDL_INIT_SENSOR)
+
+------------------------
+
+EXAMPLE SDL2 Program
+
+#include "SDL.h"
+
+// ... (Your other SDL setup)
+
+int main(int argc, char **argv) {
+    // ... (SDL initialization and window creation)
+
+    SDL_Init(SDL_INIT_SENSOR); // Initialize the sensor subsystem
+
+    int num_sensors = SDL_NumSensors();
+    SDL_Sensor *compass_sensor = NULL;
+
+    for (int i = 0; i < num_sensors; ++i) {
+        if (/* Check for magnetic field sensor (e.g., by name or platform-specific type) */) {
+            compass_sensor = SDL_SensorOpen(i);
+            if (compass_sensor == NULL) {
+                SDL_Log("Couldn't open compass sensor: %s\n", SDL_GetError());
+            } else {
+                SDL_Log("Opened compass sensor: %s\n", SDL_SensorGetDeviceName(i));
+                break;
+            }
+        }
+    }
+
+    // ... (Main event loop)
+    SDL_Event event;
+    while (!done) {
+        while (SDL_PollEvent(&event) > 0) {
+            switch (event.type) {
+                case SDL_SENSORUPDATE:
+                    if (event.sensor.which == SDL_SensorGetInstanceID(compass_sensor)) {
+                        // event.sensor.data[0], event.sensor.data[1], event.sensor.data[2]
+                        // contain the magnetic field data (x, y, z)
+                        // Implement your compass heading calculation here
+                        SDL_Log("Compass update: %.2f, %.2f, %.2f\n",
+                                event.sensor.data[0], event.sensor.data[1], event.sensor.data[2]);
+                    }
+                    break;
+                // ... (Other event handling)
+            }
+        }
+        // ... (Rendering and other game logic)
+    }
+
+    // ... (SDL cleanup and sensor closing)
+    if (compass_sensor) {
+        SDL_SensorClose(compass_sensor);
+    }
+    SDL_Quit();
+    return 0;
+}
+
+----------------------
+
+
