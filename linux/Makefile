@@ -3,6 +3,7 @@ SRCS :=  \
   ../src/main.c \
   ../src/sdl.c \
   ../src/sdl_audio.c \
+  ../src/sdl_sensor.c \
   ../src/utils.c \
   ../src/logging.c \
   ../picoc/clibrary.c \
@@ -37,11 +38,10 @@ CFLAGS = -Wall -Werror -Wno-unused-result -g -I../src $(shell pkg-config sdl3--c
 
 $(TARGET):
 	gcc -o $@ $(CFLAGS) $(SRCS) -lSDL3 -lSDL3_ttf -lm
-	cd ../apps; git clean -fdx
-	tar -cf assets/apps.tar --exclude apps/*/Makefile -C .. apps
+	tar -cf assets/apps.tar --exclude-ignore-recursive=tar_exclude_list -C .. apps
 
 clean:
-	rm $(TARGET)
+	rm -f $(TARGET)
 	rm -rf files/*
 	rm -f assets/apps.tar
 

@@ -2,8 +2,7 @@
 
 # remove and reconstruct assets/apps.tar
 rm -f assets/apps.tar
-cd ../apps; git clean -fdx; cd ../android
-tar -cf assets/apps.tar --exclude apps/*/Makefile -C .. apps
+tar -cf assets/apps.tar --exclude-ignore-recursive=tar_exclude_list -C .. apps
 
 # construct version, and rebuild
 cd SDL/build/org.sthaid.ezApp

@@ -188,9 +188,13 @@ static void controller(void)
     int rc;
     sdl_event_t event;
 
+    // xxx should this be in init()
     rc = sdl_init(); //xxx handle ret
     INFO("sdl_win_width,height = %d %d  sdl_char_width,height=%d %d\n",
         sdl_win_width, sdl_win_height, sdl_char_width, sdl_char_height);
+
+    // xxx temp
+    sdl_sensor_test();
 
     while (true) {
         // xxx reset other stuff here too, fontsz, color
@@ -247,6 +251,7 @@ static void controller(void)
         }
     }
 
+    // xxx should this move
     sdl_exit();
 }
 

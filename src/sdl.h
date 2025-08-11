@@ -3,7 +3,6 @@
 
 //#include <SDL3/SDL_main.h> xxx
 
-
 // https://www.w3schools.com/colors/colors_converter.asp
 
 #define BYTES_PER_PIXEL  4
@@ -156,3 +155,10 @@ void sdl_audio_state(sdl_audio_state_t * state);
 void sdl_audio_print_devices_info(void);
 void sdl_audio_create_test_file(char *filename, int duration_secs, int freq);
 
+// --------------------
+// sensors
+// --------------------
+
+void sdl_sensor_test(void); //xxx temp
+
+void sdl_sensor_print_devices(void);

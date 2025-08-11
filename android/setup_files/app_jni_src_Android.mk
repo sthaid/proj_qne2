@@ -6,7 +6,7 @@ LOCAL_MODULE := main
 
 # Add your application source files here...
 LOCAL_SRC_FILES :=  \
-  src/main.c src/sdl.c src/sdl_audio.c src/utils.c src/logging.c \
+  src/main.c src/sdl.c src/sdl_audio.c src/sdl_sensor.c src/utils.c src/logging.c \
   picoc/clibrary.c \
   picoc/debug.c \
   picoc/expression.c \

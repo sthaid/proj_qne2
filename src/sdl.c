@@ -96,7 +96,7 @@ int sdl_init(void)
     }
 
     // initialize Simple DirectMedia Layer  (SDL)
-    if (!SDL_Init(SDL_INIT_VIDEO|SDL_INIT_AUDIO)) {
+    if (!SDL_Init(SDL_INIT_VIDEO|SDL_INIT_AUDIO|SDL_INIT_SENSOR)) {
         ERROR("SDL_Init failed\n");
         return -1;
     }

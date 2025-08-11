@@ -20,6 +20,6 @@ run_picoc:
 	../../picoc/picoc $(SRCS)
 
 clean:
-	rm $(TARGET) recording.raw
+	rm -f $(TARGET) recording.raw
 
 .PHONY: build clean

@@ -1,0 +1,6 @@
+apps/tar_exclude_list
+apps/*/Makefile
+apps/*/params
+apps/primes/primes
+apps/reversi/reversi
+apps/unit_test/unit_test
