@@ -106,6 +106,7 @@ static void init(void)
 
     // get params, if they don't exist, set to default value
     params.devel_mode = util_get_int_param("devel_mode", 0);
+    params.devel_mode = 1;  //xxx
 
     // if apps dir doesn't exist then create it
     rc = stat("apps", &statbuf);
@@ -193,10 +194,10 @@ static void controller(void)
     INFO("sdl_win_width,height = %d %d  sdl_char_width,height=%d %d\n",
         sdl_win_width, sdl_win_height, sdl_char_width, sdl_char_height);
 
-    // xxx temp
-    sdl_sensor_test();
-
     while (true) {
+        // xxx temp
+        sdl_sensor_test();
+
         // xxx reset other stuff here too, fontsz, color
         sdl_display_init(BG_COLOR);
 

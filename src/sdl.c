@@ -291,7 +291,7 @@ static void process_sdl_event(SDL_Event *ev, sdl_event_t *event)
         static int last_pressed_y = -1;
         int x, y;
 #if 0
-       INFO("MOUSEBUTTON button=%s state=%s x=%d y=%d\n",
+       INFO("MOUSE_BUTTON button=%s state=%s x=%d y=%d\n",
                (ev->button.button == SDL_BUTTON_LEFT   ? "LEFT" :
                 ev->button.button == SDL_BUTTON_MIDDLE ? "MIDDLE" :
                 ev->button.button == SDL_BUTTON_RIGHT  ? "RIGHT" : "???"),
@@ -335,7 +335,7 @@ static void process_sdl_event(SDL_Event *ev, sdl_event_t *event)
         break; }
     case SDL_EVENT_MOUSE_MOTION: {
         if ((ev->motion.state & SDL_BUTTON_LMASK) && evid_motion_registered) {
-            INFO("MOUSEMOTION x=%f y=%f xrel=%f yrel=%f\n",
+            INFO("MOUSE_MOTION x=%f y=%f xrel=%f yrel=%f\n",
                 ev->motion.x,
                 ev->motion.y,
                 ev->motion.xrel,
@@ -347,6 +347,13 @@ static void process_sdl_event(SDL_Event *ev, sdl_event_t *event)
             event->u.motion.xrel = ev->motion.xrel;
             event->u.motion.yrel = ev->motion.yrel;
         }
+        break; }
+    case SDL_EVENT_SENSOR_UPDATE: {
+        SDL_SensorEvent *x = &ev->sensor;
+        INFO("SENSOR: which=%d data=%f %f %f %f %f %f timestamp=%ld\n",
+             x->which,
+             x->data[0], x->data[1], x->data[2], x->data[3], x->data[4], x->data[5],
+             x->sensor_timestamp);
         break; }
     case SDL_EVENT_FINGER_DOWN:
     case SDL_EVENT_FINGER_UP:
