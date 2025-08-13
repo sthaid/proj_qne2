@@ -4,31 +4,238 @@
 #include <utils.h>
 #include <logging.h>
 
+// xxx call the cleanup routines from picoc
+
+// notes
+// - sensor_tbl is indexed by SDL_SensorID, which assumes the 
+//   SDL_SensorID is a small number, less than MAX_SENSOR_ID
+
 //
 // defines
 //
+
+#define MAX_SENSOR_ID 256
 
 //
 // typedefs
 //
 
+typedef struct {
+    SDL_SensorType type;
+    int            nptype;
+    const char    *name;
+    SDL_Sensor    *sensor;
+    struct {
+        double value;
+    } data;
+} sensor_t;
+
 //
 // variables
 //
+
+static sensor_t sensor_tbl[MAX_SENSOR_ID];
 
 //
 // prototypes
 //
 
-// -----------------  DEBUG & SUPPORT ROUTINES  -----------
+static int get_permission(char *name)
+static void get_permission_cb(void *userdata, const char *permission, bool granted)
 
-static bool granted;
-void cb(void *userdata, const char *permission, bool granted_arg)
+// -----------------  INIT & EVENT HANDLER  --------------
+
+int sdl_sensor_init(void)
 {
-    INFO("permission=%s  granted=%d\n", permission, granted_arg);
-    granted = granted_arg;
+    int            i, num_sensors = 0;
+    SDL_SensorID  *ids;
+
+    ids = SDL_GetSensors(&num_sensors);
+    if (ids == NULL) {
+        ERROR("SDL_GetSensors returned NULL\n");
+        return;
+    }
+
+    for (i = 0; i < num_sensors; i++) {
+        // check if sensor is device private
+        if (SDL_GetSensorNonPortableTypeForID(ids[i]) >= 65536) {
+            continue;
+        }
+
+        // check if id is out of range supported by this code
+        if (ids[i] < 0 || ids[i] >= MAX_SENSOR_ID) {
+            ERROR("sensor id %d is out of range, sensor ignored\n", ids[i]);
+            continue;
+        }
+
+        sensor[ids[i]].type   = SDL_GetSensorTypeForID(ids[i]);
+        sensor[ids[i]].nptype = SDL_GetSensorNonPortableTypeForID(ids[i]);
+        sensor[ids[i]].name   = SDL_GetSensorNameForID(ids[i]);
+    }
+
+    for (id = 0; id < MAX_SENSOR_ID; id++) {
+        if (sensor[id].name != NULL) {
+            INFO("%2d %2d %2d %s\n",
+                 id, sensor[id].type, sensor[id].nptype, sensor[id].name);
+        }
+    }
+
+    SDL_free(ids);
 }
 
+void sdl_sensor_event(SDL_SensorEvent *event)
+{
+    int id;
+    sensor_t *sens;
+
+    id = event->which;
+
+    if (id < 0 || id >= MAX_SENSOR_ID) {
+        ERROR("invlaid sensor id %d\n", id);
+        return;
+    }
+
+    sens = &sensor_tbl[id];
+    if (sens[id].sensor == NULL) {
+        ERROR("sensor id %d is not open\n", id);
+        return;
+    }
+
+    switch (send[id].nptype) {
+    case ASENSOR_TYPE_STEP_COUNTER:
+        sens->data.value++;
+        break;
+    default:
+        ERROR("sensor id %d, invalid nptype %d\n", id, send->nptype);
+        break;
+    }
+}
+
+// -----------  APIS AVAILABLE IN PICOC  --------------
+
+void *sdl_sensor_open(int nptype)
+{
+    int id, rc;
+
+    // get the id of the first sensor with the requested nptype;
+    // note: nptype is 'sensor platform dependent type' or 'NonPortableType'
+    for (id = 0; id < MAX_SENSOR_ID; id++) {
+        if (sensor_tbl[id].name == NULL) {
+            continue;
+        }
+        if (sensor_tbl[id].nptype == nptype) {
+            break;
+        }
+    }
+    if (id == MAX_SENSOR_ID) {
+        ERROR("no sensor found for nptype %d\n", nptype);
+        return -1;
+    }
+
+    // if sensor id is already open then return error
+    if (sensor_tbl[id].sensor != NULL) {
+        ERROR("sensor id %d is already open\n", id);
+        return -1;
+    }
+
+    // get permission, if required for the requested nptype; 
+    // note that the permission may also be needed in AndroidManifest.xml
+    if (nptype == ASENSOR_TYPE_STEP_COUNTER) {
+        rc = get_permission("android.permission.ACTIVITY_RECOGNITION");
+        if (rc < 0) {
+            ERROR("failed to be granted ACTIVITY_RECOGNITION permission for STEP_COUNTER sensor\n");
+            return -1;
+        }
+    }
+
+    // clear sensor data
+    memset(&sensor_tbl[id].data, 0, sizeof(sensor_tbl[id].data));
+
+    // open the sensor
+    sdl_sensor = SDL_OpenSensor(id);
+    if (sdl_sensor == NULL) {
+        ERROR("failed to open sensor id %d, %s\n", id, SDL_GetError());
+        return -1;
+    }
+    sensor_tbl[idx].sensor = sdl_sensor;
+
+    // return sensor id
+    return id;
+}
+        
+void sdl_sensor_close(int id)
+{
+    if (id < 0 || id >= MAX_SENSOR_ID) {
+        ERROR("id %d is out of range\n", id);
+        return;
+    }
+    if (sensor_tbl[id].sensor == NULL) {
+        ERROR("sensor %d is not open\n", id);
+        return;
+    }
+    
+    SDL_CloseSensor(sensor_tbl[id].sensor);
+    sensor_tbl[id].sensor = NULL;
+}
+
+int sdl_sensor_read(int id, double *value)
+{
+    *value = 0;
+
+    if (id < 0 || id >= max_sensor) {
+        ERROR("invlaid sensor id %d\n", id);
+        return -1;
+    }
+
+    if (sensor_tbl[id].sensor == NULL) {
+        ERROR("sensor id %d is not open\n", id);
+        return -1;
+    }
+
+    *value = sensor_tbl[id].value;
+    return 0;
+}
+
+// -----------------  PRIVATE  ----------------------------
+
+#define PERM_NO_RESULT    0
+#define PERM_GRANTED      1
+#define PERM_NOT_GRANTED  2
+
+static int get_permission(char *name)
+{
+    bool succ;
+    int perm_result;
+
+    perm_result = PERM_NO_RESULT;
+    succ = SDL_RequestAndroidPermission(name, get_permission_cb, &perm_result);
+    if (!succ) {
+        ERROR("SDL_RequestAndroidPermission failed, %s\n", SDL_GetError());
+        return -1;
+    }
+
+    while (perm_result == PERM_NO_RESULT)
+        usleep(TEN_MS);  //xxx add timeout?
+    }
+
+    if (perm_result != PERM_GRANTED) {
+        ERROR("ASENSOR_TYPE_STEP_COUNTER not granted\n");
+        return -1;
+    }
+
+    return 0;
+}
+
+static void get_permission_cb(void *userdata, const char *permission, bool granted)
+{
+    int *perm_result = (int*)userdata;
+
+    INFO("permission=%s  granted=%d\n", permission, granted);
+    *perm_result = granted;
+}
+
+
+#if 0  //xxx del
 void sdl_sensor_test(void)
 {
     static bool first = true;
@@ -69,35 +276,10 @@ void sdl_sensor_test(void)
 
     //SDL_CloseSensor(step_counter);
 }
-
-void sdl_sensor_print_devices(void)
-{
-    int i, num_sensors = 0;
-    SDL_SensorID *ids;
-    //SDL_Sensor *sensor;
-    const char *name;
-    SDL_SensorType type;
-    int nptype;
-
-    ids = SDL_GetSensors(&num_sensors);
-    if (ids == NULL) {
-        ERROR("SDL_GetSensors returned NULL\n");
-        return;
-    }
-
-    INFO("num_sensors = %d\n", num_sensors);
-    for (i = 0; i < num_sensors; i++) {
-        name = SDL_GetSensorNameForID(ids[i]);
-        type = SDL_GetSensorTypeForID(ids[i]);
-        nptype = SDL_GetSensorNonPortableTypeForID(ids[i]);
-        INFO("  %d: %-60s type=%d  nptype=%d\n", ids[i], name, type, nptype);
-    }
-
-    SDL_free(ids);
-}
+#endif
 
 #if 0
-// xxx
+// -----------------  NOTES  --------------------
 
 // get list of sensors
 SDL_GetSensors                     : SDL_SensorID * SDL_GetSensors(int *count);    // returns uint32[]
@@ -233,6 +415,4 @@ num_sensors = 42
   41: Palm Proximity Sensor version 2                              type=0  nptype=8
   42: Motion Sensor                                                type=0  nptype=65559
   43: Orientation Sensor                                           type=0  nptype=3
-
-
 #endif
