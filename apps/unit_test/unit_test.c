@@ -14,7 +14,7 @@
 // defines
 //
 
-#define MAX_PAGE 8
+#define MAX_PAGE 9
 
 // xxx check these
 #define ROW2Y(r) ((r) * sdl_char_height)  // xxx ctr vs ...
@@ -36,7 +36,7 @@ static bool end_program;
 // prototypes
 //
 
-static void common_page_hndlr(void);
+static void page_hndlr(void);
 
 static void page_0_draw(void);
 
@@ -60,6 +60,10 @@ static void page_6_draw(void);
 static void page_7_init(void);
 static void page_7_draw(void);
 static void page_7_process_event(sdl_event_t *event);
+
+static void page_8_init(void);
+static void page_8_draw(void);
+static void page_8_exit(void);
 
 // -----------------  MAIN  ------------------------------------------
 
@@ -90,7 +94,7 @@ int main(int argc, char **argv)
 
     // call handler routine for the current page
     while (true) {
-        common_page_hndlr();
+        page_hndlr();
         if (end_program) {
             break;
         }
@@ -118,14 +122,15 @@ char *page_title[] = {       // Page
         "Textures",     //   5
         "Colors",       //   6
         "Audio",        //   7
+        "Sensors",      //   8
             };
 static int pagenum = 0;
 
-static void common_page_hndlr()
+static void page_hndlr()
 {
     sdl_event_t event;
     sdl_loc_t  *loc;
-    bool        page_changed = false;
+    int         new_pagenum = -1;
 
     sdl_print_init(20, COLOR_WHITE, COLOR_BLACK);
 
@@ -134,6 +139,7 @@ static void common_page_hndlr()
     case 3: page_3_init(); break;
     case 5: page_5_init(); break;
     case 7: page_7_init(); break;
+    case 8: page_8_init(); break;
     }
 
     while (true) {
@@ -167,6 +173,7 @@ static void common_page_hndlr()
         case 5: page_5_draw(); break;
         case 6: page_6_draw(); break;
         case 7: page_7_draw(); break;
+        case 8: page_8_draw(); break;
         default:
             printf("ERROR invalid pagenum %d\n", pagenum);
             end_program = true;
@@ -189,22 +196,22 @@ static void common_page_hndlr()
             end_program = true;
             break;      
         case EVID_SWIPE_RIGHT: case EVID_PREV_PAGE:
-            if (--pagenum < 0) {
-                pagenum = MAX_PAGE-1;
+            new_pagenum = pagenum - 1;
+            if (new_pagenum < 0) {
+                new_pagenum = MAX_PAGE-1;
             }
-            page_changed = true;
             break;      
         case EVID_SWIPE_LEFT: case EVID_NEXT_PAGE:
-            if (++pagenum >= MAX_PAGE) {
-                pagenum = 0;
+            new_pagenum = pagenum + 1;
+            if (new_pagenum >= MAX_PAGE) {
+                new_pagenum = 0;
             }
-            page_changed = true;
             break;      
         }
 
         // if the page has been changed or the program is terminating
         // then break out of the loop
-        if (page_changed || end_program) {
+        if (new_pagenum != -1 || end_program) {
             break;
         }
 
@@ -220,7 +227,11 @@ static void common_page_hndlr()
     switch (pagenum) {
     case 3: page_3_exit(); break;
     case 5: page_5_exit(); break;
+    case 8: page_8_exit(); break;
     }
+
+    // update pagenum
+    pagenum = new_pagenum;
 }
 
 // -----------------  PAGE 0: CLOCK  --------------------------
@@ -694,7 +705,7 @@ static void page_7_process_event(sdl_event_t *ev)
         sdl_audio_state_t state;
 
         sdl_audio_state(&state);
-        if (state.state != AUDIO_STATE_RECORD) {  //xxx add ING to name end
+        if (state.state != AUDIO_STATE_RECORD) {  //xxx add ING to name end  - 'RECORDING'
             rc = sdl_audio_record(record_file_name, 30, false);
             if (rc != 0) {
                 printf("ERROR: sdl_audio_record %s failed\n", record_file_name);
@@ -775,3 +786,33 @@ static void generate_morse_code_tones(sdl_tone_t **t, char *letters)
     }
     add_terminator(t);
 }
+
+// -----------------  PAGE 8: SENSORS -------------------------
+
+int sensor_id = -1;
+
+static void page_8_init(void)
+{
+    sensor_id = sdl_sensor_open(true, ASENSOR_TYPE_STEP_COUNTER);
+}
+
+static void page_8_draw(void)
+{
+    double value = 0;
+
+    if (sensor_id < 0) {
+        sdl_render_printf(0, 200, "open failed");
+        return;
+    }
+
+    sdl_sensor_read(sensor_id, &value);
+    sdl_render_printf(0, 200, "id=%d val=%f", sensor_id, value);
+}
+
+static void page_8_exit(void)
+{
+    if (sensor_id >= 0) {
+        sdl_sensor_close(sensor_id);
+    }
+}
+

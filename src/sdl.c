@@ -149,14 +149,18 @@ int sdl_init(void)
          DEFAULT_FONTSZ, sdl_char_width, sdl_char_height);
     if (sdl_char_width != 50 || sdl_char_height != 83) {
         ERROR("chw,chh, expected = 50,83  actual = %d,%d\n", sdl_char_width, sdl_char_height);
-        return -1;
+        return -1; //xxx should this be an error ret
     }
 
 #if 0
     // SDL Text Input is not being used 
     // xxx try SDL_StartTextInput
+    // xxx delete
     SDL_StopTextInput();
 #endif
+
+    // init sensor code
+    sdl_sensor_init();
 
     // this is needed so that the first actual display present works
     sdl_display_init(COLOR_BLACK);
@@ -354,6 +358,7 @@ static void process_sdl_event(SDL_Event *ev, sdl_event_t *event)
              x->which,
              x->data[0], x->data[1], x->data[2], x->data[3], x->data[4], x->data[5],
              x->sensor_timestamp);
+        sdl_sensor_event(x);
         break; }
     case SDL_EVENT_FINGER_DOWN:
     case SDL_EVENT_FINGER_UP:

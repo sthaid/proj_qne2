@@ -99,8 +99,11 @@ static int audio_open(bool record)
     return 0;
 }
 
+// xxx needs cleanup routine to close streams
+
 // -----------------  DEBUG & SUPPORT ROUTINES  -----------
 
+// xxx move to end
 void sdl_audio_print_devices_info(void)
 {
     SDL_AudioDeviceID *devid;

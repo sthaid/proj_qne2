@@ -451,6 +451,40 @@ void Sdl_audio_create_test_file (struct ParseState *Parser, struct Value *Return
 }
 
 //
+// sensors
+//
+
+void Sdl_sensor_open (struct ParseState *Parser, struct Value *ReturnValue,
+	struct Value **Param, int NumArgs)
+{
+    bool type_is_np = Param[0]->Val->Integer;
+    int type        = Param[1]->Val->Integer;
+    int id;
+
+    id = sdl_sensor_open(type_is_np, type);
+    ReturnValue->Val->Integer = id; 
+}
+
+void Sdl_sensor_close (struct ParseState *Parser, struct Value *ReturnValue,
+	struct Value **Param, int NumArgs)
+{
+    int id = Param[0]->Val->Integer;
+
+    sdl_sensor_close(id);
+}
+
+void Sdl_sensor_read (struct ParseState *Parser, struct Value *ReturnValue,
+	struct Value **Param, int NumArgs)
+{
+    int     id    = Param[0]->Val->Integer;
+    double *value = Param[1]->Val->Pointer;
+    int     rc;
+
+    rc = sdl_sensor_read(id, value);
+    ReturnValue->Val->Integer = rc; 
+}
+
+//
 // SDL REGISTRATION
 //
 
@@ -520,7 +554,12 @@ struct LibraryFunction SdlFunctions[] = {
     { Sdl_audio_ctl,                    "void sdl_audio_ctl(int req);" },
     { Sdl_audio_state,                  "void sdl_audio_state(sdl_audio_state_t * state);" },
     { Sdl_audio_print_device_info,      "void sdl_audio_print_devices_info(void);" },
-    { Sdl_audio_create_test_file,        "void sdl_audio_create_test_file(char *filename, int duration_secs, int freq);" },
+    { Sdl_audio_create_test_file,       "void sdl_audio_create_test_file(char *filename, int duration_secs, int freq);" },
+
+    // sensors
+    { Sdl_sensor_open,                  "int sdl_sensor_open(bool type_is_np, int type);" },
+    { Sdl_sensor_close,                 "void sdl_sensor_close(int id);" },
+    { Sdl_sensor_read,                  "int sdl_sensor_read(int id, double *value);" },
 
     { NULL, NULL } };
 
@@ -597,6 +636,8 @@ typedef struct { \n\
 #define AUDIO_REQ_STOP     1 \n\
 #define AUDIO_REQ_PAUSE    2 \n\
 #define AUDIO_REQ_UNPAUSE  3 \n\
+\n\
+#define ASENSOR_TYPE_STEP_COUNTER 19\n\
 ";
 
 // -----------------  UTILS PLATFORM ROUTINES  --------------------------

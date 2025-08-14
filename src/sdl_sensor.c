@@ -4,8 +4,6 @@
 #include <utils.h>
 #include <logging.h>
 
-// xxx call the cleanup routines from picoc
-
 // notes
 // - sensor_tbl is indexed by SDL_SensorID, which assumes the 
 //   SDL_SensorID is a small number, less than MAX_SENSOR_ID
@@ -16,6 +14,8 @@
 
 #define MAX_SENSOR_ID 256
 
+#define TEN_MS 10000
+
 //
 // typedefs
 //
@@ -24,7 +24,7 @@ typedef struct {
     SDL_SensorType type;
     int            nptype;
     const char    *name;
-    SDL_Sensor    *sensor;
+    SDL_Sensor    *sensor;  // xxx is sensor opened as nptype or type?
     struct {
         double value;
     } data;
@@ -40,22 +40,24 @@ static sensor_t sensor_tbl[MAX_SENSOR_ID];
 // prototypes
 //
 
-static int get_permission(char *name)
-static void get_permission_cb(void *userdata, const char *permission, bool granted)
+static int get_permission(char *name);
 
 // -----------------  INIT & EVENT HANDLER  --------------
 
 int sdl_sensor_init(void)
 {
     int            i, num_sensors = 0;
+    int            num_avail_sensors = 0;
     SDL_SensorID  *ids;
 
+    // get list of sensor ids
     ids = SDL_GetSensors(&num_sensors);
     if (ids == NULL) {
         ERROR("SDL_GetSensors returned NULL\n");
-        return;
+        return -1;
     }
 
+    // loop over all sensor ids, and save info in sensor_tbl
     for (i = 0; i < num_sensors; i++) {
         // check if sensor is device private
         if (SDL_GetSensorNonPortableTypeForID(ids[i]) >= 65536) {
@@ -68,67 +70,86 @@ int sdl_sensor_init(void)
             continue;
         }
 
-        sensor[ids[i]].type   = SDL_GetSensorTypeForID(ids[i]);
-        sensor[ids[i]].nptype = SDL_GetSensorNonPortableTypeForID(ids[i]);
-        sensor[ids[i]].name   = SDL_GetSensorNameForID(ids[i]);
+        // save sensor type, non-portable-type, and name in sensor_tbl
+        sensor_tbl[ids[i]].type   = SDL_GetSensorTypeForID(ids[i]);
+        sensor_tbl[ids[i]].nptype = SDL_GetSensorNonPortableTypeForID(ids[i]);
+        sensor_tbl[ids[i]].name   = SDL_GetSensorNameForID(ids[i]);
+        num_avail_sensors++;
     }
 
-    for (id = 0; id < MAX_SENSOR_ID; id++) {
-        if (sensor[id].name != NULL) {
+    // print the info from sensor_tbl
+    INFO("num_sensors: total=%d avail=%d\n", num_sensors, num_avail_sensors);
+    for (int id = 0; id < MAX_SENSOR_ID; id++) {
+        if (sensor_tbl[id].name != NULL) {
             INFO("%2d %2d %2d %s\n",
-                 id, sensor[id].type, sensor[id].nptype, sensor[id].name);
+                 id, sensor_tbl[id].type, sensor_tbl[id].nptype, sensor_tbl[id].name);
         }
     }
 
+    // free the list of ids
     SDL_free(ids);
+
+    // return success
+    return 0;
 }
 
+// called from process_sdl_event, in sdl.c, when SDL_EVENT_SENSOR_UPDATE occurs
 void sdl_sensor_event(SDL_SensorEvent *event)
 {
     int id;
     sensor_t *sens;
 
+    // validate sensor id is in range
     id = event->which;
-
     if (id < 0 || id >= MAX_SENSOR_ID) {
         ERROR("invlaid sensor id %d\n", id);
         return;
     }
 
+    // validate sensor id is for an open sensor
     sens = &sensor_tbl[id];
-    if (sens[id].sensor == NULL) {
+    if (sens->sensor == NULL) {
         ERROR("sensor id %d is not open\n", id);
         return;
     }
 
-    switch (send[id].nptype) {
+    // xxx first check sensor type field ??
+
+    // process the sensor data, save result in sensor_tbl[id].data struct
+    switch (sens->nptype) {
     case ASENSOR_TYPE_STEP_COUNTER:
         sens->data.value++;
         break;
     default:
-        ERROR("sensor id %d, invalid nptype %d\n", id, send->nptype);
+        ERROR("sensor id %d, invalid nptype %d\n", id, sens->nptype);
         break;
     }
 }
 
 // -----------  APIS AVAILABLE IN PICOC  --------------
 
-void *sdl_sensor_open(int nptype)
+int sdl_sensor_open(bool type_is_np, int type)
 {
     int id, rc;
+    SDL_Sensor *sdl_sensor;
 
-    // get the id of the first sensor with the requested nptype;
-    // note: nptype is 'sensor platform dependent type' or 'NonPortableType'
+    // get the id of the first sensor with the requested type/nptype;
+    // note: 
+    // - type   - sensors that are defined by SDL
+    // - nptype - 'NonPortableType', values are platform dependant
     for (id = 0; id < MAX_SENSOR_ID; id++) {
         if (sensor_tbl[id].name == NULL) {
             continue;
         }
-        if (sensor_tbl[id].nptype == nptype) {
+        if (type_is_np && type == sensor_tbl[id].nptype) {
+            break;
+        }
+        if (!type_is_np && type == sensor_tbl[id].type) {
             break;
         }
     }
     if (id == MAX_SENSOR_ID) {
-        ERROR("no sensor found for nptype %d\n", nptype);
+        ERROR("no sensor found for %s %d\n", (type_is_np ? "nptype" : "type"), type);
         return -1;
     }
 
@@ -140,7 +161,7 @@ void *sdl_sensor_open(int nptype)
 
     // get permission, if required for the requested nptype; 
     // note that the permission may also be needed in AndroidManifest.xml
-    if (nptype == ASENSOR_TYPE_STEP_COUNTER) {
+    if (type_is_np && type == ASENSOR_TYPE_STEP_COUNTER) {
         rc = get_permission("android.permission.ACTIVITY_RECOGNITION");
         if (rc < 0) {
             ERROR("failed to be granted ACTIVITY_RECOGNITION permission for STEP_COUNTER sensor\n");
@@ -157,7 +178,8 @@ void *sdl_sensor_open(int nptype)
         ERROR("failed to open sensor id %d, %s\n", id, SDL_GetError());
         return -1;
     }
-    sensor_tbl[idx].sensor = sdl_sensor;
+    sensor_tbl[id].sensor = sdl_sensor;
+    INFO("sensor_tbl[%d].sensor = %p\n", id, sensor_tbl[id].sensor);
 
     // return sensor id
     return id;
@@ -174,29 +196,39 @@ void sdl_sensor_close(int id)
         return;
     }
     
+    INFO("xxx closing sensor %d\n", id);
     SDL_CloseSensor(sensor_tbl[id].sensor);
     sensor_tbl[id].sensor = NULL;
 }
 
 int sdl_sensor_read(int id, double *value)
 {
+    // preset return value
     *value = 0;
 
-    if (id < 0 || id >= max_sensor) {
+    // validate id arg is for an open sensor
+    if (id < 0 || id >= MAX_SENSOR_ID) {
         ERROR("invlaid sensor id %d\n", id);
         return -1;
     }
+
+    //INFO("sensor_tbl[%d].sensor = %p\n", id, sensor_tbl[id].sensor);
 
     if (sensor_tbl[id].sensor == NULL) {
         ERROR("sensor id %d is not open\n", id);
         return -1;
     }
 
-    *value = sensor_tbl[id].value;
+    // return sensor data
+    *value = sensor_tbl[id].data.value;
     return 0;
 }
 
 // -----------------  PRIVATE  ----------------------------
+
+#ifdef ANDROID
+
+static void get_permission_cb(void *userdata, const char *permission, bool granted);
 
 #define PERM_NO_RESULT    0
 #define PERM_GRANTED      1
@@ -207,6 +239,7 @@ static int get_permission(char *name)
     bool succ;
     int perm_result;
 
+    // request permission
     perm_result = PERM_NO_RESULT;
     succ = SDL_RequestAndroidPermission(name, get_permission_cb, &perm_result);
     if (!succ) {
@@ -214,15 +247,18 @@ static int get_permission(char *name)
         return -1;
     }
 
-    while (perm_result == PERM_NO_RESULT)
-        usleep(TEN_MS);  //xxx add timeout?
+    // wait for permission request to be either granted or not-granted
+    while (perm_result == PERM_NO_RESULT) {
+        usleep(TEN_MS);
     }
 
+    // if not granted then return error
     if (perm_result != PERM_GRANTED) {
-        ERROR("ASENSOR_TYPE_STEP_COUNTER not granted\n");
+        ERROR("%s not granted\n", name);
         return -1;
     }
 
+    // return success
     return 0;
 }
 
@@ -231,55 +267,42 @@ static void get_permission_cb(void *userdata, const char *permission, bool grant
     int *perm_result = (int*)userdata;
 
     INFO("permission=%s  granted=%d\n", permission, granted);
-    *perm_result = granted;
+    *perm_result = (granted ? PERM_GRANTED : PERM_NOT_GRANTED);
 }
 
+#else
 
-#if 0  //xxx del
-void sdl_sensor_test(void)
+static int get_permission(char *name)
 {
-    static bool first = true;
-    bool succ;
-    float data[6];
-    static SDL_Sensor *step_counter;
-
-    if (first) {
-        sdl_sensor_print_devices();
-
-        succ = SDL_RequestAndroidPermission("android.permission.ACTIVITY_RECOGNITION", cb, NULL);
-        if (!succ) {
-            ERROR("SDL_RequestAndroidPermission failed, %s\n", SDL_GetError());
-        } else {
-            while (!granted) {
-                sleep(1);
-            }
-        }
-
-        // step counter ID 15
-        INFO("opening step counter ...\n");
-        step_counter = SDL_OpenSensor(15);
-        if (step_counter == NULL) {
-            ERROR("failed to open step counter, %s\n", SDL_GetError());
-        }
-        first = false;
-    }
-
-    if (step_counter) {
-        succ = SDL_GetSensorData(step_counter, data, 6);
-        if (!succ) {
-            ERROR("get step counter failed, %s\n", SDL_GetError());
-            return;
-        }
-        INFO("step ctr = %f %f %f %f %f %f \n",
-             data[0], data[1], data[2], data[3], data[4], data[5]);
-    }
-
-    //SDL_CloseSensor(step_counter);
+    return 0;
 }
+
 #endif
 
 #if 0
 // -----------------  NOTES  --------------------
+
+------------
+REFERENCES 
+------------
+
+- Sensor Events
+    https://developer.android.com/reference/android/hardware/SensorEvent.html
+    https://developer.android.com/reference/android/hardware/SensorEvent.html#values
+- Sensor types
+    https://source.android.com/docs/core/interaction/sensors/sensor-types
+- SensorType Enum - non portable sensor types
+    https://learn.microsoft.com/en-us/dotnet/api/android.hardware.sensortype?view=net-android-35.0
+- Android SDK, NDK 29 sensor.h
+    ~/android_sdk/ndk/29.0.13846066/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include/android/sensor.h
+- Permissions
+    https://developer.android.com/guide/topics/permissions/overview
+    https://developer.android.com/reference/android/Manifest.permission
+    SDL_RequestAndroidPermission
+
+---------------
+SDL API
+---------------
 
 // get list of sensors
 SDL_GetSensors                     : SDL_SensorID * SDL_GetSensors(int *count);    // returns uint32[]
@@ -308,7 +331,10 @@ SDL_GetSensorNonPortableTypeForID  : int SDL_GetSensorNonPortableTypeForID(SDL_S
 
 SDL_GetSensorProperties            : SDL_PropertiesID SDL_GetSensorProperties(SDL_Sensor *sensor);    # ret is uint32
 
---- sensor types ---
+-------------
+SENSOR TYPES
+-------------
+
 https://wiki.libsdl.org/SDL3/SDL_SensorType
 
 typedef enum SDL_SensorType {
@@ -322,25 +348,58 @@ typedef enum SDL_SensorType {
     SDL_SENSOR_GYRO_R           /**< Gyroscope for right Joy-Con controller */
 } SDL_SensorType;
 
-References:
-- Sensor Events
-    https://developer.android.com/reference/android/hardware/SensorEvent.html
-    https://developer.android.com/reference/android/hardware/SensorEvent.html#values
-- Sensor types
-    https://source.android.com/docs/core/interaction/sensors/sensor-types
-- SensorType Enum - non portable sensor types
-    https://learn.microsoft.com/en-us/dotnet/api/android.hardware.sensortype?view=net-android-35.0
-- Android SDK 
-    ~/android_sdk/ndk/29.0.13846066/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include/android/sensor.h
-- Permissions
-    https://developer.android.com/guide/topics/permissions/overview
-    https://developer.android.com/reference/android/Manifest.permission
-    SDL_RequestAndroidPermission
+#define SDL_SENSOR_ACCEL    1
+#define SDL_SENSOR_GYRO     2
+#define SDL_SENSOR_ACCEL_L  3
+#define SDL_SENSOR_GYRO_L   4
+#define SDL_SENSOR_ACCEL_R  5
+#define SDL_SENSOR_GYRO_R   6
 
-notes:
-- wakeup sensor - wake the Application Processor from sleep state
+--------------------------
+SENSOR NON PORTABLE TYPES
+--------------------------
 
----- Sensor Events ----
+From:
+~/android_sdk/ndk/29.0.13846066/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include/android/sensor.h
+
+#define ASENSOR_TYPE_ACCELEROMETER       1
+#define ASENSOR_TYPE_MAGNETIC_FIELD      2
+#define ASENSOR_TYPE_GYROSCOPE           4
+#define ASENSOR_TYPE_LIGHT               5
+#define ASENSOR_TYPE_PRESSURE            6
+#define ASENSOR_TYPE_PROXIMITY           8
+#define ASENSOR_TYPE_GRAVITY             9
+#define ASENSOR_TYPE_LINEAR_ACCELERATION 10
+#define ASENSOR_TYPE_ROTATION_VECTOR     11
+#define ASENSOR_TYPE_RELATIVE_HUMIDITY   12
+#define ASENSOR_TYPE_AMBIENT_TEMPERATURE 13
+#define ASENSOR_TYPE_MAGNETIC_FIELD_UNCALIBRATED 14
+#define ASENSOR_TYPE_GAME_ROTATION_VECTOR 15
+#define ASENSOR_TYPE_GYROSCOPE_UNCALIBRATED 16
+#define ASENSOR_TYPE_SIGNIFICANT_MOTION 17
+#define ASENSOR_TYPE_STEP_DETECTOR 18
+#define ASENSOR_TYPE_STEP_COUNTER 19
+#define ASENSOR_TYPE_GEOMAGNETIC_ROTATION_VECTOR 20
+#define ASENSOR_TYPE_HEART_RATE 21
+#define ASENSOR_TYPE_POSE_6DOF 28
+#define ASENSOR_TYPE_STATIONARY_DETECT 29
+#define ASENSOR_TYPE_MOTION_DETECT 30
+#define ASENSOR_TYPE_HEART_BEAT 31
+#define ASENSOR_TYPE_DYNAMIC_SENSOR_META 32
+#define ASENSOR_TYPE_ADDITIONAL_INFO 33
+#define ASENSOR_TYPE_LOW_LATENCY_OFFBODY_DETECT 34
+#define ASENSOR_TYPE_ACCELEROMETER_UNCALIBRATED 35
+#define ASENSOR_TYPE_HINGE_ANGLE 36
+#define ASENSOR_TYPE_HEAD_TRACKER 37
+#define ASENSOR_TYPE_ACCELEROMETER_LIMITED_AXES 38
+#define ASENSOR_TYPE_GYROSCOPE_LIMITED_AXES 39
+#define ASENSOR_TYPE_ACCELEROMETER_LIMITED_AXES_UNCALIBRATED 40
+#define ASENSOR_TYPE_GYROSCOPE_LIMITED_AXES_UNCALIBRATED 41
+#define ASENSOR_TYPE_HEADING 42
+
+--------------
+SENSOR EVENTS
+--------------
 
 retrieved by SDL_PollEvent()   eventid = SDL_EVENT_SENSOR_UPDATE
 
@@ -355,24 +414,16 @@ typedef struct SDL_SensorEvent {
                                   not necessarily synchronized with the system clock */
 } SDL_SensorEvent;
 
+----------
+NOTES 
+----------
 
----- Sensor Types ----
+- wakeup sensor - wake the Application Processor from sleep state
 
-typedef enum SDL_SensorType {
-    SDL_SENSOR_INVALID = -1,    /**< Returned for an invalid sensor */
-    SDL_SENSOR_UNKNOWN,         /**< Unknown sensor type */
-    SDL_SENSOR_ACCEL,           /**< Accelerometer */
-    SDL_SENSOR_GYRO,            /**< Gyroscope */
-    SDL_SENSOR_ACCEL_L,         /**< Accelerometer for left Joy-Con controller and Wii nunchuk */
-    SDL_SENSOR_GYRO_L,          /**< Gyroscope for left Joy-Con controller */
-    SDL_SENSOR_ACCEL_R,         /**< Accelerometer for right Joy-Con controller */
-    SDL_SENSOR_GYRO_R           /**< Gyroscope for right Joy-Con controller */
-} SDL_SensorType;
+-----------------------------
+ANDROID SENSORS ON MY DEVICE
+-----------------------------
 
-
----- List of Android Sensors on my device ----
-
-num_sensors = 42
   2: lsm6dso LSM6DSO Accelerometer Non-wakeup                     type=1  nptype=1
   3: AK09918 Magnetometer                                         type=0  nptype=2
   4: lsm6dso LSM6DSO Gyroscope Non-wakeup                         type=2  nptype=4
@@ -415,4 +466,5 @@ num_sensors = 42
   41: Palm Proximity Sensor version 2                              type=0  nptype=8
   42: Motion Sensor                                                type=0  nptype=65559
   43: Orientation Sensor                                           type=0  nptype=3
+
 #endif

@@ -110,7 +110,7 @@ static void init(void)
 
     // if apps dir doesn't exist then create it
     rc = stat("apps", &statbuf);
-    if (rc != 0 || !S_ISDIR(statbuf.st_mode)) {
+    if (true || rc != 0 || !S_ISDIR(statbuf.st_mode)) {  //xxx true
         create_default_apps();
     }
 
@@ -138,19 +138,22 @@ static void create_default_apps(void)
     int rc;
     size_t len;
 
-    system("rm -rf apps");
-
     ptr = SDL_LoadFile("apps.tar", &len);
     if (ptr == NULL ) {
         ERROR("failed to read apps.tar");
         return;
     }
 
-    rc = util_write_file("tmp_apps.tar", ptr, len);
+    rc = util_write_file("tmp_apps.tar", ptr, len);  // xxx why tmp_apps.tar name?
     SDL_free(ptr);
     if (rc != 0) {
         ERROR("failed to write tmp_apps.tar\n");
         return;
+    }
+
+    rc = system("rm -rf apps");
+    if (rc != 0) {
+        ERROR("rm -rf apps, failed\n");
     }
 
     rc = system("tar -xvf tmp_apps.tar");  // xxx would just the tar work
@@ -195,9 +198,6 @@ static void controller(void)
         sdl_win_width, sdl_win_height, sdl_char_width, sdl_char_height);
 
     while (true) {
-        // xxx temp
-        sdl_sensor_test();
-
         // xxx reset other stuff here too, fontsz, color
         sdl_display_init(BG_COLOR);
 

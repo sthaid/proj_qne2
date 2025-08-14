@@ -1,3 +1,4 @@
+// xxx should this file include these
 #include <SDL3/SDL.h>
 #include <SDL3_ttf/SDL_ttf.h>
 
@@ -159,6 +160,13 @@ void sdl_audio_create_test_file(char *filename, int duration_secs, int freq);
 // sensors
 // --------------------
 
-void sdl_sensor_test(void); //xxx temp
+#define ASENSOR_TYPE_STEP_COUNTER 19
 
-void sdl_sensor_print_devices(void);
+// xxx move to new file
+int sdl_sensor_init(void);  // xxx call this
+void sdl_sensor_event(SDL_SensorEvent *event);  // xxx call this
+
+int sdl_sensor_open(bool type_is_np, int type);
+void sdl_sensor_close(int id);
+int sdl_sensor_read(int id, double *value);
+
