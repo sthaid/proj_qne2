@@ -196,7 +196,6 @@ void sdl_sensor_close(int id)
         return;
     }
     
-    INFO("xxx closing sensor %d\n", id);
     SDL_CloseSensor(sensor_tbl[id].sensor);
     sensor_tbl[id].sensor = NULL;
 }
@@ -211,8 +210,6 @@ int sdl_sensor_read(int id, double *value)
         ERROR("invlaid sensor id %d\n", id);
         return -1;
     }
-
-    //INFO("sensor_tbl[%d].sensor = %p\n", id, sensor_tbl[id].sensor);
 
     if (sensor_tbl[id].sensor == NULL) {
         ERROR("sensor id %d is not open\n", id);
