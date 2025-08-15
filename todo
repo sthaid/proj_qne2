@@ -1,3 +1,13 @@
+tools need to get ip addr and port
+get rid of menu file
+try creating a simple test app
+do more code cleanups
+work on other sensors
+how to start program when booting
+
+
+xxxxxxxxxx
+
 ./ezsh "if [ ! -d apps/reversix ]; then echo NO; else echo YES; fi"
 
 xxxxxxx

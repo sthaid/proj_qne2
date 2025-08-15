@@ -37,7 +37,6 @@ typedef struct {
 // variables
 //
 
-// xxx are all these needed
 static const char *storage_path;
 static params_t    params;
 static pthread_t   server_tid;
@@ -48,8 +47,8 @@ static pthread_t   server_tid;
 
 static void controller(void);
 static void *server_thread(void *cx);
-static char *sock_addr_to_str(char * s, int slen, struct sockaddr * addr);
-static void remove_trailing_newline(char *s);
+//static char *sock_addr_to_str(char * s, int slen, struct sockaddr * addr);
+//static void remove_trailing_newline(char *s);  xxx move to utils
 
 //
 // routines to launch a C program using picoc interpreter
@@ -71,13 +70,14 @@ int MAIN(int argc, char **argv)
     // xxx comment
     controller();
 
-    // end program xxx kill the server thread ?
+    // end program
     INFO("TERMINATING\n");
     return 0;
 }
 
 static void sigusr1_hndlr(int signum)
 {
+    // nothing needed here
 }
 
 static void init(void)
@@ -91,7 +91,7 @@ static void init(void)
 #ifdef ANDROID
     storage_path = SDL_GetAndroidInternalStoragePath();
 #else
-    storage_path = "/home/haid/proj/proj_qne2/linux/files";  //xxx
+    storage_path = "/home/haid/proj/proj_qne2/linux/files";
 #endif
     chdir(storage_path);
 
@@ -101,18 +101,19 @@ static void init(void)
 
     // print startup messages
     INFO("========== STARTING: VERSION=%s ==========\n", VERSION);
+    INFO("storage_path = %s\n", storage_path);
 
     // get params, if they don't exist, set to default value
     params.devel_mode = util_get_int_param("devel_mode", 0);
-    params.devel_mode = 1;  //xxx
+    params.devel_mode = 1;  //xxx del this
 
     // if apps dir doesn't exist then create it
     rc = stat("apps", &statbuf);
-    if (true || rc != 0 || !S_ISDIR(statbuf.st_mode)) {  //xxx true
+    if (true || rc != 0 || !S_ISDIR(statbuf.st_mode)) {  //xxx true, del true
         create_default_apps();
     }
 
-    // xxx
+    // xxx comment
     struct sigaction action;
     memset(&action, 0, sizeof(action));
     action.sa_handler = sigusr1_hndlr;
@@ -165,30 +166,23 @@ static void create_default_apps(void)
 
 // -----------------  CONTROLLER  ------------------------------------
 
-#define MAX_PAGE 10
-#define MAX_MENU 15
+#define MAX_APPS 100
 
-typedef struct {
-    char *dir;
-    char *name;
-    char *args;
-} menu_t;
-
-static int    page;
-static int    last_page;
-static menu_t menu[MAX_PAGE][MAX_MENU];
+static char *apps[MAX_APPS];
+static int   max_apps;
+static int   page;
+static int   last_page;
 
 static void display_menu(void);
-static void read_menu(void);
+static void get_list_of_apps(void);
 static void settings(void);
 
 static void controller(void)
 {
-    int rc;
     sdl_event_t event;
 
     // xxx should this be in init()
-    rc = sdl_init(); //xxx handle ret
+    sdl_init(); //xxx handle ret
     INFO("sdl_win_width,height = %d %d  sdl_char_width,height=%d %d\n",
         sdl_win_width, sdl_win_height, sdl_char_width, sdl_char_height);
 
@@ -223,27 +217,42 @@ static void controller(void)
             if (++page > last_page) {
                 page = 0;
             }
-        } else if (event.event_id == EVID_QUIT) {
-            break;
-        } else {
-            // xxx check that menu entry is defined
-            int pg = event.event_id / MAX_MENU;
-            int id = event.event_id % MAX_MENU;
+        } else if (event.event_id == max_apps-1) {
+            INFO("running Settings\n");
+            settings();
+            INFO("done Settings\n");
+        } else if (event.event_id >= 0 && event.event_id < max_apps-1) {
+            char           app_dir[100], picoc_args[1000];
+            int            id = event.event_id;
+            int            rc;
+            DIR           *dir;
+            struct dirent *dirent;
 
-            if (pg == 0 && id == MAX_MENU-1) {
-                INFO("running Settings\n");
-                settings();
-                INFO("done Settings\n");
-            } else {
-                char working_dir[100];
-                INFO("running %s\n", menu[pg][id].name);
-                sdl_print_init(DEFAULT_FONTSZ, COLOR_WHITE, COLOR_BLACK);
-                sprintf(working_dir, "apps/%s", menu[pg][id].dir);
-                chdir(working_dir);
-                rc = picoc_fg(menu[pg][id].args);
-                chdir("../.."); //xxx back to storage_path
-                INFO("done %s, rc=%d\n", menu[pg][id].name, rc);
+            INFO("running %s\n", apps[id]);
+
+            sdl_print_init(DEFAULT_FONTSZ, COLOR_WHITE, COLOR_BLACK);
+            sprintf(app_dir, "apps/%s", apps[id]);
+            chdir(app_dir);
+
+            // construct list of *.c files in this dir
+            picoc_args[0] = '\0';
+            dir = opendir(".");
+            while ((dirent = readdir(dir)) != NULL) {
+                char *fn = dirent->d_name;
+                if (strstr(fn, ".c")) {
+                    strcat(picoc_args, fn);
+                    strcat(picoc_args, " ");
+                }
             }
+            closedir(dir);
+
+            INFO("XXX picoc_args = %s\n", picoc_args);
+            rc = picoc_fg(picoc_args);  // args
+
+            chdir(storage_path);
+
+            INFO("done %s, rc=%d\n", apps[id], rc);
+            // xxx if app fails, put up screen with error message
         }
     }
 
@@ -253,7 +262,6 @@ static void controller(void)
 
 static void display_menu(void)
 {
-    int    id;
     static sdl_texture_t *circle;
 
     #define RADIUS 100
@@ -264,21 +272,20 @@ static void display_menu(void)
     }
 
     // xxx
-    read_menu();
+    get_list_of_apps();
 
-    // xxx comment
-    for (id = 0; id < MAX_MENU; id++) {
-        char *name = menu[page][id].name;
-        char str1[32], str2[32], *p;
+    // xxx comment, xxx fix for multi page
+    for (int id = 0; id < max_apps; id++) {
+        //char *name = menu[page][id].name;
+        char str1[32], str2[32];
         int len1, len2, len_max, x, y;
-        double numchars, chw, chh;
+        //double numchars, chw, chh;
         sdl_loc_t loc;
+        double chw, chh;
+        int numchars;
+        
 
-        // if this menu entry is not defined then continue
-        if (name == NULL) {
-            continue;
-        }
-
+#if 0
         // if name contains '_' then divide name to 2 strings,
         // else one string
         memset(str1, 0, sizeof(str1));
@@ -289,6 +296,11 @@ static void display_menu(void)
         } else {
             strcpy(str1, name);
         }
+#else
+//xxx  IMPROVE THE icons
+        strcpy(str1, apps[id]);
+        str2[0] = '\0';
+#endif
 
         len1 = strlen(str1);
         len2 = strlen(str2);
@@ -337,13 +349,14 @@ static void display_menu(void)
         loc.y = y - RADIUS;
         loc.w = 2 * RADIUS;
         loc.h = 2 * RADIUS;
-        sdl_register_event(&loc, page * MAX_MENU + id);
+        sdl_register_event(&loc, id);
     }
 
     // xxx
     sdl_print_init(LARGE_FONTSZ, COLOR_WHITE, BG_COLOR);
 
     // xxx move this
+    // xxx apps should take advantage of this
     #define DISPLAY_CONTROL_ITEM(col,str,evid) \
         do { \
             sdl_loc_t *loc; \
@@ -363,8 +376,70 @@ static void display_menu(void)
     sdl_print_init(DEFAULT_FONTSZ, COLOR_WHITE, BG_COLOR);
 }
 
-static void read_menu(void)
+static int qsort_compare(const void *a, const void *b)
 {
+    const char *str_a = *(char **)a;
+    const char *str_b = *(char **)b;
+    int rc;
+
+    rc = strcmp(str_a, str_b);
+    printf("%s  %s  %d\n", str_a, str_b, rc);
+    return rc;
+}
+
+// xxx
+static void get_list_of_apps(void)
+{
+    struct stat statbuf;
+    char        apps_dir_path[100];
+    DIR        *apps_dir;
+    struct dirent *dirent;
+    int         i, rc;
+
+    static long apps_dir_mtime;
+
+    // if apps dir has not changed then return
+    sprintf(apps_dir_path, "%s/apps", storage_path);
+    rc = stat(apps_dir_path, &statbuf);
+    if (rc != 0) {
+        ERROR("stat %s failed, %s\n", apps_dir_path, strerror(errno));
+        return;
+    }
+    if (statbuf.st_mtime == apps_dir_mtime) {
+        return;
+    }
+    apps_dir_mtime = statbuf.st_mtime;
+
+    // free the current apps names
+    for (i = 0; i < max_apps; i++) {
+        free(apps[i]);
+        apps[i] = NULL;
+    }
+    max_apps = 0;
+
+    // obtain apps directory content,
+    // these are the names of the defined apps
+    apps_dir = opendir(apps_dir_path);
+    while ((dirent = readdir(apps_dir)) != NULL) {
+        if (dirent->d_name[0] == '.') {
+            continue;
+        }
+        apps[max_apps++] = strdup(dirent->d_name);
+    }
+    closedir(apps_dir);
+
+    // sort list alphabetical
+    qsort(apps, max_apps, sizeof(char*), qsort_compare);
+
+    // add settings to the end
+    apps[max_apps++] = strdup("settings");
+
+    // debug print the list of apps names
+    for (i = 0; i < max_apps; i++) {
+        INFO("apps[%d] = %s\n", i, apps[i]);
+    }
+}
+#if 0  // xxx del
     FILE *fp;
     char s[500], name[100], dir[100], *args;
     int cnt, pg, id, n, ret;
@@ -464,7 +539,7 @@ static void read_menu(void)
             }
         }
     }
-}
+#endif
 
 #define ROW2Y(r) ((r) * sdl_char_height)  // xxx ctr vs ...
 #define ROW2Y_CTR(r) ((r) * sdl_char_height + sdl_char_height/2)
@@ -639,7 +714,7 @@ again:
         int                sockfd;
         struct sockaddr_in peer_addr;
         socklen_t          peer_addr_len;
-        char               peer_addr_str[200];
+        //char               peer_addr_str[200];
 
         // accept connection
         peer_addr_len = sizeof(peer_addr);
@@ -648,7 +723,7 @@ again:
             ERROR("accept, %s\n", strerror(errno));
             break;
         }
-        sock_addr_to_str(peer_addr_str, sizeof(peer_addr_str), (struct sockaddr *)&peer_addr);
+        //sock_addr_to_str(peer_addr_str, sizeof(peer_addr_str), (struct sockaddr *)&peer_addr);
         //INFO("accepted connection from %s, sockfd=%d\n", peer_addr_str, sockfd);
 
         // create thread to process the client request
@@ -727,6 +802,7 @@ static void process_req_using_android_sh(int sockfd, char *cmd)
 
 // -----------------  UTILS  ----------------------------------
 
+#if 0
 static char * sock_addr_to_str(char * s, int slen, struct sockaddr * addr)
 {
     char addr_str[100];
@@ -752,7 +828,9 @@ static char * sock_addr_to_str(char * s, int slen, struct sockaddr * addr)
     snprintf(s,slen,"%s:%d",addr_str,ntohs(port2));
     return s;
 }
+#endif
 
+#if 0
 static void remove_trailing_newline(char *s)
 {
     int len = strlen(s);
@@ -761,3 +839,4 @@ static void remove_trailing_newline(char *s)
         s[len-1] = '\0';
     }
 }
+#endif

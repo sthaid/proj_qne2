@@ -65,6 +65,7 @@ int main(int argc, char **argv)
     write(sockfd, cmd, strlen(cmd));
     write(sockfd, "\n", 1);
 
+    // xxx cleanup and comment shut_wr
     bool shut_wr = false;
 
     // transfer data between the socket and stdin/stdout
