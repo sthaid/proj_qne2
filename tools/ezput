@@ -1,0 +1,46 @@
+#!/bin/bash
+
+# if no args provided then the filename_list is set to all
+# the files in this directory else the filename_list are the args
+if [ "$1" = "" ]; then
+  filename_list=$(echo *)
+else
+  filename_list="$*"
+fi
+
+# verify parent directory is 'apps'
+parent_dir=$(basename $(dirname $PWD))
+if [ "$parent_dir" != apps ]; then
+    echo "ERROR: parent_dir must be apps"
+    exit 1
+fi
+
+# determine the destination dir (on android), and whether it exists
+android_dir=apps/$(basename $PWD)
+android_dir_exists=$(ezsh "if [ ! -d $android_dir ]; then echo NO; else echo YES; fi")
+
+# if the android_dir does not exist then prompt user to create it
+if [ "$android_dir_exists" != YES ]; then
+  echo "ERROR: android dir $android_dir does not exist"
+  read -p "Create y/n? " yn
+  if [ "$yn" != y ]; then
+    exit 1
+  fi
+  ezsh "mkdir $android_dir"
+fi
+
+# loop over filename_list
+for filename in $filename_list; do
+  # skip filenames that should not be copied to Android
+  if [ ! -f "$filename" -o -x $filename -o $filename = Makefile ]; then
+    echo "skipping $filename"
+    shift
+    continue
+  fi
+
+  # copy the file to Android
+  echo "copying file to android $android_dir/$filename"
+  cat $filename | ezsh "cat > $android_dir/$filename"
+done
+
+exit 0

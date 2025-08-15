@@ -1,2 +1,2 @@
-../run: run.c
-	gcc -o ../run -Wall run.c
+ezsh: ezsh.c
+	gcc -o ezsh -Wall ezsh.c
