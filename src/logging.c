@@ -11,22 +11,27 @@
 
 #define MAX_TIME_STR 100
 
+static char log_file[100];
+
 static long get_real_time_us(void);
 static char * time2str(char * str, long us, bool gmt, bool display_ms, bool display_date);
 
 // ----------------- LOGGING -----------------
 
-void init_logging(char *logfile)
+void log_init(char *log_file_arg)
 {
     FILE *fp;
     int rc;
 
-    if (logfile) {
-        fp = freopen(logfile, "a", stdout);
+    if (log_file_arg) { // xxx this should be required
+        strcpy(log_file, log_file_arg);
+
+        fp = freopen(log_file, "a", stdout);
         if (fp == NULL) {
-            ERROR("failed to reopen stdout to file '%s', %s\n", logfile, strerror(errno));
+            ERROR("failed to reopen stdout to file '%s', %s\n", log_file, strerror(errno));
             return;
         }
+
         rc = dup2(fileno(stdout), fileno(stderr));
         if (rc < 0) {
             ERROR("failed to dup stdout to stderr, %s\n", strerror(errno));
@@ -37,11 +42,11 @@ void init_logging(char *logfile)
     setlinebuf(stdout);
     setlinebuf(stderr);
 
-    fprintf(stdout, "test print to stdout\n");  //xxx temp
+    fprintf(stdout, "test print to stdout\n");  //xxx temp prints
     fprintf(stderr, "test print to stderr\n");
 }
 
-void logmsg(char *lvl, const char *func, char *fmt, ...)
+void log_msg(char *lvl, const char *func, char *fmt, ...)
 {
     va_list ap;
     char    msg[1000];
@@ -81,6 +86,39 @@ void logmsg(char *lvl, const char *func, char *fmt, ...)
     // log using printf to stderr
     time2str(time_str, get_real_time_us(), false, true, true),
     fprintf(stderr, "%s %s %s: %s\n", time_str, lvl, func, msg);
+}
+
+void log_clear(void)
+{
+    if (log_file[0] == '\0') {
+        return;
+    }
+
+    freopen(log_file, "w", stdout);
+    dup2(fileno(stdout), fileno(stderr));
+
+    setlinebuf(stdout);
+    setlinebuf(stderr);
+
+    INFO("---------- log cleared ----------\n");
+}
+
+int log_size(void)
+{
+    int rc;
+    struct stat statbuf;
+
+    if (log_file[0] == '\0') {
+        return 0;
+    }
+
+    rc = stat(log_file, &statbuf);
+    if (rc != 0) {
+        ERROR("stat '%s' failed\n", strerror(errno));
+        return 0;
+    }
+
+    return statbuf.st_size;
 }
 
 // -----------------  LOCAL  -------------------------

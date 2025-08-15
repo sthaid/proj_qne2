@@ -1,16 +1,18 @@
 #define INFO(fmt, args...) \
     do { \
-        logmsg("INFO", __func__, fmt, ## args); \
+        log_msg("INFO", __func__, fmt, ## args); \
     } while (0)
 #define WARN(fmt, args...) \
     do { \
-        logmsg("WARN", __func__, fmt, ## args); \
+        log_msg("WARN", __func__, fmt, ## args); \
     } while (0)
 #define ERROR(fmt, args...) \
     do { \
-        logmsg("ERROR", __func__, fmt, ## args); \
+        log_msg("ERROR", __func__, fmt, ## args); \
     } while (0)
 
-void init_logging(char *logfile);
-void logmsg(char * lvl, const char * func, char * fmt, ...) __attribute__ ((format (printf, 3, 4)));
+void log_init(char *logfile);
+void log_msg(char * lvl, const char * func, char * fmt, ...) __attribute__ ((format (printf, 3, 4)));
+void log_clear(void);
+int log_size(void);
 

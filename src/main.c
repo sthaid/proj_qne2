@@ -39,8 +39,6 @@ typedef struct {
 
 // xxx are all these needed
 static const char *storage_path;
-static bool        server_thread_running;  
-static char        log_file_pathname[100];
 static params_t    params;
 static pthread_t   server_tid;
 
@@ -51,8 +49,6 @@ static pthread_t   server_tid;
 static void controller(void);
 static void *server_thread(void *cx);
 static char *sock_addr_to_str(char * s, int slen, struct sockaddr * addr);
-//static bool is_socket_connected(int socket_fd); xxx
-//static void get_file_info(char *pathname, size_t *size, time_t *mtime); xxx
 static void remove_trailing_newline(char *s);
 
 //
@@ -88,6 +84,7 @@ static void init(void)
 {
     int rc;
     struct stat statbuf;
+    char log_path[100];
 
     // determine storage_path, and 
     // set current working directory to storage_path
@@ -99,7 +96,8 @@ static void init(void)
     chdir(storage_path);
 
     // init logging
-    init_logging("log");
+    sprintf(log_path, "%s/%s", storage_path, "log");
+    log_init(log_path);
 
     // print startup messages
     INFO("========== STARTING: VERSION=%s ==========\n", VERSION);
@@ -122,9 +120,6 @@ static void init(void)
 
     // create server thread
     pthread_create(&server_tid, NULL, server_thread, NULL);
-//  while (server_thread_running == false) {
-//      usleep(10000);
-//  }
 }
 
 static void create_default_apps(void)
@@ -246,7 +241,7 @@ static void controller(void)
                 sprintf(working_dir, "apps/%s", menu[pg][id].dir);
                 chdir(working_dir);
                 rc = picoc_fg(menu[pg][id].args);
-                chdir("../..");
+                chdir("../.."); //xxx back to storage_path
                 INFO("done %s, rc=%d\n", menu[pg][id].name, rc);
             }
         }
@@ -478,16 +473,18 @@ static void read_menu(void)
 static void settings(void)
 {
     sdl_event_t event;
-    sdl_loc_t *loc;
-    bool quit = false;
-    bool reset_apps_confirm = false;
+    sdl_loc_t  *loc;
+    bool        quit = false;
+    bool        reset_apps_confirm = false;
+    int         sz;
 
     INFO("SETTINGS\n");
 
     #define EVID_DEVEL_MODE 1000
     #define EVID_RESET_APPS 1001
-    #define EVID_RESET_APPS_CONFIRM 1002
-    #define EVID_RESET_APPS_CANCEL  1003
+    #define EVID_LOG_FILE_CLEAR 1002
+    #define EVID_RESET_APPS_CONFIRM 1003
+    #define EVID_RESET_APPS_CANCEL  1004
 
     while (true) {
         sdl_display_init(BG_COLOR);
@@ -507,6 +504,16 @@ static void settings(void)
             sdl_print_init(-1, COLOR_LIGHT_BLUE, BG_COLOR);
             loc = sdl_render_printf(0, ROW2Y(8), "Reset_Apps");
             sdl_register_event(loc, EVID_RESET_APPS);
+            sdl_print_init(-1, COLOR_WHITE, BG_COLOR);
+
+            sdl_print_init(-1, COLOR_LIGHT_BLUE, BG_COLOR);
+            sz = log_size();
+            if (sz < 1000000) {
+                loc = sdl_render_printf(0, ROW2Y(10), "Log_Clear sz=%d", sz);
+            } else {
+                loc = sdl_render_printf(0, ROW2Y(10), "Log_Clear sz=%d M", sz/1000000);
+            }
+            sdl_register_event(loc, EVID_LOG_FILE_CLEAR);
             sdl_print_init(-1, COLOR_WHITE, BG_COLOR);
         } else {
             sdl_render_printf(0, ROW2Y(8), "Reset_Apps?");
@@ -553,6 +560,9 @@ static void settings(void)
             break;
         case EVID_RESET_APPS_CANCEL:
             reset_apps_confirm = false;
+            break;
+        case EVID_LOG_FILE_CLEAR:   
+            log_clear();
             break;
         case EVID_QUIT:
             quit = true;
@@ -612,7 +622,6 @@ again:
                (struct sockaddr *)&server_address,
                sizeof(server_address));
     if (ret == -1) {
-        // xxx maybe retry, and server_thread_running not being set
         ERROR("bind, %s\n", strerror(errno));
         return NULL;
     }
@@ -626,7 +635,6 @@ again:
 
     // accept and process connections
     INFO("accepting connections\n");
-    server_thread_running = true;  // xxx needed?
     while (1) {
         int                sockfd;
         struct sockaddr_in peer_addr;
@@ -639,8 +647,6 @@ again:
         if (sockfd == -1) {
             ERROR("accept, %s\n", strerror(errno));
             break;
-            //sleep(1);
-            //continue;
         }
         sock_addr_to_str(peer_addr_str, sizeof(peer_addr_str), (struct sockaddr *)&peer_addr);
         //INFO("accepted connection from %s, sockfd=%d\n", peer_addr_str, sockfd);
@@ -649,10 +655,12 @@ again:
         pthread_create(&tid, NULL, process_req_thread, (void*)(long)sockfd);
     }
 
-    // xxx
+    // close listen socket,
+    // goto top to wait for developer mode enabled
     close(listen_sockfd);
     goto again;
 
+    // not reached
     INFO("SERVER_THREAD TERMINATING\n");
     return NULL;
 }
@@ -672,7 +680,7 @@ static void *process_req_thread(void *cx)
         if (ret != 1) {
             ERROR("failed to read ch from sockfd %d, %s\n", sockfd, strerror(errno));
             close(sockfd);
-            exit(1);
+            return NULL;
         }
         if (ch == '\n') {
             break;
@@ -682,28 +690,11 @@ static void *process_req_thread(void *cx)
     *p = '\0';
     //INFO("cmd '%s'\n", cmd);
 
-    // some cmds are handled here, without using android /bin/sh
-    if (strcmp(cmd, "log_mark") == 0) {
-        // xxx maybe not needed
-        INFO("---------- log_mark ----------\n");
-        goto done;
-    }
-    if (strcmp(cmd, "log_clear") == 0) {
-        // xxx use logging.c
-        freopen(log_file_pathname, "w", stdout);
-        freopen(log_file_pathname, "w", stderr);
-        setlinebuf(stdout);
-        setlinebuf(stderr);
-        INFO("---------- log_clear ----------\n");
-        goto done;
-    }
-        
     // xxx comment
     if (fork() == 0) {
         process_req_using_android_sh(sockfd, cmd);
     }
 
-done:
     close(sockfd);
     return NULL;
 }
@@ -761,33 +752,6 @@ static char * sock_addr_to_str(char * s, int slen, struct sockaddr * addr)
     snprintf(s,slen,"%s:%d",addr_str,ntohs(port2));
     return s;
 }
-
-#if 0 //xxx
-static bool is_socket_connected(int socket_fd)
-{
-    int error = 0;
-    int ret;
-    socklen_t len = sizeof(error);
-
-    ret = getsockopt(socket_fd, SOL_SOCKET, SO_ERROR, &error, &len);
-
-    return ret == 0 && error == 0;
-}
-
-static void get_file_info(char *pathname, size_t *size, time_t *mtime)
-{
-    struct stat statbuf;
-
-    if (lstat(pathname, &statbuf) != 0) {
-        if (size) *size = 0;
-        if (mtime) *mtime = 0;
-        return;
-    }
-
-    if (size) *size = statbuf.st_size;
-    if (mtime) *mtime = statbuf.st_mtime;
-}
-#endif
 
 static void remove_trailing_newline(char *s)
 {

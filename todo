@@ -1,3 +1,24 @@
+./ezsh "if [ ! -d apps/reversix ]; then echo NO; else echo YES; fi"
+
+xxxxxxx
+
+update log_clear to truncate the file, using Settings
+eliminate log_mark
+
+programs
+- ez  options db or log or put
+- ez db
+- ez log
+- ez put     # puts the current dir as long as it is uner app
+              if it doesn't already exst then prompt
+- use arg or env or file - for ipaddr:port
+
+put all cmds in the ez program
+
+get rid of menu file
+
+xxxxxxxx
+
 SENSORS
 - lat/long
 - flashlight
