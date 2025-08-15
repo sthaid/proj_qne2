@@ -5,6 +5,8 @@ tags
 *.tar.gz
 apps.tar
 
+tools/src/ezsh
+
 picoc/my_tests
 
 linux/ezApp
