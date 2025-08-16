@@ -1,2 +1,2 @@
-ezsh: ezsh.c
-	gcc -o ezsh -Wall ezsh.c
+../ezsh: ezsh.c
+	gcc -Wall -o ../ezsh -Wall ezsh.c

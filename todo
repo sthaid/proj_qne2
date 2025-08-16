@@ -1,3 +1,13 @@
+makefile generator
+tar file excluder
+ez.cfg
+add ip and port to settings screen
+modify port on settings screen
+menu screen
+rename unit_test to Test, and rename other apps 
+
+xxxxxxxxxxxxx
+
 tools need to get ip addr and port
 get rid of menu file
 try creating a simple test app

