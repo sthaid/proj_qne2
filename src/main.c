@@ -25,12 +25,18 @@
 #define DEFAULT_FONTSZ  20
 #define LARGE_FONTSZ    10
 
+#define DEFAULT_DEVEL_PORT 9000   // IANA registered port range 1024 - 49151
+
+#define TEN_MS 10000
+#define ONE_SEC 1000000
+
 //
 // typedefs
 //
 
 typedef struct {
     bool devel_mode;
+    int  devel_port;
 } params_t;
 
 //
@@ -105,7 +111,10 @@ static void init(void)
 
     // get params, if they don't exist, set to default value
     params.devel_mode = util_get_int_param("devel_mode", 0);
-    params.devel_mode = 1;  //xxx del this
+    params.devel_port = util_get_int_param("devel_port", DEFAULT_DEVEL_PORT);
+
+    // xxx temporary
+    params.devel_mode = 1;
 
     // if apps dir doesn't exist then create it
     rc = stat("apps", &statbuf);
@@ -117,7 +126,7 @@ static void init(void)
     struct sigaction action;
     memset(&action, 0, sizeof(action));
     action.sa_handler = sigusr1_hndlr;
-    sigaction(SIGUSR1, &action, NULL);
+    sigaction(SIGUSR2, &action, NULL);
 
     // create server thread
     pthread_create(&server_tid, NULL, server_thread, NULL);
@@ -200,7 +209,7 @@ static void controller(void)
         sdl_display_present();
 
         // wait for an event, 1 sec timeout
-        sdl_get_event(1000000, &event);
+        sdl_get_event(ONE_SEC, &event);
         if (event.event_id == -1) {
             continue;
         }
@@ -439,107 +448,6 @@ static void get_list_of_apps(void)
         INFO("apps[%d] = %s\n", i, apps[i]);
     }
 }
-#if 0  // xxx del
-    FILE *fp;
-    char s[500], name[100], dir[100], *args;
-    int cnt, pg, id, n, ret;
-    struct stat statbuf;
-
-    static long menu_mtime;
-    static char menu_path[100];
-
-    // construct menu_path, if not already done so
-    if (menu_path[0] == '\0') {
-        sprintf(menu_path, "%s/apps/menu", storage_path);
-    }
-
-    // if menu file has not changed then return
-    ret = stat(menu_path, &statbuf);
-    if (ret != 0) {
-        ERROR("stat %s failed, %s\n", menu_path, strerror(errno));
-        return;
-    }
-    if (statbuf.st_mtime == menu_mtime) {
-        return;
-    }
-    menu_mtime = statbuf.st_mtime;
-
-    // free and clear menu
-    for (pg = 0; pg < MAX_PAGE; pg++) {
-        for (id = 0; id < MAX_MENU; id++) {
-            free(menu[pg][id].name);
-            free(menu[pg][id].dir);
-            free(menu[pg][id].args);
-        }
-    }
-    memset(menu, 0, sizeof(menu));
-
-    // xxx
-    last_page = 0;
-    page = 0;
-
-    // open menu file
-    fp = fopen(menu_path, "r");
-    if (fp == NULL) {
-        ERROR("failed to open %s, %s\n", menu_path, strerror(errno));
-        return;
-    }
-
-    // read lines from menu file, and populate menu struct
-    while (fgets(s, sizeof(s), fp) != NULL) {
-        remove_trailing_newline(s);
-
-        // allow blank or comment lines
-        if (s[0] == '\0' || s[0] == '#') {
-            continue;
-        }
-
-        // extract: pg, id, name, and args:
-        // example of line in menu file:
-        //   "0 5 test_app test test.c"
-        //   - pg       = menu page
-        //   - id       = location on menu page
-        //   - app_name = name shown on the menu page
-        //   - dir      = app is in dir files/apps/<dir>
-        //   - args     = args passed to picoc xxx explain more
-        name[0] = '\0';
-        id = n = 0;
-        cnt = sscanf(s, "%d %d %s %s %n", &pg, &id, name, dir, &n);
-        if (cnt < 4 || n == 0 || pg < 0 || pg >= MAX_PAGE || id < 0 || id >= MAX_MENU) {
-            ERROR("invalid line in menu file, '%s'\n", s);
-            continue;
-        }
-        args = s+n;
-
-        // save values in the menu table
-        menu[pg][id].name = strdup(name);
-        menu[pg][id].dir = strdup(dir);
-        menu[pg][id].args = strdup(args);
-
-        // keep track of last menu page
-        if (pg > last_page) {
-            last_page = pg;
-        }
-    }
-
-    // close menu file
-    fclose(fp);
-
-    // xxx
-    menu[0][MAX_MENU-1].name = strdup("Settings");
-    menu[0][MAX_MENU-1].dir  = NULL;
-    menu[0][MAX_MENU-1].args = NULL;
-
-    // debug print the new menu
-    INFO("menu is now ...\n");
-    for (pg = 0; pg < MAX_PAGE; pg++) {
-        for (id = 0; id < MAX_MENU; id++) {
-            if (menu[pg][id].name != NULL) {
-                INFO("%2d %2d  %16s  %8s  %s\n", pg, id, menu[pg][id].name, menu[pg][id].dir, menu[pg][id].args);
-            }
-        }
-    }
-#endif
 
 #define ROW2Y(r) ((r) * sdl_char_height)  // xxx ctr vs ...
 #define ROW2Y_CTR(r) ((r) * sdl_char_height + sdl_char_height/2)
@@ -550,58 +458,53 @@ static void settings(void)
     sdl_event_t event;
     sdl_loc_t  *loc;
     bool        quit = false;
-    bool        reset_apps_confirm = false;
-    int         sz;
+    int         size;
+    char       *msg = NULL;
+    long        msg_time = 0;
 
     INFO("SETTINGS\n");
 
-    #define EVID_DEVEL_MODE 1000
-    #define EVID_RESET_APPS 1001
-    #define EVID_LOG_FILE_CLEAR 1002
-    #define EVID_RESET_APPS_CONFIRM 1003
-    #define EVID_RESET_APPS_CANCEL  1004
+    #define EVID_DEVEL_MODE         1000
+    #define EVID_DEVEL_PORT         1001
+    #define EVID_RESET_APPS         1002
+    #define EVID_LOG_FILE_CLEAR     1003
 
     while (true) {
         sdl_display_init(BG_COLOR);
         sdl_print_init(DEFAULT_FONTSZ, COLOR_WHITE, BG_COLOR);
         sdl_render_text_xyctr(sdl_win_width/2, sdl_char_height/2, "Settings");
 
-        if (!reset_apps_confirm) {
-            sdl_render_printf(0, ROW2Y(2), "Version = %s", VERSION);
+        sdl_render_printf(0, ROW2Y(2), "Version = %s", VERSION);
 
-            sdl_render_printf(0, ROW2Y(4), "Copyright");
+        sdl_render_printf(0, ROW2Y(4), "Copyright");
 
-            sdl_print_init(-1, COLOR_LIGHT_BLUE, BG_COLOR);
-            loc = sdl_render_printf(0, ROW2Y(6), "Devel_Mode = %d", params.devel_mode);
-            sdl_register_event(loc, EVID_DEVEL_MODE);
-            sdl_print_init(-1, COLOR_WHITE, BG_COLOR);
+        sdl_print_init(-1, COLOR_LIGHT_BLUE, BG_COLOR);
+        loc = sdl_render_printf(0, ROW2Y(6), "Devel_Mode = %s", params.devel_mode ? "ON" : "OFF");
+        sdl_register_event(loc, EVID_DEVEL_MODE);
+        sdl_print_init(-1, COLOR_WHITE, BG_COLOR);
 
-            sdl_print_init(-1, COLOR_LIGHT_BLUE, BG_COLOR);
-            loc = sdl_render_printf(0, ROW2Y(8), "Reset_Apps");
-            sdl_register_event(loc, EVID_RESET_APPS);
-            sdl_print_init(-1, COLOR_WHITE, BG_COLOR);
+        sdl_print_init(-1, COLOR_LIGHT_BLUE, BG_COLOR);
+        loc = sdl_render_printf(0, ROW2Y(8), "Devel_Port = %d", params.devel_port);
+        sdl_register_event(loc, EVID_DEVEL_PORT);
+        sdl_print_init(-1, COLOR_WHITE, BG_COLOR);
 
-            sdl_print_init(-1, COLOR_LIGHT_BLUE, BG_COLOR);
-            sz = log_size();
-            if (sz < 1000000) {
-                loc = sdl_render_printf(0, ROW2Y(10), "Log_Clear sz=%d", sz);
-            } else {
-                loc = sdl_render_printf(0, ROW2Y(10), "Log_Clear sz=%d M", sz/1000000);
-            }
-            sdl_register_event(loc, EVID_LOG_FILE_CLEAR);
-            sdl_print_init(-1, COLOR_WHITE, BG_COLOR);
+        sdl_print_init(-1, COLOR_LIGHT_BLUE, BG_COLOR);
+        loc = sdl_render_printf(0, ROW2Y(10), "Reset_Apps");
+        sdl_register_event(loc, EVID_RESET_APPS);
+        sdl_print_init(-1, COLOR_WHITE, BG_COLOR);
+
+        sdl_print_init(-1, COLOR_LIGHT_BLUE, BG_COLOR);
+        size = log_size();
+        if (size < 1000000) {
+            loc = sdl_render_printf(0, ROW2Y(12), "Log_Clear sz=%d", size);
         } else {
-            sdl_render_printf(0, ROW2Y(8), "Reset_Apps?");
+            loc = sdl_render_printf(0, ROW2Y(12), "Log_Clear sz=%d M", size/1000000);
+        }
+        sdl_register_event(loc, EVID_LOG_FILE_CLEAR);
+        sdl_print_init(-1, COLOR_WHITE, BG_COLOR);
 
-            sdl_print_init(-1, COLOR_LIGHT_BLUE, BG_COLOR);
-            loc = sdl_render_printf(0, ROW2Y(10), "Confirm");
-            sdl_register_event(loc, EVID_RESET_APPS_CONFIRM);
-            sdl_print_init(-1, COLOR_WHITE, BG_COLOR);
-
-            sdl_print_init(-1, COLOR_LIGHT_BLUE, BG_COLOR);
-            loc = sdl_render_printf(sdl_win_width/2, ROW2Y(10), "Cancel");
-            sdl_register_event(loc, EVID_RESET_APPS_CANCEL);
-            sdl_print_init(-1, COLOR_WHITE, BG_COLOR);
+        if (msg && (util_microsec_timer() - msg_time) < 3000000) {
+            sdl_render_printf(0, sdl_win_height-300, "%s", msg);
         }
 
         sdl_print_init(LARGE_FONTSZ, COLOR_WHITE, BG_COLOR);
@@ -610,7 +513,7 @@ static void settings(void)
 
         sdl_display_present();
 
-        sdl_get_event(-1, &event);
+        sdl_get_event(TEN_MS, &event);
         if (event.event_id == -1) {
             continue;
         }
@@ -622,20 +525,35 @@ static void settings(void)
             params.devel_mode = (params.devel_mode ? 0 : 1);
             util_set_int_param("devel_mode", params.devel_mode);
             if (!params.devel_mode) {
-                INFO("sending SIGUSR1 to server_thread\n");
-                pthread_kill(server_tid, SIGUSR1);
+                INFO("sending SIGUSR2 to server_thread\n");
+                pthread_kill(server_tid, SIGUSR2);  // xxx not working on android
             }
             break;
-        case EVID_RESET_APPS:
-            reset_apps_confirm = true;
-            break;
-        case EVID_RESET_APPS_CONFIRM:
-            create_default_apps();
-            reset_apps_confirm = false;
-            break;
-        case EVID_RESET_APPS_CANCEL:
-            reset_apps_confirm = false;
-            break;
+        case EVID_DEVEL_PORT: {
+            char *str; 
+            int cnt, port;
+            str = sdl_get_input_str("Port?", true, BG_COLOR);
+            INFO("GOT STR '%s'\n", str);
+            cnt = sscanf(str, "%d", &port);
+            if (cnt == 1 && (port >= 1024 && port <= 49151)) {
+                params.devel_port = port;
+                util_set_int_param("devel_port", port);
+                INFO("sending SIGUSR2 to server_thread\n");
+                pthread_kill(server_tid, SIGUSR2);
+            }
+            break; }
+        case EVID_RESET_APPS: {
+            char *str; 
+            str = sdl_get_input_str("Reset Apps y/n?", false, BG_COLOR);
+            INFO("GOT STR '%s'\n", str);
+            if (strcasecmp(str, "y") == 0) {
+                INFO("XXX resetting apps\n");
+                create_default_apps();
+                msg = "Apps are reset.";
+                msg_time = util_microsec_timer();
+            }
+            // xxx display msg for 2 secs
+            break; }
         case EVID_LOG_FILE_CLEAR:   
             log_clear();
             break;
@@ -651,8 +569,6 @@ static void settings(void)
 }
 
 // ----------------- SERVER ----------------------------
-
-#define PORTNUM 9000   // IANA registered port range 1024 - 49151
 
 static void *process_req_thread(void *cx);
 static void process_req_using_android_sh(int sockfd, char *cmd);
@@ -671,7 +587,7 @@ again:
         sleep(1);
     }
 
-    INFO("SERVER_THREAD STARTING\n");
+    INFO("SERVER_THREAD STARTING, listening on port %d\n", params.devel_port);
 
     // create listen socket
     listen_sockfd = socket(AF_INET, SOCK_STREAM, 0);
@@ -692,13 +608,15 @@ again:
     memset(&server_address, 0, sizeof(server_address));
     server_address.sin_family      = AF_INET;
     server_address.sin_addr.s_addr = INADDR_ANY;
-    server_address.sin_port        = htons(PORTNUM);
+    server_address.sin_port        = htons(params.devel_port);
     ret = bind(listen_sockfd,
                (struct sockaddr *)&server_address,
                sizeof(server_address));
     if (ret == -1) {
         ERROR("bind, %s\n", strerror(errno));
-        return NULL;
+        close(listen_sockfd);
+        sleep(1);
+        goto again;
     }
 
     // listen 

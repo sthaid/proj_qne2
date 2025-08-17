@@ -27,6 +27,7 @@
 #define EVID_SWIPE_RIGHT       9990
 #define EVID_SWIPE_LEFT        9991
 #define EVID_MOTION            9992
+#define EVID_KEYBD             9993
 #define EVID_QUIT              9999
 
 //
@@ -49,7 +50,10 @@ typedef struct {
         struct {
             int x, y, xrel, yrel;
         } motion;
-    } u;
+        struct {
+            int ch;
+        } keybd;
+    } u;  // xxx is u needed
 } sdl_event_t;
 
 #define PIXELS_MAGIC 0x11223344
@@ -170,3 +174,5 @@ int sdl_sensor_open(bool type_is_np, int type);
 void sdl_sensor_close(int id);
 int sdl_sensor_read(int id, double *value);
 
+// xxxxxxxxxx
+char *sdl_get_input_str(char *prompt, bool numeric_keybd, int bg_color);

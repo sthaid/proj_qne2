@@ -29,6 +29,9 @@
 #define MIN_FONT_PTSIZE  10
 #define MAX_FONT_PTSIZE  200
 
+#define ONE_MS 1000
+#define TEN_MS 10000
+
 //
 // typedefs
 //
@@ -51,7 +54,6 @@ int sdl_char_height;
 // variables
 //
 
-
 static SDL_Window     * window;
 static SDL_Renderer   * renderer;
 static double           scale;
@@ -63,6 +65,7 @@ static int              max_event;
 static bool             evid_swipe_right_registered;
 static bool             evid_swipe_left_registered;
 static bool             evid_motion_registered;
+static bool             evid_keybd_registered;
 
 //
 // prototypes
@@ -190,6 +193,7 @@ void sdl_display_init(int color)
     evid_swipe_right_registered = false;
     evid_swipe_left_registered = false;
     evid_motion_registered = false;
+    evid_keybd_registered = false;
 
     set_render_draw_color(color);
     SDL_RenderClear(renderer);
@@ -204,6 +208,8 @@ void sdl_display_present(void)
 
 void sdl_register_event(sdl_loc_t *loc, int event_id)
 {
+    sdl_loc_t loc2;
+
     if (event_id == EVID_SWIPE_RIGHT) {
         evid_swipe_right_registered = true;
         return;
@@ -216,13 +222,30 @@ void sdl_register_event(sdl_loc_t *loc, int event_id)
         evid_motion_registered = true;
         return;
     }
+    if (event_id == EVID_KEYBD) {
+        evid_keybd_registered = true;
+        return;
+    }
 
     if (loc == NULL || loc->w == 0 || loc->h == 0) {
         ERROR("invalid loc, event_id=%d\n", event_id);
         return;
     }
 
-    event_tbl[max_event].loc = *loc;
+    // enforce minimum w,h
+    loc2 = *loc;
+    if (loc2.w < 150) {
+        int delta = 150 - loc2.w;
+        loc2.w += delta;
+        loc2.x -= delta/2;
+    }
+    if (loc2.h < 150) {
+        int delta = 150 - loc2.h;
+        loc2.h += delta;
+        loc2.y -= delta/2;
+    }
+
+    event_tbl[max_event].loc = loc2;
     event_tbl[max_event].event_id  = event_id; 
     max_event++;
 }
@@ -237,6 +260,7 @@ void sdl_get_event(long timeout_us, sdl_event_t *event)
     long waited = 0;
     bool got_event;
 
+    // xxx move
     memset(event, 0, sizeof(*event));
     event->event_id = -1;
 
@@ -251,8 +275,8 @@ try_again:
             return;
         } else if (timeout_us < 0 || waited < timeout_us) {
             // either wait forever or time waited is less than timeout_us
-            usleep(1000);
-            waited += 1000;
+            usleep(ONE_MS);
+            waited += ONE_MS;
             goto try_again;
         } else {
             // time waited exceeds timeout_us
@@ -351,6 +375,31 @@ static void process_sdl_event(SDL_Event *ev, sdl_event_t *event)
              x->sensor_timestamp);
         sdl_sensor_event(x);
         break; }
+#if 0
+    case SDL_EVENT_TEXT_INPUT: {
+        SDL_TextInputEvent *x = &ev->text;
+        INFO("SDL_EVENT_TEXT_INPUT: '%s'\n", x->text);
+        break; }
+    case SDL_EVENT_TEXT_EDITING: {
+        SDL_TextEditingEvent *x = &ev->edit;
+        INFO("SDL_EVENT_TEXT_EDITING: '%s' %d %d\n", x->text, x->start, x->length);
+        break; }
+#endif
+    case SDL_EVENT_KEY_DOWN:  //xxx dont need down case
+    case SDL_EVENT_KEY_UP: {
+        SDL_KeyboardEvent *x = &ev->key;
+        bool shift = (x->mod & SDL_KMOD_SHIFT) != 0;
+        SDL_Keycode keycode;
+
+        if (!evid_keybd_registered || x->down) {
+            break;
+        }
+
+        keycode = SDL_GetKeyFromScancode(x->scancode, x->mod, false);  // xxx not always working
+        INFO("GOT keycode 0x%x  shift=%d\n", keycode, shift);
+        event->event_id = EVID_KEYBD;
+        event->u.keybd.ch = keycode;
+        break; }
     case SDL_EVENT_FINGER_DOWN:
     case SDL_EVENT_FINGER_UP:
     case SDL_EVENT_FINGER_MOTION: {
@@ -364,6 +413,79 @@ static void process_sdl_event(SDL_Event *ev, sdl_event_t *event)
         //INFO("event_type %d - not supported\n", ev->type);
         break; }
     }
+}
+
+char *sdl_get_input_str(char *prompt, bool numeric_keybd, int bg_color)
+{
+    static char input[100]; // xxx bounds check
+    int         max_input;
+    sdl_loc_t  *loc;
+    sdl_event_t event;
+
+    // init
+    memset(input, 0, sizeof(input));
+    max_input = 0;
+
+    SDL_PropertiesID props = SDL_CreateProperties();
+    SDL_SetNumberProperty(
+            props, 
+            SDL_PROP_TEXTINPUT_TYPE_NUMBER, 
+            numeric_keybd ?  SDL_TEXTINPUT_TYPE_NUMBER : SDL_TEXTINPUT_TYPE_TEXT);
+    SDL_StartTextInputWithProperties(window, props);
+
+//xxx yyy how to restore
+    sdl_print_init(DEFAULT_FONTSZ, COLOR_WHITE, bg_color);
+
+    // 
+    while (true) {
+        // xxx
+        sdl_display_init(bg_color);
+        sdl_register_event(NULL, EVID_KEYBD);
+
+        // display prompt
+        sdl_render_printf(0, 200, "%s", prompt);
+
+        // display input line
+        loc = sdl_render_printf(0, 350, "%s", input);
+
+        // display cursor
+        sdl_render_printf(loc->x+loc->w, loc->y, "%s", "_");
+
+        // xxx
+        sdl_display_present();
+
+        // wait for event
+        sdl_get_event(-1, &event);
+
+        // process event
+        if (event.event_id == EVID_KEYBD) {
+            int ch = event.u.keybd.ch;
+
+            if (ch >= 0x20 && ch < 0x7f) {
+                if (max_input < sizeof(input)) {
+                    input[max_input++] = ch;
+                }
+                continue; 
+            } else if (ch == '\b') {
+                if (max_input > 0) {
+                    input[--max_input] = '\0';
+                }
+            } if (ch == '\r') {
+                break;
+            }
+        }
+
+        if (event.event_id == EVID_QUIT) {
+            input[0] = '\0';
+            break;
+        }
+    }
+
+    SDL_StopTextInput(window);
+    sdl_print_init(DEFAULT_FONTSZ, COLOR_WHITE, COLOR_PURPLE);  // xxx restore
+    SDL_DestroyProperties(props);
+
+    return input;
 }
 
 // -----------------  COLORS  -----------------------------
@@ -509,13 +631,13 @@ static sdl_loc_t *render_text(bool xy_is_ctr, int x, int y, char * str)
     // if font not initialized then return error
     if (font[text.ptsize] == NULL) {
         ERROR("font ptsize %d, not initialized\n", text.ptsize);
-        memset(&loc, 0, sizeof(loc));
+        loc.x = x; loc.y = y; loc.w = 0; loc.h = 0;
         return &loc;
     }
 
     // if zero len str then return
     if (str[0] == '\0') {
-        memset(&loc, 0, sizeof(loc));
+        loc.x = x; loc.y = y; loc.w = 0; loc.h = 0;
         return &loc;
     }
 
@@ -523,7 +645,7 @@ static sdl_loc_t *render_text(bool xy_is_ctr, int x, int y, char * str)
     surface = TTF_RenderText_Shaded(font[text.ptsize], str, 0, text.fg_color, text.bg_color);
     if (surface == NULL) {
         ERROR("TTF_RenderText_Shaded returned NULL\n");
-        memset(&loc, 0, sizeof(loc));
+        loc.x = x; loc.y = y; loc.w = 0; loc.h = 0;
         return &loc;
     }
 
@@ -555,17 +677,6 @@ static sdl_loc_t *render_text(bool xy_is_ctr, int x, int y, char * str)
     loc.w = pos.w / scale;
     loc.h = pos.h / scale;
 
-    // xxx enforce minimum w,h in loc
-    if (loc.w < 150) {
-        int delta = 150 - loc.w;
-        loc.w += delta;
-        loc.x -= delta/2;
-    }
-    if (loc.h < 150) {
-        int delta = 150 - loc.h;
-        loc.h += delta;
-        loc.y -= delta/2;
-    }
     return &loc;
 }
 

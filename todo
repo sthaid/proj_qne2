@@ -1,12 +1,30 @@
+ezsh should terminate when it sees output about bind
+sdl_print get routine
+
+08/17/25 09:10:00.196 INFO init: storage_path = /data/data/org.sthaid.ezApp/files
+max_params=4
+  devel_mode = 1
+  player_black = 0
+  player_white = 2
+  devel_port = 9001
+
+
+add ip and port to settings screen
+- how to get ip addr
+- modify port on settings screen
+- how to read text from sdl
+
+
 makefile generator
 tar file excluder
-ez.cfg
-add ip and port to settings screen
-modify port on settings screen
 menu screen
 rename unit_test to Test, and rename other apps 
 
+ez.cfg     DONE
 xxxxxxxxxxxxx
+
+QUERY info on using java:
+"on android using sdl3 how to get phone ip address"
 
 tools need to get ip addr and port
 get rid of menu file
