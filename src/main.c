@@ -281,10 +281,98 @@ static void display_menu(void)
     }
 
     // xxx
+    // xxx put settings at end
     get_list_of_apps();
 
-    // xxx comment, xxx fix for multi page
-    for (int id = 0; id < max_apps; id++) {
+    for (int i = 0; i < max_apps; i++) {
+        char     *name = apps[i];
+        char      s1[10], s2[10];
+        int       len, l1, l2, lmax, x, y;
+        double    chw, chh, numchars;
+        sdl_loc_t loc;
+
+        len  = strlen(name);
+        if (len > 8) len = 8;
+
+        if (len <= 4) {
+            l1 = len;
+            l2 = 0;
+            strcpy(s1, name);
+            s2[0] = '\0';
+            lmax = l1;
+        } else {
+            l1 = len / 2;
+            l2 = len - l1;
+            strncpy(s1, name, l1);
+            strncpy(s2, name+l1, l2);
+            s1[l1] = '\0';
+            s2[l2] = '\0';
+            lmax = l2;
+        }
+
+        if (s2[0] == '\0') {
+            double k = (len == 1 ? 1 : 1.5);
+            chw = (k * RADIUS) / lmax;
+            numchars = sdl_win_width / chw;
+        } else {
+            double k = ((len == 5 || len == 6) ? 1.35 : 1.5);
+            chw = (k * RADIUS) / lmax;
+            numchars = sdl_win_width / chw;
+        }
+        chh = chw / 0.6;
+
+        // determine dispaly location of the center of the menu item
+        x = (sdl_win_width/3/2) + (i%3) * (sdl_win_width/3);
+        y = (sdl_win_height/6/2) + (i/3) * (sdl_win_height/6);
+
+        // display the menu item
+        sdl_render_texture(x-RADIUS, y-RADIUS, -1, -1,  0, circle);
+
+        // xxx
+        sdl_print_init(numchars, COLOR_WHITE, COLOR_BLUE);
+        if (s2[0] == '\0') {
+            sdl_render_text_xyctr(x, y, s1);
+        } else {
+            sdl_render_text_xyctr(x, nearbyint(y-0.5*chh), s1);
+            sdl_render_text_xyctr(x, nearbyint(y+0.5*chh), s2);
+        }
+
+        // register event
+        loc.x = x - RADIUS;
+        loc.y = y - RADIUS;
+        loc.w = 2 * RADIUS;
+        loc.h = 2 * RADIUS;
+        sdl_register_event(&loc, i);
+    }
+
+// xxx improve below
+    // xxx
+    sdl_print_init(LARGE_FONTSZ, COLOR_WHITE, BG_COLOR);
+
+    // xxx move this
+    // xxx apps should take advantage of this
+    #define DISPLAY_CONTROL_ITEM(col,str,evid) \
+        do { \
+            sdl_loc_t *loc; \
+            int x = (sdl_win_width/3/2) + (col) * (sdl_win_width/3); \
+            int y = sdl_win_height - sdl_char_height/2; \
+            loc = sdl_render_text_xyctr(x, y, str); \
+            sdl_register_event(loc, evid); \
+        } while (0)
+
+    // xxx no arrows if not needed
+    if (last_page > 0) {
+        DISPLAY_CONTROL_ITEM(0,"<",EVID_PAGE_DECREMENT);
+        DISPLAY_CONTROL_ITEM(1,">",EVID_PAGE_INCREMENT);
+    }
+    DISPLAY_CONTROL_ITEM(2,"X",EVID_QUIT);
+
+    sdl_print_init(DEFAULT_FONTSZ, COLOR_WHITE, BG_COLOR);
+}
+
+        
+
+#if 0
         //char *name = menu[page][id].name;
         char str1[32], str2[32];
         int len1, len2, len_max, x, y;
@@ -292,8 +380,6 @@ static void display_menu(void)
         sdl_loc_t loc;
         double chw, chh;
         int numchars;
-        
-
 #if 0
         // if name contains '_' then divide name to 2 strings,
         // else one string
@@ -337,53 +423,7 @@ static void display_menu(void)
         }
         chh = chw / 0.6;
         numchars = sdl_win_width / chw;
-
-        // determine dispaly location of the center of the menu item
-        x = (sdl_win_width/3/2) + (id%3) * (sdl_win_width/3);
-        y = (sdl_win_height/6/2) + (id/3) * (sdl_win_height/6);
-
-        // display the menu item
-        sdl_render_texture(x-RADIUS, y-RADIUS, -1, -1,  0, circle);
-
-        sdl_print_init(numchars, COLOR_WHITE, COLOR_BLUE);
-        if (len2 == 0) {
-            sdl_render_text_xyctr(x, y, str1);
-        } else {
-            sdl_render_text_xyctr(x, rint(y-0.5*chh), str1);
-            sdl_render_text_xyctr(x, rint(y+0.5*chh), str2);
-        }
-
-        // register event
-        loc.x = x - RADIUS;
-        loc.y = y - RADIUS;
-        loc.w = 2 * RADIUS;
-        loc.h = 2 * RADIUS;
-        sdl_register_event(&loc, id);
-    }
-
-    // xxx
-    sdl_print_init(LARGE_FONTSZ, COLOR_WHITE, BG_COLOR);
-
-    // xxx move this
-    // xxx apps should take advantage of this
-    #define DISPLAY_CONTROL_ITEM(col,str,evid) \
-        do { \
-            sdl_loc_t *loc; \
-            int x = (sdl_win_width/3/2) + (col) * (sdl_win_width/3); \
-            int y = sdl_win_height - sdl_char_height/2; \
-            loc = sdl_render_text_xyctr(x, y, str); \
-            sdl_register_event(loc, evid); \
-        } while (0)
-
-    // xxx no arrows if not needed
-    if (last_page > 0) {
-        DISPLAY_CONTROL_ITEM(0,"<",EVID_PAGE_DECREMENT);
-        DISPLAY_CONTROL_ITEM(1,">",EVID_PAGE_INCREMENT);
-    }
-    DISPLAY_CONTROL_ITEM(2,"X",EVID_QUIT);
-
-    sdl_print_init(DEFAULT_FONTSZ, COLOR_WHITE, BG_COLOR);
-}
+#endif
 
 static int qsort_compare(const void *a, const void *b)
 {
