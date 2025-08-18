@@ -15,7 +15,7 @@ linux/files/*
 android/SDL3-3.2.20
 android/SDL
 
-apps/primes/primes
-apps/reversi/reversi
-apps/unit_test/unit_test
+apps/Primes/primes
+apps/Reversi/reversi
+apps/Test/test
 apps/*/params

@@ -1,8 +1,8 @@
 #include <stdio.h>
 
-#include "tester.h"
+#include "common.h"
 
-void tester_proc(void)
+void test1_proc(void)
 {
     printf("verified call between 2 source files\n");
 }

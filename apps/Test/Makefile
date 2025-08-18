@@ -1,6 +1,6 @@
-TARGET = unit_test
+TARGET = test
 
-SRCS   = unit_test.c tester.c
+SRCS   = test.c test1.c
 
 SRCS_COMMON = \
        ../../src/sdl.c \

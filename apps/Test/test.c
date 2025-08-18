@@ -8,7 +8,7 @@
 #include <sdl.h>
 #include <utils.h>
 
-#include "tester.h"
+#include "common.h"
 
 //
 // defines
@@ -90,7 +90,7 @@ int main(int argc, char **argv)
     printf("sdl_char_width/height = %d %d\n", sdl_char_width, sdl_char_height);
 
     // test calling a routine that is defined in another file
-    tester_proc();
+    test1_proc();
 
     // call handler routine for the current page
     while (true) {

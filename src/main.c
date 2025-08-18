@@ -30,6 +30,8 @@
 #define TEN_MS 10000
 #define ONE_SEC 1000000
 
+#define LAST_PAGE ((max_apps - 1) / 18)
+
 //
 // typedefs
 //
@@ -180,7 +182,6 @@ static void create_default_apps(void)
 static char *apps[MAX_APPS];
 static int   max_apps;
 static int   page;
-static int   last_page;
 
 static void display_menu(void);
 static void get_list_of_apps(void);
@@ -220,17 +221,17 @@ static void controller(void)
             break;
         } else if (event.event_id == EVID_PAGE_DECREMENT) {
             if (--page < 0) {
-                page = last_page;
+                page = LAST_PAGE;
             }
         } else if (event.event_id == EVID_PAGE_INCREMENT) {
-            if (++page > last_page) {
+            if (++page > LAST_PAGE) {
                 page = 0;
             }
-        } else if (event.event_id == max_apps-1) {
+        } else if (event.event_id == 17) {  // xxx use more defines 
             INFO("running Settings\n");
             settings();
             INFO("done Settings\n");
-        } else if (event.event_id >= 0 && event.event_id < max_apps-1) {
+        } else if (event.event_id >= 0 && event.event_id <= max_apps-1) {
             char           app_dir[100], picoc_args[1000];
             int            id = event.event_id;
             int            rc;
@@ -255,13 +256,15 @@ static void controller(void)
             }
             closedir(dir);
 
-            INFO("XXX picoc_args = %s\n", picoc_args);
-            rc = picoc_fg(picoc_args);  // args
-
+            if (picoc_args[0] != '\0') {
+                INFO("XXX picoc_args = %s\n", picoc_args);
+                rc = picoc_fg(picoc_args);  // args
+                INFO("done %s, rc=%d\n", apps[id], rc);
+                // xxx if app fails, put up screen with error message
+            } else {
+                ERROR("no source code in %s\n", app_dir);
+            }
             chdir(storage_path);
-
-            INFO("done %s, rc=%d\n", apps[id], rc);
-            // xxx if app fails, put up screen with error message
         }
     }
 
@@ -272,6 +275,7 @@ static void controller(void)
 static void display_menu(void)
 {
     static sdl_texture_t *circle;
+    int first, last;
 
     #define RADIUS 100
 
@@ -284,12 +288,19 @@ static void display_menu(void)
     // xxx put settings at end
     get_list_of_apps();
 
-    for (int i = 0; i < max_apps; i++) {
+    first = page * 18;
+    last  = first + 17;
+
+    for (int i = first; i <= last; i++) {
         char     *name = apps[i];
         char      s1[10], s2[10];
         int       len, l1, l2, lmax, x, y;
         double    chw, chh, numchars;
         sdl_loc_t loc;
+
+        if (name == NULL) {
+            continue;
+        }
 
         len  = strlen(name);
         if (len > 8) len = 8;
@@ -323,7 +334,7 @@ static void display_menu(void)
 
         // determine dispaly location of the center of the menu item
         x = (sdl_win_width/3/2) + (i%3) * (sdl_win_width/3);
-        y = (sdl_win_height/6/2) + (i/3) * (sdl_win_height/6);
+        y = ((sdl_win_height-150)/6/2) + ((i-first)/3) * ((sdl_win_height-150)/6);
 
         // display the menu item
         sdl_render_texture(x-RADIUS, y-RADIUS, -1, -1,  0, circle);
@@ -361,7 +372,7 @@ static void display_menu(void)
         } while (0)
 
     // xxx no arrows if not needed
-    if (last_page > 0) {
+    if (LAST_PAGE > 0) {
         DISPLAY_CONTROL_ITEM(0,"<",EVID_PAGE_DECREMENT);
         DISPLAY_CONTROL_ITEM(1,">",EVID_PAGE_INCREMENT);
     }
@@ -480,12 +491,22 @@ static void get_list_of_apps(void)
     // sort list alphabetical
     qsort(apps, max_apps, sizeof(char*), qsort_compare);
 
-    // add settings to the end
-    apps[max_apps++] = strdup("settings");
+    // add settings as xxx
+    if (max_apps < 18) {
+        apps[17] = strdup("Settings");
+        max_apps = 18;
+    } else {
+        memmove(apps+18, apps+17, (max_apps-17)*sizeof(char*));
+        apps[17] = strdup("Settings");
+        max_apps++;
+    }
 
     // debug print the list of apps names
+    INFO("max_apps = %d\n", max_apps);
     for (i = 0; i < max_apps; i++) {
-        INFO("apps[%d] = %s\n", i, apps[i]);
+        if (apps[i] != NULL) {
+            INFO("apps[%d] = %s\n", i, apps[i]);
+        }
     }
 }
 
