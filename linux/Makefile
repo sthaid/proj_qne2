@@ -38,7 +38,11 @@ CFLAGS = -Wall -Werror -Wno-unused-result -g -I../src $(shell pkg-config sdl3--c
 
 $(TARGET):
 	gcc -o $@ $(CFLAGS) $(SRCS) -lSDL3 -lSDL3_ttf -lm
-	tar -cf assets/apps.tar --exclude-ignore-recursive=tar_exclude_list -C .. apps
+	rm -rf files; mkdir files;
+	cd ..; \
+	find apps -type f ! -name params ! -name README ! -name Makefile ! -executable > /tmp/files.txt; \
+	tar -cf linux/assets/apps.tar --files-from /tmp/files.txt; \
+	rm -f /tmp/files.txt
 
 clean:
 	rm -f $(TARGET)

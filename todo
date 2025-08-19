@@ -1,19 +1,16 @@
+tar file excluder
+-  find . -type f ! -name params ! -name README ! -name Makefile ! -executable
+
+
 add util_get_ipaddt to picoc
-
-dm2q:/ $ ip -4 addr show | grep " inet "
-    inet 127.0.0.1/8 scope host lo
-    inet 192.168.1.243/24 brd 192.168.1.255 scope global wlan0
-
-08/17/25 09:10:00.196 INFO init: storage_path = /data/data/org.sthaid.ezApp/files
-max_params=4
-  devel_mode = 1
-  player_black = 0
-  player_white = 2
-  devel_port = 9001
 
 sdl_print get routine
 
-tar file excluder
+do more code cleanups
+- code cleanup
+- SDL
+   - eval all routines for error checking
+   - eval use of rint / nearbyint
 
 sensors
 - accel / level
@@ -21,22 +18,16 @@ sensors
 
 - - - - - - - - - - - - - 
 
-code cleanup
-
 test case for swipe and motion
-
-add ip:port to settings
 
 QUERY info on using java:
 "on android using sdl3 how to get phone ip address"
 
 xxxxxxx xxxxxxxx xxxxxxxx xxxxxxxx xxxxxxxx xxxxxxxx
-
-ezsh should terminate when it sees output about bind
+xxxxxxx xxxxxxxx xxxxxxxx xxxxxxxx xxxxxxxx xxxxxxxx
+xxxxxxx xxxxxxxx xxxxxxxx xxxxxxxx xxxxxxxx xxxxxxxx
 
 try creating a simple test app
-
-do more code cleanups
 
 work on other sensors
 
@@ -46,12 +37,6 @@ SENSORS
 - lat/long
 - flashlight
 - acceleration
-
-SDL
-- eval all routines for error checking
-- eval use of rint / nearbyint
-
-EZTOOL on windows
 
 APPS
 - unit_test            almost done
@@ -92,6 +77,8 @@ AUDIO
   - adjust audio recording level
   - record append
   - auto quiet stop
+
+EZTOOL on windows
 
 NEW FEATURES
 - event handling to locate an eventposition by registering the whole screen

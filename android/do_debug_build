@@ -1,11 +1,14 @@
 #!/bin/bash
 
 # remove and reconstruct assets/apps.tar
-rm -f assets/apps.tar
-tar -cf assets/apps.tar --exclude-ignore-recursive=tar_exclude_list -C .. apps
+cd ..
+rm -f android/assets/apps.tar
+find apps -type f ! -name params ! -name README ! -name Makefile ! -executable > /tmp/files.txt;
+tar -cf android/assets/apps.tar --files-from /tmp/files.txt;
+rm -f /tmp/files.txt
 
 # construct version, and rebuild
-cd SDL/build/org.sthaid.ezApp
+cd android/SDL/build/org.sthaid.ezApp
 echo "char *version = \"`git log -1 --format=%h`\";" > app/jni/src/version.c
 ./gradlew assembleDebug
 

@@ -95,14 +95,6 @@ int main(int argc, char **argv)
         }
         if (ret2 > 0) {
             write(STDOUT_FILENO, buff, ret2);
-
-#if 0
-            // 08/17/25 10:05:27.141 ERROR server_thread: bind, Address already in use
-            if (ret2 > 22 && strncmp(buff+22, "ERROR server_thread: bind, Address already in use", 49) == 0) {
-                fprintf(stderr, "XXXXXXXXXXXX\n");
-                return 1;
-            }
-#endif
         }
 
         // sleep if connection is idle
