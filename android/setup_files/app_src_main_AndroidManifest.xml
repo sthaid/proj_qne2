@@ -57,6 +57,9 @@
     <!-- if you want to connect to the network or internet, uncomment this. -->
     <uses-permission android:name="android.permission.INTERNET" />
 
+    <!-- Allows an application to recognize physical activity. -->
+    <uses-permission android:name="android.permission.ACTIVITY_RECOGNITION" />
+
     <!-- Create a Java class extending SDLActivity and place it in a
          directory under app/src/main/java matching the package, e.g. app/src/main/java/com/gamemaker/game/MyGame.java
 

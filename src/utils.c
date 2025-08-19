@@ -4,6 +4,9 @@
 
 // xxx pthread_create_detached
 
+// xxx update prints to include __func__ and ERROR format
+//     OR, use logging
+
 // ----------------- TIME --------------------
 
 long util_microsec_timer(void)
@@ -128,6 +131,7 @@ static struct {
     char *value;
 } params[MAX_PARAMS];
 static int max_params;
+static char params_dir[100];
 
 static void remove_trailing_newline(char *s)
 {
@@ -140,18 +144,25 @@ static void remove_trailing_newline(char *s)
 
 static void read_params_file(void)
 {
-    static bool first_call = true;
     char s[200], name[100];
     int cnt, n;
     FILE *fp;
+    char current_dir[100];
 
-    if (first_call == false) {
+    getcwd(current_dir, sizeof(current_dir));
+    if (strcmp(current_dir, params_dir) == 0) {
         return;
     }
-    first_call = false;
-    
+    strcpy(params_dir, current_dir);
+
+    printf("reading params file in dir '%s'\n", current_dir);
+
+    memset(params, 0, sizeof(params));
+    max_params = 0;
+
     fp = fopen("params", "r");
     if (fp == NULL) {
+        printf("params file does not exist\n");
         return;
     }
 
@@ -172,21 +183,37 @@ static void read_params_file(void)
 
     fclose(fp);
 
-    util_print_params();
+    printf("max_params=%d\n", max_params);
+    for (int i = 0; i < max_params; i++) {
+        printf("  %s = %s\n", params[i].name, params[i].value);
+    }
 }
 
 static void write_params_file(void)
 {
     FILE *fp;
-    int i;
+    char current_dir[100];
 
-    fp = fopen("params", "w");
-    if (fp == NULL) {
-        printf("ERROR: write_param_file, fopen failed, %s\n", strerror(errno));
+    getcwd(current_dir, sizeof(current_dir));
+    if (strcmp(current_dir, params_dir) != 0) {
+        printf("ERROR: write_params_file, current_dir=%s params_dir=%s\n",
+               current_dir, params_dir);
         return;
     }
 
-    for (i = 0; i < max_params; i++) {
+    printf("writing params file in dir '%s'\n", current_dir);
+    printf("max_params=%d\n", max_params);
+    for (int i = 0; i < max_params; i++) {
+        printf("  %s = %s\n", params[i].name, params[i].value);
+    }
+
+    fp = fopen("params", "w");
+    if (fp == NULL) {
+        printf("ERROR: write_params_file, fopen failed, %s\n", strerror(errno));
+        return;
+    }
+
+    for (int i = 0; i < max_params; i++) {
         fprintf(fp, "%-16s = %s\n", params[i].name, params[i].value);
     }
 
@@ -310,5 +337,75 @@ void util_print_params(void)
     for (i = 0; i < max_params; i++) {
         printf("  %s = %s\n", params[i].name, params[i].value);
     }
+}
+
+// -----------------  NETWORK  -------------------------------
+
+char *util_get_ipaddr(void)
+{
+    static char ipaddr[20];
+    int rc, a, b, c, d;
+    unsigned int addr;
+    struct ifaddrs *ifap, *ifap_orig;;
+
+    strcpy(ipaddr, "xxx.xxx.xxx.xxx");
+
+    rc = getifaddrs(&ifap_orig);
+    if (rc != 0) {
+        printf("ERROR: getifaddrs, %s\n", strerror(errno));
+        return ipaddr;
+    }
+
+    ifap = ifap_orig;
+    while (ifap) {
+        printf("ifa_name = %s\n", ifap->ifa_name);
+        if (ifap->ifa_addr->sa_family == AF_INET) {
+            struct sockaddr_in *x = (struct sockaddr_in*)ifap->ifa_addr;
+            printf("%x\n", x->sin_addr.s_addr);
+            addr = htonl(x->sin_addr.s_addr);
+            a = (addr >> 24) & 0xff;
+            b = (addr >> 16) & 0xff;
+            c = (addr >>  8) & 0xff;
+            d = (addr >>  0) & 0xff;
+            if (a == 192) {
+                sprintf(ipaddr, "%d.%d.%d.%d", a,b,c,d);
+                break;
+            }
+        }
+            
+        ifap = ifap->ifa_next;
+    }
+
+    freeifaddrs(ifap_orig);
+
+    return ipaddr;
+
+#if 0
+    static char ipaddr[20];
+    FILE       *fp;
+    char        s[100], s1[100];
+    int         a, b, c, d;
+
+    strcpy(ipaddr, "xxx.xxx.xxx.xxx");
+
+    fp = popen("ip -4 addr show | grep \" inet \"", "r");
+    if (fp != NULL) {
+        while (fgets(s, sizeof(s), fp) != NULL) {
+            if (sscanf(s, "%s %d.%d.%d.%d", s1, &a, &b, &c, &d) == 5 &&
+                strcmp(s1, "inet") == 0 &&
+                a != 127)
+            {
+                sprintf(ipaddr, "%d.%d.%d.%d", a, b, c, d);
+                break;
+            }
+        }
+
+        fclose(fp);
+    } else {
+        printf("ERROR: popen failed, %s\n", strerror(errno));
+    }
+
+    return ipaddr;
+#endif
 }
 

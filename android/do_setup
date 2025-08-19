@@ -67,6 +67,8 @@ echo
 # update some build files in $BUILD_DIR
 echo "Updating files in $BUILD_DIR"
 cd $BUILD_DIR
+update_build_file app_jni_Application.mk app/jni/Application.mk
+update_build_file app_build.gradle app/build.gradle
 update_build_file app_jni_src_Android.mk app/jni/src/Android.mk
 update_build_file app_src_main_res_values_strings.xml app/src/main/res/values/strings.xml
 update_build_file app_src_main_AndroidManifest.xml app/src/main/AndroidManifest.xml

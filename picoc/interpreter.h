@@ -6,6 +6,12 @@
 
 #include "platform.h"
 
+//xxx why needed?
+struct __sFILE {
+  char __private[152];
+} __attribute__((aligned(sizeof(void*))));
+
+
 #ifndef NULL
 #define NULL 0
 #endif

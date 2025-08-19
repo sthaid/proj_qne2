@@ -522,13 +522,15 @@ static void settings(void)
     int         size;
     char       *msg = NULL;
     long        msg_time = 0;
-
-    INFO("SETTINGS\n");
+    char       *ipaddr;
 
     #define EVID_DEVEL_MODE         1000
     #define EVID_DEVEL_PORT         1001
     #define EVID_RESET_APPS         1002
     #define EVID_LOG_FILE_CLEAR     1003
+
+    ipaddr = util_get_ipaddr();
+    INFO("SETTINGS %s:%d\n", ipaddr, params.devel_port);
 
     while (true) {
         sdl_display_init(BG_COLOR);
@@ -557,15 +559,17 @@ static void settings(void)
         sdl_print_init(-1, COLOR_LIGHT_BLUE, BG_COLOR);
         size = log_size();
         if (size < 1000000) {
-            loc = sdl_render_printf(0, ROW2Y(12), "Log_Clear sz=%d", size);
+            loc = sdl_render_printf(0, ROW2Y(12), "Clear_Log sz=%d", size);
         } else {
-            loc = sdl_render_printf(0, ROW2Y(12), "Log_Clear sz=%d M", size/1000000);
+            loc = sdl_render_printf(0, ROW2Y(12), "Clear_Log sz=%d M", size/1000000);
         }
         sdl_register_event(loc, EVID_LOG_FILE_CLEAR);
         sdl_print_init(-1, COLOR_WHITE, BG_COLOR);
 
         if (msg && (util_microsec_timer() - msg_time) < 3000000) {
-            sdl_render_printf(0, sdl_win_height-300, "%s", msg);
+            sdl_render_printf(0, sdl_win_height-400, "%s", msg);
+        } else if (params.devel_mode) {
+            sdl_render_printf(0, sdl_win_height-400, "%s:%d", ipaddr, params.devel_port);
         }
 
         sdl_print_init(LARGE_FONTSZ, COLOR_WHITE, BG_COLOR);

@@ -1,5 +1,8 @@
-ezsh should terminate when it sees output about bind
-sdl_print get routine
+add util_get_ipaddt to picoc
+
+dm2q:/ $ ip -4 addr show | grep " inet "
+    inet 127.0.0.1/8 scope host lo
+    inet 192.168.1.243/24 brd 192.168.1.255 scope global wlan0
 
 08/17/25 09:10:00.196 INFO init: storage_path = /data/data/org.sthaid.ezApp/files
 max_params=4
@@ -8,54 +11,36 @@ max_params=4
   player_white = 2
   devel_port = 9001
 
+sdl_print get routine
 
-add ip and port to settings screen
-- how to get ip addr
-- modify port on settings screen
-- how to read text from sdl
-
-
-makefile generator
 tar file excluder
-menu screen
-rename unit_test to Test, and rename other apps 
 
-ez.cfg     DONE
-xxxxxxxxxxxxx
+sensors
+- accel / level
+- compass
+
+- - - - - - - - - - - - - 
+
+code cleanup
+
+test case for swipe and motion
+
+add ip:port to settings
 
 QUERY info on using java:
 "on android using sdl3 how to get phone ip address"
 
-tools need to get ip addr and port
-get rid of menu file
+xxxxxxx xxxxxxxx xxxxxxxx xxxxxxxx xxxxxxxx xxxxxxxx
+
+ezsh should terminate when it sees output about bind
+
 try creating a simple test app
+
 do more code cleanups
+
 work on other sensors
+
 how to start program when booting
-
-
-xxxxxxxxxx
-
-./ezsh "if [ ! -d apps/reversix ]; then echo NO; else echo YES; fi"
-
-xxxxxxx
-
-update log_clear to truncate the file, using Settings
-eliminate log_mark
-
-programs
-- ez  options db or log or put
-- ez db
-- ez log
-- ez put     # puts the current dir as long as it is uner app
-              if it doesn't already exst then prompt
-- use arg or env or file - for ipaddr:port
-
-put all cmds in the ez program
-
-get rid of menu file
-
-xxxxxxxx
 
 SENSORS
 - lat/long
@@ -65,14 +50,8 @@ SENSORS
 SDL
 - eval all routines for error checking
 - eval use of rint / nearbyint
-- make minimum loc size ??
-- larger loc for around matching events
 
-EZTOOL
-- define simple/minimum set of tools needed
-- vi support for when running in eztool, is this even needed?
-- get the tools to work on Windows
-- need IP addr, and port, use env vars, and print when starting
+EZTOOL on windows
 
 APPS
 - unit_test            almost done
@@ -80,14 +59,17 @@ APPS
    - add undo, and keep undo available when game is over
    - edge heuristic improvement
 - primes               started
+- sensors
+  - compass
+  - level
+  - step counter
+  - lat/long/elevation
 - clock
+- flashlight app
 - morse_code
 - tic tack toe
 - blackjack
 - pong
-- lat/long/elevation
-- compass
-- flashlight app
 - whack a mole
 
 PICOC
@@ -99,7 +81,6 @@ PICOC
   - report to developers
 
 BUILD
-- remove Makefile, and other files from apps.tar, don't git clean -fd ?
 - create launcher icon
 
 CODE CLEANUP
@@ -139,7 +120,6 @@ NEW FEATURES
 
 BUGS
 - unit_test page3 multi line test, scrolling issue
-- increase size of text in menu items
 - swipe up causes crash in menu - RETEST
 - add pthread_create_detached
 

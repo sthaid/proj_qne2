@@ -385,7 +385,7 @@ static void process_sdl_event(SDL_Event *ev, sdl_event_t *event)
         INFO("SDL_EVENT_TEXT_EDITING: '%s' %d %d\n", x->text, x->start, x->length);
         break; }
 #endif
-    case SDL_EVENT_KEY_DOWN:  //xxx dont need down case
+    case SDL_EVENT_KEY_DOWN:
     case SDL_EVENT_KEY_UP: {
         SDL_KeyboardEvent *x = &ev->key;
         bool shift = (x->mod & SDL_KMOD_SHIFT) != 0;

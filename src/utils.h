@@ -17,3 +17,6 @@ int util_get_int_param(char *name, int default_value);
 void util_set_int_param(char *name, int value);
 void util_print_params(void);
 
+// -----------------  NETWORK  -------------------------------
+
+char *util_get_ipaddr(void);
