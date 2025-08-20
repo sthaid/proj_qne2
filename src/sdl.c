@@ -368,12 +368,14 @@ static void process_sdl_event(SDL_Event *ev, sdl_event_t *event)
         }
         break; }
     case SDL_EVENT_SENSOR_UPDATE: {
+#if 0
         SDL_SensorEvent *x = &ev->sensor;
         INFO("SENSOR: which=%d data=%f %f %f %f %f %f timestamp=%ld\n",
              x->which,
              x->data[0], x->data[1], x->data[2], x->data[3], x->data[4], x->data[5],
              x->sensor_timestamp);
         sdl_sensor_event(x);
+#endif
         break; }
 #if 0
     case SDL_EVENT_TEXT_INPUT: {

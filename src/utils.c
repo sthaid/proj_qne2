@@ -356,6 +356,7 @@ char *util_get_ipaddr(void)
         return ipaddr;
     }
 
+    // xxx skip 127, return 192 if avail, else 10. else other
     ifap = ifap_orig;
     while (ifap) {
         printf("ifa_name = %s\n", ifap->ifa_name);

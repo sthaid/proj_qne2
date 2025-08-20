@@ -16,6 +16,8 @@
 
 #define TEN_MS 10000
 
+#define ASENSOR_TYPE_STEP_COUNTER 19
+
 //
 // typedefs
 //
@@ -24,7 +26,7 @@ typedef struct {
     SDL_SensorType type;
     int            nptype;
     const char    *name;
-    SDL_Sensor    *sensor;  // xxx is sensor opened as nptype or type?
+    SDL_Sensor    *sensor;
     struct {
         double value;
     } data;
@@ -99,6 +101,8 @@ void sdl_sensor_event(SDL_SensorEvent *event)
     int id;
     sensor_t *sens;
 
+    return; //xxx  maybe this wont be used
+
     // validate sensor id is in range
     id = event->which;
     if (id < 0 || id >= MAX_SENSOR_ID) {
@@ -116,6 +120,7 @@ void sdl_sensor_event(SDL_SensorEvent *event)
     // xxx first check sensor type field ??
 
     // process the sensor data, save result in sensor_tbl[id].data struct
+    // xxx can this be generalized
     switch (sens->nptype) {
     case ASENSOR_TYPE_STEP_COUNTER:
         sens->data.value++;
@@ -128,28 +133,24 @@ void sdl_sensor_event(SDL_SensorEvent *event)
 
 // -----------  APIS AVAILABLE IN PICOC  --------------
 
-int sdl_sensor_open(bool type_is_np, int type)
+// xxx maybe better to return void*
+int sdl_sensor_open(int nptype)
 {
     int id, rc;
     SDL_Sensor *sdl_sensor;
 
-    // get the id of the first sensor with the requested type/nptype;
-    // note: 
-    // - type   - sensors that are defined by SDL
-    // - nptype - 'NonPortableType', values are platform dependant
+    // get the id of the first sensor with the requested nptype;
+    // note:  nptype = 'NonPortableType', values are platform dependant
     for (id = 0; id < MAX_SENSOR_ID; id++) {
         if (sensor_tbl[id].name == NULL) {
             continue;
         }
-        if (type_is_np && type == sensor_tbl[id].nptype) {
-            break;
-        }
-        if (!type_is_np && type == sensor_tbl[id].type) {
+        if (nptype == sensor_tbl[id].nptype) {
             break;
         }
     }
     if (id == MAX_SENSOR_ID) {
-        ERROR("no sensor found for %s %d\n", (type_is_np ? "nptype" : "type"), type);
+        ERROR("no sensor found with nptype %d\n", nptype);
         return -1;
     }
 
@@ -161,7 +162,7 @@ int sdl_sensor_open(bool type_is_np, int type)
 
     // get permission, if required for the requested nptype; 
     // note that the permission may also be needed in AndroidManifest.xml
-    if (type_is_np && type == ASENSOR_TYPE_STEP_COUNTER) {
+    if (nptype == ASENSOR_TYPE_STEP_COUNTER) {
         rc = get_permission("android.permission.ACTIVITY_RECOGNITION");
         if (rc < 0) {
             ERROR("failed to be granted ACTIVITY_RECOGNITION permission for STEP_COUNTER sensor\n");
@@ -200,10 +201,13 @@ void sdl_sensor_close(int id)
     sensor_tbl[id].sensor = NULL;
 }
 
-int sdl_sensor_read(int id, double *value)
+int sdl_sensor_read(int id, double *values, int num_values)
 {
-    // preset return value
-    *value = 0;
+    int i;
+    bool succ;
+    float float_values[16];
+
+    // xxx check num_values
 
     // validate id arg is for an open sensor
     if (id < 0 || id >= MAX_SENSOR_ID) {
@@ -216,9 +220,18 @@ int sdl_sensor_read(int id, double *value)
         return -1;
     }
 
-    // return sensor data
-    *value = sensor_tbl[id].data.value;
-    return 0;
+    succ = SDL_GetSensorData(sensor_tbl[id].sensor, float_values, num_values);
+    if (!succ) {
+        ERROR("SDL_GetSensorData failed for id %d, %s\n", id, SDL_GetError());
+    }
+
+    for (i = 0; i < num_values; i++) {
+        values[i] = float_values[i];
+    }
+
+    INFO("XXXXXXX reading id=%d  %p,  %f %f %f  num_val=%d\n",
+        id, sensor_tbl[id].sensor, values[0], values[1], values[2], num_values);
+    return succ ? 0 : -1;
 }
 
 // -----------------  PRIVATE  ----------------------------
@@ -271,6 +284,7 @@ static void get_permission_cb(void *userdata, const char *permission, bool grant
 
 static int get_permission(char *name)
 {
+    // return success
     return 0;
 }
 

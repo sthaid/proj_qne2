@@ -1,9 +1,11 @@
 
 SUBDIRS = \
-    apps/primes \
-    apps/reversi \
-    apps/unit_test \
-    picoc linux android
+    apps/Primes \
+    apps/Reversi \
+    apps/Test \
+    picoc \
+    linux \
+    android
 
 .PHONY: build clean
 

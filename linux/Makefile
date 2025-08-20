@@ -40,7 +40,7 @@ $(TARGET):
 	gcc -o $@ $(CFLAGS) $(SRCS) -lSDL3 -lSDL3_ttf -lm
 	rm -rf files; mkdir files;
 	cd ..; \
-	find apps -type f ! -name params ! -name README ! -name Makefile ! -executable > /tmp/files.txt; \
+	find apps -type f ! -name params ! -name README ! -name Makefile ! -name "*.swp" ! -executable > /tmp/files.txt; \
 	tar -cf linux/assets/apps.tar --files-from /tmp/files.txt; \
 	rm -f /tmp/files.txt
 

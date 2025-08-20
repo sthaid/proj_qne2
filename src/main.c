@@ -249,7 +249,8 @@ static void controller(void)
             dir = opendir(".");
             while ((dirent = readdir(dir)) != NULL) {
                 char *fn = dirent->d_name;
-                if (strstr(fn, ".c")) {
+                int len = strlen(fn);
+                if (len > 2 && strcmp(fn+len-2, ".c") == 0) {
                     strcat(picoc_args, fn);
                     strcat(picoc_args, " ");
                 }

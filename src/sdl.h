@@ -164,15 +164,48 @@ void sdl_audio_create_test_file(char *filename, int duration_secs, int freq);
 // sensors
 // --------------------
 
+#define ASENSOR_TYPE_ACCELEROMETER       1
+#define ASENSOR_TYPE_MAGNETIC_FIELD      2
+#define ASENSOR_TYPE_GYROSCOPE           4
+#define ASENSOR_TYPE_LIGHT               5
+#define ASENSOR_TYPE_PRESSURE            6
+#define ASENSOR_TYPE_PROXIMITY           8
+#define ASENSOR_TYPE_GRAVITY             9
+#define ASENSOR_TYPE_LINEAR_ACCELERATION 10
+#define ASENSOR_TYPE_ROTATION_VECTOR     11
+#define ASENSOR_TYPE_RELATIVE_HUMIDITY   12
+#define ASENSOR_TYPE_AMBIENT_TEMPERATURE 13
+#define ASENSOR_TYPE_MAGNETIC_FIELD_UNCALIBRATED 14
+#define ASENSOR_TYPE_GAME_ROTATION_VECTOR 15
+#define ASENSOR_TYPE_GYROSCOPE_UNCALIBRATED 16
+#define ASENSOR_TYPE_SIGNIFICANT_MOTION 17
+#define ASENSOR_TYPE_STEP_DETECTOR 18
 #define ASENSOR_TYPE_STEP_COUNTER 19
+#define ASENSOR_TYPE_GEOMAGNETIC_ROTATION_VECTOR 20
+#define ASENSOR_TYPE_HEART_RATE 21
+#define ASENSOR_TYPE_POSE_6DOF 28
+#define ASENSOR_TYPE_STATIONARY_DETECT 29
+#define ASENSOR_TYPE_MOTION_DETECT 30
+#define ASENSOR_TYPE_HEART_BEAT 31
+#define ASENSOR_TYPE_DYNAMIC_SENSOR_META 32
+#define ASENSOR_TYPE_ADDITIONAL_INFO 33
+#define ASENSOR_TYPE_LOW_LATENCY_OFFBODY_DETECT 34
+#define ASENSOR_TYPE_ACCELEROMETER_UNCALIBRATED 35
+#define ASENSOR_TYPE_HINGE_ANGLE 36
+#define ASENSOR_TYPE_HEAD_TRACKER 37
+#define ASENSOR_TYPE_ACCELEROMETER_LIMITED_AXES 38
+#define ASENSOR_TYPE_GYROSCOPE_LIMITED_AXES 39
+#define ASENSOR_TYPE_ACCELEROMETER_LIMITED_AXES_UNCALIBRATED 40
+#define ASENSOR_TYPE_GYROSCOPE_LIMITED_AXES_UNCALIBRATED 41
+#define ASENSOR_TYPE_HEADING 42
 
-// xxx move to new file
-int sdl_sensor_init(void);  // xxx call this
-void sdl_sensor_event(SDL_SensorEvent *event);  // xxx call this
+// xxx move these 2 to new file
+int sdl_sensor_init(void);
+void sdl_sensor_event(SDL_SensorEvent *event);
 
-int sdl_sensor_open(bool type_is_np, int type);
+int sdl_sensor_open(int nptype);
 void sdl_sensor_close(int id);
-int sdl_sensor_read(int id, double *value);
+int sdl_sensor_read(int id, double *values, int num_values);
 
 // xxxxxxxxxx
 char *sdl_get_input_str(char *prompt, bool numeric_keybd, int bg_color);

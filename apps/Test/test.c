@@ -184,7 +184,7 @@ static void page_hndlr()
         sdl_display_present();
 
         // wait for an event with 50 ms timeout;
-        // if no event available, then continue
+        // if no event available, then redraw display
         sdl_get_event(50000, &event);
         if (event.event_id == -1) {
             continue;
@@ -793,20 +793,22 @@ int sensor_id = -1;
 
 static void page_8_init(void)
 {
-    sensor_id = sdl_sensor_open(true, ASENSOR_TYPE_STEP_COUNTER);
+    //sensor_id = sdl_sensor_open(true, ASENSOR_TYPE_STEP_COUNTER);
+    sensor_id = sdl_sensor_open(ASENSOR_TYPE_ACCELEROMETER);
 }
 
 static void page_8_draw(void)
 {
-    double value = 0;
+    double values[3];
 
     if (sensor_id < 0) {
         sdl_render_printf(0, 200, "open failed");
         return;
     }
 
-    sdl_sensor_read(sensor_id, &value);
-    sdl_render_printf(0, 200, "id=%d val=%f", sensor_id, value);
+    sdl_sensor_read(sensor_id, values, 3);
+    printf("id=%d val=%f %f %f\n", sensor_id, values[0], values[1], values[2]);
+    sdl_render_printf(0, 200, "id=%d val=%f %f %f", sensor_id, values[0], values[1], values[2]);
 }
 
 static void page_8_exit(void)

@@ -457,11 +457,10 @@ void Sdl_audio_create_test_file (struct ParseState *Parser, struct Value *Return
 void Sdl_sensor_open (struct ParseState *Parser, struct Value *ReturnValue,
 	struct Value **Param, int NumArgs)
 {
-    bool type_is_np = Param[0]->Val->Integer;
-    int type        = Param[1]->Val->Integer;
+    int nptype = Param[0]->Val->Integer;
     int id;
 
-    id = sdl_sensor_open(type_is_np, type);
+    id = sdl_sensor_open(nptype);
     ReturnValue->Val->Integer = id; 
 }
 
@@ -476,11 +475,12 @@ void Sdl_sensor_close (struct ParseState *Parser, struct Value *ReturnValue,
 void Sdl_sensor_read (struct ParseState *Parser, struct Value *ReturnValue,
 	struct Value **Param, int NumArgs)
 {
-    int     id    = Param[0]->Val->Integer;
-    double *value = Param[1]->Val->Pointer;
+    int     id         = Param[0]->Val->Integer;
+    double *values     = Param[1]->Val->Pointer;
+    int     num_values = Param[2]->Val->Integer;
     int     rc;
 
-    rc = sdl_sensor_read(id, value);
+    rc = sdl_sensor_read(id, values, num_values);
     ReturnValue->Val->Integer = rc; 
 }
 
@@ -557,9 +557,9 @@ struct LibraryFunction SdlFunctions[] = {
     { Sdl_audio_create_test_file,       "void sdl_audio_create_test_file(char *filename, int duration_secs, int freq);" },
 
     // sensors
-    { Sdl_sensor_open,                  "int sdl_sensor_open(bool type_is_np, int type);" },
+    { Sdl_sensor_open,                  "int sdl_sensor_open(int nptype);" },
     { Sdl_sensor_close,                 "void sdl_sensor_close(int id);" },
-    { Sdl_sensor_read,                  "int sdl_sensor_read(int id, double *value);" },
+    { Sdl_sensor_read,                  "int sdl_sensor_read(int id, double *values, int num_values);" },
 
     { NULL, NULL } };
 
@@ -637,7 +637,40 @@ typedef struct { \n\
 #define AUDIO_REQ_PAUSE    2 \n\
 #define AUDIO_REQ_UNPAUSE  3 \n\
 \n\
-#define ASENSOR_TYPE_STEP_COUNTER 19\n\
+#define ASENSOR_TYPE_ACCELEROMETER       1 \n\
+#define ASENSOR_TYPE_MAGNETIC_FIELD      2 \n\
+#define ASENSOR_TYPE_GYROSCOPE           4 \n\
+#define ASENSOR_TYPE_LIGHT               5 \n\
+#define ASENSOR_TYPE_PRESSURE            6 \n\
+#define ASENSOR_TYPE_PROXIMITY           8 \n\
+#define ASENSOR_TYPE_GRAVITY             9 \n\
+#define ASENSOR_TYPE_LINEAR_ACCELERATION 10 \n\
+#define ASENSOR_TYPE_ROTATION_VECTOR     11 \n\
+#define ASENSOR_TYPE_RELATIVE_HUMIDITY   12 \n\
+#define ASENSOR_TYPE_AMBIENT_TEMPERATURE 13 \n\
+#define ASENSOR_TYPE_MAGNETIC_FIELD_UNCALIBRATED 14 \n\
+#define ASENSOR_TYPE_GAME_ROTATION_VECTOR 15 \n\
+#define ASENSOR_TYPE_GYROSCOPE_UNCALIBRATED 16 \n\
+#define ASENSOR_TYPE_SIGNIFICANT_MOTION 17 \n\
+#define ASENSOR_TYPE_STEP_DETECTOR 18 \n\
+#define ASENSOR_TYPE_STEP_COUNTER 19 \n\
+#define ASENSOR_TYPE_GEOMAGNETIC_ROTATION_VECTOR 20 \n\
+#define ASENSOR_TYPE_HEART_RATE 21 \n\
+#define ASENSOR_TYPE_POSE_6DOF 28 \n\
+#define ASENSOR_TYPE_STATIONARY_DETECT 29 \n\
+#define ASENSOR_TYPE_MOTION_DETECT 30 \n\
+#define ASENSOR_TYPE_HEART_BEAT 31 \n\
+#define ASENSOR_TYPE_DYNAMIC_SENSOR_META 32 \n\
+#define ASENSOR_TYPE_ADDITIONAL_INFO 33 \n\
+#define ASENSOR_TYPE_LOW_LATENCY_OFFBODY_DETECT 34 \n\
+#define ASENSOR_TYPE_ACCELEROMETER_UNCALIBRATED 35 \n\
+#define ASENSOR_TYPE_HINGE_ANGLE 36 \n\
+#define ASENSOR_TYPE_HEAD_TRACKER 37 \n\
+#define ASENSOR_TYPE_ACCELEROMETER_LIMITED_AXES 38 \n\
+#define ASENSOR_TYPE_GYROSCOPE_LIMITED_AXES 39 \n\
+#define ASENSOR_TYPE_ACCELEROMETER_LIMITED_AXES_UNCALIBRATED 40 \n\
+#define ASENSOR_TYPE_GYROSCOPE_LIMITED_AXES_UNCALIBRATED 41 \n\
+#define ASENSOR_TYPE_HEADING 42 \n\
 ";
 
 // -----------------  UTILS PLATFORM ROUTINES  --------------------------
