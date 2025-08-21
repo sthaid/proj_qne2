@@ -49,7 +49,7 @@ typedef struct {
         struct {
             int ch;
         } keybd;
-    } u;  // xxx is u needed
+    } u;
 } sdl_event_t;
 
 #define PIXELS_MAGIC 0x11223344
@@ -117,6 +117,9 @@ void sdl_render_texture(int x, int y, int w, int h, double angle, sdl_texture_t 
 void sdl_destroy_texture(sdl_texture_t *texture);
 void sdl_query_texture(sdl_texture_t *texture, int *w, int *h);
 sdl_pixels_t *sdl_read_display_pixels(int x, int y, int w, int h);
+
+// get string, from virtual keyboard when on Android
+char *sdl_get_input_str(char *prompt, bool numeric_keybd, int bg_color);
 
 // --------------------
 // audio
@@ -201,17 +204,12 @@ typedef struct {
     char *name;
 } sdl_sensor_info_t;
 
-int sdl_sensor_init(void);  // xxx
+int sdl_sensor_init_private(void);
 
 sdl_sensor_info_t *sdl_sensor_get_info_tbl(int *num_sensors);
 void *sdl_sensor_open_by_nptype(int nptype);
 void *sdl_sensor_open_by_id(int id);
 void sdl_sensor_close(void *sensor);
 int sdl_sensor_read(void *sensor, double *values, int num_values);
-
-// xxxxxxxxxx xxxxxxxxx xxxxxxxxxxx xxxxxxxxx xxxxxxxxxxx
-
-// xxx where should this go
-char *sdl_get_input_str(char *prompt, bool numeric_keybd, int bg_color);
 
 #endif

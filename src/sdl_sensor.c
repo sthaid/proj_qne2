@@ -36,7 +36,7 @@ static int get_permission(char *name);
 // -----------------  INIT -------------------------------
 
 // called by sdl_init
-int sdl_sensor_init(void)
+int sdl_sensor_init_private(void)
 {
     int            i, max, num_sensors;
     SDL_SensorID  *ids;

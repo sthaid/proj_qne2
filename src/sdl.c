@@ -150,7 +150,7 @@ int sdl_init(void)
     }
 
     // init sensor code
-    sdl_sensor_init();
+    sdl_sensor_init_private();
 
     // this is needed so that the first actual display present works
     sdl_display_init(COLOR_BLACK);

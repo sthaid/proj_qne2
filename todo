@@ -2,16 +2,17 @@
 code cleanup:
 ------------
 
-src/std_hdrs.h
+src/std_hdrs.h          OK
+src/sdl.h              OK
+src/logging.h          OK
+src/utils.h           OK
+
 src/main.c
 src/sdl.c
-src/sdl.h
 src/logging.c
-src/logging.h
 src/sdl_audio.c
 src/sdl_sensor.c
 src/utils.c
-src/utils.h
 
 apps/Primes/primes.c
 apps/Test/test.c
