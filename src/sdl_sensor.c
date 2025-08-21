@@ -33,6 +33,7 @@ static int get_permission(char *name);
 
 // -----------------  INIT -------------------------------
 
+// called by sdl_init
 int sdl_sensor_init(void)
 {
     int            i, max, num_sensors;
@@ -46,7 +47,7 @@ int sdl_sensor_init(void)
     }
     INFO("num_sensors =%d\n", num_sensors);
 
-    // loop over all sensor ids, and save info in sensor_info_tbl  xxx check comments
+    // loop over returned list of sensor ids, and save info in sensor_info_tbl
     max = 0;
     for (i = 0; i < num_sensors; i++) {
         // check if sensor is device private
@@ -54,8 +55,7 @@ int sdl_sensor_init(void)
             continue;
         }
 
-        // save sensor type, non-portable-type, and name in sensor_info_tbl
-        //xxx save id too ???
+        // save sensor id, type, non-portable-type, and name in sensor_info_tbl
         sensor_info_tbl[max].id      = ids[i];
         sensor_info_tbl[max].sdltype = SDL_GetSensorTypeForID(ids[i]);
         sensor_info_tbl[max].nptype  = SDL_GetSensorNonPortableTypeForID(ids[i]);
@@ -107,8 +107,6 @@ void *sdl_sensor_open_by_nptype(int nptype)
 {
     int i, id, rc;
 
-    printf("nptype %d\n", nptype);
-
     // get permission, if required for the requested nptype; 
     // note that the permission may also be needed in AndroidManifest.xml
     if (nptype == ASENSOR_TYPE_STEP_COUNTER) {
@@ -131,7 +129,6 @@ void *sdl_sensor_open_by_nptype(int nptype)
         return NULL;
     }
     id = sensor_info_tbl[i].id;
-    printf("id = %d\n", id);
 
     // open the sensor using the id
     return sdl_sensor_open_by_id(id);
@@ -149,19 +146,37 @@ int sdl_sensor_read(void *sensor, double *values, int num_values)
     float float_values[16];
     int id = SDL_GetSensorID(sensor);
 
-    // xxx check num_values
+    // Note that the values are first obtained in float_values[], and 
+    // then converted to doubles for return in the values array.
+    // The reason for this is that picoc treats variables declared 
+    // float as doubles.
 
+    // verify num_values is in expected range
+    if (num_values < 1 || num_values > 16) {
+        ERROR("num_values %d is out of range\n", num_values);
+        for (i = 0; i < num_values; i++) {
+            values[i] = 0;
+        }
+        return -1;
+    }
+
+    // get the sensor values, in float_values[]
     succ = SDL_GetSensorData(sensor, float_values, num_values);
     if (!succ) {
         ERROR("SDL_GetSensorData failed for id %d, %s\n", id, SDL_GetError());
+        for (i = 0; i < num_values; i++) {
+            values[i] = 0;
+        }
+        return -1;
     }
 
-    // xxx comment
+    // convert the float_values to double values, for return to caller
     for (i = 0; i < num_values; i++) {
         values[i] = float_values[i];
     }
 
-    return succ ? 0 : -1;
+    // success
+    return 0;
 }
 
 // -----------------  PRIVATE  ----------------------------

@@ -1,14 +1,6 @@
-should sensors return void* instead of id
-update test pgm to test sensors using a table
-
-
-dont include swp files,  and dont scan them to picoc
-
-sensors
-- accel / level
-- compass
-
-add util_get_ipaddt to picoc
+util_get_ipaddr
+- fixup
+- add util_get_ipaddt to picoc
 
 sdl_print get routine
 
@@ -18,6 +10,13 @@ do more code cleanups
    - eval all routines for error checking
    - eval use of rint / nearbyint
 
+sensors
+- decode magnetometer and tilt in Test page9
+
+recording:
+- adjust audio recording level
+- record append
+- auto quiet stop
 
 - - - - - - - - - - - - - 
 
@@ -31,8 +30,6 @@ xxxxxxx xxxxxxxx xxxxxxxx xxxxxxxx xxxxxxxx xxxxxxxx
 xxxxxxx xxxxxxxx xxxxxxxx xxxxxxxx xxxxxxxx xxxxxxxx
 
 try creating a simple test app
-
-work on other sensors
 
 how to start program when booting
 

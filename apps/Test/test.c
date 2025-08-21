@@ -305,8 +305,10 @@ static void page_2_draw(void)
     sdl_render_printf(0, ROW2Y(r++), "sizoef(size_t) = %zd", sizeof(size_t));
     sdl_render_printf(0, ROW2Y(r++), "sizoef(off_t)  = %zd", sizeof(off_t));
     sdl_render_printf(0, ROW2Y(r++), "sizoef(time_t) = %zd", sizeof(time_t));
-    sdl_render_printf(0, ROW2Y(r++), "sizeof(1)      = %zd", sizeof(123));
-    sdl_render_printf(0, ROW2Y(r++), "sizeof(1ULL);  = %zd", sizeof(123UL));
+    sdl_render_printf(0, ROW2Y(r++), "sizoef(float)  = %zd", sizeof(float));
+    sdl_render_printf(0, ROW2Y(r++), "sizoef(double) = %zd", sizeof(double));
+    sdl_render_printf(0, ROW2Y(r++), "sizeof(1)      = %zd", sizeof(1));
+    sdl_render_printf(0, ROW2Y(r++), "sizeof(1L)     = %zd", sizeof(1L));
 }
 
 // -----------------  PAGE 3: MULTI LINE TEXT  ----------------

@@ -146,9 +146,6 @@ int sdl_init(void)
         return -1; //xxx should this be an error ret
     }
 
-    // ensure text input events are disabled
-    SDL_StopTextInput(window);
-
     // init sensor code
     sdl_sensor_init();
 
