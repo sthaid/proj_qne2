@@ -365,7 +365,7 @@ char *util_get_ipaddr(void)
             addr = htonl(x->sin_addr.s_addr);
 
             if (((addr >> 24) & 0xff) == 127) {
-                continue;
+                goto next;
             }
 
             a = (addr >> 24) & 0xff;
@@ -379,6 +379,7 @@ char *util_get_ipaddr(void)
             }
         }
             
+next:
         ifap = ifap->ifa_next;
     }
 
