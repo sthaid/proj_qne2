@@ -199,13 +199,22 @@ void sdl_audio_create_test_file(char *filename, int duration_secs, int freq);
 #define ASENSOR_TYPE_GYROSCOPE_LIMITED_AXES_UNCALIBRATED 41
 #define ASENSOR_TYPE_HEADING 42
 
-// xxx move these 2 to new file
-int sdl_sensor_init(void);
-void sdl_sensor_event(SDL_SensorEvent *event);
+typedef struct {
+    int   id;
+    int   sdltype;
+    int   nptype;
+    char *name;
+} sdl_sensor_info_t;
 
-int sdl_sensor_open(int nptype);
-void sdl_sensor_close(int id);
-int sdl_sensor_read(int id, double *values, int num_values);
+int sdl_sensor_init(void);  // xxx
 
-// xxxxxxxxxx
+sdl_sensor_info_t *sdl_sensor_get_info_tbl(int *num_sensors);
+void *sdl_sensor_open_by_nptype(int nptype);
+void *sdl_sensor_open_by_id(int id);
+void sdl_sensor_close(void *sensor);
+int sdl_sensor_read(void *sensor, double *values, int num_values);
+
+// xxxxxxxxxx xxxxxxxxx xxxxxxxxxxx xxxxxxxxx xxxxxxxxxxx
+
+// xxx where should this go
 char *sdl_get_input_str(char *prompt, bool numeric_keybd, int bg_color);

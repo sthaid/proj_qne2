@@ -454,33 +454,53 @@ void Sdl_audio_create_test_file (struct ParseState *Parser, struct Value *Return
 // sensors
 //
 
-void Sdl_sensor_open (struct ParseState *Parser, struct Value *ReturnValue,
+void Sdl_sensor_get_info_tbl (struct ParseState *Parser, struct Value *ReturnValue,
+	struct Value **Param, int NumArgs)
+{
+    int *num_sensors = Param[0]->Val->Pointer;
+    sdl_sensor_info_t *sit;
+
+    sit = sdl_sensor_get_info_tbl(num_sensors);
+    ReturnValue->Val->Pointer = sit;
+}
+
+void Sdl_sensor_open_by_nptype (struct ParseState *Parser, struct Value *ReturnValue,
 	struct Value **Param, int NumArgs)
 {
     int nptype = Param[0]->Val->Integer;
-    int id;
+    void *sensor;
 
-    id = sdl_sensor_open(nptype);
-    ReturnValue->Val->Integer = id; 
+    sensor = sdl_sensor_open_by_nptype(nptype);
+    ReturnValue->Val->Pointer = sensor;
+}
+
+void Sdl_sensor_open_by_id (struct ParseState *Parser, struct Value *ReturnValue,
+	struct Value **Param, int NumArgs)
+{
+    int id = Param[0]->Val->Integer;
+    void *sensor;
+
+    sensor = sdl_sensor_open_by_id(id);
+    ReturnValue->Val->Pointer = sensor;
 }
 
 void Sdl_sensor_close (struct ParseState *Parser, struct Value *ReturnValue,
 	struct Value **Param, int NumArgs)
 {
-    int id = Param[0]->Val->Integer;
+    void *sensor = Param[0]->Val->Pointer;
 
-    sdl_sensor_close(id);
+    sdl_sensor_close(sensor);
 }
 
 void Sdl_sensor_read (struct ParseState *Parser, struct Value *ReturnValue,
 	struct Value **Param, int NumArgs)
 {
-    int     id         = Param[0]->Val->Integer;
+    void   *sensor     = Param[0]->Val->Pointer;
     double *values     = Param[1]->Val->Pointer;
     int     num_values = Param[2]->Val->Integer;
     int     rc;
 
-    rc = sdl_sensor_read(id, values, num_values);
+    rc = sdl_sensor_read(sensor, values, num_values);
     ReturnValue->Val->Integer = rc; 
 }
 
@@ -557,9 +577,11 @@ struct LibraryFunction SdlFunctions[] = {
     { Sdl_audio_create_test_file,       "void sdl_audio_create_test_file(char *filename, int duration_secs, int freq);" },
 
     // sensors
-    { Sdl_sensor_open,                  "int sdl_sensor_open(int nptype);" },
-    { Sdl_sensor_close,                 "void sdl_sensor_close(int id);" },
-    { Sdl_sensor_read,                  "int sdl_sensor_read(int id, double *values, int num_values);" },
+    { Sdl_sensor_get_info_tbl,          "sdl_sensor_info_t *sdl_sensor_get_info_tbl(int *num_sensors);" },
+    { Sdl_sensor_open_by_nptype,        "void *sdl_sensor_open_by_nptype(int nptype);" },
+    { Sdl_sensor_open_by_id,            "void *sdl_sensor_open_by_id(int id);" },
+    { Sdl_sensor_close,                 "void sdl_sensor_close(void *sensor);" },
+    { Sdl_sensor_read,                  "int sdl_sensor_read(void *sensor, double *values, int num_values);" },
 
     { NULL, NULL } };
 
@@ -602,6 +624,12 @@ typedef struct { \n\
     int  volume; \n\
     char filename[100]; \n\
 } sdl_audio_state_t; \n\
+typedef struct { \n\
+    int   id; \n\
+    int   sdltype; \n\
+    int   nptype; \n\
+    char *name; \n\
+} sdl_sensor_info_t; \n\
 \n\
 #define PIXELS_MAGIC 0x11223344 \n\
 \n\

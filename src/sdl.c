@@ -146,12 +146,8 @@ int sdl_init(void)
         return -1; //xxx should this be an error ret
     }
 
-#if 0
-    // SDL Text Input is not being used 
-    // xxx try SDL_StartTextInput
-    // xxx delete
-    SDL_StopTextInput();
-#endif
+    // ensure text input events are disabled
+    SDL_StopTextInput(window);
 
     // init sensor code
     sdl_sensor_init();
@@ -368,13 +364,14 @@ static void process_sdl_event(SDL_Event *ev, sdl_event_t *event)
         }
         break; }
     case SDL_EVENT_SENSOR_UPDATE: {
-#if 0
+#if 1  // xxx why is step counter not working
         SDL_SensorEvent *x = &ev->sensor;
-        INFO("SENSOR: which=%d data=%f %f %f %f %f %f timestamp=%ld\n",
-             x->which,
-             x->data[0], x->data[1], x->data[2], x->data[3], x->data[4], x->data[5],
-             x->sensor_timestamp);
-        sdl_sensor_event(x);
+        if (x->which == 14 || x->which == 15) 
+            INFO("SENSOR: which=%d data=%f %f %f %f %f %f timestamp=%ld\n",
+                 x->which,
+                 x->data[0], x->data[1], x->data[2], x->data[3], x->data[4], x->data[5],
+                 x->sensor_timestamp);
+        //sdl_sensor_event(x);
 #endif
         break; }
 #if 0

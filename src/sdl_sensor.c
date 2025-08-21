@@ -4,15 +4,11 @@
 #include <utils.h>
 #include <logging.h>
 
-// notes
-// - sensor_tbl is indexed by SDL_SensorID, which assumes the 
-//   SDL_SensorID is a small number, less than MAX_SENSOR_ID
-
 //
 // defines
 //
 
-#define MAX_SENSOR_ID 256
+#define MAX_SENSOR_INFO 256
 
 #define TEN_MS 10000
 
@@ -22,21 +18,12 @@
 // typedefs
 //
 
-typedef struct {
-    SDL_SensorType type;
-    int            nptype;
-    const char    *name;
-    SDL_Sensor    *sensor;
-    struct {
-        double value;
-    } data;
-} sensor_t;
-
 //
 // variables
 //
 
-static sensor_t sensor_tbl[MAX_SENSOR_ID];
+static sdl_sensor_info_t sensor_info_tbl[MAX_SENSOR_INFO];
+static int               max_sensor_info_tbl;
 
 //
 // prototypes
@@ -44,12 +31,11 @@ static sensor_t sensor_tbl[MAX_SENSOR_ID];
 
 static int get_permission(char *name);
 
-// -----------------  INIT & EVENT HANDLER  --------------
+// -----------------  INIT -------------------------------
 
 int sdl_sensor_init(void)
 {
-    int            i, num_sensors = 0;
-    int            num_avail_sensors = 0;
+    int            i, max, num_sensors;
     SDL_SensorID  *ids;
 
     // get list of sensor ids
@@ -58,34 +44,33 @@ int sdl_sensor_init(void)
         ERROR("SDL_GetSensors returned NULL\n");
         return -1;
     }
+    INFO("num_sensors =%d\n", num_sensors);
 
-    // loop over all sensor ids, and save info in sensor_tbl
+    // loop over all sensor ids, and save info in sensor_info_tbl  xxx check comments
+    max = 0;
     for (i = 0; i < num_sensors; i++) {
         // check if sensor is device private
         if (SDL_GetSensorNonPortableTypeForID(ids[i]) >= 65536) {
             continue;
         }
 
-        // check if id is out of range supported by this code
-        if (ids[i] < 0 || ids[i] >= MAX_SENSOR_ID) {
-            ERROR("sensor id %d is out of range, sensor ignored\n", ids[i]);
-            continue;
-        }
-
-        // save sensor type, non-portable-type, and name in sensor_tbl
-        sensor_tbl[ids[i]].type   = SDL_GetSensorTypeForID(ids[i]);
-        sensor_tbl[ids[i]].nptype = SDL_GetSensorNonPortableTypeForID(ids[i]);
-        sensor_tbl[ids[i]].name   = SDL_GetSensorNameForID(ids[i]);
-        num_avail_sensors++;
+        // save sensor type, non-portable-type, and name in sensor_info_tbl
+        //xxx save id too ???
+        sensor_info_tbl[max].id      = ids[i];
+        sensor_info_tbl[max].sdltype = SDL_GetSensorTypeForID(ids[i]);
+        sensor_info_tbl[max].nptype  = SDL_GetSensorNonPortableTypeForID(ids[i]);
+        sensor_info_tbl[max].name    = (char*)SDL_GetSensorNameForID(ids[i]);
+        max++;
     }
+    max_sensor_info_tbl = max;
 
-    // print the info from sensor_tbl
-    INFO("num_sensors: total=%d avail=%d\n", num_sensors, num_avail_sensors);
-    for (int id = 0; id < MAX_SENSOR_ID; id++) {
-        if (sensor_tbl[id].name != NULL) {
-            INFO("%2d %2d %2d %s\n",
-                 id, sensor_tbl[id].type, sensor_tbl[id].nptype, sensor_tbl[id].name);
-        }
+    // print the info from sensor_info_tbl
+    for (i = 0; i < max_sensor_info_tbl; i++) {
+        INFO("%2d %2d %2d %s\n",
+             sensor_info_tbl[i].id, 
+             sensor_info_tbl[i].sdltype, 
+             sensor_info_tbl[i].nptype, 
+             sensor_info_tbl[i].name);
     }
 
     // free the list of ids
@@ -95,70 +80,34 @@ int sdl_sensor_init(void)
     return 0;
 }
 
-// called from process_sdl_event, in sdl.c, when SDL_EVENT_SENSOR_UPDATE occurs
-void sdl_sensor_event(SDL_SensorEvent *event)
-{
-    int id;
-    sensor_t *sens;
-
-    return; //xxx  maybe this wont be used
-
-    // validate sensor id is in range
-    id = event->which;
-    if (id < 0 || id >= MAX_SENSOR_ID) {
-        ERROR("invlaid sensor id %d\n", id);
-        return;
-    }
-
-    // validate sensor id is for an open sensor
-    sens = &sensor_tbl[id];
-    if (sens->sensor == NULL) {
-        ERROR("sensor id %d is not open\n", id);
-        return;
-    }
-
-    // xxx first check sensor type field ??
-
-    // process the sensor data, save result in sensor_tbl[id].data struct
-    // xxx can this be generalized
-    switch (sens->nptype) {
-    case ASENSOR_TYPE_STEP_COUNTER:
-        sens->data.value++;
-        break;
-    default:
-        ERROR("sensor id %d, invalid nptype %d\n", id, sens->nptype);
-        break;
-    }
-}
-
 // -----------  APIS AVAILABLE IN PICOC  --------------
 
-// xxx maybe better to return void*
-int sdl_sensor_open(int nptype)
+sdl_sensor_info_t *sdl_sensor_get_info_tbl(int *max)
 {
-    int id, rc;
-    SDL_Sensor *sdl_sensor;
+    *max = max_sensor_info_tbl;
+    return sensor_info_tbl;
+}
 
-    // get the id of the first sensor with the requested nptype;
-    // note:  nptype = 'NonPortableType', values are platform dependant
-    for (id = 0; id < MAX_SENSOR_ID; id++) {
-        if (sensor_tbl[id].name == NULL) {
-            continue;
-        }
-        if (nptype == sensor_tbl[id].nptype) {
-            break;
-        }
-    }
-    if (id == MAX_SENSOR_ID) {
-        ERROR("no sensor found with nptype %d\n", nptype);
-        return -1;
+void *sdl_sensor_open_by_id(int id)
+{
+    SDL_Sensor *sensor;
+
+    // open the sensor
+    sensor = SDL_OpenSensor(id);
+    if (sensor == NULL) {
+        ERROR("failed to open sensor id %d, %s\n", id, SDL_GetError());
+        return NULL;
     }
 
-    // if sensor id is already open then return error
-    if (sensor_tbl[id].sensor != NULL) {
-        ERROR("sensor id %d is already open\n", id);
-        return -1;
-    }
+    // return sensor
+    return sensor;
+}
+
+void *sdl_sensor_open_by_nptype(int nptype)
+{
+    int i, id, rc;
+
+    printf("nptype %d\n", nptype);
 
     // get permission, if required for the requested nptype; 
     // note that the permission may also be needed in AndroidManifest.xml
@@ -166,71 +115,52 @@ int sdl_sensor_open(int nptype)
         rc = get_permission("android.permission.ACTIVITY_RECOGNITION");
         if (rc < 0) {
             ERROR("failed to be granted ACTIVITY_RECOGNITION permission for STEP_COUNTER sensor\n");
-            return -1;
+            return NULL;
         }
     }
 
-    // clear sensor data
-    memset(&sensor_tbl[id].data, 0, sizeof(sensor_tbl[id].data));
-
-    // open the sensor
-    sdl_sensor = SDL_OpenSensor(id);
-    if (sdl_sensor == NULL) {
-        ERROR("failed to open sensor id %d, %s\n", id, SDL_GetError());
-        return -1;
+    // get the id of the first sensor with the requested nptype;
+    // note:  nptype = 'NonPortableType', values are platform dependant
+    for (i = 0; i < max_sensor_info_tbl; i++) {
+        if (nptype == sensor_info_tbl[i].nptype) {
+            break;
+        }
     }
-    sensor_tbl[id].sensor = sdl_sensor;
-    INFO("sensor_tbl[%d].sensor = %p\n", id, sensor_tbl[id].sensor);
+    if (i == max_sensor_info_tbl) {
+        ERROR("no sensor found with nptype %d\n", nptype);
+        return NULL;
+    }
+    id = sensor_info_tbl[i].id;
+    printf("id = %d\n", id);
 
-    // return sensor id
-    return id;
+    // open the sensor using the id
+    return sdl_sensor_open_by_id(id);
 }
-        
-void sdl_sensor_close(int id)
+
+void sdl_sensor_close(void *sensor)
 {
-    if (id < 0 || id >= MAX_SENSOR_ID) {
-        ERROR("id %d is out of range\n", id);
-        return;
-    }
-    if (sensor_tbl[id].sensor == NULL) {
-        ERROR("sensor %d is not open\n", id);
-        return;
-    }
-    
-    SDL_CloseSensor(sensor_tbl[id].sensor);
-    sensor_tbl[id].sensor = NULL;
+    SDL_CloseSensor(sensor);
 }
 
-int sdl_sensor_read(int id, double *values, int num_values)
+int sdl_sensor_read(void *sensor, double *values, int num_values)
 {
     int i;
     bool succ;
     float float_values[16];
+    int id = SDL_GetSensorID(sensor);
 
     // xxx check num_values
 
-    // validate id arg is for an open sensor
-    if (id < 0 || id >= MAX_SENSOR_ID) {
-        ERROR("invlaid sensor id %d\n", id);
-        return -1;
-    }
-
-    if (sensor_tbl[id].sensor == NULL) {
-        ERROR("sensor id %d is not open\n", id);
-        return -1;
-    }
-
-    succ = SDL_GetSensorData(sensor_tbl[id].sensor, float_values, num_values);
+    succ = SDL_GetSensorData(sensor, float_values, num_values);
     if (!succ) {
         ERROR("SDL_GetSensorData failed for id %d, %s\n", id, SDL_GetError());
     }
 
+    // xxx comment
     for (i = 0; i < num_values; i++) {
         values[i] = float_values[i];
     }
 
-    INFO("XXXXXXX reading id=%d  %p,  %f %f %f  num_val=%d\n",
-        id, sensor_tbl[id].sensor, values[0], values[1], values[2], num_values);
     return succ ? 0 : -1;
 }
 
@@ -297,6 +227,10 @@ static int get_permission(char *name)
 REFERENCES 
 ------------
 
+- Sensors Summary: 
+    https://developer.android.com/develop/sensors-and-location/sensors/sensors_overview
+    https://developer.android.com/reference/android/hardware/Sensor
+    https://developer.android.com/reference/android/hardware/Sensor#TYPE_STEP_COUNTER
 - Sensor Events
     https://developer.android.com/reference/android/hardware/SensorEvent.html
     https://developer.android.com/reference/android/hardware/SensorEvent.html#values

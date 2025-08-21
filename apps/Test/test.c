@@ -14,7 +14,7 @@
 // defines
 //
 
-#define MAX_PAGE 9
+#define MAX_PAGE 10
 
 // xxx check these
 #define ROW2Y(r) ((r) * sdl_char_height)  // xxx ctr vs ...
@@ -65,6 +65,10 @@ static void page_8_init(void);
 static void page_8_draw(void);
 static void page_8_exit(void);
 
+static void page_9_init(void);
+static void page_9_draw(void);
+static void page_9_exit(void);
+
 // -----------------  MAIN  ------------------------------------------
 
 int main(int argc, char **argv)
@@ -113,16 +117,17 @@ int main(int argc, char **argv)
 
 // xxx check this
 // picoc: picoc does not support this being static, causes crash
-char *page_title[] = {       // Page
-        "Unit Test",    //   0
-        "Font",         //   1
-        "Sizeof",       //   2
-        "Multi Lines",  //   3
-        "Drawing",      //   4
-        "Textures",     //   5
-        "Colors",       //   6
-        "Audio",        //   7
-        "Sensors",      //   8
+char *page_title[] = {   // Page
+        "Unit Test",     //   0
+        "Font",          //   1
+        "Sizeof",        //   2
+        "Multi Lines",   //   3
+        "Drawing",       //   4
+        "Textures",      //   5
+        "Colors",        //   6
+        "Audio",         //   7
+        "Sensor Info",   //   8
+        "Sensor Values", //   9
             };
 static int pagenum = 0;
 
@@ -140,6 +145,7 @@ static void page_hndlr()
     case 5: page_5_init(); break;
     case 7: page_7_init(); break;
     case 8: page_8_init(); break;
+    case 9: page_9_init(); break;
     }
 
     while (true) {
@@ -174,6 +180,7 @@ static void page_hndlr()
         case 6: page_6_draw(); break;
         case 7: page_7_draw(); break;
         case 8: page_8_draw(); break;
+        case 9: page_9_draw(); break;
         default:
             printf("ERROR invalid pagenum %d\n", pagenum);
             end_program = true;
@@ -228,6 +235,7 @@ static void page_hndlr()
     case 3: page_3_exit(); break;
     case 5: page_5_exit(); break;
     case 8: page_8_exit(); break;
+    case 9: page_9_exit(); break;
     }
 
     // update pagenum
@@ -787,34 +795,95 @@ static void generate_morse_code_tones(sdl_tone_t **t, char *letters)
     add_terminator(t);
 }
 
-// -----------------  PAGE 8: SENSORS -------------------------
+// -----------------  PAGE 8: SENSOR INFO TBL -----------------
 
-int sensor_id = -1;
+static sdl_sensor_info_t *sit;
+static int                max_sit;
+static char              *sit_lines[100];
 
 static void page_8_init(void)
 {
-    //sensor_id = sdl_sensor_open(true, ASENSOR_TYPE_STEP_COUNTER);
-    sensor_id = sdl_sensor_open(ASENSOR_TYPE_ACCELEROMETER);
+    char str[200];
+
+    sit = sdl_sensor_get_info_tbl(&max_sit);
+    if (sit == NULL) {
+        printf("ERROR: sdl_sensor_get_info_tbl failed\n");
+    }
+
+    y_top = ROW2Y(2); 
+    y_display_begin = ROW2Y(2);
+    y_display_end = sdl_win_height-3*sdl_char_height;
+
+    for (int i = 0; i < max_sit; i++) {
+        sprintf(str, "%2d %2d %2d %s", sit[i].id, sit[i].sdltype, sit[i].nptype, sit[i].name);
+        sit_lines[i] = strdup(str);  // xxx need to free
+    }
 }
 
 static void page_8_draw(void)
 {
-    double values[3];
-
-    if (sensor_id < 0) {
-        sdl_render_printf(0, 200, "open failed");
-        return;
-    }
-
-    sdl_sensor_read(sensor_id, values, 3);
-    printf("id=%d val=%f %f %f\n", sensor_id, values[0], values[1], values[2]);
-    sdl_render_printf(0, 200, "id=%d val=%f %f %f", sensor_id, values[0], values[1], values[2]);
+    sdl_print_init(30, COLOR_WHITE, COLOR_BLACK);
+    sdl_render_multiline_text_2(y_top, y_display_begin, y_display_end, sit_lines, max_sit);
 }
 
 static void page_8_exit(void)
 {
-    if (sensor_id >= 0) {
-        sdl_sensor_close(sensor_id);
+    for (int i = 0; i < max_sit; i++) {
+        free(sit_lines[i]);
     }
 }
 
+// -----------------  PAGE 9: SENSOR DATA ---------------------
+
+#define MAX_SENSOR_TEST_TBL 6
+
+struct sensor_test_s {
+    char *name;
+    int   nptype;
+    void *sensor;
+} sensor_test_tbl[MAX_SENSOR_TEST_TBL];
+
+static void page_9_init(void)
+{
+    printf("MAX %d\n", MAX_SENSOR_TEST_TBL);
+    sensor_test_tbl[0].name =  "accel";
+    sensor_test_tbl[0].nptype =  ASENSOR_TYPE_ACCELEROMETER;
+    sensor_test_tbl[1].name =  "magf";
+    sensor_test_tbl[1].nptype =  ASENSOR_TYPE_MAGNETIC_FIELD;
+    sensor_test_tbl[2].name =  "stepc";
+    sensor_test_tbl[2].nptype =  ASENSOR_TYPE_STEP_COUNTER;
+    sensor_test_tbl[3].name =  "stepd";
+    sensor_test_tbl[3].nptype =  ASENSOR_TYPE_STEP_DETECTOR;
+    sensor_test_tbl[4].name =  "pressure";
+    sensor_test_tbl[4].nptype =  ASENSOR_TYPE_PRESSURE;
+    sensor_test_tbl[5].name =  "gravity";
+    sensor_test_tbl[5].nptype =  ASENSOR_TYPE_GRAVITY;
+
+    for (int i = 0; i < MAX_SENSOR_TEST_TBL; i++) {
+        struct sensor_test_s *x = &sensor_test_tbl[i];
+
+        x->sensor = sdl_sensor_open_by_nptype(x->nptype);
+        printf("open %s %d, ret %p\n", x->name, x->nptype, x->sensor);
+    }
+}
+
+static void page_9_draw(void)
+{
+    double val[3];
+
+    sdl_print_init(30, COLOR_WHITE, COLOR_BLACK);
+
+    for (int i = 0; i < MAX_SENSOR_TEST_TBL; i++) {
+        struct sensor_test_s *x = &sensor_test_tbl[i];
+        sdl_sensor_read(x->sensor, val, 3);
+        sdl_render_printf(0, ROW2Y(i+2), "%-8s %6.2f %6.2f %6.2f", x->name, val[0], val[1], val[2]);
+    }
+}
+
+static void page_9_exit(void)
+{
+    for (int i = 0; i < MAX_SENSOR_TEST_TBL; i++) {
+        struct sensor_test_s *x = &sensor_test_tbl[i];
+        sdl_sensor_close(x->sensor);
+    }
+}
