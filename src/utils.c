@@ -2,11 +2,6 @@
 
 #include <utils.h>
 
-// xxx pthread_create_detached
-
-// xxx update prints to include __func__ and ERROR format
-//     OR, use logging
-
 // ----------------- TIME --------------------
 
 long util_microsec_timer(void)
@@ -17,7 +12,7 @@ long util_microsec_timer(void)
     return  ((long)ts.tv_sec * 1000000) + ((long)ts.tv_nsec / 1000);
 }
 
-long util_get_real_time_us(void)  // xxx use microsec instead of us?
+long util_get_real_time_microsec(void)
 {
     struct timespec ts;
 
@@ -155,14 +150,14 @@ static void read_params_file(void)
     }
     strcpy(params_dir, current_dir);
 
-    printf("reading params file in dir '%s'\n", current_dir);
+    printf("INFO %s: reading params file in dir '%s'\n", __func__, current_dir);
 
     memset(params, 0, sizeof(params));
     max_params = 0;
 
     fp = fopen("params", "r");
     if (fp == NULL) {
-        printf("params file does not exist\n");
+        printf("INFO %s: params file does not exist\n", __func__);
         return;
     }
 
@@ -171,7 +166,7 @@ static void read_params_file(void)
         n = 0;
         cnt = sscanf(s, "%s = %n", name, &n);
         if (cnt != 1 || n == 0) {
-            printf("ERROR: read_params_file '%s'\n", s);
+            printf("ERROR %s: read_params_file '%s'\n", __func__, s);
             fclose(fp);
             return;
         }
@@ -183,9 +178,9 @@ static void read_params_file(void)
 
     fclose(fp);
 
-    printf("max_params=%d\n", max_params);
+    printf("INFO %s: max_params=%d\n", __func__, max_params);
     for (int i = 0; i < max_params; i++) {
-        printf("  %s = %s\n", params[i].name, params[i].value);
+        printf("INFO %s:   %s = %s\n", __func__, params[i].name, params[i].value);
     }
 }
 
@@ -196,20 +191,20 @@ static void write_params_file(void)
 
     getcwd(current_dir, sizeof(current_dir));
     if (strcmp(current_dir, params_dir) != 0) {
-        printf("ERROR: write_params_file, current_dir=%s params_dir=%s\n",
-               current_dir, params_dir);
+        printf("ERROR %s: write_params_file, current_dir=%s params_dir=%s\n",
+               __func__, current_dir, params_dir);
         return;
     }
 
-    printf("writing params file in dir '%s'\n", current_dir);
-    printf("max_params=%d\n", max_params);
+    printf("INFO %s: writing params file in dir '%s'\n", __func__, current_dir);
+    printf("INFO %s: max_params=%d\n", __func__, max_params);
     for (int i = 0; i < max_params; i++) {
-        printf("  %s = %s\n", params[i].name, params[i].value);
+        printf("INFO %s:   %s = %s\n", __func__, params[i].name, params[i].value);
     }
 
     fp = fopen("params", "w");
     if (fp == NULL) {
-        printf("ERROR: write_params_file, fopen failed, %s\n", strerror(errno));
+        printf("ERROR %s: write_params_file, fopen failed, %s\n", __func__, strerror(errno));
         return;
     }
 
@@ -243,7 +238,7 @@ char *util_get_str_param(char *name, char *default_value)
         return params[i].value;
     } else {
         if (max_params >= MAX_PARAMS) {
-            printf("ERROR: params tbl is full\n");
+            printf("ERROR %s: params tbl is full\n", __func__);
             return default_value;
         }
         params[max_params].name = strdup(name);
@@ -278,7 +273,7 @@ void util_set_str_param(char *name, char *value)
         params[i].value = strdup(value);
     } else {
         if (max_params >= MAX_PARAMS) {
-            printf("ERROR: params tbl is full\n");
+            printf("ERROR %s: params tbl is full\n", __func__);
             return;
         }
         params[max_params].name = strdup(name);
@@ -333,9 +328,9 @@ void util_print_params(void)
 
     read_params_file();
 
-    printf("max_params=%d\n", max_params);
+    printf("INFO %s: max_params=%d\n", __func__, max_params);
     for (i = 0; i < max_params; i++) {
-        printf("  %s = %s\n", params[i].name, params[i].value);
+        printf("INFO %s:   %s = %s\n", __func__, params[i].name, params[i].value);
     }
 }
 
@@ -352,7 +347,7 @@ char *util_get_ipaddr(void)
 
     rc = getifaddrs(&ifap_orig);
     if (rc != 0) {
-        printf("ERROR: getifaddrs, %s\n", strerror(errno));
+        printf("ERROR %s: getifaddrs, %s\n", __func__, strerror(errno));
         return ipaddr;
     }
 
@@ -420,7 +415,7 @@ next:
 
         fclose(fp);
     } else {
-        printf("ERROR: popen failed, %s\n", strerror(errno));
+        printf("ERROR %s: popen failed, %s\n", __func__, strerror(errno));
     }
 
     return ipaddr;

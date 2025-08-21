@@ -713,10 +713,10 @@ void Util_microsec_timer (struct ParseState *Parser, struct Value *ReturnValue,
     ReturnValue->Val->LongInteger = util_microsec_timer();
 }
 
-void Util_get_real_time_us (struct ParseState *Parser, struct Value *ReturnValue,
+void Util_get_real_time_microsec (struct ParseState *Parser, struct Value *ReturnValue,
 	struct Value **Param, int NumArgs)
 {
-    ReturnValue->Val->LongInteger = util_get_real_time_us();
+    ReturnValue->Val->LongInteger = util_get_real_time_microsec();
 }
 
 void Util_time2str (struct ParseState *Parser, struct Value *ReturnValue,
@@ -834,7 +834,7 @@ void UtilsSetupFunction(Picoc *pc)
 struct LibraryFunction UtilsFunctions[] = {
     // time
     { Util_microsec_timer,   "long util_microsec_timer(void);" },
-    { Util_get_real_time_us, "long util_get_real_time_us(void);" },
+    { Util_get_real_time_microsec, "long util_get_real_time_microsec(void);" },
     { Util_time2str,         "char *util_time2str(char * str, long us, bool gmt, bool display_ms, bool display_date);" },
     // file read/write
     { Util_write_file,       "int util_write_file(char *path, void *data, int len);" },

@@ -13,7 +13,7 @@
 
 static char log_file[100];
 
-static long get_real_time_us(void);
+static long get_real_time_microsec(void);
 static char * time2str(char * str, long us, bool gmt, bool display_ms, bool display_date);
 
 // ----------------- LOGGING -----------------
@@ -23,27 +23,25 @@ void log_init(char *log_file_arg)
     FILE *fp;
     int rc;
 
-    if (log_file_arg) { // xxx this should be required
-        strcpy(log_file, log_file_arg);
+    strcpy(log_file, log_file_arg);
 
-        fp = freopen(log_file, "a", stdout);
-        if (fp == NULL) {
-            ERROR("failed to reopen stdout to file '%s', %s\n", log_file, strerror(errno));
-            return;
-        }
+    fp = freopen(log_file, "a", stdout);
+    if (fp == NULL) {
+        ERROR("failed to reopen stdout to file '%s', %s\n", log_file, strerror(errno));
+        return;
+    }
 
-        rc = dup2(fileno(stdout), fileno(stderr));
-        if (rc < 0) {
-            ERROR("failed to dup stdout to stderr, %s\n", strerror(errno));
-            return;
-        }
+    rc = dup2(fileno(stdout), fileno(stderr));
+    if (rc < 0) {
+        ERROR("failed to dup stdout to stderr, %s\n", strerror(errno));
+        return;
     }
 
     setlinebuf(stdout);
     setlinebuf(stderr);
 
-    fprintf(stdout, "test print to stdout\n");  //xxx temp prints
-    fprintf(stderr, "test print to stderr\n");
+    //fprintf(stdout, "test print to stdout\n");
+    //fprintf(stderr, "test print to stderr\n");
 }
 
 void log_msg(char *lvl, const char *func, char *fmt, ...)
@@ -84,7 +82,7 @@ void log_msg(char *lvl, const char *func, char *fmt, ...)
 #endif
 
     // log using printf to stderr
-    time2str(time_str, get_real_time_us(), false, true, true),
+    time2str(time_str, get_real_time_microsec(), false, true, true),
     fprintf(stderr, "%s %s %s: %s\n", time_str, lvl, func, msg);
 }
 
@@ -123,7 +121,7 @@ int log_size(void)
 
 // -----------------  LOCAL  -------------------------
 
-static long get_real_time_us(void)
+static long get_real_time_microsec(void)
 {
     struct timespec ts;
 

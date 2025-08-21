@@ -259,7 +259,7 @@ static void page_0_draw(void)
     sdl_render_text_xyctr(sdl_win_width/2, ROW2Y(5), str);
 
     // print the time in microsecs
-    usecs = util_get_real_time_us();
+    usecs = util_get_real_time_microsec();
     util_time2str(str, usecs, false, true, false);
     sdl_render_text_xyctr(sdl_win_width/2, ROW2Y(7), str);
 
