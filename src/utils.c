@@ -344,7 +344,7 @@ void util_print_params(void)
 char *util_get_ipaddr(void)
 {
     static char ipaddr[20];
-    int rc, a, b, c, d;
+    int rc, a=0, b=0, c=0, d=0;
     unsigned int addr;
     struct ifaddrs *ifap, *ifap_orig;;
 
@@ -356,19 +356,24 @@ char *util_get_ipaddr(void)
         return ipaddr;
     }
 
-    // xxx skip 127, return 192 if avail, else 10. else other
     ifap = ifap_orig;
     while (ifap) {
-        printf("ifa_name = %s\n", ifap->ifa_name);
+        //printf("ifa_name = %s\n", ifap->ifa_name);
         if (ifap->ifa_addr->sa_family == AF_INET) {
             struct sockaddr_in *x = (struct sockaddr_in*)ifap->ifa_addr;
-            printf("%x\n", x->sin_addr.s_addr);
+
             addr = htonl(x->sin_addr.s_addr);
+
+            if (((addr >> 24) & 0xff) == 127) {
+                continue;
+            }
+
             a = (addr >> 24) & 0xff;
             b = (addr >> 16) & 0xff;
             c = (addr >>  8) & 0xff;
             d = (addr >>  0) & 0xff;
-            if (a == 192) {
+
+            if (a == 192 || a == 10) {
                 sprintf(ipaddr, "%d.%d.%d.%d", a,b,c,d);
                 break;
             }
@@ -379,9 +384,20 @@ char *util_get_ipaddr(void)
 
     freeifaddrs(ifap_orig);
 
+    if (ipaddr[0] == 'x' && a != 0) {
+        sprintf(ipaddr, "%d.%d.%d.%d", a,b,c,d);
+    }
+
     return ipaddr;
 
 #if 0
+    // The following approach doesn't work on Android, Google AI says:
+    //
+    // "The ip program, along with other network utilities like ifconfig, 
+    //  route, and netstat, cannot be run directly by non-privileged user 
+    //  applications on Android due to security restrictions implemented by 
+    //  the operating system.:
+
     static char ipaddr[20];
     FILE       *fp;
     char        s[100], s1[100];

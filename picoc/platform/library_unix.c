@@ -760,6 +760,10 @@ void Util_read_file (struct ParseState *Parser, struct Value *ReturnValue,
     ReturnValue->Val->Pointer = file_contents;
 }
 
+//
+// utils params
+//
+
 void Util_get_str_param(struct ParseState *Parser, struct Value *ReturnValue,
         struct Value **Param, int NumArgs)
 {
@@ -807,6 +811,19 @@ void Util_print_params(struct ParseState *Parser, struct Value *ReturnValue,
 }
 
 //
+// utils network
+//
+
+void Util_get_ipaddr(struct ParseState *Parser, struct Value *ReturnValue,
+        struct Value **Param, int NumArgs)
+{
+    char *ipaddr;
+
+    ipaddr = util_get_ipaddr();
+    ReturnValue->Val->Pointer = ipaddr;
+}
+
+//
 // UTILS REGISTRATION
 //
 
@@ -828,6 +845,8 @@ struct LibraryFunction UtilsFunctions[] = {
     { Util_get_int_param,    "int util_get_int_param(char *name, int default_value);" },
     { Util_set_int_param,    "void util_set_int_param(char *name, int value);" },
     { Util_print_params,     "void util_print_params(void);" },
+    // network
+    { Util_get_ipaddr,       "char *util_get_ipaddr(void);" },
 
     { NULL, NULL } };
 

@@ -249,7 +249,7 @@ static void page_0_draw(void)
     time_t t;
     struct tm *tm;
     char str[100];
-    long usecs, delta;
+    long usecs, delta_ms;
     static long usecs_last, usecs_first;
     
     // print the time, hh:mm:ss
@@ -269,9 +269,13 @@ static void page_0_draw(void)
     if (usecs_first == 0) {
         usecs_first = usecs;
     }
-    delta = usecs - usecs_last;
+    delta_ms = (usecs - usecs_last) / 1000;
     usecs_last = usecs;
-    sdl_render_printf_xyctr(sdl_win_width/2, ROW2Y(9), "%0.3f %ld", (usecs-usecs_first)/1000000., delta);
+    sdl_render_printf_xyctr(sdl_win_width/2, ROW2Y(9), "%0.3f delta=%ld ms", 
+        (usecs-usecs_first)/1000000., delta_ms);
+
+    // print ipaddr
+    sdl_render_printf_xyctr(sdl_win_width/2, ROW2Y(11), "%s", util_get_ipaddr());
 }
 
 // -----------------  PAGE 1: FONT  ---------------------------
