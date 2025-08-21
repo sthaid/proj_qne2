@@ -4,6 +4,8 @@
 #include <utils.h>
 #include <logging.h>
 
+#include <SDL3/SDL.h>
+
 //
 // defines
 //

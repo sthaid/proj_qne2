@@ -1,11 +1,4 @@
-// xxx should this file include these
-#include <SDL3/SDL.h>
-#include <SDL3_ttf/SDL_ttf.h>
-
-//#include <SDL3/SDL_main.h> xxx
-
 // https://www.w3schools.com/colors/colors_converter.asp
-
 #define BYTES_PER_PIXEL  4
 #define COLOR_BLACK      (   0  |    0<<8 |    0<<16 |  255<<24 )
 #define COLOR_WHITE      ( 255  |  255<<8 |  255<<16 |  255<<24 )

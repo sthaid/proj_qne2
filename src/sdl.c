@@ -3,6 +3,9 @@
 #include <sdl.h>
 #include <logging.h>
 
+#include <SDL3/SDL.h>
+#include <SDL3_ttf/SDL_ttf.h>
+
 // xxx landscape
 // xxx keyboard events for < > END and up/down
 // xxx read pixels routien
@@ -20,7 +23,7 @@
 
 #ifdef ANDROID
     #define FONT_FILE_PATH  "FreeMonoBold.ttf"
-#else
+#else //xxx
     #define FONT_FILE_PATH "/home/haid/proj/proj_qne2/linux/assets/FreeMonoBold.ttf" //xxx
 #endif
 

@@ -1,11 +1,10 @@
 #include <std_hdrs.h>
 
-#include <math.h>
-#include <sys/mman.h>
-
 #include <sdl.h>
 #include <utils.h>
 #include <logging.h>
+
+#include <SDL3/SDL.h>
 
 // xxx todo
 // - add timeouts to the threads, and sleep loops <=======

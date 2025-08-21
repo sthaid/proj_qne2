@@ -1,9 +1,12 @@
 #include <std_hdrs.h>
-#include <signal.h>  //xxx add to std_hdrs
 
-#include <sdl.h>   // xxx does this bring in SDL.h?
+#include <sdl.h>
 #include <utils.h>
 #include <logging.h>
+
+#ifdef ANDROID
+#include <SDL3/SDL.h>
+#endif
 
 //
 // defines

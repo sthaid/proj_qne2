@@ -1,8 +1,30 @@
-util_get_ipaddr
-- fixup
-- add util_get_ipaddt to picoc
+------------
+code cleanup:
+------------
 
-sdl_print get routine
+src/std_hdrs.h
+src/main.c
+src/sdl.c
+src/sdl.h
+src/logging.c
+src/logging.h
+src/sdl_audio.c
+src/sdl_sensor.c
+src/utils.c
+src/utils.h
+
+apps/Primes/primes.c
+apps/Test/test.c
+apps/Test/test1.c
+apps/Reversi/reversi.c
+apps/Reversi/cpu.c
+
+
+xxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+
+sdl issues
+- row2y, etc
+- sdl_print get routine
 
 do more code cleanups
 - code cleanup

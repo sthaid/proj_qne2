@@ -10,15 +10,16 @@
 #include <errno.h>
 #include <dirent.h>
 #include <fcntl.h>
+#include <signal.h>
 #include <math.h>
 #include <pthread.h>
 
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <sys/stat.h>
+#include <sys/mman.h>
 
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <ifaddrs.h>
-
 
