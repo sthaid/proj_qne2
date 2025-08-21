@@ -1,3 +1,6 @@
+#ifndef __UTILS_H__
+#define __UTILS_H__
+
 // -----------------  TIME  ----------------------------------
 
 long util_microsec_timer(void);
@@ -20,3 +23,5 @@ void util_print_params(void);
 // -----------------  NETWORK  -------------------------------
 
 char *util_get_ipaddr(void);
+
+#endif

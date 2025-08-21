@@ -1,3 +1,5 @@
+#ifndef __STD_HDRS_H__
+#define __STD_HDRS_H__
 
 #include <stdio.h>
 #include <stdbool.h>
@@ -23,3 +25,4 @@
 #include <arpa/inet.h>
 #include <ifaddrs.h>
 
+#endif

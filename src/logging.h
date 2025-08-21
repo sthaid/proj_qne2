@@ -1,3 +1,6 @@
+#ifndef __LOGGING_H__
+#define __LOGGING_H__
+
 #define INFO(fmt, args...) \
     do { \
         log_msg("INFO", __func__, fmt, ## args); \
@@ -16,3 +19,4 @@ void log_msg(char * lvl, const char * func, char * fmt, ...) __attribute__ ((for
 void log_clear(void);
 int log_size(void);
 
+#endif

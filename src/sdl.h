@@ -1,3 +1,6 @@
+#ifndef __SDL_H__
+#define __SDL_H__
+
 // https://www.w3schools.com/colors/colors_converter.asp
 #define BYTES_PER_PIXEL  4
 #define COLOR_BLACK      (   0  |    0<<8 |    0<<16 |  255<<24 )
@@ -114,7 +117,6 @@ void sdl_render_texture(int x, int y, int w, int h, double angle, sdl_texture_t 
 void sdl_destroy_texture(sdl_texture_t *texture);
 void sdl_query_texture(sdl_texture_t *texture, int *w, int *h);
 sdl_pixels_t *sdl_read_display_pixels(int x, int y, int w, int h);
-// xxx maybe void sdl_update_texture(sdl_texture_t *texture, int *pixels);  //xxx add region
 
 // --------------------
 // audio
@@ -211,3 +213,5 @@ int sdl_sensor_read(void *sensor, double *values, int num_values);
 
 // xxx where should this go
 char *sdl_get_input_str(char *prompt, bool numeric_keybd, int bg_color);
+
+#endif
