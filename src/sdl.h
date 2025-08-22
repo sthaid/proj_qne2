@@ -129,10 +129,11 @@ char *sdl_get_input_str(char *prompt, bool numeric_keybd, int bg_color);
 #define AUDIO_REQ_PAUSE    2
 #define AUDIO_REQ_UNPAUSE  3
 
-#define AUDIO_STATE_IDLE        0
-#define AUDIO_STATE_PLAY_FILE   1
-#define AUDIO_STATE_PLAY_TONES  2
-#define AUDIO_STATE_RECORD      3
+#define AUDIO_STATE_IDLE           0
+#define AUDIO_STATE_PLAY_FILE      1
+#define AUDIO_STATE_PLAY_TONES     2
+#define AUDIO_STATE_RECORD         3
+#define AUDIO_STATE_RECORD_APPEND  4
 
 typedef struct {
     short freq;
@@ -149,7 +150,7 @@ typedef struct {
 } sdl_audio_state_t;
 
 int sdl_audio_play(char *filename);
-int sdl_audio_record(char *filename, int duration_secs, bool auto_stop);
+int sdl_audio_record(char *filename, int max_duration_secs, int auto_stop_secs, bool append);
 int sdl_audio_play_tones(int time_units_ms, sdl_tone_t *tones);
 
 void sdl_audio_ctl(int req);

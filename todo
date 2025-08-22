@@ -9,10 +9,10 @@ src/utils.h           OK
 
 src/logging.c         OK
 src/utils.c             OK
-src/main.c
-src/sdl.c
 src/sdl_audio.c
 src/sdl_sensor.c
+src/main.c
+src/sdl.c
 
 apps/Primes/primes.c
 apps/Test/test.c
@@ -25,6 +25,7 @@ xxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 
 // xxx pthread_create_detached
 
+is recording volume control needed
 
 sdl issues
 - row2y, etc

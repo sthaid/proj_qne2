@@ -60,6 +60,7 @@ static void page_6_draw(void);
 static void page_7_init(void);
 static void page_7_draw(void);
 static void page_7_process_event(sdl_event_t *event);
+static void page_7_exit(void);
 
 static void page_8_init(void);
 static void page_8_draw(void);
@@ -234,6 +235,7 @@ static void page_hndlr()
     switch (pagenum) {
     case 3: page_3_exit(); break;
     case 5: page_5_exit(); break;
+    case 7: page_7_exit(); break;
     case 8: page_8_exit(); break;
     case 9: page_9_exit(); break;
     }
@@ -564,6 +566,7 @@ static void color_test(int idx, char *color_name, int color)
 #define EVID_AUDIO_PLAY_MORSE_CODE  13
 #define EVID_AUDIO_PLAY_RECORDING   19
 #define EVID_AUDIO_RECORD           20
+#define EVID_AUDIO_RECORD_APPEND    21
 #define EVID_AUDIO_STOP             30
 #define EVID_AUDIO_PAUSE            31
 #define EVID_AUDIO_CONT             32
@@ -598,6 +601,11 @@ static void page_7_draw(void)
     sdl_print_init(-1, state.state == AUDIO_STATE_RECORD ? COLOR_RED : COLOR_WHITE, COLOR_BLACK);
     loc = sdl_render_text(0, 200, "RECORD");
     sdl_register_event(loc, EVID_AUDIO_RECORD);
+    sdl_print_init(-1, COLOR_WHITE, COLOR_BLACK);
+
+    sdl_print_init(-1, state.state == AUDIO_STATE_RECORD_APPEND ? COLOR_RED : COLOR_WHITE, COLOR_BLACK);
+    loc = sdl_render_text(sdl_win_width/2, 200, "APPEND");
+    sdl_register_event(loc, EVID_AUDIO_RECORD_APPEND);
     sdl_print_init(-1, COLOR_WHITE, COLOR_BLACK);
 
     //
@@ -637,7 +645,7 @@ static void page_7_draw(void)
         y = sdl_win_height-650;
 
         // state, processed/total time, and paused
-        sdl_render_printf(0, y, "%s %d / %d", 
+        sdl_render_printf(0, y, "%s %d/%d", 
                           audio_state_str(state.state), state.processed_secs, state.total_secs);
         if (state.paused) {
             sdl_render_printf(sdl_win_width-sdl_char_width, y, "%s", "P");
@@ -676,6 +684,7 @@ static void page_7_process_event(sdl_event_t *ev)
     int rc, i, freq;
     sdl_tone_t tones[5000];
     sdl_tone_t *t;
+    sdl_audio_state_t state;
 
     switch (ev->event_id) {
     case EVID_AUDIO_PLAY_TONE:
@@ -714,20 +723,32 @@ static void page_7_process_event(sdl_event_t *ev)
         generate_morse_code_tones(&t, "CQ CQ HELLO WORLD CQ CQ");
         sdl_audio_play_tones(100, tones); // intvl = 100 ms
         break;
-    case EVID_AUDIO_RECORD: {
-        char *record_file_name = "recording.raw";
-        sdl_audio_state_t state;
-
+    case EVID_AUDIO_RECORD:
         sdl_audio_state(&state);
-        if (state.state != AUDIO_STATE_RECORD) {  //xxx add ING to name end  - 'RECORDING'
-            rc = sdl_audio_record(record_file_name, 30, false);
-            if (rc != 0) {
-                printf("ERROR: sdl_audio_record %s failed\n", record_file_name);
-            }
-        } else {
+        if (state.state == AUDIO_STATE_RECORD) {
             sdl_audio_ctl(AUDIO_REQ_STOP);
+            break;
         }
-        break; }
+
+        // 30 sec max, 3 sec auto stop, new recording
+        rc = sdl_audio_record("recording.raw", 30, 3, false);
+        if (rc != 0) {
+            printf("ERROR: sdl_audio_record failed\n");
+        }
+        break;
+    case EVID_AUDIO_RECORD_APPEND:
+        sdl_audio_state(&state);
+        if (state.state == AUDIO_STATE_RECORD_APPEND) {
+            sdl_audio_ctl(AUDIO_REQ_STOP);
+            break;
+        }
+
+        // 30 sec max, 3 sec auto stop, append
+        rc = sdl_audio_record("recording.raw", 30, 3, true);
+        if (rc != 0) {
+            printf("ERROR: sdl_audio_record append failed\n");
+        }
+        break;
     case EVID_AUDIO_STOP:
         sdl_audio_ctl(AUDIO_REQ_STOP);
         break;
@@ -740,12 +761,18 @@ static void page_7_process_event(sdl_event_t *ev)
     }
 }
 
+static void page_7_exit(void)
+{
+    sdl_audio_ctl(AUDIO_REQ_STOP);
+}
+
 static char *audio_state_str(int x)
 {
-    if (x == AUDIO_STATE_IDLE)       return "IDLE";
-    if (x == AUDIO_STATE_PLAY_FILE)  return "PLAY_FILE";
-    if (x == AUDIO_STATE_PLAY_TONES) return "PLAY_TONES";
-    if (x == AUDIO_STATE_RECORD)     return "RECORD";
+    if (x == AUDIO_STATE_IDLE)          return "IDLE";
+    if (x == AUDIO_STATE_PLAY_FILE)     return "PLAY_FILE";
+    if (x == AUDIO_STATE_PLAY_TONES)    return "PLAY_TONES";
+    if (x == AUDIO_STATE_RECORD)        return "RECORD";
+    if (x == AUDIO_STATE_RECORD_APPEND) return "RECORD_APPEND";
     return "INVLD_STATE";
 }
 

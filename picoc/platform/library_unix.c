@@ -398,12 +398,13 @@ void Sdl_audio_play (struct ParseState *Parser, struct Value *ReturnValue,
 void Sdl_audio_record (struct ParseState *Parser, struct Value *ReturnValue,
 	struct Value **Param, int NumArgs)
 {
-    char *filename      = Param[0]->Val->Pointer;
-    int   duration_secs = Param[1]->Val->Integer;
-    bool  auto_stop     = Param[2]->Val->Integer;
+    char *filename           = Param[0]->Val->Pointer;
+    int   max_duration_secs  = Param[1]->Val->Integer;
+    int   auto_stop_secs     = Param[2]->Val->Integer;
+    bool  append             = Param[3]->Val->Integer;
     int   rc;
 
-    rc = sdl_audio_record(filename, duration_secs, auto_stop);
+    rc = sdl_audio_record(filename, max_duration_secs, auto_stop_secs, append);
     ReturnValue->Val->Integer = rc; 
 }
 
@@ -569,7 +570,7 @@ struct LibraryFunction SdlFunctions[] = {
 
     // audio
     { Sdl_audio_play,                   "int sdl_audio_play(char *filename);" },
-    { Sdl_audio_record,                 "int sdl_audio_record(char *filename, int duration_secs, bool auto_stop);" },
+    { Sdl_audio_record,                 "int sdl_audio_record(char *filename, int max_duration_secs, int auto_stop_secs, bool append); "},
     { Sdl_audio_play_tones,             "int sdl_audio_play_tones(int time_units_ms, sdl_tone_t *tones);" },
     { Sdl_audio_ctl,                    "void sdl_audio_ctl(int req);" },
     { Sdl_audio_state,                  "void sdl_audio_state(sdl_audio_state_t * state);" },
@@ -656,10 +657,11 @@ typedef struct { \n\
 #define EVID_MOTION            9992 \n\
 #define EVID_QUIT              9999 \n\
 \n\
-#define AUDIO_STATE_IDLE        0 \n\
-#define AUDIO_STATE_PLAY_FILE   1 \n\
-#define AUDIO_STATE_PLAY_TONES  2 \n\
-#define AUDIO_STATE_RECORD      3 \n\
+#define AUDIO_STATE_IDLE          0 \n\
+#define AUDIO_STATE_PLAY_FILE     1 \n\
+#define AUDIO_STATE_PLAY_TONES    2 \n\
+#define AUDIO_STATE_RECORD        3 \n\
+#define AUDIO_STATE_RECORD_APPEND 4 \n\
 \n\
 #define AUDIO_REQ_STOP     1 \n\
 #define AUDIO_REQ_PAUSE    2 \n\
