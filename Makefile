@@ -5,7 +5,8 @@ SUBDIRS = \
     apps/Test \
     picoc \
     linux \
-    android
+    android \
+    tools/src
 
 .PHONY: build clean
 

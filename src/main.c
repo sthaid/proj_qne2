@@ -25,6 +25,7 @@
 
 #define BG_COLOR (!params.devel_mode ? COLOR_TEAL : COLOR_VIOLET)
 
+#define SMALL_FONTSZ    30
 #define DEFAULT_FONTSZ  20
 #define LARGE_FONTSZ    10
 
@@ -51,6 +52,7 @@ typedef struct {
 static const char *storage_path;
 static params_t    params;
 static pthread_t   server_tid;
+static pthread_t   waiter_tid;
 
 //
 // prototypes 
@@ -58,8 +60,7 @@ static pthread_t   server_tid;
 
 static void controller(void);
 static void *server_thread(void *cx);
-//static char *sock_addr_to_str(char * s, int slen, struct sockaddr * addr);
-//static void remove_trailing_newline(char *s);  xxx move to utils
+static void *waiter_thread(void *cx);
 
 //
 // routines to launch a C program using picoc interpreter
@@ -71,7 +72,9 @@ void picoc_bg(char *args);
 // -----------------  MAIN  ------------------------------------------
 
 static void init(void);
+static void terminate(void);
 static void create_default_apps(void);
+static void sigusr1_hndlr(int signum);
 
 int MAIN(int argc, char **argv)
 {
@@ -82,13 +85,8 @@ int MAIN(int argc, char **argv)
     controller();
 
     // end program
-    INFO("TERMINATING\n");
+    terminate();
     return 0;
-}
-
-static void sigusr1_hndlr(int signum)
-{
-    // nothing needed here
 }
 
 static void init(void)
@@ -133,8 +131,20 @@ static void init(void)
     action.sa_handler = sigusr1_hndlr;
     sigaction(SIGUSR2, &action, NULL);
 
-    // create server thread
+    // create server threads
     pthread_create(&server_tid, NULL, server_thread, NULL);
+    pthread_create(&waiter_tid, NULL, waiter_thread, NULL);
+
+    sdl_init(); //xxx handle ret
+    INFO("sdl_win_width,height = %d %d  sdl_char_width,height=%d %d\n", //xxx is this printed in sdl
+        sdl_win_width, sdl_win_height, sdl_char_width, sdl_char_height);
+}
+
+static void terminate(void)
+{
+    sdl_exit();
+
+    INFO("TERMINATING\n");
 }
 
 static void create_default_apps(void)
@@ -154,7 +164,7 @@ static void create_default_apps(void)
         return;
     }
 
-    rc = util_write_file("tmp_apps.tar", ptr, len);  // xxx why tmp_apps.tar name?
+    rc = util_write_file("tmp_apps.tar", ptr, len);
     SDL_free(ptr);
     if (rc != 0) {
         ERROR("failed to write tmp_apps.tar\n");
@@ -166,7 +176,7 @@ static void create_default_apps(void)
         ERROR("rm -rf apps, failed\n");
     }
 
-    rc = system("tar -xvf tmp_apps.tar");  // xxx would just the tar work
+    rc = system("tar -xvf tmp_apps.tar");
     if (rc != 0) {
         ERROR("tar -xvf tmp_apps.tar, failed\n");
     }
@@ -176,6 +186,11 @@ static void create_default_apps(void)
         ERROR("failed to unlink tmp_apps.tar, %s\n", strerror(errno));
     }
 #endif
+}
+
+static void sigusr1_hndlr(int signum)
+{
+    // nothing needed here
 }
 
 // -----------------  CONTROLLER  ------------------------------------
@@ -193,11 +208,6 @@ static void settings(void);
 static void controller(void)
 {
     sdl_event_t event;
-
-    // xxx should this be in init()
-    sdl_init(); //xxx handle ret
-    INFO("sdl_win_width,height = %d %d  sdl_char_width,height=%d %d\n",
-        sdl_win_width, sdl_win_height, sdl_char_width, sdl_char_height);
 
     while (true) {
         // xxx reset other stuff here too, fontsz, color
@@ -230,10 +240,6 @@ static void controller(void)
             if (++page > LAST_PAGE) {
                 page = 0;
             }
-        } else if (event.event_id == 17) {  // xxx use more defines 
-            INFO("running Settings\n");
-            settings();
-            INFO("done Settings\n");
         } else if (event.event_id >= 0 && event.event_id <= max_apps-1) {
             char           app_dir[100], picoc_args[1000];
             int            id = event.event_id;
@@ -241,40 +247,46 @@ static void controller(void)
             DIR           *dir;
             struct dirent *dirent;
 
+            // xxx check for null
+
             INFO("running %s\n", apps[id]);
 
             sdl_print_init(DEFAULT_FONTSZ, COLOR_WHITE, COLOR_BLACK);
-            sprintf(app_dir, "apps/%s", apps[id]);
-            chdir(app_dir);
 
-            // construct list of *.c files in this dir
-            picoc_args[0] = '\0';
-            dir = opendir(".");
-            while ((dirent = readdir(dir)) != NULL) {
-                char *fn = dirent->d_name;
-                int len = strlen(fn);
-                if (len > 2 && strcmp(fn+len-2, ".c") == 0) {
-                    strcat(picoc_args, fn);
-                    strcat(picoc_args, " ");
-                }
-            }
-            closedir(dir);
-
-            if (picoc_args[0] != '\0') {
-                INFO("XXX picoc_args = %s\n", picoc_args);
-                rc = picoc_fg(picoc_args);  // args
-                INFO("done %s, rc=%d\n", apps[id], rc);
-                // xxx if app fails, put up screen with error message
+            if (strcmp(apps[id], "Settings") == 0) {
+                settings();
             } else {
-                ERROR("no source code in %s\n", app_dir);
+                sprintf(app_dir, "apps/%s", apps[id]);
+                chdir(app_dir);
+
+                // construct list of *.c files in this dir
+                picoc_args[0] = '\0';
+                dir = opendir(".");
+                while ((dirent = readdir(dir)) != NULL) {
+                    char *fn = dirent->d_name;
+                    int len = strlen(fn);
+                    if (len > 2 && strcmp(fn+len-2, ".c") == 0) {
+                        strcat(picoc_args, fn);
+                        strcat(picoc_args, " ");
+                    }
+                }
+                closedir(dir);
+
+                if (picoc_args[0] != '\0') {
+                    INFO("XXX picoc_args = %s\n", picoc_args);
+                    rc = picoc_fg(picoc_args);  // args
+                    INFO("done %s, rc=%d\n", apps[id], rc);
+                } else {
+                    ERROR("no source code in %s\n", app_dir);
+                }
+
+                chdir(storage_path);
             }
-            chdir(storage_path);
         }
     }
-
-    // xxx should this move
-    sdl_exit();
 }
+
+// ----------------------------------------------------------------
 
 static void display_menu(void)
 {
@@ -289,11 +301,16 @@ static void display_menu(void)
     }
 
     // xxx
-    // xxx put settings at end
     get_list_of_apps();
 
     first = page * 18;
     last  = first + 17;
+
+    if (LAST_PAGE > 0) {
+        sdl_print_init(SMALL_FONTSZ, COLOR_WHITE, BG_COLOR);
+        sdl_render_printf_xyctr(sdl_win_width/2, sdl_char_height/2, "Page %d", page);
+        sdl_print_init(DEFAULT_FONTSZ, COLOR_WHITE, BG_COLOR);
+    }
 
     for (int i = first; i <= last; i++) {
         char     *name = apps[i];
@@ -376,6 +393,7 @@ static void display_menu(void)
         } while (0)
 
     // xxx no arrows if not needed
+    // xxx dont display if at begining or end
     if (LAST_PAGE > 0) {
         DISPLAY_CONTROL_ITEM(0,"<",EVID_PAGE_DECREMENT);
         DISPLAY_CONTROL_ITEM(1,">",EVID_PAGE_INCREMENT);
@@ -385,94 +403,65 @@ static void display_menu(void)
     sdl_print_init(DEFAULT_FONTSZ, COLOR_WHITE, BG_COLOR);
 }
 
-        
+// ----------------------------------------------------------------
 
-#if 0
-        //char *name = menu[page][id].name;
-        char str1[32], str2[32];
-        int len1, len2, len_max, x, y;
-        //double numchars, chw, chh;
-        sdl_loc_t loc;
-        double chw, chh;
-        int numchars;
-#if 0
-        // if name contains '_' then divide name to 2 strings,
-        // else one string
-        memset(str1, 0, sizeof(str1));
-        memset(str2, 0, sizeof(str2));
-        if ((p = strchr(name, '_')) != NULL) {
-            memcpy(str1, name, p-name);
-            strcpy(str2, p+1);
-        } else {
-            strcpy(str1, name);
-        }
-#else
-//xxx  IMPROVE THE icons
-        strcpy(str1, apps[id]);
-        str2[0] = '\0';
-#endif
+// xxx explain this
+static void get_list_of_apps_from_layout_file(char *layout_file_path);
+static void get_list_of_apps_from_apps_dirs(char *apps_dir_path);
 
-        len1 = strlen(str1);
-        len2 = strlen(str2);
-        len_max = (len1 > len2 ? len1 : len2);
-
-        // determine the size of the chars that appear in the menu item;
-        // the size is determined differently if there are 2 strings vs 1;
-        // the numeric values were determined experimentally
-        if (len2 == 0) {
-            if (len_max == 1) {
-                chw = (1.0 * RADIUS) / len_max;
-            } else {
-                chw = (1.5 * RADIUS) / len_max;
-            }
-        } else {
-            if (len_max == 1) {
-                chw = (0.59 * RADIUS) / len_max;
-            } else if (len_max == 2) {
-                chw = (1.0 * RADIUS) / len_max;
-            } else if (len_max == 3) {
-                chw = (1.4 * RADIUS) / len_max;
-            } else {
-                chw = (1.5 * RADIUS) / len_max;
-            }
-        }
-        chh = chw / 0.6;
-        numchars = sdl_win_width / chw;
-#endif
-
-static int qsort_compare(const void *a, const void *b)
-{
-    const char *str_a = *(char **)a;
-    const char *str_b = *(char **)b;
-    int rc;
-
-    rc = strcmp(str_a, str_b);
-    printf("%s  %s  %d\n", str_a, str_b, rc);
-    return rc;
-}
-
-// xxx
 static void get_list_of_apps(void)
 {
+    char layout_file_path[100];
+    char apps_dir_path[100];
+    int rc;
     struct stat statbuf;
-    char        apps_dir_path[100];
-    DIR        *apps_dir;
-    struct dirent *dirent;
-    int         i, rc;
 
+    static long layout_file_mtime;
     static long apps_dir_mtime;
 
-    // if apps dir has not changed then return
+    // if layout file exists
+    //   if layout file has changed then
+    //     get_list_of_apps_from_layout_file
+    //   endif
+    // endif
+    sprintf(layout_file_path, "%s/apps/layout", storage_path);
+    rc = stat(layout_file_path, &statbuf);
+    if (rc == 0) {
+        if (statbuf.st_mtime != layout_file_mtime) {
+            get_list_of_apps_from_layout_file(layout_file_path);
+            layout_file_mtime = statbuf.st_mtime;
+        }
+        apps_dir_mtime = 0;
+        return;
+    }
+
+    // if apps dir exists
+    //   if apps dir has changed then
+    //     get_list_of_apps_from_apps_dirs
+    //   endif
+    // endif
     sprintf(apps_dir_path, "%s/apps", storage_path);
     rc = stat(apps_dir_path, &statbuf);
-    if (rc != 0) {
-        ERROR("stat %s failed, %s\n", apps_dir_path, strerror(errno));
+    if (rc == 0) {
+        if (statbuf.st_mtime != apps_dir_mtime) {
+            get_list_of_apps_from_apps_dirs(apps_dir_path);
+            apps_dir_mtime = statbuf.st_mtime;
+        }
+        layout_file_mtime = 0;
         return;
     }
-    if (statbuf.st_mtime == apps_dir_mtime) {
-        return;
-    }
-    apps_dir_mtime = statbuf.st_mtime;
+
+    ERROR("failed to stat %s, %s\n", apps_dir_path, strerror(errno));
+    apps_dir_mtime = 0;
+    layout_file_mtime = 0;
+    return;
+}
+
+static void get_list_of_apps_from_layout_file(char *layout_file_path)
+{
+    char str[200], s[3][50];
+    int i, cnt;
+    FILE *fp;
 
     // free the current apps names
     for (i = 0; i < max_apps; i++) {
@@ -481,29 +470,25 @@ static void get_list_of_apps(void)
     }
     max_apps = 0;
 
-    // obtain apps directory content,
-    // these are the names of the defined apps
-    apps_dir = opendir(apps_dir_path);
-    while ((dirent = readdir(apps_dir)) != NULL) {
-        if (dirent->d_name[0] == '.') {
+    // xxx comment
+    fp = fopen(layout_file_path, "r");
+    while (fgets(str, sizeof(str), fp)) {
+        if (str[0] == '\n' || str[0] == '#') {
             continue;
         }
-        apps[max_apps++] = strdup(dirent->d_name);
+        cnt = sscanf(str, "%s %s %s", s[0], s[1], s[2]);
+        if (cnt != 3) {
+            ERROR("invalid line '%s'\n", str);
+            break;
+        }
+        for (i = 0; i < 3; i++) {
+            if (strcmp(s[i], "-") != 0) {
+                apps[max_apps] = strdup(s[i]);
+            }
+            max_apps++;
+        }
     }
-    closedir(apps_dir);
-
-    // sort list alphabetical
-    qsort(apps, max_apps, sizeof(char*), qsort_compare);
-
-    // add settings as xxx
-    if (max_apps < 18) {
-        apps[17] = strdup("Settings");
-        max_apps = 18;
-    } else {
-        memmove(apps+18, apps+17, (max_apps-17)*sizeof(char*));
-        apps[17] = strdup("Settings");
-        max_apps++;
-    }
+    fclose(fp);
 
     // debug print the list of apps names
     INFO("max_apps = %d\n", max_apps);
@@ -514,6 +499,59 @@ static void get_list_of_apps(void)
     }
 }
 
+static int qsort_compare(const void *a, const void *b)
+{
+    const char *str_a = *(char **)a;
+    const char *str_b = *(char **)b;
+    int rc;
+
+    rc = strcmp(str_a, str_b);
+    return rc;
+}
+
+static void get_list_of_apps_from_apps_dirs(char *apps_dir_path)
+{
+    DIR           *apps_dir;
+    struct dirent *dirent;
+    int            i;
+
+    // free the current apps names
+    for (i = 0; i < max_apps; i++) {
+        free(apps[i]);
+        apps[i] = NULL;
+    }
+    max_apps = 0;
+
+    // obtain apps directory content,
+    // these are the names of the apps
+    apps_dir = opendir(apps_dir_path);
+    while ((dirent = readdir(apps_dir)) != NULL) {
+        if (dirent->d_name[0] == '.') {
+            continue;
+        }
+        apps[max_apps++] = strdup(dirent->d_name);
+    }
+    closedir(apps_dir);
+
+    // xxx comment
+    // add Settings
+    apps[max_apps++] = strdup("Settings");
+
+    // sort list alphabetical
+    qsort(apps, max_apps, sizeof(char*), qsort_compare);
+
+    // debug print the list of apps names
+    INFO("max_apps = %d\n", max_apps);
+    for (i = 0; i < max_apps; i++) {
+        if (apps[i] != NULL) {
+            INFO("apps[%d] = %s\n", i, apps[i]);
+        }
+    }
+}
+
+// ----------------------------------------------------------------
+
+// xxx include in picoc ?
 #define ROW2Y(r) ((r) * sdl_char_height)  // xxx ctr vs ...
 #define ROW2Y_CTR(r) ((r) * sdl_char_height + sdl_char_height/2)
 #define NK2X(n,k) ((sdl_win_width/2/(n)) + (k) * (sdl_win_width/(n)))
@@ -536,14 +574,15 @@ static void settings(void)
     ipaddr = util_get_ipaddr();
     INFO("SETTINGS %s:%d\n", ipaddr, params.devel_port);
 
+    // xxx comments, and cleanup
     while (true) {
         sdl_display_init(BG_COLOR);
         sdl_print_init(DEFAULT_FONTSZ, COLOR_WHITE, BG_COLOR);
         sdl_render_text_xyctr(sdl_win_width/2, sdl_char_height/2, "Settings");
 
-        sdl_render_printf(0, ROW2Y(2), "Version = %s", VERSION);
+        sdl_render_printf(0, ROW2Y(2), "Version = %s", VERSION);  // xxx add this
 
-        sdl_render_printf(0, ROW2Y(4), "Copyright");
+        sdl_render_printf(0, ROW2Y(4), "Copyright");  // xxx add file for this, and display it
 
         sdl_print_init(-1, COLOR_LIGHT_BLUE, BG_COLOR);
         loc = sdl_render_printf(0, ROW2Y(6), "Devel_Mode = %s", params.devel_mode ? "ON" : "OFF");
@@ -622,6 +661,7 @@ static void settings(void)
                 msg_time = util_microsec_timer();
             }
             // xxx display msg for 2 secs
+            // xxx add routine to display the message
             break; }
         case EVID_LOG_FILE_CLEAR:   
             log_clear();
@@ -639,8 +679,14 @@ static void settings(void)
 
 // ----------------- SERVER ----------------------------
 
+// xxx check if SIGUSR2 is working
+// xxx can the forked processes be killed when changing the port; or is that worth it
+
+#define MAX_PID_TBL 20
+
 static void *process_req_thread(void *cx);
 static void process_req_using_android_sh(int sockfd, char *cmd);
+static void kill_child_processes(pid_t pid);
 
 static void *server_thread(void *cx)
 {
@@ -650,13 +696,12 @@ static void *server_thread(void *cx)
 
 again:
     // wait for developer mode to be enabled
+    INFO("waiting for devel_mode enabled\n");
     sleep(1);
     while (params.devel_mode == false) {
-        printf("xxx waiting for devl mode0\n");
         sleep(1);
     }
-
-    INFO("SERVER_THREAD STARTING, listening on port %d\n", params.devel_port);
+    INFO("server starting, listening on port %d\n", params.devel_port);
 
     // create listen socket
     listen_sockfd = socket(AF_INET, SOCK_STREAM, 0);
@@ -701,7 +746,6 @@ again:
         int                sockfd;
         struct sockaddr_in peer_addr;
         socklen_t          peer_addr_len;
-        //char               peer_addr_str[200];
 
         // accept connection
         peer_addr_len = sizeof(peer_addr);
@@ -710,16 +754,18 @@ again:
             ERROR("accept, %s\n", strerror(errno));
             break;
         }
-        //sock_addr_to_str(peer_addr_str, sizeof(peer_addr_str), (struct sockaddr *)&peer_addr);
-        //INFO("accepted connection from %s, sockfd=%d\n", peer_addr_str, sockfd);
 
         // create thread to process the client request
         pthread_create(&tid, NULL, process_req_thread, (void*)(long)sockfd);
     }
 
-    // close listen socket,
-    // goto top to wait for developer mode enabled
+    // close listen socket
     close(listen_sockfd);
+
+    // kill all child processes
+    kill_child_processes(getpid());
+
+    // goto top to reinit server_thread
     goto again;
 
     // not reached
@@ -730,6 +776,7 @@ again:
 static void *process_req_thread(void *cx)
 {
     int sockfd = (int)(long)cx;
+    pid_t pid;
 
     char cmd[1000], *p;
 
@@ -750,13 +797,14 @@ static void *process_req_thread(void *cx)
         *p++ = ch;
     }
     *p = '\0';
-    //INFO("cmd '%s'\n", cmd);
 
     // xxx comment
-    if (fork() == 0) {
+    if ((pid = fork()) == 0) {
         process_req_using_android_sh(sockfd, cmd);
     }
+    INFO("created pid %d, cmd='%s'\n", pid, cmd);
 
+    // parent is done with sockfd
     close(sockfd);
     return NULL;
 }
@@ -787,43 +835,73 @@ static void process_req_using_android_sh(int sockfd, char *cmd)
     exit(1);
 }
 
-// -----------------  UTILS  ----------------------------------
-
-#if 0
-static char * sock_addr_to_str(char * s, int slen, struct sockaddr * addr)
+static void *waiter_thread(void *cx)
 {
-    char addr_str[100];
-    int port2;
+    pid_t pid;
 
-    if (addr->sa_family == AF_INET) {
-        inet_ntop(AF_INET,
-                  &((struct sockaddr_in*)addr)->sin_addr,
-                  addr_str, sizeof(addr_str));
-        port2 = ((struct sockaddr_in*)addr)->sin_port;
-#if 0 //xxx
-    } else if (addr->sa_family == AF_INET6) {
-        inet_ntop(AF_INET6,
-                  &((struct sockaddr_in6*)addr)->sin6_addr,
-                 addr_str, sizeof(addr_str));
-        port2 = ((struct sockaddr_in6*)addr)->sin6_port;
-#endif
-    } else {
-        snprintf(s,slen,"Invalid AddrFamily %d", addr->sa_family);
-        return s;
+    while (true) {
+        // wait for a server process to terminate
+        pid = wait(NULL);
+
+        // it is normal for the above call to wait to return an
+        // error when there are no child processes
+        if (pid == -1) {
+            if (errno != ECHILD) {
+                ERROR("wait failed, %s\n", strerror(errno));
+            }
+            sleep(1);
+            continue;
+        }
     }
 
-    snprintf(s,slen,"%s:%d",addr_str,ntohs(port2));
-    return s;
+    return NULL;
 }
-#endif
 
-#if 0
-static void remove_trailing_newline(char *s)
+static void kill_child_processes(pid_t pid)
 {
-    int len = strlen(s);
+    FILE *fp;
+    pid_t child_pid;
+    char cmd[100], s[100];
 
-    if (len > 0) {
-        s[len-1] = '\0';
+    // use ps to get the child pid(s)
+    sprintf(cmd, "ps -o pid= --ppid %d", pid);
+    fp = popen(cmd, "r");
+    while (fgets(s, sizeof(s), fp) != NULL) {
+        if (sscanf(s, "%d", &child_pid) == 1) {
+            kill_child_processes(child_pid);
+        }
+    }
+    pclose(fp);
+
+    // dont kill self
+    if (pid != getpid()) {
+        char cmdline_path[50], cmdline[80];
+        int  fd, len, i;
+        bool got_cmdline = false;
+
+        // debug print the cmdline of pid that is about to be killed
+        memset(cmdline, 0, sizeof(cmdline));
+        sprintf(cmdline_path, "/proc/%d/cmdline", pid);
+        fd = open(cmdline_path, O_RDONLY);
+        if (fd >= 0) {
+            len = read(fd, cmdline, sizeof(cmdline)-1);
+            if (len > 0) {
+                for (i = 0; i < len; i++) {
+                    if (cmdline[i] == '\0') cmdline[i] = ' ';
+                }
+                got_cmdline = true;
+            } else {
+                sprintf(cmdline, "failed read %s", cmdline_path);
+            }
+            close(fd);
+        } else {
+            sprintf(cmdline, "failed open %s", cmdline_path);
+        }
+
+        // kill pid
+        if (got_cmdline) {
+            INFO("killing pid=%d: %s\n", pid, cmdline);
+            kill(pid,SIGKILL);
+        }
     }
 }
-#endif

@@ -1,3 +1,11 @@
+keep track of the pid that was forked
+get children
+  ps -o pid= --ppid 174064
+
+why doesnt ezsh work on linux
+
+save the server pids so they can be killed
+
 ------------
 code cleanup:
 ------------
@@ -9,7 +17,7 @@ src/utils.h           OK
 
 src/logging.c         OK
 src/utils.c             OK
-src/sdl_audio.c
+src/sdl_audio.c        OK
 src/sdl_sensor.c
 src/main.c
 src/sdl.c
@@ -20,8 +28,9 @@ apps/Test/test1.c
 apps/Reversi/reversi.c
 apps/Reversi/cpu.c
 
-
 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+
+exclude recording.raw
 
 // xxx pthread_create_detached
 

@@ -18,4 +18,5 @@ android/SDL
 apps/Primes/primes
 apps/Reversi/reversi
 apps/Test/test
+apps/Test/recording.raw
 apps/*/params
