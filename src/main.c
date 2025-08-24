@@ -36,6 +36,8 @@
 
 #define LAST_PAGE ((max_apps - 1) / 18)
 
+#define DEVEL
+
 //
 // typedefs
 //
@@ -58,7 +60,7 @@ static pthread_t   waiter_tid;
 // prototypes 
 //
 
-static void controller(void);
+static void processing(void);
 static void *server_thread(void *cx);
 static void *waiter_thread(void *cx);
 
@@ -72,7 +74,7 @@ void picoc_bg(char *args);
 // -----------------  MAIN  ------------------------------------------
 
 static void init(void);
-static void terminate(void);
+static void cleanup(void);
 static void create_default_apps(void);
 static void sigusr1_hndlr(int signum);
 
@@ -81,11 +83,13 @@ int MAIN(int argc, char **argv)
     // initialize
     init();
 
-    // xxx comment
-    controller();
+    // processing
+    processing();
+
+    // cleanup
+    cleanup();
 
     // end program
-    terminate();
     return 0;
 }
 
@@ -116,16 +120,23 @@ static void init(void)
     params.devel_mode = util_get_int_param("devel_mode", 0);
     params.devel_port = util_get_int_param("devel_port", DEFAULT_DEVEL_PORT);
 
-    // xxx temporary
+#ifdef DEVEL
+    // enable developer mode
     params.devel_mode = 1;
+    util_set_int_param("devel_mode", 1);
 
+    // re-init apps to default
+    create_default_apps();
+#else
     // if apps dir doesn't exist then create it
     rc = stat("apps", &statbuf);
-    if (true || rc != 0 || !S_ISDIR(statbuf.st_mode)) {  //xxx true, del true
+    if (rc != 0 || !S_ISDIR(statbuf.st_mode)) {
         create_default_apps();
     }
+#endif
 
-    // xxx comment
+    // allocate SIGUSR2, this signal is sent to the server_thread
+    // when developer mode is disabled or developer mode port is changed
     struct sigaction action;
     memset(&action, 0, sizeof(action));
     action.sa_handler = sigusr1_hndlr;
@@ -135,12 +146,13 @@ static void init(void)
     pthread_create(&server_tid, NULL, server_thread, NULL);
     pthread_create(&waiter_tid, NULL, waiter_thread, NULL);
 
-    sdl_init(); //xxx handle ret
-    INFO("sdl_win_width,height = %d %d  sdl_char_width,height=%d %d\n", //xxx is this printed in sdl
-        sdl_win_width, sdl_win_height, sdl_char_width, sdl_char_height);
+    // init sdl
+    sdl_init();
+    INFO("sdl_win_width,height = %d %d  sdl_char_width,height=%d %d\n",
+         sdl_win_width, sdl_win_height, sdl_char_width, sdl_char_height);
 }
 
-static void terminate(void)
+static void cleanup(void)
 {
     sdl_exit();
 
@@ -193,7 +205,7 @@ static void sigusr1_hndlr(int signum)
     // nothing needed here
 }
 
-// -----------------  CONTROLLER  ------------------------------------
+// -----------------  PROCESSING  ------------------------------------
 
 #define MAX_APPS 100
 
@@ -205,18 +217,16 @@ static void display_menu(void);
 static void get_list_of_apps(void);
 static void settings(void);
 
-static void controller(void)
+static void processing(void)
 {
     sdl_event_t event;
 
     while (true) {
-        // xxx reset other stuff here too, fontsz, color
+        // clear the display, and set the font to default
         sdl_display_init(BG_COLOR);
-
-        // xxx comment
         sdl_print_init(DEFAULT_FONTSZ, COLOR_WHITE, BG_COLOR);
 
-        // display menu, and register for sdl events
+        // display menu, and register for events
         display_menu();
 
         // update the display
@@ -247,46 +257,48 @@ static void controller(void)
             DIR           *dir;
             struct dirent *dirent;
 
-            // xxx check for null
-
-            INFO("running %s\n", apps[id]);
-
-            sdl_print_init(DEFAULT_FONTSZ, COLOR_WHITE, COLOR_BLACK);
-
-            if (strcmp(apps[id], "Settings") == 0) {
-                settings();
+            if (apps[id] == NULL) {
+                ERROR("apps[%d] is NULL\n", id);
             } else {
-                sprintf(app_dir, "apps/%s", apps[id]);
-                chdir(app_dir);
+                INFO("running %s\n", apps[id]);
 
-                // construct list of *.c files in this dir
-                picoc_args[0] = '\0';
-                dir = opendir(".");
-                while ((dirent = readdir(dir)) != NULL) {
-                    char *fn = dirent->d_name;
-                    int len = strlen(fn);
-                    if (len > 2 && strcmp(fn+len-2, ".c") == 0) {
-                        strcat(picoc_args, fn);
-                        strcat(picoc_args, " ");
-                    }
-                }
-                closedir(dir);
+                sdl_print_init(DEFAULT_FONTSZ, COLOR_WHITE, COLOR_BLACK);
 
-                if (picoc_args[0] != '\0') {
-                    INFO("XXX picoc_args = %s\n", picoc_args);
-                    rc = picoc_fg(picoc_args);  // args
-                    INFO("done %s, rc=%d\n", apps[id], rc);
+                if (strcmp(apps[id], "Settings") == 0) {
+                    settings();
                 } else {
-                    ERROR("no source code in %s\n", app_dir);
-                }
+                    sprintf(app_dir, "apps/%s", apps[id]);
+                    chdir(app_dir);
 
-                chdir(storage_path);
+                    // construct list of *.c files in this dir
+                    picoc_args[0] = '\0';
+                    dir = opendir(".");
+                    while ((dirent = readdir(dir)) != NULL) {
+                        char *fn = dirent->d_name;
+                        int len = strlen(fn);
+                        if (len > 2 && strcmp(fn+len-2, ".c") == 0) {
+                            strcat(picoc_args, fn);
+                            strcat(picoc_args, " ");
+                        }
+                    }
+                    closedir(dir);
+
+                    if (picoc_args[0] != '\0') {
+                        INFO("picoc_args = %s\n", picoc_args);
+                        rc = picoc_fg(picoc_args);  // args
+                        INFO("done %s, rc=%d\n", apps[id], rc);
+                    } else {
+                        ERROR("no source code in %s\n", app_dir);
+                    }
+
+                    chdir(storage_path);
+                }
             }
         }
     }
 }
 
-// ----------------------------------------------------------------
+// -----------------  xxxxxxxx  -----------------------------------
 
 static void display_menu(void)
 {
@@ -295,12 +307,16 @@ static void display_menu(void)
 
     #define RADIUS 100
 
-    // xxx
+    // allocate circle texture, which is used when displaying menu items
     if (circle == NULL) {
         circle = sdl_create_filled_circle_texture(RADIUS, COLOR_BLUE);
     }
 
-    // xxx
+    // get the list of apps: 
+    // - this initializes the apps[] array of  app names
+    // - the dir names are the same as the app names
+    // - the apps array is indexed by the location on the display, for
+    //   example idx=0 is top left, and idx=17 is bottom right
     get_list_of_apps();
 
     first = page * 18;
@@ -358,9 +374,9 @@ static void display_menu(void)
         y = ((sdl_win_height-150)/6/2) + ((i-first)/3) * ((sdl_win_height-150)/6);
 
         // display the menu item
+        // - first render the circle
+        // - then render the app name text within the circle
         sdl_render_texture(x-RADIUS, y-RADIUS, -1, -1,  0, circle);
-
-        // xxx
         sdl_print_init(numchars, COLOR_WHITE, COLOR_BLUE);
         if (s2[0] == '\0') {
             sdl_render_text_xyctr(x, y, s1);
@@ -377,6 +393,7 @@ static void display_menu(void)
         sdl_register_event(&loc, i);
     }
 
+// XXX
 // xxx improve below
     // xxx
     sdl_print_init(LARGE_FONTSZ, COLOR_WHITE, BG_COLOR);
@@ -403,7 +420,7 @@ static void display_menu(void)
     sdl_print_init(DEFAULT_FONTSZ, COLOR_WHITE, BG_COLOR);
 }
 
-// ----------------------------------------------------------------
+// -----------------  xxxxxxxx  -----------------------------------
 
 // xxx explain this
 static void get_list_of_apps_from_layout_file(char *layout_file_path);
@@ -470,17 +487,24 @@ static void get_list_of_apps_from_layout_file(char *layout_file_path)
     }
     max_apps = 0;
 
-    // xxx comment
+    // read the app names, which are the same as their dir names,
+    // from the layout file
     fp = fopen(layout_file_path, "r");
     while (fgets(str, sizeof(str), fp)) {
+        // ignore lines that are blank or begin with comment char
         if (str[0] == '\n' || str[0] == '#') {
             continue;
         }
+
+        // read 3 app names from each line of the layout file
         cnt = sscanf(str, "%s %s %s", s[0], s[1], s[2]);
         if (cnt != 3) {
             ERROR("invalid line '%s'\n", str);
             break;
         }
+
+        // store the app names just read in the apps[] array;
+        // ignoring app names that are "-"
         for (i = 0; i < 3; i++) {
             if (strcmp(s[i], "-") != 0) {
                 apps[max_apps] = strdup(s[i]);
@@ -533,8 +557,9 @@ static void get_list_of_apps_from_apps_dirs(char *apps_dir_path)
     }
     closedir(apps_dir);
 
-    // xxx comment
-    // add Settings
+    // add Settings; Settings is a special 'app', 
+    // it is implemented by the settings() routine in this
+    // file; it is not executed by picoc as the other apps are
     apps[max_apps++] = strdup("Settings");
 
     // sort list alphabetical
@@ -551,6 +576,7 @@ static void get_list_of_apps_from_apps_dirs(char *apps_dir_path)
 
 // ----------------------------------------------------------------
 
+// XXX
 // xxx include in picoc ?
 #define ROW2Y(r) ((r) * sdl_char_height)  // xxx ctr vs ...
 #define ROW2Y_CTR(r) ((r) * sdl_char_height + sdl_char_height/2)
@@ -580,8 +606,10 @@ static void settings(void)
         sdl_print_init(DEFAULT_FONTSZ, COLOR_WHITE, BG_COLOR);
         sdl_render_text_xyctr(sdl_win_width/2, sdl_char_height/2, "Settings");
 
+        // XXX
         sdl_render_printf(0, ROW2Y(2), "Version = %s", VERSION);  // xxx add this
 
+        // XXX
         sdl_render_printf(0, ROW2Y(4), "Copyright");  // xxx add file for this, and display it
 
         sdl_print_init(-1, COLOR_LIGHT_BLUE, BG_COLOR);
@@ -634,7 +662,7 @@ static void settings(void)
             util_set_int_param("devel_mode", params.devel_mode);
             if (!params.devel_mode) {
                 INFO("sending SIGUSR2 to server_thread\n");
-                pthread_kill(server_tid, SIGUSR2);  // xxx not working on android
+                pthread_kill(server_tid, SIGUSR2);
             }
             break;
         case EVID_DEVEL_PORT: {
@@ -646,8 +674,10 @@ static void settings(void)
             if (cnt == 1 && (port >= 1024 && port <= 49151)) {
                 params.devel_port = port;
                 util_set_int_param("devel_port", port);
-                INFO("sending SIGUSR2 to server_thread\n");
-                pthread_kill(server_tid, SIGUSR2);
+                if (params.devel_mode) {
+                    INFO("sending SIGUSR2 to server_thread\n");
+                    pthread_kill(server_tid, SIGUSR2);
+                }
             }
             break; }
         case EVID_RESET_APPS: {
@@ -655,16 +685,16 @@ static void settings(void)
             str = sdl_get_input_str("Reset Apps y/n?", false, BG_COLOR);
             INFO("GOT STR '%s'\n", str);
             if (strcasecmp(str, "y") == 0) {
-                INFO("XXX resetting apps\n");
+                INFO("resetting apps\n");
                 create_default_apps();
                 msg = "Apps are reset.";
                 msg_time = util_microsec_timer();
             }
-            // xxx display msg for 2 secs
-            // xxx add routine to display the message
             break; }
         case EVID_LOG_FILE_CLEAR:   
             log_clear();
+            msg = "Log file is cleared.";
+            msg_time = util_microsec_timer();
             break;
         case EVID_QUIT:
             quit = true;
@@ -678,9 +708,6 @@ static void settings(void)
 }
 
 // ----------------- SERVER ----------------------------
-
-// xxx check if SIGUSR2 is working
-// xxx can the forked processes be killed when changing the port; or is that worth it
 
 #define MAX_PID_TBL 20
 
@@ -798,7 +825,7 @@ static void *process_req_thread(void *cx)
     }
     *p = '\0';
 
-    // xxx comment
+    // fork and exec /bin/sh, to execute cmd
     if ((pid = fork()) == 0) {
         process_req_using_android_sh(sockfd, cmd);
     }
@@ -840,7 +867,7 @@ static void *waiter_thread(void *cx)
     pid_t pid;
 
     while (true) {
-        // wait for a server process to terminate
+        // wait for a process to terminate
         pid = wait(NULL);
 
         // it is normal for the above call to wait to return an
