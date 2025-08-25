@@ -21,11 +21,7 @@
 // font defines
 // 
 
-#ifdef ANDROID
-    #define FONT_FILE_PATH  "FreeMonoBold.ttf"
-#else //xxx
-    #define FONT_FILE_PATH "/home/haid/proj/proj_qne2/linux/assets/FreeMonoBold.ttf" //xxx
-#endif
+#define FONT_FILE_PATH  "FreeMonoBold.ttf"
 
 #define DEFAULT_FONTSZ 20
 

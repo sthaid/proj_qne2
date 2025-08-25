@@ -97,7 +97,10 @@ static void init(void)
 #ifdef ANDROID
     storage_path = (char*)SDL_GetAndroidInternalStoragePath();
 #else
-    storage_path = "/home/haid/proj/proj_qne2/linux/files";  //xxx dont use haid
+    static char storage_path_buff[200];
+    getcwd(storage_path_buff, sizeof(storage_path_buff));
+    strcat(storage_path_buff, "/files");
+    storage_path = storage_path_buff;
 #endif
     chdir(storage_path);
 

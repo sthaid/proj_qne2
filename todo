@@ -1,21 +1,13 @@
-version file ?
+bottom row controls
 
 copyright formatting ?
 
+version file ?
+
 android build files
-
-copy assetfiles to files
-- update font path for non android
-- make util to do the copy
-- remove SDL stuff from main.c
-
-version 
-
-copyright
 
 ROW2Y
 
-bottom row controls
 
 fix some picoc issues
 - printing
