@@ -293,13 +293,13 @@ static void processing(void)
             DIR           *dir;
             struct dirent *dirent;
 
-            // xxx too much indentation here
+            // XXX too much indentation here
             if (apps[id] == NULL) {
                 ERROR("apps[%d] is NULL\n", id);
             } else {
                 INFO("running %s\n", apps[id]);
 
- //xxx               sdl_print_init(DEFAULT_FONT, COLOR_WHITE, COLOR_BLACK);
+ //xxx del           sdl_print_init(DEFAULT_FONT, COLOR_WHITE, COLOR_BLACK);
 
                 if (strcmp(apps[id], "Settings") == 0) {
                     settings();
@@ -335,7 +335,7 @@ static void processing(void)
     }
 }
 
-// -----------------  xxxxxxxx  -----------------------------------
+// -----------------  DISPLAY MENU  -------------------------------
 
 static void display_menu(void)
 {
@@ -362,7 +362,7 @@ static void display_menu(void)
 
     if (LAST_PAGE > 0) {
         sdl_print_save(&print_state);
-        sdl_print_init(SMALL_FONT, COLOR_WHITE, BG_COLOR); //xxxcall it print_set
+        sdl_print_init(SMALL_FONT, COLOR_WHITE, BG_COLOR); //xxx call it print_set
         sdl_render_printf_xyctr(sdl_win_width/2, sdl_char_height/2, "Page %d", page);
         sdl_print_restore(&print_state);
     }
@@ -433,7 +433,7 @@ static void display_menu(void)
     }
 }
 
-// -----------------  xxxxxxxx  -----------------------------------
+// -----------------  GET LIST OF APPS  ---------------------------
 
 // xxx explain this
 static void get_list_of_apps_from_layout_file(char *layout_file_path);
@@ -587,10 +587,9 @@ static void get_list_of_apps_from_apps_dirs(char *apps_dir_path)
     }
 }
 
-// ----------------------------------------------------------------
+// -----------------  SETTINGS  -----------------------------------
 
-// XXX
-// xxx include in picoc ?
+// XXX xxx include in picoc ?
 #define ROW2Y(r) ((r) * sdl_char_height)  // xxx ctr vs ...
 #define ROW2Y_CTR(r) ((r) * sdl_char_height + sdl_char_height/2)
 #define NK2X(n,k) ((sdl_win_width/2/(n)) + (k) * (sdl_win_width/(n)))
@@ -613,37 +612,41 @@ static void settings(void)
     #define EVID_LOG_FILE_CLEAR     1003
     #define EVID_COPYRIGHT          1004
 
+    // get this device ipaddr
     ipaddr = util_get_ipaddr();
     INFO("SETTINGS %s:%d\n", ipaddr, params.devel_port);
 
-    // xxx comments, and cleanup
+    // handle the setting display
     while (true) {
+        // init and display title
         sdl_display_init(BG_COLOR);
         sdl_print_init(DEFAULT_FONT, COLOR_WHITE, BG_COLOR);
-
         sdl_render_text_xyctr(sdl_win_width/2, sdl_char_height/2, "Settings");
 
-        // XXX
-        sdl_render_printf(0, ROW2Y(2), "Version = %s", VERSION);  // xxx add this
+        // display version
+        sdl_render_printf(0, ROW2Y(2), "Version = %s", VERSION);  // xxx add support for VERSION
 
-        // XXX
-        sdl_print_init_color(COLOR_LIGHT_BLUE, BG_COLOR);  //xxx just need one?
-        loc = sdl_render_printf(0, ROW2Y(4), "Copyright");  // xxx add file for this, and display it
+        // init print color to COLOR_LIGHT_BLUE for the following,
+        // because these all can be selected
+        sdl_print_init_color(COLOR_LIGHT_BLUE, BG_COLOR);
+
+        // display Copyright
+        loc = sdl_render_printf(0, ROW2Y(4), "Copyright");
         sdl_register_event(loc, EVID_COPYRIGHT);
 
-        sdl_print_init_color(COLOR_LIGHT_BLUE, BG_COLOR);
+        // display Devel_Mode
         loc = sdl_render_printf(0, ROW2Y(6), "Devel_Mode = %s", params.devel_mode ? "ON" : "OFF");
         sdl_register_event(loc, EVID_DEVEL_MODE);
 
-        sdl_print_init_color(COLOR_LIGHT_BLUE, BG_COLOR);
+        // display Devel_Port
         loc = sdl_render_printf(0, ROW2Y(8), "Devel_Port = %d", params.devel_port);
         sdl_register_event(loc, EVID_DEVEL_PORT);
 
-        sdl_print_init_color(COLOR_LIGHT_BLUE, BG_COLOR);
+        // display Reset_Apps
         loc = sdl_render_printf(0, ROW2Y(10), "Reset_Apps");
         sdl_register_event(loc, EVID_RESET_APPS);
 
-        sdl_print_init_color(COLOR_LIGHT_BLUE, BG_COLOR);
+        // display Clear_Log
         size = log_size();
         if (size < 1000000) {
             loc = sdl_render_printf(0, ROW2Y(12), "Clear_Log sz=%d", size);
@@ -652,17 +655,21 @@ static void settings(void)
         }
         sdl_register_event(loc, EVID_LOG_FILE_CLEAR);
 
+        // if a message is requested for display then do so
         if (msg && (util_microsec_timer() - msg_time) < 3000000) {
             sdl_render_printf(0, sdl_win_height-400, "%s", msg);
         } else if (params.devel_mode) {
             sdl_render_printf(0, sdl_win_height-400, "%s:%d", ipaddr, params.devel_port);
         }
 
-        // xxx comments
+        // display the control event 'X' to exit this screen
         sdl_register_control_events(NULL, NULL, "X", BG_COLOR);
 
+        // present the display
         sdl_display_present();
 
+        // wait for an event, with 10 ms timeout;
+        // if no event received then re-display
         sdl_get_event(TEN_MS, &event);
         if (event.event_id == -1) {
             continue;
@@ -724,7 +731,7 @@ static void settings(void)
     }
 }
 
-void copyright(void)
+static void copyright(void)
 {
     char       *str;
     int         y_display_begin, y_display_end, y_top;
@@ -732,25 +739,26 @@ void copyright(void)
     sdl_event_t event;
     bool        quit = false;
 
+    // read the copyright file
     str = util_read_file("copyright", &len);
     if (str == NULL) {
         ERROR("failed to read copyright file\n");
         return;
     }
 
+    // init vars
     y_display_begin = 100;
     y_display_end = sdl_win_height - 200;
     y_top = y_display_begin;
 
+    // display copyright, support motion (for scrolling) and exit/quit events
     while (true) {
+        // display copyright and register for motion (scrolling) & exit events
         sdl_display_init(BG_COLOR);
         sdl_print_init(SMALLEST_FONT, COLOR_WHITE, BG_COLOR);
         sdl_register_event(NULL, EVID_MOTION);
         sdl_render_multiline_text(y_top, y_display_begin, y_display_end, str);
-
-        // xxx
         sdl_register_control_events(NULL, NULL, "X", BG_COLOR);
-
         sdl_display_present();
 
         sdl_get_event(-1, &event);
@@ -771,6 +779,7 @@ void copyright(void)
         }
     }
 
+    // free allocated copyrght buffer
     free(str);
 }
 

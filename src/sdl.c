@@ -6,16 +6,11 @@
 #include <SDL3/SDL.h>
 #include <SDL3_ttf/SDL_ttf.h>
 
-// xxx landscape
-// xxx keyboard events for < > END and up/down
-// xxx read pixels routien
-// xxx use of rint vs nearbyint
-
-// xxx try SDL_SetRenderLogicalPresentation
-
-//
-// logging
-//
+// xxx todo?
+// - landscape
+// - read pixels routine ? 
+// - use of rint vs nearbyint
+// - try SDL_SetRenderLogicalPresentation
 
 //
 // font defines
@@ -23,7 +18,8 @@
 
 #define FONT_FILE_PATH  "FreeMonoBold.ttf"
 
-#define DEFAULT_FONTSZ 20
+#define LARGE_FONT    10
+#define DEFAULT_FONT  20
 
 #define MIN_FONT_PTSIZE  10
 #define MAX_FONT_PTSIZE  200
@@ -96,13 +92,13 @@ int sdl_init(void)
 
     // create SDL Window and Renderer
 #ifdef ANDROID
-    if (!SDL_CreateWindowAndRenderer("xxxxx", 0, 0, SDL_WINDOW_FULLSCREEN, &window, &renderer)) {
+    if (!SDL_CreateWindowAndRenderer("xxx", 0, 0, SDL_WINDOW_FULLSCREEN, &window, &renderer)) {
         ERROR("SDL_CreateWindowAndRenderer failed\n");
         return -1;
     }
 #else
     // xxx test with larger win width
-    if (!SDL_CreateWindowAndRenderer("xxxxx", 450, 975, 0, &window, &renderer)) {
+    if (!SDL_CreateWindowAndRenderer("xxx", 450, 975, 0, &window, &renderer)) {
         ERROR("SDL_CreateWindowAndRenderer failed\n");
         return -1;
     }
@@ -135,14 +131,13 @@ int sdl_init(void)
     }
 #endif
 
-    // init default fontsize, where DEFAULT_FONTSZ is num chars across display;
+    // init default fontsize, where DEFAULT_FONT is num chars across display;
     // and validate expected character size and columns
-    sdl_print_init(DEFAULT_FONTSZ, COLOR_WHITE, COLOR_BLACK);
+    sdl_print_init(DEFAULT_FONT, COLOR_WHITE, COLOR_BLACK);
     INFO("sdl_print_init(%d) sdl_char_width=%d sdl_char_height=%d\n", 
-         DEFAULT_FONTSZ, sdl_char_width, sdl_char_height);
+         DEFAULT_FONT, sdl_char_width, sdl_char_height);
     if (sdl_char_width != 50 || sdl_char_height != 83) {
         ERROR("chw,chh, expected = 50,83  actual = %d,%d\n", sdl_char_width, sdl_char_height);
-        return -1; //xxx should this be an error ret
     }
 
     // init sensor code
@@ -242,7 +237,7 @@ void sdl_register_event(sdl_loc_t *loc, int event_id)
     max_event++;
 }
 
-//xxx check this
+//XXX xxx check this code
 void sdl_register_control_events(char *ev1, char *ev2, char *ev3, int bg_color)
 {
     sdl_loc_t *loc;
@@ -256,9 +251,7 @@ void sdl_register_control_events(char *ev1, char *ev2, char *ev3, int bg_color)
 
     sdl_print_save(&print_state);
 
-#define LARGE_FONTSZ    10
-
-    sdl_print_init(LARGE_FONTSZ, COLOR_WHITE, bg_color);
+    sdl_print_init(LARGE_FONT, COLOR_WHITE, bg_color);
 
     for (i = 0; i < 3; i++) {
         if (ev[i] == NULL) {
@@ -391,18 +384,16 @@ static void process_sdl_event(SDL_Event *ev, sdl_event_t *event)
             event->u.motion.yrel = ev->motion.yrel;
         }
         break; }
+#if 0
     case SDL_EVENT_SENSOR_UPDATE: {
-#if 1  // xxx why is step counter not working
         SDL_SensorEvent *x = &ev->sensor;
+        // xxx why is step counter not working
         if (x->which == 14 || x->which == 15) 
             INFO("SENSOR: which=%d data=%f %f %f %f %f %f timestamp=%ld\n",
                  x->which,
                  x->data[0], x->data[1], x->data[2], x->data[3], x->data[4], x->data[5],
                  x->sensor_timestamp);
-        //sdl_sensor_event(x);
-#endif
         break; }
-#if 0
     case SDL_EVENT_TEXT_INPUT: {
         SDL_TextInputEvent *x = &ev->text;
         INFO("SDL_EVENT_TEXT_INPUT: '%s'\n", x->text);
@@ -422,7 +413,7 @@ static void process_sdl_event(SDL_Event *ev, sdl_event_t *event)
             break;
         }
 
-        keycode = SDL_GetKeyFromScancode(x->scancode, x->mod, false);  // xxx not always working
+        keycode = SDL_GetKeyFromScancode(x->scancode, x->mod, false);
         INFO("GOT keycode 0x%x  shift=%d\n", keycode, shift);
         event->event_id = EVID_KEYBD;
         event->u.keybd.ch = keycode;
@@ -444,10 +435,13 @@ static void process_sdl_event(SDL_Event *ev, sdl_event_t *event)
 
 char *sdl_get_input_str(char *prompt, bool numeric_keybd, int bg_color)
 {
-    static char input[100]; // xxx bounds check
-    int         max_input;
-    sdl_loc_t  *loc;
-    sdl_event_t event;
+    static char       input[100]; // xxx bounds check
+    int               max_input;
+    sdl_loc_t        *loc;
+    sdl_event_t       event;
+    sdl_print_state_t print_state;
+
+    // xxx comments
 
     // init
     memset(input, 0, sizeof(input));
@@ -460,25 +454,17 @@ char *sdl_get_input_str(char *prompt, bool numeric_keybd, int bg_color)
             numeric_keybd ?  SDL_TEXTINPUT_TYPE_NUMBER : SDL_TEXTINPUT_TYPE_TEXT);
     SDL_StartTextInputWithProperties(window, props);
 
-//xxx yyy how to restore
-    sdl_print_init(DEFAULT_FONTSZ, COLOR_WHITE, bg_color);
+    sdl_print_save(&print_state);
+    sdl_print_init(DEFAULT_FONT, COLOR_WHITE, bg_color);
 
-    // 
+    //  xxx comment
     while (true) {
-        // xxx
+        // xxx comment
         sdl_display_init(bg_color);
         sdl_register_event(NULL, EVID_KEYBD);
-
-        // display prompt
         sdl_render_printf(0, 200, "%s", prompt);
-
-        // display input line
         loc = sdl_render_printf(0, 350, "%s", input);
-
-        // display cursor
         sdl_render_printf(loc->x+loc->w, loc->y, "%s", "_");
-
-        // xxx
         sdl_display_present();
 
         // wait for event
@@ -508,10 +494,12 @@ char *sdl_get_input_str(char *prompt, bool numeric_keybd, int bg_color)
         }
     }
 
+    // cleanup
     SDL_StopTextInput(window);
-    sdl_print_init(DEFAULT_FONTSZ, COLOR_WHITE, COLOR_PURPLE);  // xxx restore
     SDL_DestroyProperties(props);
+    sdl_print_restore(&print_state);
 
+    // return input string
     return input;
 }
 
@@ -540,7 +528,6 @@ int sdl_scale_color(int color, double inten)
 }
 
 // ported from http://www.noah.org/wiki/Wavelength_to_RGB_in_Python
-// xxx violet not working well
 int sdl_wavelength_to_color(int wavelength_arg)
 {
     double wavelength = wavelength_arg;
@@ -599,40 +586,28 @@ static void set_render_draw_color(int color)
 
 // -----------------  RENDER TEXT  ------------------------
 
-static struct {
-    int ptsize;
-    SDL_Color fg_color;
-    SDL_Color bg_color;
-} text;
+static sdl_print_state_t print_state;
 
 void sdl_print_save(sdl_print_state_t *save)
 {
-    //*save = text;
-    memcpy(save, &text, sizeof(text));
+    *save = print_state;
 }
 
 void sdl_print_restore(sdl_print_state_t *restore)
 {
-    //text = *restore;
-    memcpy(&text, restore, sizeof(text));
+    print_state = *restore;
 }
 
 void sdl_print_init_color(int fg_color, int bg_color)
 {
-    // save new font color
-    memcpy(&text.fg_color, &fg_color, 4);
-    memcpy(&text.bg_color, &bg_color, 4);
+    print_state.fg_color = fg_color;
+    print_state.bg_color = bg_color;
 }
 
 void sdl_print_init(double numchars, int fg_color, int bg_color)
 {
     int ptsize;
     double chw_fp, chh_fp;
-
-    // if numchars is -1 then the font size is not being changed 
-    if (numchars == -1) { // xxx del
-        goto change_font_color;
-    }
 
     // determine real font ptsize to use;
     // note: rint() not used here so ptsize will round down
@@ -655,14 +630,13 @@ void sdl_print_init(double numchars, int fg_color, int bg_color)
     }
 
     // save new point size and character width/height
-    text.ptsize = ptsize;
+    print_state.ptsize = ptsize;
     sdl_char_width  = rint(sdl_win_width / numchars);  // xxx nearbyint
     sdl_char_height = rint(sdl_char_width / 0.6);
 
-change_font_color:
     // save new font color
-    memcpy(&text.fg_color, &fg_color, 4);
-    memcpy(&text.bg_color, &bg_color, 4);
+    print_state.fg_color = fg_color;
+    print_state.bg_color = bg_color;
 }
 
 static sdl_loc_t *render_text(bool xy_is_ctr, int x, int y, char * str)
@@ -675,8 +649,8 @@ static sdl_loc_t *render_text(bool xy_is_ctr, int x, int y, char * str)
     //printf("xy_is_ctr = %d x=%d y=%d str='%s'\n", xy_is_ctr, x, y, str);
 
     // if font not initialized then return error
-    if (font[text.ptsize] == NULL) {
-        ERROR("font ptsize %d, not initialized\n", text.ptsize);
+    if (font[print_state.ptsize] == NULL) {
+        ERROR("font ptsize %d, not initialized\n", print_state.ptsize);
         loc.x = x; loc.y = y; loc.w = 0; loc.h = 0;
         return &loc;
     }
@@ -688,7 +662,9 @@ static sdl_loc_t *render_text(bool xy_is_ctr, int x, int y, char * str)
     }
 
     // render the string to a surface
-    surface = TTF_RenderText_Shaded(font[text.ptsize], str, 0, text.fg_color, text.bg_color);
+    surface = TTF_RenderText_Shaded(font[print_state.ptsize], str, 0, 
+                                         *(SDL_Color*)&print_state.fg_color, 
+                                         *(SDL_Color*)&print_state.bg_color);
     if (surface == NULL) {
         ERROR("TTF_RenderText_Shaded returned NULL\n");
         loc.x = x; loc.y = y; loc.w = 0; loc.h = 0;
@@ -1194,15 +1170,17 @@ sdl_texture_t *sdl_create_text_texture(char * str)
     }
 
     // if font not initialized then return error
-    if (font[text.ptsize] == NULL) {
-        ERROR("font ptsize %d, not initialized\n", text.ptsize);
+    if (font[print_state.ptsize] == NULL) {
+        ERROR("font ptsize %d, not initialized\n", print_state.ptsize);
         return NULL;
     }
 
     // render the text to a surface,
     // create a texture from the surface
     // free the surface
-    surface = TTF_RenderText_Shaded(font[text.ptsize], str, 0, text.fg_color, text.bg_color);
+    surface = TTF_RenderText_Shaded(font[print_state.ptsize], str, 0, 
+                                    *(SDL_Color*)&print_state.fg_color, 
+                                    *(SDL_Color*)&print_state.bg_color);
     if (surface == NULL) {
         ERROR("failed to allocate surface\n");
         return NULL;
