@@ -38,16 +38,13 @@ CFLAGS = -Wall -Werror -Wno-unused-result -g -I../src $(shell pkg-config sdl3--c
 
 $(TARGET):
 	gcc -o $@ $(CFLAGS) $(SRCS) -lSDL3 -lSDL3_ttf -lm
-	rm -rf files; mkdir files;
-	cd ..; \
-	find apps -type f ! -name params ! -name README ! -name Makefile ! -name "*.swp" ! -executable > /tmp/files.txt; \
-	tar -cf linux/assets/apps.tar --files-from /tmp/files.txt; \
-	rm -f /tmp/files.txt
+	rm -rf files assets; mkdir files assets;
+	gen_apps_tar linux/assets/apps.tar
+	ln -s ../../android/assets/FreeMonoBold.ttf assets
+	ln -s ../../android/assets/copyright assets
 
 clean:
-	rm -f $(TARGET)
-	rm -rf files/*
-	rm -f assets/apps.tar
+	rm -rf $(TARGET) files assets
 
 .PHONY: $(TARGET)
 

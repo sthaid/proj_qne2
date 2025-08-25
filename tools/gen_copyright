@@ -1,0 +1,18 @@
+#!/bin/bash
+
+topdir=$(git rev-parse --show-toplevel)
+cd $topdir
+
+tmp_copyright=/tmp/copyright
+
+echo -e "\n---------- EZAPP ----------\n" >> $tmp_copyright
+cat LICENSE > $tmp_copyright
+
+echo -e "\n---------- SDL ----------\n" >> $tmp_copyright
+cat android/SDL/LICENSE.txt >> $tmp_copyright
+
+echo -e "\n---------- PICOC ----------\n" >> $tmp_copyright
+picoc/picoc -c >> $tmp_copyright
+
+fmt -w 40 $tmp_copyright > android/assets/copyright
+

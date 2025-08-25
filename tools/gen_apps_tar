@@ -1,0 +1,26 @@
+#!/bin/bash
+
+topdir=$(git rev-parse --show-toplevel)
+cd $topdir
+
+dest_path=$1
+if [ "$dest_path" == "" ]; then
+  echo "ERROR dest_path required"
+  exit 1
+fi
+
+rm -f $dest_path
+
+find apps -type f \
+          ! -name params \
+          ! -name README \
+          ! -name Makefile \
+          ! -name "*.swp" \
+          ! -name "recording.raw" \
+          ! -executable \
+    > /tmp/files.txt;
+
+tar -cf $dest_path --files-from /tmp/files.txt;
+
+rm -f /tmp/files.txt
+

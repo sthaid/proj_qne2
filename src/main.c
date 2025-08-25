@@ -51,7 +51,7 @@ typedef struct {
 // variables
 //
 
-static const char *storage_path;
+static char       *storage_path;
 static params_t    params;
 static pthread_t   server_tid;
 static pthread_t   waiter_tid;
@@ -63,6 +63,7 @@ static pthread_t   waiter_tid;
 static void processing(void);
 static void *server_thread(void *cx);
 static void *waiter_thread(void *cx);
+static void kill_child_processes(pid_t pid);
 
 //
 // routines to launch a C program using picoc interpreter
@@ -76,35 +77,27 @@ void picoc_bg(char *args);
 static void init(void);
 static void cleanup(void);
 static void create_default_apps(void);
+static void copy_asset_file(char *asset_filename, char *dest_dir);
 static void sigusr1_hndlr(int signum);
 
 int MAIN(int argc, char **argv)
 {
-    // initialize
     init();
-
-    // processing
     processing();
-
-    // cleanup
     cleanup();
-
-    // end program
     return 0;
 }
 
 static void init(void)
 {
-    int rc;
-    struct stat statbuf;
     char log_path[100];
 
     // determine storage_path, and 
     // set current working directory to storage_path
 #ifdef ANDROID
-    storage_path = SDL_GetAndroidInternalStoragePath();
+    storage_path = (char*)SDL_GetAndroidInternalStoragePath();
 #else
-    storage_path = "/home/haid/proj/proj_qne2/linux/files";
+    storage_path = "/home/haid/proj/proj_qne2/linux/files";  //xxx dont use haid
 #endif
     chdir(storage_path);
 
@@ -120,15 +113,22 @@ static void init(void)
     params.devel_mode = util_get_int_param("devel_mode", 0);
     params.devel_port = util_get_int_param("devel_port", DEFAULT_DEVEL_PORT);
 
+    // copy asset files to storage_path
+    copy_asset_file("apps.tar", storage_path);
+    copy_asset_file("copyright", storage_path);
+    copy_asset_file("FreeMonoBold.ttf", storage_path);
+
 #ifdef DEVEL
-    // enable developer mode
+    // for development:
+    // - enable developer mode
+    // - init apps to default
     params.devel_mode = 1;
     util_set_int_param("devel_mode", 1);
-
-    // re-init apps to default
     create_default_apps();
 #else
-    // if apps dir doesn't exist then create it
+    // if apps dir struct doesn't exist then create it
+    int rc;
+    struct stat statbuf;
     rc = stat("apps", &statbuf);
     if (rc != 0 || !S_ISDIR(statbuf.st_mode)) {
         create_default_apps();
@@ -156,46 +156,71 @@ static void cleanup(void)
 {
     sdl_exit();
 
+    kill_child_processes(getpid());
+
     INFO("TERMINATING\n");
 }
 
 static void create_default_apps(void)
 {
-    INFO("creating default apps\n");
-#ifndef ANDROID
-    system("rm -rf apps");
-    system("tar -xvf ../assets/apps.tar");
-#else
-    void *ptr;
     int rc;
-    size_t len;
 
-    ptr = SDL_LoadFile("apps.tar", &len);
-    if (ptr == NULL ) {
-        ERROR("failed to read apps.tar");
-        return;
-    }
-
-    rc = util_write_file("tmp_apps.tar", ptr, len);
-    SDL_free(ptr);
-    if (rc != 0) {
-        ERROR("failed to write tmp_apps.tar\n");
-        return;
-    }
-
+    // remove existing apps dir struct
     rc = system("rm -rf apps");
     if (rc != 0) {
         ERROR("rm -rf apps, failed\n");
     }
 
-    rc = system("tar -xvf tmp_apps.tar");
+    // extract apps.tar
+    rc = system("tar -xvf apps.tar");
     if (rc != 0) {
-        ERROR("tar -xvf tmp_apps.tar, failed\n");
+        ERROR("tar -xvf apps.tar, failed\n");
+    }
+}
+
+static void copy_asset_file(char *asset_filename, char *dest_dir)
+{
+    int rc;
+    char dest_path[200];
+
+    sprintf(dest_path, "%s/%s", dest_dir, asset_filename);
+
+#ifndef ANDROID
+    char cmd[250];
+
+    sprintf(cmd, "cp %s/../assets/%s %s", storage_path, asset_filename, dest_path);
+    rc = system(cmd);
+    if (rc != 0) {
+        ERROR("cmd '%s' failed\n", cmd);
+    }
+#else
+    void  *ptr;
+    size_t len;
+
+    // remove dest file, in case it already exists
+    unlink(dest_path);
+
+    // read the asset using SDL_LoadFile;
+    //
+    // Note SDL_LoadFile calls SDL_IOFromFile, which attempts to read
+    // the file as follows:
+    // - if filename begins with '/' then use fopen
+    //   else if filename begins with "content://" then use Android_JNI_OpenFileDescriptor
+    //   else fopen of file in SDL_GetAndroidInternalStoragePath
+    //   endif
+    // - if above failed then try to read the file from assets, using Android_JNI_FileOpen
+    ptr = SDL_LoadFile(asset_filename, &len);
+    if (ptr == NULL ) {
+        ERROR("failed to read apps.tar");
+        return;
     }
 
-    rc = unlink("tmp_apps.tar");
+    // write the file to dest_path
+    rc = util_write_file(dest_path, ptr, len);
+    SDL_free(ptr);
     if (rc != 0) {
-        ERROR("failed to unlink tmp_apps.tar, %s\n", strerror(errno));
+        ERROR("failed to write %s\n", dest_path);
+        return;
     }
 #endif
 }
@@ -582,6 +607,8 @@ static void get_list_of_apps_from_apps_dirs(char *apps_dir_path)
 #define ROW2Y_CTR(r) ((r) * sdl_char_height + sdl_char_height/2)
 #define NK2X(n,k) ((sdl_win_width/2/(n)) + (k) * (sdl_win_width/(n)))
 
+static void copyright(void);
+
 static void settings(void)
 {
     sdl_event_t event;
@@ -596,6 +623,7 @@ static void settings(void)
     #define EVID_DEVEL_PORT         1001
     #define EVID_RESET_APPS         1002
     #define EVID_LOG_FILE_CLEAR     1003
+    #define EVID_COPYRIGHT          1004
 
     ipaddr = util_get_ipaddr();
     INFO("SETTINGS %s:%d\n", ipaddr, params.devel_port);
@@ -610,7 +638,10 @@ static void settings(void)
         sdl_render_printf(0, ROW2Y(2), "Version = %s", VERSION);  // xxx add this
 
         // XXX
-        sdl_render_printf(0, ROW2Y(4), "Copyright");  // xxx add file for this, and display it
+        sdl_print_init(-1, COLOR_LIGHT_BLUE, BG_COLOR);
+        loc = sdl_render_printf(0, ROW2Y(4), "Copyright");  // xxx add file for this, and display it
+        sdl_register_event(loc, EVID_COPYRIGHT);
+        sdl_print_init(-1, COLOR_WHITE, BG_COLOR);
 
         sdl_print_init(-1, COLOR_LIGHT_BLUE, BG_COLOR);
         loc = sdl_render_printf(0, ROW2Y(6), "Devel_Mode = %s", params.devel_mode ? "ON" : "OFF");
@@ -696,6 +727,9 @@ static void settings(void)
             msg = "Log file is cleared.";
             msg_time = util_microsec_timer();
             break;
+        case EVID_COPYRIGHT:
+            copyright();
+            break;
         case EVID_QUIT:
             quit = true;
             break;
@@ -707,13 +741,60 @@ static void settings(void)
     }
 }
 
+void copyright(void)
+{
+    char       *str;
+    int         y_display_begin, y_display_end, y_top;
+    int         len;
+    sdl_event_t event;
+    bool        quit = false;
+
+    str = util_read_file("copyright", &len);
+    if (str == NULL) {
+        ERROR("failed to read copyright file\n");
+        return;
+    }
+
+    y_display_begin = 100;
+    y_display_end = sdl_win_height - 200;
+    y_top = y_display_begin;
+
+    while (true) {
+        sdl_display_init(BG_COLOR);
+        sdl_print_init(40, COLOR_WHITE, BG_COLOR);
+        sdl_register_event(NULL, EVID_MOTION);
+        sdl_render_multiline_text(y_top, y_display_begin, y_display_end, str);
+        sdl_print_init(LARGE_FONTSZ, COLOR_WHITE, BG_COLOR);
+        DISPLAY_CONTROL_ITEM(2,"X",EVID_QUIT);
+        sdl_display_present();
+
+        sdl_get_event(-1, &event);
+        switch (event.event_id) {
+        case EVID_MOTION:
+            y_top += event.u.motion.yrel;
+            if (y_top >= y_display_begin) {
+                y_top = y_display_begin;
+            }
+            break;
+        case EVID_QUIT:
+            quit = true;
+            break;
+        }
+
+        if (quit) {
+            break;
+        }
+    }
+
+    free(str);
+}
+
 // ----------------- SERVER ----------------------------
 
 #define MAX_PID_TBL 20
 
 static void *process_req_thread(void *cx);
 static void process_req_using_android_sh(int sockfd, char *cmd);
-static void kill_child_processes(pid_t pid);
 
 static void *server_thread(void *cx)
 {

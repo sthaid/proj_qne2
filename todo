@@ -1,10 +1,33 @@
-keep track of the pid that was forked
-get children
-  ps -o pid= --ppid 174064
+version file ?
 
-why doesnt ezsh work on linux
+copyright formatting ?
 
-save the server pids so they can be killed
+android build files
+
+copy assetfiles to files
+- update font path for non android
+- make util to do the copy
+- remove SDL stuff from main.c
+
+version 
+
+copyright
+
+ROW2Y
+
+bottom row controls
+
+fix some picoc issues
+- printing
+- setting 64 bit value
+
+exclude recording.raw
+- maybe make a script to create the tar file
+
+recording static
+
+xxxxxxxxxxxxxxxx
+
 
 ------------
 code cleanup:
@@ -18,8 +41,8 @@ src/utils.h           OK
 src/logging.c         OK
 src/utils.c             OK
 src/sdl_audio.c        OK
-src/sdl_sensor.c
 src/main.c
+src/sdl_sensor.c
 src/sdl.c
 
 apps/Primes/primes.c
@@ -29,8 +52,6 @@ apps/Reversi/reversi.c
 apps/Reversi/cpu.c
 
 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-
-exclude recording.raw
 
 // xxx pthread_create_detached
 

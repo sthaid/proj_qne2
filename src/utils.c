@@ -77,18 +77,19 @@ int util_write_file(char *path, void *buf, int len)
     return 0;
 }
 
+// xxx comment on extra byte
 void *util_read_file(char *path, int *len_ret)
 {
     int fd, ret;
     struct stat statbuf;
-    void *buf;
+    char *buf;
 
     ret = stat(path, &statbuf);
     if (ret < 0) {
         return NULL;
     }
 
-    buf = malloc(statbuf.st_size);
+    buf = malloc(statbuf.st_size+1);
     if (buf == NULL) {
         return NULL;
     }
@@ -104,6 +105,8 @@ void *util_read_file(char *path, int *len_ret)
         free(buf);
         return NULL;
     }
+
+    buf[statbuf.st_size] = '\0';
 
     close(fd);
 

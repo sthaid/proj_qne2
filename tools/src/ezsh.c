@@ -38,7 +38,7 @@ int main(int argc, char **argv)
     //   set cmd to the arg provided
     // endif
     if (optind == argc) {
-        cmd = "echo \"==== ANDROID SHELL ====\"; /bin/sh -i";
+        cmd = "echo \"==== SHELL ====\"; /bin/sh -i";
     } else if (optind == argc-1) {
         cmd = argv[optind];
     } else {
