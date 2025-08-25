@@ -24,7 +24,10 @@
 #define EVID_SWIPE_LEFT        9991
 #define EVID_MOTION            9992
 #define EVID_KEYBD             9993
-#define EVID_QUIT              9999
+#define EVID_CONTROL_EVENT_1   9994
+#define EVID_CONTROL_EVENT_2   9995
+#define EVID_CONTROL_EVENT_3   9996
+#define EVID_QUIT              9999  // xxx review where this is used
 
 //
 // typedefs
@@ -84,6 +87,7 @@ void sdl_display_present(void);
 
 // event registration and query
 void sdl_register_event(sdl_loc_t *loc, int event_id);
+void sdl_register_control_events(char *ev1, char *ev2, char *ev3, int bg_color);
 void sdl_get_event(long timeout_us, sdl_event_t *event);
 
 // create colors
@@ -92,7 +96,18 @@ int sdl_scale_color(int color, double inten);
 int sdl_wavelength_to_color(int wavelength);
 
 // render text
+
+// xxx new
+typedef struct {
+    int ptsize;
+    int bg_color;
+    int fg_color;
+} sdl_print_state_t;
 void sdl_print_init(double numchars, int fg_color, int bg_color);
+void sdl_print_save(sdl_print_state_t *save);
+void sdl_print_restore(sdl_print_state_t *restore);
+void sdl_print_init_color(int fg_color, int bg_color);
+
 sdl_loc_t *sdl_render_text(int x, int y, char *str);
 sdl_loc_t *sdl_render_printf(int x, int y, char *fmt, ...) __attribute__ ((format (printf, 3, 4)));
 sdl_loc_t *sdl_render_text_xyctr(int x, int y, char *str);

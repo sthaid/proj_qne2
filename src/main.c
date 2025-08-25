@@ -12,7 +12,7 @@
 // defines
 //
 
-#define VERSION "0.0"
+#define VERSION "0.0" //xxx todo
 
 #ifdef ANDROID
 #define MAIN SDL_main
@@ -20,23 +20,24 @@
 #define MAIN main
 #endif
 
-#define EVID_PAGE_DECREMENT 1000
-#define EVID_PAGE_INCREMENT 1001
-
-#define BG_COLOR (!params.devel_mode ? COLOR_TEAL : COLOR_VIOLET)
-
-#define SMALL_FONTSZ    30
-#define DEFAULT_FONTSZ  20
-#define LARGE_FONTSZ    10
-
+#define DEVEL
 #define DEFAULT_DEVEL_PORT 9000   // IANA registered port range 1024 - 49151
-
-#define TEN_MS 10000
-#define ONE_SEC 1000000
 
 #define LAST_PAGE ((max_apps - 1) / 18)
 
-#define DEVEL
+#define BG_COLOR (!params.devel_mode ? COLOR_TEAL : COLOR_VIOLET)
+
+#define SMALLEST_FONT 40
+#define SMALL_FONT    30
+#define DEFAULT_FONT  20
+#define LARGE_FONT    10
+
+#define EVID_PAGE_DECREMENT  EVID_CONTROL_EVENT_1
+#define EVID_PAGE_INCREMENT  EVID_CONTROL_EVENT_2
+#define EVID_EXIT            EVID_CONTROL_EVENT_3
+
+#define TEN_MS  10000
+#define ONE_SEC 1000000
 
 //
 // typedefs
@@ -252,10 +253,17 @@ static void processing(void)
     while (true) {
         // clear the display, and set the font to default
         sdl_display_init(BG_COLOR);
-        sdl_print_init(DEFAULT_FONTSZ, COLOR_WHITE, BG_COLOR);
+        sdl_print_init(DEFAULT_FONT, COLOR_WHITE, BG_COLOR);
 
         // display menu, and register for events
         display_menu();
+
+        // register for screen bottom control events
+        if (LAST_PAGE > 0) {
+            sdl_register_control_events("<", ">", "X", BG_COLOR);
+        } else {
+            sdl_register_control_events(NULL, NULL, "X", BG_COLOR);
+        }
 
         // update the display
         sdl_display_present();
@@ -268,7 +276,7 @@ static void processing(void)
 
         // process the event
         INFO("proc event_id %d\n", event.event_id);
-        if (event.event_id == EVID_QUIT) {
+        if (event.event_id == EVID_EXIT || event.event_id == EVID_QUIT) {
             break;
         } else if (event.event_id == EVID_PAGE_DECREMENT) {
             if (--page < 0) {
@@ -285,12 +293,13 @@ static void processing(void)
             DIR           *dir;
             struct dirent *dirent;
 
+            // xxx too much indentation here
             if (apps[id] == NULL) {
                 ERROR("apps[%d] is NULL\n", id);
             } else {
                 INFO("running %s\n", apps[id]);
 
-                sdl_print_init(DEFAULT_FONTSZ, COLOR_WHITE, COLOR_BLACK);
+ //xxx               sdl_print_init(DEFAULT_FONT, COLOR_WHITE, COLOR_BLACK);
 
                 if (strcmp(apps[id], "Settings") == 0) {
                     settings();
@@ -332,6 +341,7 @@ static void display_menu(void)
 {
     static sdl_texture_t *circle;
     int first, last;
+    sdl_print_state_t print_state;
 
     #define RADIUS 100
 
@@ -351,9 +361,10 @@ static void display_menu(void)
     last  = first + 17;
 
     if (LAST_PAGE > 0) {
-        sdl_print_init(SMALL_FONTSZ, COLOR_WHITE, BG_COLOR);
+        sdl_print_save(&print_state);
+        sdl_print_init(SMALL_FONT, COLOR_WHITE, BG_COLOR); //xxxcall it print_set
         sdl_render_printf_xyctr(sdl_win_width/2, sdl_char_height/2, "Page %d", page);
-        sdl_print_init(DEFAULT_FONTSZ, COLOR_WHITE, BG_COLOR);
+        sdl_print_restore(&print_state);
     }
 
     for (int i = first; i <= last; i++) {
@@ -420,32 +431,6 @@ static void display_menu(void)
         loc.h = 2 * RADIUS;
         sdl_register_event(&loc, i);
     }
-
-// XXX
-// xxx improve below
-    // xxx
-    sdl_print_init(LARGE_FONTSZ, COLOR_WHITE, BG_COLOR);
-
-    // xxx move this
-    // xxx apps should take advantage of this
-    #define DISPLAY_CONTROL_ITEM(col,str,evid) \
-        do { \
-            sdl_loc_t *loc; \
-            int x = (sdl_win_width/3/2) + (col) * (sdl_win_width/3); \
-            int y = sdl_win_height - sdl_char_height/2; \
-            loc = sdl_render_text_xyctr(x, y, str); \
-            sdl_register_event(loc, evid); \
-        } while (0)
-
-    // xxx no arrows if not needed
-    // xxx dont display if at begining or end
-    if (LAST_PAGE > 0) {
-        DISPLAY_CONTROL_ITEM(0,"<",EVID_PAGE_DECREMENT);
-        DISPLAY_CONTROL_ITEM(1,">",EVID_PAGE_INCREMENT);
-    }
-    DISPLAY_CONTROL_ITEM(2,"X",EVID_QUIT);
-
-    sdl_print_init(DEFAULT_FONTSZ, COLOR_WHITE, BG_COLOR);
 }
 
 // -----------------  xxxxxxxx  -----------------------------------
@@ -634,34 +619,31 @@ static void settings(void)
     // xxx comments, and cleanup
     while (true) {
         sdl_display_init(BG_COLOR);
-        sdl_print_init(DEFAULT_FONTSZ, COLOR_WHITE, BG_COLOR);
+        sdl_print_init(DEFAULT_FONT, COLOR_WHITE, BG_COLOR);
+
         sdl_render_text_xyctr(sdl_win_width/2, sdl_char_height/2, "Settings");
 
         // XXX
         sdl_render_printf(0, ROW2Y(2), "Version = %s", VERSION);  // xxx add this
 
         // XXX
-        sdl_print_init(-1, COLOR_LIGHT_BLUE, BG_COLOR);
+        sdl_print_init_color(COLOR_LIGHT_BLUE, BG_COLOR);  //xxx just need one?
         loc = sdl_render_printf(0, ROW2Y(4), "Copyright");  // xxx add file for this, and display it
         sdl_register_event(loc, EVID_COPYRIGHT);
-        sdl_print_init(-1, COLOR_WHITE, BG_COLOR);
 
-        sdl_print_init(-1, COLOR_LIGHT_BLUE, BG_COLOR);
+        sdl_print_init_color(COLOR_LIGHT_BLUE, BG_COLOR);
         loc = sdl_render_printf(0, ROW2Y(6), "Devel_Mode = %s", params.devel_mode ? "ON" : "OFF");
         sdl_register_event(loc, EVID_DEVEL_MODE);
-        sdl_print_init(-1, COLOR_WHITE, BG_COLOR);
 
-        sdl_print_init(-1, COLOR_LIGHT_BLUE, BG_COLOR);
+        sdl_print_init_color(COLOR_LIGHT_BLUE, BG_COLOR);
         loc = sdl_render_printf(0, ROW2Y(8), "Devel_Port = %d", params.devel_port);
         sdl_register_event(loc, EVID_DEVEL_PORT);
-        sdl_print_init(-1, COLOR_WHITE, BG_COLOR);
 
-        sdl_print_init(-1, COLOR_LIGHT_BLUE, BG_COLOR);
+        sdl_print_init_color(COLOR_LIGHT_BLUE, BG_COLOR);
         loc = sdl_render_printf(0, ROW2Y(10), "Reset_Apps");
         sdl_register_event(loc, EVID_RESET_APPS);
-        sdl_print_init(-1, COLOR_WHITE, BG_COLOR);
 
-        sdl_print_init(-1, COLOR_LIGHT_BLUE, BG_COLOR);
+        sdl_print_init_color(COLOR_LIGHT_BLUE, BG_COLOR);
         size = log_size();
         if (size < 1000000) {
             loc = sdl_render_printf(0, ROW2Y(12), "Clear_Log sz=%d", size);
@@ -669,7 +651,6 @@ static void settings(void)
             loc = sdl_render_printf(0, ROW2Y(12), "Clear_Log sz=%d M", size/1000000);
         }
         sdl_register_event(loc, EVID_LOG_FILE_CLEAR);
-        sdl_print_init(-1, COLOR_WHITE, BG_COLOR);
 
         if (msg && (util_microsec_timer() - msg_time) < 3000000) {
             sdl_render_printf(0, sdl_win_height-400, "%s", msg);
@@ -677,9 +658,8 @@ static void settings(void)
             sdl_render_printf(0, sdl_win_height-400, "%s:%d", ipaddr, params.devel_port);
         }
 
-        sdl_print_init(LARGE_FONTSZ, COLOR_WHITE, BG_COLOR);
-        DISPLAY_CONTROL_ITEM(2,"X",EVID_QUIT);
-        sdl_print_init(DEFAULT_FONTSZ, COLOR_WHITE, BG_COLOR);
+        // xxx comments
+        sdl_register_control_events(NULL, NULL, "X", BG_COLOR);
 
         sdl_display_present();
 
@@ -733,7 +713,7 @@ static void settings(void)
         case EVID_COPYRIGHT:
             copyright();
             break;
-        case EVID_QUIT:
+        case EVID_EXIT: case EVID_QUIT:
             quit = true;
             break;
         }
@@ -764,11 +744,13 @@ void copyright(void)
 
     while (true) {
         sdl_display_init(BG_COLOR);
-        sdl_print_init(40, COLOR_WHITE, BG_COLOR);
+        sdl_print_init(SMALLEST_FONT, COLOR_WHITE, BG_COLOR);
         sdl_register_event(NULL, EVID_MOTION);
         sdl_render_multiline_text(y_top, y_display_begin, y_display_end, str);
-        sdl_print_init(LARGE_FONTSZ, COLOR_WHITE, BG_COLOR);
-        DISPLAY_CONTROL_ITEM(2,"X",EVID_QUIT);
+
+        // xxx
+        sdl_register_control_events(NULL, NULL, "X", BG_COLOR);
+
         sdl_display_present();
 
         sdl_get_event(-1, &event);
@@ -779,7 +761,7 @@ void copyright(void)
                 y_top = y_display_begin;
             }
             break;
-        case EVID_QUIT:
+        case EVID_QUIT: case EVID_EXIT:
             quit = true;
             break;
         }

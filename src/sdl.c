@@ -242,6 +242,38 @@ void sdl_register_event(sdl_loc_t *loc, int event_id)
     max_event++;
 }
 
+//xxx check this
+void sdl_register_control_events(char *ev1, char *ev2, char *ev3, int bg_color)
+{
+    sdl_loc_t *loc;
+    int i, x, y;
+    char *ev[3];
+    sdl_print_state_t print_state;
+
+    ev[0] = ev1;
+    ev[1] = ev2;
+    ev[2] = ev3;
+
+    sdl_print_save(&print_state);
+
+#define LARGE_FONTSZ    10
+
+    sdl_print_init(LARGE_FONTSZ, COLOR_WHITE, bg_color);
+
+    for (i = 0; i < 3; i++) {
+        if (ev[i] == NULL) {
+            continue;
+        }
+
+        x = (sdl_win_width/3/2) + i * (sdl_win_width/3);
+        y = sdl_win_height - sdl_char_height/2;
+        loc = sdl_render_text_xyctr(x, y, ev[i]);
+        sdl_register_event(loc, EVID_CONTROL_EVENT_1+i);
+    }
+
+    sdl_print_restore(&print_state);
+}
+
 // arg timeout_us:
 //   -1:     wait forever
 //    0:     don't wait
@@ -573,13 +605,32 @@ static struct {
     SDL_Color bg_color;
 } text;
 
+void sdl_print_save(sdl_print_state_t *save)
+{
+    //*save = text;
+    memcpy(save, &text, sizeof(text));
+}
+
+void sdl_print_restore(sdl_print_state_t *restore)
+{
+    //text = *restore;
+    memcpy(&text, restore, sizeof(text));
+}
+
+void sdl_print_init_color(int fg_color, int bg_color)
+{
+    // save new font color
+    memcpy(&text.fg_color, &fg_color, 4);
+    memcpy(&text.bg_color, &bg_color, 4);
+}
+
 void sdl_print_init(double numchars, int fg_color, int bg_color)
 {
     int ptsize;
     double chw_fp, chh_fp;
 
     // if numchars is -1 then the font size is not being changed 
-    if (numchars == -1) {
+    if (numchars == -1) { // xxx del
         goto change_font_color;
     }
 
@@ -605,7 +656,7 @@ void sdl_print_init(double numchars, int fg_color, int bg_color)
 
     // save new point size and character width/height
     text.ptsize = ptsize;
-    sdl_char_width  = rint(sdl_win_width / numchars);
+    sdl_char_width  = rint(sdl_win_width / numchars);  // xxx nearbyint
     sdl_char_height = rint(sdl_char_width / 0.6);
 
 change_font_color:
