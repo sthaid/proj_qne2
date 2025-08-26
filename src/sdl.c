@@ -11,6 +11,9 @@
 // - read pixels routine ? 
 // - use of rint vs nearbyint
 // - try SDL_SetRenderLogicalPresentation
+// xxx review sdl3 port
+// - routines now return succ
+// - and use of floats instead of ints
 
 //
 // font defines
@@ -68,6 +71,19 @@ static bool             evid_keybd_registered;
 
 static void process_sdl_event(SDL_Event *ev, sdl_event_t *event);
 static void set_render_draw_color(int color);
+
+//
+// inline routines
+//
+
+//xxx static assert
+// xxx [-Werror=strict-aliasing]
+static inline SDL_Color sdl_color(int color)
+{
+    SDL_Color val;
+    memcpy(&val, &color, sizeof(color));
+    return val;
+}
 
 // ----------------- INIT / EXIT --------------------------
 
@@ -237,31 +253,36 @@ void sdl_register_event(sdl_loc_t *loc, int event_id)
     max_event++;
 }
 
-//XXX xxx check this code
-void sdl_register_control_events(char *ev1, char *ev2, char *ev3, int bg_color)
+void sdl_register_control_events(char *evstr1, char *evstr2, char *evstr3, int bg_color,
+                                 int evid1, int evid2, int evid3)
 {
     sdl_loc_t *loc;
     int i, x, y;
-    char *ev[3];
+    char *evstr[3];
+    int  evid[3];
     sdl_print_state_t print_state;
 
-    ev[0] = ev1;
-    ev[1] = ev2;
-    ev[2] = ev3;
+    evstr[0] = evstr1;
+    evstr[1] = evstr2;
+    evstr[2] = evstr3;
+
+    evid[0] = evid1;
+    evid[1] = evid2;
+    evid[2] = evid3;
 
     sdl_print_save(&print_state);
 
     sdl_print_init(LARGE_FONT, COLOR_WHITE, bg_color);
 
     for (i = 0; i < 3; i++) {
-        if (ev[i] == NULL) {
+        if (evstr[i] == NULL) {
             continue;
         }
 
         x = (sdl_win_width/3/2) + i * (sdl_win_width/3);
         y = sdl_win_height - sdl_char_height/2;
-        loc = sdl_render_text_xyctr(x, y, ev[i]);
-        sdl_register_event(loc, EVID_CONTROL_EVENT_1+i);
+        loc = sdl_render_text_xyctr(x, y, evstr[i]);
+        sdl_register_event(loc, evid[i]);
     }
 
     sdl_print_restore(&print_state);
@@ -596,6 +617,8 @@ void sdl_print_save(sdl_print_state_t *save)
 void sdl_print_restore(sdl_print_state_t *restore)
 {
     print_state = *restore;
+    sdl_char_width = print_state.char_width;
+    sdl_char_height = print_state.char_height;
 }
 
 void sdl_print_init_color(int fg_color, int bg_color)
@@ -629,12 +652,14 @@ void sdl_print_init(double numchars, int fg_color, int bg_color)
         }
     }
 
-    // save new point size and character width/height
-    print_state.ptsize = ptsize;
+    // save new point size and character width/height xxx comment
     sdl_char_width  = rint(sdl_win_width / numchars);  // xxx nearbyint
     sdl_char_height = rint(sdl_char_width / 0.6);
 
-    // save new font color
+    // save new font color xxx comment
+    print_state.ptsize = ptsize;
+    print_state.char_width = sdl_char_width;
+    print_state.char_height = sdl_char_height;
     print_state.fg_color = fg_color;
     print_state.bg_color = bg_color;
 }
@@ -663,8 +688,8 @@ static sdl_loc_t *render_text(bool xy_is_ctr, int x, int y, char * str)
 
     // render the string to a surface
     surface = TTF_RenderText_Shaded(font[print_state.ptsize], str, 0, 
-                                         *(SDL_Color*)&print_state.fg_color, 
-                                         *(SDL_Color*)&print_state.bg_color);
+                                         sdl_color(print_state.fg_color), 
+                                         sdl_color(print_state.bg_color));
     if (surface == NULL) {
         ERROR("TTF_RenderText_Shaded returned NULL\n");
         loc.x = x; loc.y = y; loc.w = 0; loc.h = 0;
@@ -1179,8 +1204,8 @@ sdl_texture_t *sdl_create_text_texture(char * str)
     // create a texture from the surface
     // free the surface
     surface = TTF_RenderText_Shaded(font[print_state.ptsize], str, 0, 
-                                    *(SDL_Color*)&print_state.fg_color, 
-                                    *(SDL_Color*)&print_state.bg_color);
+                                    sdl_color(print_state.fg_color), 
+                                    sdl_color(print_state.bg_color));
     if (surface == NULL) {
         ERROR("failed to allocate surface\n");
         return NULL;

@@ -64,6 +64,20 @@ void Sdl_register_event (struct ParseState *Parser, struct Value *ReturnValue,
     sdl_register_event(loc, event_id);
 }
 
+void Sdl_register_control_events (struct ParseState *Parser, struct Value *ReturnValue,
+	struct Value **Param, int NumArgs)
+{
+    char *evstr1   = (char*)Param[0]->Val->Pointer;
+    char *evstr2   = (char*)Param[1]->Val->Pointer;
+    char *evstr3   = (char*)Param[2]->Val->Pointer;
+    int   bg_color = Param[3]->Val->Integer;
+    int   evid1    = Param[4]->Val->Integer;
+    int   evid2    = Param[5]->Val->Integer;
+    int   evid3    = Param[6]->Val->Integer;
+
+    sdl_register_control_events(evstr1, evstr2, evstr3, bg_color, evid1, evid2, evid3);
+}
+
 void Sdl_get_event (struct ParseState *Parser, struct Value *ReturnValue,
 	struct Value **Param, int NumArgs)
 {
@@ -126,6 +140,31 @@ void Sdl_print_init (struct ParseState *Parser, struct Value *ReturnValue,
     int    bg_color = Param[2]->Val->Integer;
 
     sdl_print_init(numchars, fg_color, bg_color);
+}
+
+void Sdl_print_init_color (struct ParseState *Parser, struct Value *ReturnValue,
+	struct Value **Param, int NumArgs)
+{
+    int fg_color = Param[0]->Val->Integer;
+    int bg_color = Param[1]->Val->Integer;
+
+    sdl_print_init_color(fg_color, bg_color);
+}
+
+void Sdl_print_save (struct ParseState *Parser, struct Value *ReturnValue,
+	struct Value **Param, int NumArgs)
+{
+    sdl_print_state_t *print_state = (sdl_print_state_t*)Param[0]->Val->Pointer;
+
+    sdl_print_save(print_state);
+}
+
+void Sdl_print_restore (struct ParseState *Parser, struct Value *ReturnValue,
+	struct Value **Param, int NumArgs)
+{
+    sdl_print_state_t *print_state = (sdl_print_state_t*)Param[0]->Val->Pointer;
+
+    sdl_print_restore(print_state);
 }
 
 void Sdl_render_text (struct ParseState *Parser, struct Value *ReturnValue,
@@ -534,6 +573,8 @@ struct LibraryFunction SdlFunctions[] = {
 
     // event registration and query
     { Sdl_register_event,  "void sdl_register_event(sdl_loc_t *loc, int event_id);" },
+    { Sdl_register_control_events, 
+                           "void sdl_register_control_events(char *evstr1, char *evstr2, char *evstr3, int bg_color, int evid1, int evid2, int evid3); " },
     { Sdl_get_event,       "void sdl_get_event(long timeout_us, sdl_event_t *event);" },
 
     // create colors
@@ -543,6 +584,9 @@ struct LibraryFunction SdlFunctions[] = {
 
     // render text
     { Sdl_print_init,              "void sdl_print_init(double numchars, int fg_color, int bg_color);" },
+    { Sdl_print_init_color,        "void sdl_print_init_color(int fg_color, int bg_color);" },
+    { Sdl_print_save,              "void sdl_print_save(sdl_print_state_t *save);" },
+    { Sdl_print_restore,           "void sdl_print_restore(sdl_print_state_t *restore);" },
     { Sdl_render_text,             "sdl_loc_t *sdl_render_text(int x, int y, char *str);" },
     { Sdl_render_printf,           "sdl_loc_t *sdl_render_printf(int x, int y, char *fmt, ...);" },
     { Sdl_render_text_xyctr,       "sdl_loc_t *sdl_render_text_xyctr(int x, int y, char *str);" },
@@ -631,6 +675,13 @@ typedef struct { \n\
     int   nptype; \n\
     char *name; \n\
 } sdl_sensor_info_t; \n\
+typedef struct { \n\
+    int ptsize; \n\
+    int char_width; \n\
+    int char_height; \n\
+    int bg_color; \n\
+    int fg_color; \n\
+} sdl_print_state_t; \n\
 \n\
 #define PIXELS_MAGIC 0x11223344 \n\
 \n\
@@ -651,6 +702,9 @@ typedef struct { \n\
 #define COLOR_LIGHT_GRAY ( 192  |  192<<8 |  192<<16 |  255<<24 ) \n\
 #define COLOR_GRAY       ( 128  |  128<<8 |  128<<16 |  255<<24 ) \n\
 #define COLOR_DARK_GRAY  (  64  |   64<<8 |   64<<16 |  255<<24 ) \n\
+\n\
+#define ROW2Y(r) ((r) * sdl_char_height) \n\
+#define COL2X(c) ((c) * sdl_char_width) \n\
 \n\
 #define EVID_SWIPE_RIGHT       9990 \n\
 #define EVID_SWIPE_LEFT        9991 \n\

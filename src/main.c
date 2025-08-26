@@ -8,11 +8,15 @@
 #include <SDL3/SDL.h>
 #endif
 
+// xxx
+// - update comments throughout
+// - version string
+
 //
 // defines
 //
 
-#define VERSION "0.0" //xxx todo
+#define VERSION "1.0"
 
 #ifdef ANDROID
 #define MAIN SDL_main
@@ -242,6 +246,7 @@ static char *apps[MAX_APPS];
 static int   max_apps;
 static int   page;
 
+static void run_app(int id);
 static void display_menu(void);
 static void get_list_of_apps(void);
 static void settings(void);
@@ -287,52 +292,56 @@ static void processing(void)
                 page = 0;
             }
         } else if (event.event_id >= 0 && event.event_id <= max_apps-1) {
-            char           app_dir[100], picoc_args[1000];
-            int            id = event.event_id;
-            int            rc;
-            DIR           *dir;
-            struct dirent *dirent;
-
-            // XXX too much indentation here
+            int id = event.event_id;
             if (apps[id] == NULL) {
                 ERROR("apps[%d] is NULL\n", id);
+            } else if (strcmp(apps[id], "Settings") == 0) {
+                settings();
             } else {
-                INFO("running %s\n", apps[id]);
-
- //xxx del           sdl_print_init(DEFAULT_FONT, COLOR_WHITE, COLOR_BLACK);
-
-                if (strcmp(apps[id], "Settings") == 0) {
-                    settings();
-                } else {
-                    sprintf(app_dir, "apps/%s", apps[id]);
-                    chdir(app_dir);
-
-                    // construct list of *.c files in this dir
-                    picoc_args[0] = '\0';
-                    dir = opendir(".");
-                    while ((dirent = readdir(dir)) != NULL) {
-                        char *fn = dirent->d_name;
-                        int len = strlen(fn);
-                        if (len > 2 && strcmp(fn+len-2, ".c") == 0) {
-                            strcat(picoc_args, fn);
-                            strcat(picoc_args, " ");
-                        }
-                    }
-                    closedir(dir);
-
-                    if (picoc_args[0] != '\0') {
-                        INFO("picoc_args = %s\n", picoc_args);
-                        rc = picoc_fg(picoc_args);  // args
-                        INFO("done %s, rc=%d\n", apps[id], rc);
-                    } else {
-                        ERROR("no source code in %s\n", app_dir);
-                    }
-
-                    chdir(storage_path);
-                }
+                run_app(id);
             }
         }
     }
+}
+
+static void run_app(int id)
+{
+    char           app_dir[100], picoc_args[1000];
+    int            rc;
+    DIR           *dir;
+    struct dirent *dirent;
+
+    INFO("running %s\n", apps[id]);
+
+    // chdir to the directory containing the app files
+    sprintf(app_dir, "apps/%s", apps[id]);
+    chdir(app_dir);
+
+    // construct list of *.c files in this dir
+    picoc_args[0] = '\0';
+    dir = opendir(".");
+    while ((dirent = readdir(dir)) != NULL) {
+        char *fn = dirent->d_name;
+        int len = strlen(fn);
+        if (len > 2 && strcmp(fn+len-2, ".c") == 0) {
+            strcat(picoc_args, fn);
+            strcat(picoc_args, " ");
+        }
+    }
+    closedir(dir);
+
+    // if list of *.c files is empty then error
+    // else run the app using the picoc c language interpreter
+    if (picoc_args[0] != '\0') {
+        ERROR("no source code in %s\n", app_dir);
+    } else {
+        INFO("picoc_args = %s\n", picoc_args);
+        rc = picoc_fg(picoc_args);  // args
+        INFO("done %s, rc=%d\n", apps[id], rc);
+    }
+
+    // chdir back to storage_path, which is the 'files' dir
+    chdir(storage_path);
 }
 
 // -----------------  DISPLAY MENU  -------------------------------
@@ -362,7 +371,7 @@ static void display_menu(void)
 
     if (LAST_PAGE > 0) {
         sdl_print_save(&print_state);
-        sdl_print_init(SMALL_FONT, COLOR_WHITE, BG_COLOR); //xxx call it print_set
+        sdl_print_init(SMALL_FONT, COLOR_WHITE, BG_COLOR);
         sdl_render_printf_xyctr(sdl_win_width/2, sdl_char_height/2, "Page %d", page);
         sdl_print_restore(&print_state);
     }
@@ -435,7 +444,14 @@ static void display_menu(void)
 
 // -----------------  GET LIST OF APPS  ---------------------------
 
-// xxx explain this
+// The list of apps is created from either:
+// - the 'layout' file, if that file exists, or
+// - the subdirectoires of apps dir; in this case the apps
+//   are displayed in alphabetic order
+// 
+// Using the 'layout' file provides the ability to organize the 
+// location of the apps.
+
 static void get_list_of_apps_from_layout_file(char *layout_file_path);
 static void get_list_of_apps_from_apps_dirs(char *apps_dir_path);
 
@@ -589,11 +605,6 @@ static void get_list_of_apps_from_apps_dirs(char *apps_dir_path)
 
 // -----------------  SETTINGS  -----------------------------------
 
-// XXX xxx include in picoc ?
-#define ROW2Y(r) ((r) * sdl_char_height)  // xxx ctr vs ...
-#define ROW2Y_CTR(r) ((r) * sdl_char_height + sdl_char_height/2)
-#define NK2X(n,k) ((sdl_win_width/2/(n)) + (k) * (sdl_win_width/(n)))
-
 static void copyright(void);
 
 static void settings(void)
@@ -618,16 +629,16 @@ static void settings(void)
 
     // handle the setting display
     while (true) {
-        // init and display title
+        // init disaplay and display title line
         sdl_display_init(BG_COLOR);
         sdl_print_init(DEFAULT_FONT, COLOR_WHITE, BG_COLOR);
         sdl_render_text_xyctr(sdl_win_width/2, sdl_char_height/2, "Settings");
 
         // display version
-        sdl_render_printf(0, ROW2Y(2), "Version = %s", VERSION);  // xxx add support for VERSION
+        sdl_render_printf(0, ROW2Y(2), "Version = %s", VERSION);
 
         // init print color to COLOR_LIGHT_BLUE for the following,
-        // because these all can be selected
+        // because these all are selectable
         sdl_print_init_color(COLOR_LIGHT_BLUE, BG_COLOR);
 
         // display Copyright
@@ -655,7 +666,11 @@ static void settings(void)
         }
         sdl_register_event(loc, EVID_LOG_FILE_CLEAR);
 
-        // if a message is requested for display then do so
+        // change print color back to white
+        sdl_print_init_color(COLOR_WHITE, BG_COLOR);
+
+        // if a message is requested for display then do so;
+        // otherwise, when in developer mode, display ipaddr:port
         if (msg && (util_microsec_timer() - msg_time) < 3000000) {
             sdl_render_printf(0, sdl_win_height-400, "%s", msg);
         } else if (params.devel_mode) {
@@ -690,7 +705,6 @@ static void settings(void)
             char *str; 
             int cnt, port;
             str = sdl_get_input_str("Port?", true, BG_COLOR);
-            INFO("GOT STR '%s'\n", str);
             cnt = sscanf(str, "%d", &port);
             if (cnt == 1 && (port >= 1024 && port <= 49151)) {
                 params.devel_port = port;
@@ -704,9 +718,7 @@ static void settings(void)
         case EVID_RESET_APPS: {
             char *str; 
             str = sdl_get_input_str("Reset Apps y/n?", false, BG_COLOR);
-            INFO("GOT STR '%s'\n", str);
             if (strcasecmp(str, "y") == 0) {
-                INFO("resetting apps\n");
                 create_default_apps();
                 msg = "Apps are reset.";
                 msg_time = util_microsec_timer();

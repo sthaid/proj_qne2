@@ -14,17 +14,10 @@
 // defines
 //
 
-#define MAX_PAGE 10
-
-// xxx check these
-#define ROW2Y(r) ((r) * sdl_char_height)  // xxx ctr vs ...
-#define ROW2Y_CTR(r) ((r) * sdl_char_height + sdl_char_height/2)
-#define NK2X(n,k) ((sdl_win_width/2/(n)) + (k) * (sdl_win_width/(n)))
-
-// events common to all pages
-#define EVID_PREV_PAGE   1
-#define EVID_NEXT_PAGE   2
-#define EVID_END_PROGRAM 3
+#define SMALLEST_FONT 40
+#define SMALL_FONT    30
+#define DEFAULT_FONT  20
+#define LARGE_FONT    10
 
 //
 // variables
@@ -116,7 +109,7 @@ int main(int argc, char **argv)
 
 // -----------------  SUPPORT PROCS FOR ALL PAGES  ------------
 
-// xxx check this
+// xxx check this about picoc
 // picoc: picoc does not support this being static, causes crash
 char *page_title[] = {   // Page
         "Unit Test",     //   0
@@ -132,13 +125,17 @@ char *page_title[] = {   // Page
             };
 static int pagenum = 0;
 
+#define MAX_PAGE 10
+
+#define EVID_PREV_PAGE 1
+#define EVID_NEXT_PAGE 2
+
 static void page_hndlr()
 {
     sdl_event_t event;
-    sdl_loc_t  *loc;
     int         new_pagenum = -1;
 
-    sdl_print_init(20, COLOR_WHITE, COLOR_BLACK);
+    sdl_print_init(DEFAULT_FONT, COLOR_WHITE, COLOR_BLACK);
 
     // call the page specific init routine, if provided
     switch (pagenum) {
@@ -154,21 +151,15 @@ static void page_hndlr()
         sdl_display_init(COLOR_BLACK);
 
         // draw title line
-        sdl_print_init(20, COLOR_WHITE, COLOR_BLACK);
-        sdl_render_text_xyctr(NK2X(1,0), ROW2Y_CTR(0), page_title[pagenum]);
+        sdl_print_init(DEFAULT_FONT, COLOR_WHITE, COLOR_BLACK);
+        sdl_render_text_xyctr(sdl_win_width/2, sdl_char_height/2, page_title[pagenum]);
 
-        // render text and register events for the following:
+        // register control events
         // "<" - previous page
         // ">" - next page
         // 'X' - end prorgram
-        sdl_print_init(10, COLOR_WHITE, COLOR_BLACK);
-        loc = sdl_render_printf_xyctr(NK2X(3,0), sdl_win_height-sdl_char_height/2, "%s", "<");
-        sdl_register_event(loc, EVID_PREV_PAGE);
-        loc = sdl_render_printf_xyctr(NK2X(3,1), sdl_win_height-sdl_char_height/2, "%s", ">");
-        sdl_register_event(loc, EVID_NEXT_PAGE);
-        loc = sdl_render_printf_xyctr(NK2X(3,2), sdl_win_height-sdl_char_height/2, "%s", "X");
-        sdl_register_event(loc, EVID_END_PROGRAM);
-        sdl_print_init(20, COLOR_WHITE, COLOR_BLACK);
+        sdl_register_control_events("<", ">", "X", COLOR_BLACK,
+                                    EVID_PREV_PAGE, EVID_NEXT_PAGE, EVID_QUIT);
 
         // draw display
         switch (pagenum) {
@@ -200,7 +191,7 @@ static void page_hndlr()
 
         // process common events
         switch (event.event_id) {
-        case EVID_QUIT: case EVID_END_PROGRAM:
+        case EVID_QUIT:
             end_program = true;
             break;      
         case EVID_SWIPE_RIGHT: case EVID_PREV_PAGE:
@@ -209,7 +200,7 @@ static void page_hndlr()
                 new_pagenum = MAX_PAGE-1;
             }
             break;      
-        case EVID_SWIPE_LEFT: case EVID_NEXT_PAGE:
+        case EVID_SWIPE_LEFT: case EVID_NEXT_PAGE:  // XXX xxx register for these swipe events  NO motion if swipe reg
             new_pagenum = pagenum + 1;
             if (new_pagenum >= MAX_PAGE) {
                 new_pagenum = 0;
@@ -319,7 +310,7 @@ static void page_2_draw(void)
 
 // -----------------  PAGE 3: MULTI LINE TEXT  ----------------
 
-// xxx not working correctly, probably scaling problem
+// XXX xxx not working correctly, probably scaling problem
 
 // This tests both
 // - sdl_render_multiline_text, and
@@ -558,8 +549,6 @@ static void color_test(int idx, char *color_name, int color)
 
 // -----------------  PAGE 7: AUDIO  --------------------------
 
-// xxx stop audio when exit page
-
 #define EVID_AUDIO_PLAY_TONE        10
 #define EVID_AUDIO_PLAY_FREQ_SWEEP  11
 #define EVID_AUDIO_PLAY_SQUARE_WAVE 12
@@ -598,15 +587,15 @@ static void page_7_draw(void)
     // record section
     //
 
-    sdl_print_init(-1, state.state == AUDIO_STATE_RECORD ? COLOR_RED : COLOR_WHITE, COLOR_BLACK);
+    sdl_print_init_color(state.state == AUDIO_STATE_RECORD ? COLOR_RED : COLOR_WHITE, COLOR_BLACK);
     loc = sdl_render_text(0, 200, "RECORD");
     sdl_register_event(loc, EVID_AUDIO_RECORD);
-    sdl_print_init(-1, COLOR_WHITE, COLOR_BLACK);
 
-    sdl_print_init(-1, state.state == AUDIO_STATE_RECORD_APPEND ? COLOR_RED : COLOR_WHITE, COLOR_BLACK);
+    sdl_print_init_color(state.state == AUDIO_STATE_RECORD_APPEND ? COLOR_RED : COLOR_WHITE, COLOR_BLACK);
     loc = sdl_render_text(sdl_win_width/2, 200, "APPEND");
     sdl_register_event(loc, EVID_AUDIO_RECORD_APPEND);
-    sdl_print_init(-1, COLOR_WHITE, COLOR_BLACK);
+
+    sdl_print_init_color(COLOR_WHITE, COLOR_BLACK);
 
     //
     // play section
@@ -614,7 +603,7 @@ static void page_7_draw(void)
 
     y = 400;
 
-    sdl_render_text_xyctr(NK2X(1,0), y, "--- PLAY ---");
+    sdl_render_text_xyctr(sdl_win_width/2, y, "--- PLAY ---");
     y += 150;
 
     loc = sdl_render_text(0, y, "RECORDING");
@@ -820,7 +809,7 @@ static void generate_morse_code_tones(sdl_tone_t **t, char *letters)
                 add_tone(t, MORSE_FREQ, intvl);
                 add_gap(t, 1);
             }
-            add_gap(t, 2);  // xxx update_gap
+            add_gap(t, 2);
         } else if (ch == ' ') {
             add_gap(t, 4);
         }
@@ -849,13 +838,13 @@ static void page_8_init(void)
 
     for (int i = 0; i < max_sit; i++) {
         sprintf(str, "%2d %2d %2d %s", sit[i].id, sit[i].sdltype, sit[i].nptype, sit[i].name);
-        sit_lines[i] = strdup(str);  // xxx need to free
+        sit_lines[i] = strdup(str);
     }
 }
 
 static void page_8_draw(void)
 {
-    sdl_print_init(30, COLOR_WHITE, COLOR_BLACK);
+    sdl_print_init(SMALL_FONT, COLOR_WHITE, COLOR_BLACK);
     sdl_render_multiline_text_2(y_top, y_display_begin, y_display_end, sit_lines, max_sit);
 }
 
@@ -903,13 +892,16 @@ static void page_9_init(void)
 static void page_9_draw(void)
 {
     double val[3];
+    int row = 2;
 
-    sdl_print_init(30, COLOR_WHITE, COLOR_BLACK);
+    sdl_print_init(SMALL_FONT, COLOR_WHITE, COLOR_BLACK);
 
     for (int i = 0; i < MAX_SENSOR_TEST_TBL; i++) {
         struct sensor_test_s *x = &sensor_test_tbl[i];
-        sdl_sensor_read(x->sensor, val, 3);
-        sdl_render_printf(0, ROW2Y(i+2), "%-8s %6.2f %6.2f %6.2f", x->name, val[0], val[1], val[2]);
+        if (x->sensor) {
+            sdl_sensor_read(x->sensor, val, 3);
+            sdl_render_printf(0, ROW2Y(row++), "%-8s %6.2f %6.2f %6.2f", x->name, val[0], val[1], val[2]);
+        }
     }
 }
 

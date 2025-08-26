@@ -1,3 +1,39 @@
+typedef struct {
+    int ptsize;
+    int bg_color;
+    int fg_color;
+} sdl_print_state_t;
+
+void sdl_print_init(double numchars, int fg_color, int bg_color);
+void sdl_print_init_color(int fg_color, int bg_color);
+void sdl_print_save(sdl_print_state_t *save);
+void sdl_print_restore(sdl_print_state_t *restore);
+
+void sdl_register_control_events(char *ev1, char *ev2, char *ev3, int bg_color);
+
+#define ROW2Y(r) ((r) * sdl_char_height)
+#define COL2X(c) ((c) * sdl_char_width)
+
+
+
+// xx use these in unit test code, as well as swipe event
+void sdl_print_init_color(int fg_color, int bg_color);
+void sdl_print_save(sdl_print_state_t *save);
+void sdl_print_restore(sdl_print_state_t *restore);
+void sdl_register_control_events(char *ev1, char *ev2, char *ev3, int bg_color);
+
+
+
+ezput tool, the layout file
+
+update test program to use the swipe events, and the motion event
+
+updaes to picoc ...
+
+primes benchmark
+
+rename sdl_print_init to sdl_print_set
+
 bottom row controls
 
 copyright formatting ?
@@ -19,6 +55,8 @@ exclude recording.raw
 recording static
 
 xxxxxxxxxxxxxxxx
+
+try doxygen
 
 
 ------------
