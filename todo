@@ -1,3 +1,8 @@
+get rid of CONTROL_EVIDs
+ROW2Y
+
+xxxxxxxxxxx
+
 typedef struct {
     int ptsize;
     int bg_color;
@@ -23,6 +28,8 @@ void sdl_print_restore(sdl_print_state_t *restore);
 void sdl_register_control_events(char *ev1, char *ev2, char *ev3, int bg_color);
 
 
+
+does make clean work
 
 ezput tool, the layout file
 

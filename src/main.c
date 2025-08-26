@@ -36,9 +36,8 @@
 #define DEFAULT_FONT  20
 #define LARGE_FONT    10
 
-#define EVID_PAGE_DECREMENT  EVID_CONTROL_EVENT_1
-#define EVID_PAGE_INCREMENT  EVID_CONTROL_EVENT_2
-#define EVID_EXIT            EVID_CONTROL_EVENT_3
+#define EVID_PAGE_DECREMENT  900
+#define EVID_PAGE_INCREMENT  901
 
 #define TEN_MS  10000
 #define ONE_SEC 1000000
@@ -265,9 +264,10 @@ static void processing(void)
 
         // register for screen bottom control events
         if (LAST_PAGE > 0) {
-            sdl_register_control_events("<", ">", "X", BG_COLOR);
+            sdl_register_control_events("<", ">", "X", BG_COLOR,
+                                        EVID_PAGE_DECREMENT, EVID_PAGE_INCREMENT, EVID_QUIT);
         } else {
-            sdl_register_control_events(NULL, NULL, "X", BG_COLOR);
+            sdl_register_control_events(NULL, NULL, "X", BG_COLOR, 0, 0, EVID_QUIT);
         }
 
         // update the display
@@ -281,7 +281,7 @@ static void processing(void)
 
         // process the event
         INFO("proc event_id %d\n", event.event_id);
-        if (event.event_id == EVID_EXIT || event.event_id == EVID_QUIT) {
+        if (event.event_id == EVID_QUIT) {
             break;
         } else if (event.event_id == EVID_PAGE_DECREMENT) {
             if (--page < 0) {
@@ -332,7 +332,7 @@ static void run_app(int id)
 
     // if list of *.c files is empty then error
     // else run the app using the picoc c language interpreter
-    if (picoc_args[0] != '\0') {
+    if (picoc_args[0] == '\0') {
         ERROR("no source code in %s\n", app_dir);
     } else {
         INFO("picoc_args = %s\n", picoc_args);
@@ -678,7 +678,7 @@ static void settings(void)
         }
 
         // display the control event 'X' to exit this screen
-        sdl_register_control_events(NULL, NULL, "X", BG_COLOR);
+        sdl_register_control_events(NULL, NULL, "X", BG_COLOR, 0, 0, EVID_QUIT);
 
         // present the display
         sdl_display_present();
@@ -732,7 +732,7 @@ static void settings(void)
         case EVID_COPYRIGHT:
             copyright();
             break;
-        case EVID_EXIT: case EVID_QUIT:
+        case EVID_QUIT:
             quit = true;
             break;
         }
@@ -770,7 +770,7 @@ static void copyright(void)
         sdl_print_init(SMALLEST_FONT, COLOR_WHITE, BG_COLOR);
         sdl_register_event(NULL, EVID_MOTION);
         sdl_render_multiline_text(y_top, y_display_begin, y_display_end, str);
-        sdl_register_control_events(NULL, NULL, "X", BG_COLOR);
+        sdl_register_control_events(NULL, NULL, "X", BG_COLOR, 0, 0, EVID_QUIT);
         sdl_display_present();
 
         sdl_get_event(-1, &event);
@@ -781,7 +781,7 @@ static void copyright(void)
                 y_top = y_display_begin;
             }
             break;
-        case EVID_QUIT: case EVID_EXIT:
+        case EVID_QUIT:
             quit = true;
             break;
         }

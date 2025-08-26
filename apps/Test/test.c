@@ -130,6 +130,7 @@ static int pagenum = 0;
 #define EVID_PREV_PAGE 1
 #define EVID_NEXT_PAGE 2
 
+// xxx test the save and restore print state
 static void page_hndlr()
 {
     sdl_event_t event;
