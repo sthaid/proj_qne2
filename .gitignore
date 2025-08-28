@@ -10,7 +10,8 @@ tools/ezsh
 picoc/my_tests
 
 linux/ezApp
-linux/files/*
+linux/files
+linux/assets
 
 android/SDL3-3.2.20
 android/SDL

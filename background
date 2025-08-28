@@ -1,0 +1,181 @@
+TODO
+- should SDL logging be used instead, or in addition to mine?
+- dont write params file if value has not changed
+
+============================
+
+*** how to have android sdl3 app continue to run in background after exit
+
+SDL_APP_WILLENTERFOREGROUND
+SDL_EVENT_DID_ENTER_BACKGROUND
+SDL_EVENT_WILL_ENTER_FOREGROUND
+
+============================
+
+*** how to have android sdl3 app continue to run in background when paused
+
+By default, SDL3 sets SDL_HINT_ANDROID_BLOCK_ON_PAUSE to true, which causes 
+the event loop to block when the app is paused. To prevent this, set the hint to false:
+
+   SDL_SetHint(SDL_HINT_ANDROID_BLOCK_ON_PAUSE, "0");
+
+Handling Background Events:
+--------------------------
+When the app goes into the background, SDL sends SDL_APP_WILLENTERBACKGROUND and 
+SDL_APP_DIDENTERFOREGROUND events.
+
+Upon receiving SDL_APP_WILLENTERBACKGROUND, the GL context may be backed up, 
+and rendering operations should be avoided. If using an SDL renderer, set the
+render target to NULL (e.g., SDL_SetRenderTarget(renderer, NULL)).
+
+Upon receiving SDL_APP_DIDENTERFOREGROUND, the GL context is restored,
+and rendering can resume (unless SDL_RENDER_DEVICE_RESET is received,
+indicating a context loss).
+
+Battery Setting
+---------------
+Users can manually configure an app's battery usage settings to allow unrestricted 
+background usage. This is typically found in the device's "Settings" under "Apps" or "App battery usage."
+
+
+Pause App Activity If Unused:
+-----------------------------
+Some Android versions or device manufacturers offer a "Pause app activity if 
+unused" option that can automatically pause apps not actively used. Disabling 
+this for your app ensures it can continue running in the background.
+
+Using Android Services (for long-running tasks):
+------------------------------------------------
+For truly long-running background tasks, consider implementing an Android Service.
+Services are designed to run in the background independent of the user interface.
+
+A Service can be started as a "sticky" service (e.g., START_STICKY) to ensure it 
+restarts if killed by the OS.
+
+Within the Service, you can manage background operations and potentially use 
+AlarmManager to periodically restart the service if it gets terminated.
+
+---- hints ----
+
+// Each hint describes when it should be set, this one should be set before SDL is initialized.
+SDL_SetHint(SDL_HINT_APP_NAME, "My Game 2: The Revenge");
+
+SDL_hint.h
+
+grep "define SDL_HINT" SDL_hints.h  | egrep -v "ALSA|JOYSTICK|WINDOW|VIDEO|VITA|RENDER|AUDIO|MOUSE|TEXTINPUT|GAME"
+                                                   default     set-when
+SDL_HINT_AUTO_UPDATE_SENSORS                         "1"         anytime
+
+SDL_HINT_ANDROID_ALLOW_RECREATE_ACTIVITY             "0"         anytime
+* If this hint is true, the activity can be recreated on demand by the OS,
+ * and Java static data and C++ static data remain with their current values.
+ * If this hint is false, then SDL will call exit() when you return from your
+ * main function and the application will be terminated and then started fresh
+ * each time
+
+SDL_HINT_ANDROID_BLOCK_ON_PAUSE                      "1"          before SDL init
+ * A variable to control whether the event loop will block itself when the app
+ * is paused.
+
+SDL_HINT_ANDROID_TRAP_BACK_BUTTON                    "0"          anytime
+ * This is necessary for the right mouse button to work on some Android
+ * devices, or to be able to trap the back button for use in your code
+ * reliably. If this hint is true, the back button will show up as an
+ * SDL_EVENT_KEY_DOWN / SDL_EVENT_KEY_UP pair with a keycode of
+ * SDL_SCANCODE_AC_BACK.
+
+SDL_HINT_ENABLE_SCREEN_KEYBOARD                      "auto"      before StartTextInput
+ * A variable that controls whether the on-screen keyboard should be shown
+ * when text input is active.
+
+SDL_HINT_LOGGING
+ * A variable controlling the default SDL log levels.
+
+SDL_HINT_NO_SIGNAL_HANDLERS                            "0"        before SDL init
+ * Tell SDL not to catch the SIGINT or SIGTERM signals on POSIX platforms.
+ * The variable can be set to the following values:
+ * - "0": SDL will install a SIGINT and SIGTERM handler, and when it catches a
+ *   signal, convert it into an SDL_EVENT_QUIT event. (default)
+ * - "1": SDL will not install a signal handler at all.
+
+SDL_HINT_ORIENTATIONS
+ * A variable controlling which orientations are allowed on iOS/Android.
+
+SDL_HINT_THREAD_FORCE_REALTIME_TIME_CRITICAL
+ * Specifies whether SDL_THREAD_PRIORITY_TIME_CRITICAL should be treated as
+ * realtime.
+
+=============================
+
+*** can an android app maintain a network socket connection when the device is sleeping
+
+=============================
+
+*** how can sdl3 become a foreground service
+
+https://www.google.com/search?q=how+can+sdl3+become+a+foreground+service&oq=how+can+sdl3+become+a+foreground+service&gs_lcrp=EgZjaHJvbWUyBggAEEUYOTIHCAEQIRigATIHCAIQIRigATIHCAMQIRigATIHCAQQIRigAdIBCDkxMThqMGo3qAIIsAIB8QUL71J5V-qa8w&sourceid=chrome&ie=UTF-8
+
+    // Set the hint to force SDL to use a foreground service on Android
+    SDL_SetHint(SDL_HINT_ANDROID_FORCE_FOREGROUND_SERVICE, "1");
+
+<manifest ...>
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE"/>
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_YOUR_FOREGROUND_SERVICE_TYPE"/>
+    
+    <application ...>
+        <service android:name="org.libsdl.app.SDLForegroundService"
+                 android:foregroundServiceType="YOUR_FOREGROUND_SERVICE_TYPE"/>
+        
+        <!-- Other application components -->
+        <activity ...>
+            ...
+        </activity>
+    </application>
+</manifest>
+
+
+
+#include <SDL3/SDL.h>
+#include <iostream>
+
+void permissionCallback(void* userdata, const char* permission, SDL_bool granted) {
+    if (granted) {
+        std::cout << "Permission " << permission << " granted!" << std::endl;
+    } else {
+        std::cerr << "Permission " << permission << " denied." << std::endl;
+    }
+}
+
+// Inside your main() or a setup function:
+#ifdef SDL_PLATFORM_ANDROID
+    // Replace with the permission appropriate for your chosen foreground service type
+    SDL_RequestAndroidPermission("android.permission.FOREGROUND_SERVICE_YOUR_FOREGROUND_SERVICE_TYPE", permissionCallback, nullptr);
+#endif
+
+
+
+How it works
+When you set SDL_HINT_ANDROID_FORCE_FOREGROUND_SERVICE to "1", the SDL Android backend performs the following actions on your behalf: 
+It creates and manages a standard Android Service.
+It uses the Context.startForegroundService() method to start the service.
+It calls ServiceCompat.startForeground() inside the service, which requires a persistent notification. SDL handles the notification display. 
+This process keeps your SDL application running even if it is moved to the background, preventing the OS from pausing or stopping your process.
+Foreground service types are required - Android Developers
+May 29, 2025 — The system checks for proper use of foreground service types and confirms that the app has requested the proper runtime permissions or uses the required APIs. F...
+favicon
+Android Developers
+
+Understanding foreground service and full-screen intent requirements
+Foreground service requirements for Android 14. To help you identify which use cases are appropriate for foreground services and clearly define the intent of th...
+favicon
+Google Help
+Guide to Foreground Services on Android 14 - Medium
+Feb 10, 2024 — Make sure to have notifications set up correctly. When starting a foreground service it is required to provide a notification that will be visible to the user f...
+favicon
+Medium
+
+
+=====================================================
+
+https://medium.com/@nicosnicolaou/foreground-service-in-android-9ff18be69ef6

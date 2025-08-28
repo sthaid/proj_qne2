@@ -1,70 +1,38 @@
-get rid of CONTROL_EVIDs
-ROW2Y
+how to have android sdl3 app continue to run in background after exit
 
-xxxxxxxxxxx
+SDL_APP_WILLENTERFOREGROUND
+SDL_EVENT_DID_ENTER_BACKGROUND
+SDL_EVENT_WILL_ENTER_FOREGROUND
 
-typedef struct {
-    int ptsize;
-    int bg_color;
-    int fg_color;
-} sdl_print_state_t;
+=================
 
-void sdl_print_init(double numchars, int fg_color, int bg_color);
-void sdl_print_init_color(int fg_color, int bg_color);
-void sdl_print_save(sdl_print_state_t *save);
-void sdl_print_restore(sdl_print_state_t *restore);
-
-void sdl_register_control_events(char *ev1, char *ev2, char *ev3, int bg_color);
-
-#define ROW2Y(r) ((r) * sdl_char_height)
-#define COL2X(c) ((c) * sdl_char_width)
-
-
-
-// xx use these in unit test code, as well as swipe event
-void sdl_print_init_color(int fg_color, int bg_color);
-void sdl_print_save(sdl_print_state_t *save);
-void sdl_print_restore(sdl_print_state_t *restore);
-void sdl_register_control_events(char *ev1, char *ev2, char *ev3, int bg_color);
-
-
-
-does make clean work
+version file
 
 ezput tool, the layout file
 
+fix motion scaling
+
 update test program to use the swipe events, and the motion event
 
-updaes to picoc ...
+dont write params file if value has not changed
 
 primes benchmark
-
-rename sdl_print_init to sdl_print_set
-
-bottom row controls
-
-copyright formatting ?
-
-version file ?
-
-android build files
-
-ROW2Y
-
 
 fix some picoc issues
 - printing
 - setting 64 bit value
 
-exclude recording.raw
-- maybe make a script to create the tar file
-
 recording static
 
 xxxxxxxxxxxxxxxx
 
+android build files need updating
+
+should SDL logging be used instead, or in addition to mine?
+
 try doxygen
 
+updaes to picoc ...
 
 ------------
 code cleanup:
@@ -78,13 +46,13 @@ src/utils.h           OK
 src/logging.c         OK
 src/utils.c             OK
 src/sdl_audio.c        OK
-src/main.c
+src/main.c            <== in progress
 src/sdl_sensor.c
 src/sdl.c
 
-apps/Primes/primes.c
-apps/Test/test.c
+apps/Test/test.c        <=== in progress
 apps/Test/test1.c
+apps/Primes/primes.c
 apps/Reversi/reversi.c
 apps/Reversi/cpu.c
 
@@ -93,10 +61,6 @@ xxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 // xxx pthread_create_detached
 
 is recording volume control needed
-
-sdl issues
-- row2y, etc
-- sdl_print get routine
 
 do more code cleanups
 - code cleanup

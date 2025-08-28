@@ -59,6 +59,7 @@ static char       *storage_path;
 static params_t    params;
 static pthread_t   server_tid;
 static pthread_t   waiter_tid;
+static pthread_t   test_tid;  //xxx
 
 //
 // prototypes 
@@ -90,6 +91,17 @@ int MAIN(int argc, char **argv)
     processing();
     cleanup();
     return 0;
+}
+
+// xxx temp service test
+static int test_count;
+static void *test_thread(void*cx)
+{
+    while (true) {
+        test_count++;
+        sleep(1);
+    }
+    return NULL;
 }
 
 static void init(void)
@@ -153,6 +165,9 @@ static void init(void)
     pthread_create(&server_tid, NULL, server_thread, NULL);
     pthread_create(&waiter_tid, NULL, waiter_thread, NULL);
 
+    // xxx service test
+    pthread_create(&test_tid, NULL, test_thread, NULL);
+
     // init sdl
     sdl_init();
     INFO("sdl_win_width,height = %d %d  sdl_char_width,height=%d %d\n",
@@ -161,11 +176,11 @@ static void init(void)
 
 static void cleanup(void)
 {
-    sdl_exit();
+    INFO("TERMINATING\n");
 
     kill_child_processes(getpid());
 
-    INFO("TERMINATING\n");
+    sdl_exit();
 }
 
 static void create_default_apps(void)
@@ -253,11 +268,15 @@ static void settings(void);
 static void processing(void)
 {
     sdl_event_t event;
+    int count = 0;  //xxx temp
 
     while (true) {
         // clear the display, and set the font to default
         sdl_display_init(BG_COLOR);
         sdl_print_init(DEFAULT_FONT, COLOR_WHITE, BG_COLOR);
+
+        // xxx temp
+        sdl_render_printf(0, sdl_win_height/2, "%d %d", count++, test_count);
 
         // display menu, and register for events
         display_menu();

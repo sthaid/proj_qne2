@@ -87,11 +87,54 @@ static inline SDL_Color sdl_color(int color)
 
 // ----------------- INIT / EXIT --------------------------
 
+// xxx temp for testing 
+bool event_watcher(void* userdata, SDL_Event* event)
+{
+    static SDL_Renderer * save_renderer;
+
+    switch (event->type) {
+        case SDL_EVENT_WILL_ENTER_BACKGROUND:
+            save_renderer = renderer;
+            renderer = NULL;
+            sleep(1);
+            // Pause your game loop and background tasks
+            INFO("App is about to be backgrounded\n");
+            break;
+        case SDL_EVENT_DID_ENTER_BACKGROUND:
+            INFO("App is now in the background\n");
+            break;
+        case SDL_EVENT_WILL_ENTER_FOREGROUND:
+            INFO("App is about to be foregrounded\n");
+            break;
+        case SDL_EVENT_DID_ENTER_FOREGROUND:
+            renderer = save_renderer;
+            // Resume your game loop and tasks
+            INFO("App is now in the foreground\n");
+            break;
+        default:
+            break;
+    }
+    return 0;
+}
+
 int sdl_init(void)
 {
     int real_win_width, real_win_height;
     int num, i;
     double aspect_ratio;
+
+#if 0 // xxx del later
+    // set hints
+    bool succ;
+    succ = SDL_SetHint(SDL_HINT_ANDROID_BLOCK_ON_PAUSE, "0");
+    if (!succ) {
+        ERROR("failed to set SDL_HINT_ANDROID_BLOCK_ON_PAUSE\n");
+    }
+    succ = SDL_SetHint(SDL_HINT_ENABLE_SCREEN_KEYBOARD, "1");  //xxx temp
+    if (!succ) {
+        ERROR("failed to set SDL_HINT_ENABLE_SCREEN_KEYBOARD\n");
+    }
+#endif
 
     // display available and current video drivers
     num = SDL_GetNumVideoDrivers();
@@ -106,19 +149,23 @@ int sdl_init(void)
         return -1;
     }
 
-    // create SDL Window and Renderer
+    // create SDL Window and Renderer xxx simplify
 #ifdef ANDROID
-    if (!SDL_CreateWindowAndRenderer("xxx", 0, 0, SDL_WINDOW_FULLSCREEN, &window, &renderer)) {
+    if (!SDL_CreateWindowAndRenderer("ezApp", 0, 0, SDL_WINDOW_FULLSCREEN, &window, &renderer)) {
         ERROR("SDL_CreateWindowAndRenderer failed\n");
         return -1;
     }
 #else
     // xxx test with larger win width
-    if (!SDL_CreateWindowAndRenderer("xxx", 450, 975, 0, &window, &renderer)) {
+    if (!SDL_CreateWindowAndRenderer("ezApp", 450, 975, 0, &window, &renderer)) {
         ERROR("SDL_CreateWindowAndRenderer failed\n");
         return -1;
     }
 #endif
+
+    // xxx temp
+    // Add the event watcher
+    SDL_AddEventWatch(event_watcher, NULL);
 
     // get real windows size and aspect ratio
     SDL_GetWindowSize(window, &real_win_width, &real_win_height);
@@ -447,6 +494,22 @@ static void process_sdl_event(SDL_Event *ev, sdl_event_t *event)
     case SDL_EVENT_QUIT: {
         event->event_id = EVID_QUIT;
         break; }
+
+    // xxx  these dont seem to be invoked
+    case SDL_EVENT_WILL_ENTER_BACKGROUND:
+        // Pause your game loop and background tasks
+        INFO("App is about to be backgrounded\n");
+        break;
+    case SDL_EVENT_DID_ENTER_BACKGROUND:
+        INFO("App is now in the background\n");
+        break;
+    case SDL_EVENT_WILL_ENTER_FOREGROUND:
+        INFO("App is about to be foregrounded\n");
+        break;
+    case SDL_EVENT_DID_ENTER_FOREGROUND:
+        // Resume your game loop and tasks
+        INFO("App is now in the foreground\n");
+        break;
 
     default: {
         //INFO("event_type %d - not supported\n", ev->type);
