@@ -267,11 +267,15 @@ void util_set_str_param(char *name, char *value)
     }
 
     // if found then
+    //   if no change then return
     //   replace its value
     // else
     //   add param to the end
     // endif
     if (i < max_params) {
+        if (strcmp(params[i].value, value) == 0) {
+            return;
+        }
         free(params[i].value);
         params[i].value = strdup(value);
     } else {

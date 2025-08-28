@@ -646,7 +646,7 @@ typedef struct { \n\
     int event_id; \n\
     union { \n\
         struct { \n\
-            int x; int y; int xrel; int yrel; \n\
+            double x; double y; double xrel; double yrel; \n\
         } motion; \n\
     } u; \n\
 } sdl_event_t; \n\

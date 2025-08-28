@@ -415,11 +415,11 @@ static void process_sdl_event(SDL_Event *ev, sdl_event_t *event)
 
             INFO("button released xy = %d %d, delta xy = %d %d\n", x, y, delta_x, delta_y);
 
-            if (delta_x > 500 && evid_swipe_right_registered) {
+            if (delta_x > 300 && evid_swipe_right_registered) {
                 INFO("got EVID_SWIPE_RIGHT %d %d\n", delta_x, delta_y);
                 event->event_id = EVID_SWIPE_RIGHT;
                 break;
-            } else if (delta_x < -500 && evid_swipe_left_registered) {
+            } else if (delta_x < -300 && evid_swipe_left_registered) {
                 INFO("got EVID_SWIPE_LEFT %d %d\n", delta_x, delta_y);
                 event->event_id = EVID_SWIPE_LEFT;
                 break;
@@ -446,10 +446,10 @@ static void process_sdl_event(SDL_Event *ev, sdl_event_t *event)
                 ev->motion.yrel);
 
             event->event_id = EVID_MOTION;
-            event->u.motion.x = ev->motion.x;
-            event->u.motion.y = ev->motion.y;
-            event->u.motion.xrel = ev->motion.xrel;
-            event->u.motion.yrel = ev->motion.yrel;
+            event->u.motion.x = ev->motion.x / scale;
+            event->u.motion.y = ev->motion.y / scale;
+            event->u.motion.xrel = ev->motion.xrel / scale;
+            event->u.motion.yrel = ev->motion.yrel / scale;
         }
         break; }
 #if 0

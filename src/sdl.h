@@ -51,7 +51,7 @@ typedef struct {
     int event_id;
     union {
         struct {
-            int x, y, xrel, yrel;
+            double x, y, xrel, yrel;
         } motion;
         struct {
             int ch;

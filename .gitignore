@@ -5,6 +5,8 @@ tags
 *.tar.gz
 apps.tar
 
+src/version.h
+
 tools/ezsh
 
 picoc/my_tests

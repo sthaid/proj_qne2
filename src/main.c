@@ -8,6 +8,8 @@
 #include <SDL3/SDL.h>
 #endif
 
+#include "version.h"
+
 // xxx
 // - update comments throughout
 // - version string
@@ -15,8 +17,6 @@
 //
 // defines
 //
-
-#define VERSION "1.0"
 
 #ifdef ANDROID
 #define MAIN SDL_main
@@ -125,7 +125,7 @@ static void init(void)
     log_init(log_path);
 
     // print startup messages
-    INFO("========== STARTING: VERSION=%s ==========\n", VERSION);
+    INFO("========== STARTING: %s %s  ==========\n", VERSION, BUILD_DATE);
     INFO("storage_path = %s\n", storage_path);
 
     // get params, if they don't exist, set to default value
@@ -655,33 +655,34 @@ static void settings(void)
 
         // display version
         sdl_render_printf(0, ROW2Y(2), "Version = %s", VERSION);
+        sdl_render_printf(0, ROW2Y(3), "%s", BUILD_DATE);
 
         // init print color to COLOR_LIGHT_BLUE for the following,
         // because these all are selectable
         sdl_print_init_color(COLOR_LIGHT_BLUE, BG_COLOR);
 
         // display Copyright
-        loc = sdl_render_printf(0, ROW2Y(4), "Copyright");
+        loc = sdl_render_printf(0, ROW2Y(5), "Copyright");
         sdl_register_event(loc, EVID_COPYRIGHT);
 
         // display Devel_Mode
-        loc = sdl_render_printf(0, ROW2Y(6), "Devel_Mode = %s", params.devel_mode ? "ON" : "OFF");
+        loc = sdl_render_printf(0, ROW2Y(7), "Devel_Mode = %s", params.devel_mode ? "ON" : "OFF");
         sdl_register_event(loc, EVID_DEVEL_MODE);
 
         // display Devel_Port
-        loc = sdl_render_printf(0, ROW2Y(8), "Devel_Port = %d", params.devel_port);
+        loc = sdl_render_printf(0, ROW2Y(9), "Devel_Port = %d", params.devel_port);
         sdl_register_event(loc, EVID_DEVEL_PORT);
 
         // display Reset_Apps
-        loc = sdl_render_printf(0, ROW2Y(10), "Reset_Apps");
+        loc = sdl_render_printf(0, ROW2Y(11), "Reset_Apps");
         sdl_register_event(loc, EVID_RESET_APPS);
 
         // display Clear_Log
         size = log_size();
         if (size < 1000000) {
-            loc = sdl_render_printf(0, ROW2Y(12), "Clear_Log sz=%d", size);
+            loc = sdl_render_printf(0, ROW2Y(13), "Clear_Log sz=%d", size);
         } else {
-            loc = sdl_render_printf(0, ROW2Y(12), "Clear_Log sz=%d M", size/1000000);
+            loc = sdl_render_printf(0, ROW2Y(13), "Clear_Log sz=%d M", size/1000000);
         }
         sdl_register_event(loc, EVID_LOG_FILE_CLEAR);
 

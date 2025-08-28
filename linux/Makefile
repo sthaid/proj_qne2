@@ -37,6 +37,7 @@ TARGET = ezApp
 CFLAGS = -Wall -Werror -Wno-unused-result -g -I../src $(shell pkg-config sdl3--cflags)
 
 $(TARGET):
+	../tools/gen_version
 	gcc -o $@ $(CFLAGS) $(SRCS) -lSDL3 -lSDL3_ttf -lm
 	rm -rf files assets; mkdir files assets;
 	gen_apps_tar linux/assets/apps.tar
@@ -44,7 +45,7 @@ $(TARGET):
 	ln -s ../../android/assets/copyright assets
 
 clean:
-	rm -rf $(TARGET) files assets
+	rm -rf $(TARGET) files assets ../src/version.h
 
 .PHONY: $(TARGET)
 

@@ -3,7 +3,10 @@
 # remove and reconstruct assets/apps.tar
 gen_apps_tar android/assets/apps.tar
 
-# construct version, and rebuild
+# construct version info
+../tools/gen_version
+
+# rebuild
 cd SDL/build/org.sthaid.ezApp
 echo "char *version = \"`git log -1 --format=%h`\";" > app/jni/src/version.c
 ./gradlew assembleDebug

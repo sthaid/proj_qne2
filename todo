@@ -6,15 +6,15 @@ SDL_EVENT_WILL_ENTER_FOREGROUND
 
 =================
 
-version file
+version file                                                                  DONE
 
-ezput tool, the layout file
+ezput tool, the layout file                                                   DONE
 
-fix motion scaling
+fix motion scaling                                                            DONE
 
-update test program to use the swipe events, and the motion event
+update test program to use the swipe events, and the motion event             DONE
 
-dont write params file if value has not changed
+dont write params file if value has not changed                               DONE
 
 primes benchmark
 
@@ -25,6 +25,8 @@ fix some picoc issues
 recording static
 
 xxxxxxxxxxxxxxxx
+
+comment on the purpose of the Makefile and Font file in the apps subdirs
 
 android build files need updating
 

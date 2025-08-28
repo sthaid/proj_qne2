@@ -162,6 +162,10 @@ static void page_hndlr()
         sdl_register_control_events("<", ">", "X", COLOR_BLACK,
                                     EVID_PREV_PAGE, EVID_NEXT_PAGE, EVID_QUIT);
 
+        // register swipe events, also used to change page
+        sdl_register_event(NULL, EVID_SWIPE_LEFT);
+        sdl_register_event(NULL, EVID_SWIPE_RIGHT);
+
         // draw display
         switch (pagenum) {
         case 0: page_0_draw(); break;
@@ -318,7 +322,7 @@ static void page_2_draw(void)
 // - sdl_render_multiline_text_2
 // on alternate entering of this page.
 
-static int y_top;
+static double y_top;
 static int y_display_begin;
 static int y_display_end;
 static char lines[2000];
