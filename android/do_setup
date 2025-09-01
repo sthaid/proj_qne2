@@ -6,7 +6,9 @@ update_build_file()
   dest=$2
 
   echo "- updating $src to $dest"
-  cp $BUILD_DIR/$dest $TOP/setup_files/${src}.orig
+  if [ -f "$BUILD_DIR/$dest" ]; then
+    cp $BUILD_DIR/$dest $TOP/setup_files/${src}.orig
+  fi
   cp $TOP/setup_files/${src} $BUILD_DIR/$dest 
 }
 
@@ -26,16 +28,17 @@ SDL_TTF_TAR_FILE=$SDL_TTF_VER.tar.gz
 BUILD_DIR=$SDL_DIR/build/$PACKAGE_NAME
 RES_DIR=$BUILD_DIR/app/src/main/res
 
-# remove existing SDL directory tree
-echo "Remove existing $SDL_DIR"
+# remove existing SDL directory tree, and existing *.orig files in setup_files
+echo "Remove existing $SDL_DIR and setup_files/*.orig"
 rm -rf $SDL_DIR
 rm -f SDL
+rm -rf setup_files/*.orig
 
 # if SDL src tar files are not in the setup_files dir, then download them
-if [ ! -f setup_files/$SDL_TAR_FILE -o ! -f setup_files/SDL_TTF_TAR_FILE ]; then
+if [ ! -f setup_files/$SDL_TAR_FILE -o ! -f setup_files/$SDL_TTF_TAR_FILE ]; then
   echo "Downloading SDL3 source tar files"
   cd setup_files
-  ./do_get_sdl3_src
+  ./get_sdl3_src
   cd ..
 fi
 
@@ -64,14 +67,18 @@ cd $SDL_TTF_DIR/external
 ./download.sh
 echo
 
-# update some build files in $BUILD_DIR
+# update files in $BUILD_DIR
 echo "Updating files in $BUILD_DIR"
 cd $BUILD_DIR
-update_build_file app_jni_Application.mk app/jni/Application.mk
-update_build_file app_build.gradle app/build.gradle
-update_build_file app_jni_src_Android.mk app/jni/src/Android.mk
-update_build_file app_src_main_res_values_strings.xml app/src/main/res/values/strings.xml
-update_build_file app_src_main_AndroidManifest.xml app/src/main/AndroidManifest.xml
+update_build_file app_build.gradle                                    app/build.gradle
+update_build_file app_jni_Application.mk                              app/jni/Application.mk
+update_build_file app_jni_src_Android.mk                              app/jni/src/Android.mk
+update_build_file app_src_main_AndroidManifest.xml                    app/src/main/AndroidManifest.xml
+update_build_file app_src_main_java_org_libsdl_app_MyService.java     app/src/main/java/org/libsdl/app/MyService.java
+update_build_file app_src_main_java_org_libsdl_app_SDLActivity.java   app/src/main/java/org/libsdl/app/SDLActivity.java
+echo "- updating app_src_main_res to app/src/main/res"
+mv app/src/main/res                                                   $TOP/setup_files/app_src_main_res.orig
+cp -r $TOP/setup_files/app_src_main_res                               app/src/main/res
 echo
 
 # add symbolic links to the source code
@@ -87,23 +94,5 @@ echo "Creating assets directory"
 cd $BUILD_DIR/app/src/main
 ln -s ../../../../../../assets/ .
 echo
-
-# create the launcher icon
-# xxx update to SDL3
-if false; then
-echo "Creating launcher icons"
-cd $TOP/setup_files
-gcc -Wall -g `sdl2-config --cflags` -o create_ic_launcher create_ic_launcher.c -lSDL3 -lSDL2_ttf -lpng
-./create_ic_launcher  $RES_DIR/mipmap-mdpi/ic_launcher.png      48
-./create_ic_launcher  $RES_DIR/mipmap-hdpi/ic_launcher.png      72
-./create_ic_launcher  $RES_DIR/mipmap-xhdpi/ic_launcher.png     96
-./create_ic_launcher  $RES_DIR/mipmap-xxhdpi/ic_launcher.png   144
-./create_ic_launcher  $RES_DIR/mipmap-xxxhdpi/ic_launcher.png  192
-#xxx ./create_ic_launcher  google_play_store/icon_512x512.png        512
-rm create_ic_launcher
-echo
-else
-echo "xxx Skipping launcher iconds"
-fi
 
 echo "SETUP COMPLETE"

@@ -1,5 +1,7 @@
 #!/bin/bash
 
+# xxx this should get ipaddr from ez.cfg
+
 # Enable developer mode by tapping build number 8 times.
 # 
 # Go to Developer Options , and enable
@@ -16,9 +18,9 @@
 # Disconnect USB cable.
 # 
 # Issue the adb connect cmd:
-# - adb connect 192.168.1.141:5555
+# - adb connect 192.168.1.243:5555
 # - verify using 'adb shell'
 # 
 # Plug phone in with power cable, to disable sleeping while charging.
 
-adb connect 192.168.1.141:5555
+adb connect 192.168.1.243:5555

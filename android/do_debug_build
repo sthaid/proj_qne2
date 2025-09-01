@@ -8,6 +8,5 @@ gen_apps_tar android/assets/apps.tar
 
 # rebuild
 cd SDL/build/org.sthaid.ezApp
-echo "char *version = \"`git log -1 --format=%h`\";" > app/jni/src/version.c
 ./gradlew assembleDebug
 

@@ -60,6 +60,19 @@
     <!-- Allows an application to recognize physical activity. -->
     <uses-permission android:name="android.permission.ACTIVITY_RECOGNITION" />
 
+    <!--Location Permissions-->
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION" />
+
+    <!--Post Notification Permission-->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
+    <!--Foreground Service Permissions-->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
+
     <!-- Create a Java class extending SDLActivity and place it in a
          directory under app/src/main/java matching the package, e.g. app/src/main/java/com/gamemaker/game/MyGame.java
 
@@ -103,6 +116,15 @@
             </intent-filter>
             -->
         </activity>
+
+        <!--Service -->
+        <service
+            android:name="org.libsdl.app.MyService"
+            android:enabled="true"
+            android:exported="false" 
+            android:foregroundServiceType="location" />
+        <!-- <service android:name=".MyService" /> -->
+
     </application>
 
 </manifest>

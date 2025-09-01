@@ -31,7 +31,7 @@ static int               max_sensor_info_tbl;
 // prototypes
 //
 
-static int get_permission(char *name);
+int get_permission(char *name); //xxx was static
 
 // -----------------  INIT -------------------------------
 
@@ -191,7 +191,7 @@ static void get_permission_cb(void *userdata, const char *permission, bool grant
 #define PERM_GRANTED      1
 #define PERM_NOT_GRANTED  2
 
-static int get_permission(char *name)
+int get_permission(char *name)  //xxx was static 
 {
     bool succ;
     int perm_result;

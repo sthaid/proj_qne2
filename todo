@@ -1,3 +1,30 @@
+make tree copy
+mv myservice and rename
+are all drawables needed
+save changed / new files
+- make a resource subdir in save files
+start / stop service from settings
+
+logging
+
+
+files changes : /SDL3-3.2.20/build/org.sthaid.ezApp
+
+app/build.gradle   ok
+
+app/jni/Application.mk   ok
+app/jni/src/Android.mk   ok
+
+app/src/main/AndroidManifest.xml   ok
+app/src/main/java/org/libsdl/app/SDLActivity.java  ok
+app/src/main/java/org/libsdl/app/MyService.java  ok
+
+app/src/main/java/org/libsdl/app/src/main/res  ok
+src/test.cpp
+
+app_src_main_java_org_libsdl_app_src_main_res  ok
+xxxxxxxxxxxxxxxxx
+
 how to have android sdl3 app continue to run in background after exit
 
 SDL_APP_WILLENTERFOREGROUND
@@ -15,6 +42,15 @@ fix motion scaling                                                            DO
 update test program to use the swipe events, and the motion event             DONE
 
 dont write params file if value has not changed                               DONE
+
+If you want to use threads in your SDL app, it's strongly recommended that you
+do so by creating them using SDL functions. This way, the required attach/detach
+handling is managed by SDL automagically. If you have threads created by other
+means and they make calls to SDL functions, make sure that you call
+Android_JNI_SetupThread() before doing anything else otherwise SDL will attach
+your thread automatically anyway (when you make an SDL call), but it'll never
+detach it.
+
 
 primes benchmark
 

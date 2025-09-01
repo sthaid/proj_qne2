@@ -77,6 +77,8 @@ static void kill_child_processes(pid_t pid);
 int picoc_fg(char *args);
 void picoc_bg(char *args);
 
+int get_permission(char *name); //xxx
+
 // -----------------  MAIN  ------------------------------------------
 
 static void init(void);
@@ -85,9 +87,21 @@ static void create_default_apps(void);
 static void copy_asset_file(char *asset_filename, char *dest_dir);
 static void sigusr1_hndlr(int signum);
 
+extern void showHome(void); //xxx
+extern void showHome2(void);
+
 int MAIN(int argc, char **argv)
 {
     init();
+
+    get_permission("android.permission.POST_NOTIFICATION"); //xxx
+    sleep(3);
+    get_permission("android.permission.FOREGROUND_SERVICE_SPECIAL_USE");
+    sleep(3);
+    showHome();
+
+
+
     processing();
     cleanup();
     return 0;
@@ -177,6 +191,8 @@ static void init(void)
 static void cleanup(void)
 {
     INFO("TERMINATING\n");
+
+    showHome2(); //xxx
 
     kill_child_processes(getpid());
 

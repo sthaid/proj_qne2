@@ -179,3 +179,379 @@ Medium
 =====================================================
 
 https://medium.com/@nicosnicolaou/foreground-service-in-android-9ff18be69ef6
+
+./src/main/java/org/libsdl/app/SDLActivity.java
+./src/main/java/org/libsdl/app/SDLInputConnection.java
+./src/main/java/org/libsdl/app/SDLDummyEdit.java
+./src/main/java/org/libsdl/app/SDLAudioManager.java
+./src/main/java/org/libsdl/app/HIDDeviceUSB.java
+./src/main/java/org/libsdl/app/HIDDeviceManager.java
+./src/main/java/org/libsdl/app/HIDDevice.java
+./src/main/java/org/libsdl/app/SDL.java
+./src/main/java/org/libsdl/app/SDLSurface.java
+./src/main/java/org/libsdl/app/HIDDeviceBLESteamController.java
+./src/main/java/org/libsdl/app/SDLControllerManager.java
+./src/main/java/org/sthaid/ezApp/EzappActivity.java
+
+
+app/src/main/java/org/sthaid/ezApp
+----------------------------------
+
+package org.sthaid.ezApp;
+
+import org.libsdl.app.SDLActivity;
+
+public class EzappActivity extends SDLActivity
+{
+}
+
+[HOME2 | main | app]$ find src -type f | xargs grep Ezapp
+src/main/java/org/sthaid/ezApp/EzappActivity.java:public class EzappActivity extends SDLActivity
+src/main/AndroidManifest.xml:        <activity android:name="EzappActivity"
+
+
+sample foreground service
+-------------------------
+
+https://github.com/NicosNicolaou16/SampleForegroundService.git
+
+
+google AI
+----------
+
+how to modify SDLMain ectivity to start a service
+
+
+xxxxxxxx
+----------
+
+AndroidManifest.xml
+    <!--Location Permissions-->
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION" />
+
+    <!--Foreground Service Permissions-->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION" />
+
+    ....
+
+        <!--Service-->
+        <service
+            android:name=".service.LocationService"
+            android:enabled="true"
+            android:exported="false"
+            android:foregroundServiceType="location" />
+
+
+create: cp ~/LocationService.kt  sthaid/ezApp
+
+
+
+https://developer.android.com/develop/background-work/services
+
+
+xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+
+change MyService to foreground
+- add Notification to the foreground service
+- add periodic prints to MyService
+
+checkin SDL changes, these are temporary and use MyService
+
+call from MyService into my SDL C code
+
+
+
+can OnStartCommand create a thread or just run the service from there
+
+how to call from my SDL code to Java
+
+
+
+
+    protected void main() {
+        String library = SDLActivity.mSingleton.getMainSharedObject();
+        String function = SDLActivity.mSingleton.getMainFunction();
+        String[] arguments = SDLActivity.mSingleton.getArguments();
+
+        Log.v("SDL", "Running main function " + function + " from library " + library);
+        SDLActivity.nativeRunMain(library, function, arguments);
+        Log.v("SDL", "Finished main function");
+    }
+
+
+    /**
+     * This method returns the name of the application entry point
+     * It can be overridden by derived classes.
+     */
+    protected String getMainFunction() {
+        return "SDL_main";
+    }
+
+
+
+xxxxxxxxxxxxxxxxxxxxxxxxx
+
+
+how to call C code from java sdl android
+
+
+
+xxxxxxxxxxxxxxxxxxxxxxxxxx
+
+how to call java code from SDL
+
+
+bool SDL_RequestAndroidPermission(const char *permission, SDL_RequestAndroidPermissionCallback cb, void *userdata)
+{
+    if (!permission) {
+        return SDL_InvalidParamError("permission");
+    } else if (!cb) {
+        return SDL_InvalidParamError("cb");
+    }
+
+    NativePermissionRequestInfo *info = (NativePermissionRequestInfo *) SDL_calloc(1, sizeof (NativePermissionRequestInfo));
+    if (!info) {
+        return false;
+    }
+
+    info->permission = SDL_strdup(permission);
+    if (!info->permission) {
+        SDL_free(info);
+        return false;
+    }
+
+    static SDL_AtomicInt next_request_code;
+    info->request_code = SDL_AddAtomicInt(&next_request_code, 1);
+
+    info->callback = cb;
+    info->userdata = userdata;
+
+    SDL_LockMutex(Android_ActivityMutex);
+    info->next = pending_permissions.next;
+    pending_permissions.next = info;
+    SDL_UnlockMutex(Android_ActivityMutex);
+
+    JNIEnv *env = Android_JNI_GetEnv();
+    jstring jpermission = (*env)->NewStringUTF(env, permission);
+    (*env)->CallStaticVoidMethod(env, mActivityClass, midRequestPermission, jpermission, info->request_code);
+    (*env)->DeleteLocalRef(env, jpermission);
+
+    return true;
+}
+
+
+SDL_GetAndroidExternalStorageState
+
+SDL_RequestAndroidPermission
+
+
+SDL_GetAndroidJNIEnv
+
+
+
+
+#include <SDL3/SDL.h>
+#include <jni.h>
+
+// This example requires C++ and a custom Java method named "void showHome()"
+
+// Calls the void showHome() method of the Java instance of the activity.
+void showHome(void)
+{
+    // retrieve the JNI environment.
+    JNIEnv* env = (JNIEnv*)SDL_GetAndroidJNIEnv();
+
+    // retrieve the Java instance of the SDLActivity
+    jobject activity = (jobject)SDL_GetAndroidActivity();
+
+    // find the Java class of the activity. It should be SDLActivity or a subclass of it.
+    jclass clazz(env->GetObjectClass(activity));
+
+    // find the identifier of the method to call
+    jmethodID method_id = env->GetMethodID(clazz, "showHome", "()V");
+
+    // effectively call the Java method
+    env->CallVoidMethod(activity, method_id);
+
+    // clean up the local references.
+    env->DeleteLocalRef(activity);
+    env->DeleteLocalRef(clazz);
+
+    // Warning (and discussion of implementation details of SDL for Android):
+    // Local references are automatically deleted if a native function called
+    // from Java side returns. For SDL this native function is main() itself.
+    // Therefore references need to be manually deleted because otherwise the
+    // references will first be cleaned if main() returns (application exit).
+}
+
+
+xxxxxxxxxxxxxxxxx
+
+clean up code
+logging to adb logcat too
+use foreground service
+- create notifier
+call from service into C code
+
+
+
+
+/home/haid/SampleForegroundService/app/src/main/java/com/nicos/sampleforegroundservice
+
+
+https://developer.android.com/develop/background-work/services/fgs/launch
+
+
+build.gradle changed 24 to 29
+
+
+xxxxxxxxxxxx
+it is not displaying the nofification
+
+
+
+
+
+
+ZZ
+<service android:description="string resource"
+         android:directBootAware=["true" | "false"]
+         android:enabled=["true" | "false"]
+         android:exported=["true" | "false"]
+         android:foregroundServiceType=["camera" | "connectedDevice" |
+                                        "dataSync" | "health" | "location" |
+                                        "mediaPlayback" | "mediaProjection" |
+                                        "microphone" | "phoneCall" |
+                                        "remoteMessaging" | "shortService" |
+                                        "specialUse" | "systemExempted"]
+         android:icon="drawable resource"
+         android:isolatedProcess=["true" | "false"]
+         android:label="string resource"
+         android:name="string"
+         android:permission="string"
+         android:process="string"
+         android:stopWithTask=["true" | "false"]>
+    ...
+</service>
+
+
+	current foreground service type flags. Value is either 0 or a combination of ServiceInfo.FOREGROUND_SERVICE_TYPE_MANIFEST, ServiceInfo.FOREGROUND_SERVICE_TYPE_NONE, ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC, ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK, ServiceInfo.FOREGROUND_SERVICE_TYPE_PHONE_CALL, ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION, ServiceInfo.FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE, ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PROJECTION, ServiceInfo.FOREGROUND_SERVICE_TYPE_CAMERA, ServiceInfo.FOREGROUND_SERVICE_TYPE_MICROPHONE, ServiceInfo.FOREGROUND_SERVICE_TYPE_HEALTH, ServiceInfo.FOREGROUND_SERVICE_TYPE_REMOTE_MESSAGING, ServiceInfo.FOREGROUND_SERVICE_TYPE_SYSTEM_EXEMPTED, ServiceInfo.FOREGROUND_SERVICE_TYPE_SHORT_SERVICE, android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_FILE_MANAGEMENT, ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PROCESSING, and ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE
+
+
+
+
+---------------
+
+import android.app.Notification;
+import android.app.NotificationChannel;
+import android.app.NotificationManager;
+import android.app.PendingIntent;
+import android.content.Context;
+import android.content.Intent;
+import android.graphics.Color;
+import android.os.Build;
+
+public class MyNotificationHelper {
+
+    private static final String CHANNEL_ID = "my_channel_id";
+    private static final String CHANNEL_NAME = "My Channel";
+    private static final String CHANNEL_DESCRIPTION = "Description for My Channel";
+
+    public static void showNotification(Context context, String title, String message, int notificationId) {
+        NotificationManager notificationManager = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
+
+        // Create a Notification Channel for Android O and above
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            NotificationChannel channel = new NotificationChannel(CHANNEL_ID, CHANNEL_NAME, NotificationManager.IMPORTANCE_DEFAULT);
+            channel.setDescription(CHANNEL_DESCRIPTION);
+            channel.enableLights(true);
+            channel.setLightColor(Color.RED);
+            channel.enableVibration(true);
+            notificationManager.createNotificationChannel(channel);
+        }
+
+        // Create an Intent to open when the notification is tapped
+        Intent intent = new Intent(context, YourActivity.class); // Replace YourActivity with your desired activity
+        intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+        PendingIntent pendingIntent = PendingIntent.getActivity(context, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT);
+
+        // Build the notification
+        Notification.Builder builder;
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            builder = new Notification.Builder(context, CHANNEL_ID);
+        } else {
+            builder = new Notification.Builder(context);
+        }
+
+        Notification notification = builder
+                .setSmallIcon(android.R.drawable.ic_dialog_info) // Replace with your own icon
+                .setContentTitle(title)
+                .setContentText(message)
+                .setPriority(Notification.PRIORITY_DEFAULT)
+                .setContentIntent(pendingIntent)
+                .setAutoCancel(true)
+                .build();
+
+        // Show the notification
+        notificationManager.notify(notificationId, notification);
+    }
+}
+
+
+
+xxxxxxxxxxxxxxxxxxxxxxxxxxxx
+
+
+import android.app.Notification;
+import android.app.NotificationChannel;
+import android.app.NotificationManager;
+import android.app.PendingIntent;
+import android.content.Context;
+import android.content.Intent;
+import android.graphics.Color;
+import android.os.Build;
+
+public class MyNotificationHelper {
+
+    private static final String CHANNEL_ID = "my_channel_id";
+    private static final String CHANNEL_NAME = "My Channel";
+    private static final String CHANNEL_DESCRIPTION = "Description for My Channel";
+
+    public static void showNotification(Context context, String title, String message, int notificationId) {
+        NotificationManager notificationManager = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
+
+        // Create a Notification Channel for Android O and above
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            NotificationChannel channel = new NotificationChannel(CHANNEL_ID, CHANNEL_NAME, NotificationManager.IMPORTANCE_DEFAULT);
+            channel.setDescription(CHANNEL_DESCRIPTION);
+            channel.enableLights(true);
+            channel.setLightColor(Color.RED);
+            channel.enableVibration(true);
+            notificationManager.createNotificationChannel(channel);
+        }
+
+        // Build the notification
+        Notification.Builder builder;
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            builder = new Notification.Builder(context, CHANNEL_ID);
+        } else {
+            builder = new Notification.Builder(context);
+        }
+
+        Notification notification = builder
+                .setSmallIcon(android.R.drawable.ic_dialog_info) // Replace with your own icon
+                .setContentTitle(title)
+                .setContentText(message)
+                .setPriority(Notification.PRIORITY_DEFAULT)
+                .setAutoCancel(true)
+                .build();
+
+        // Show the notification
+        notificationManager.notify(notificationId, notification);
+    }
+}
