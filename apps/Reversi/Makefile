@@ -9,7 +9,7 @@ SRCS_COMMON = \
        ../../src/utils.c \
        ../../src/logging.c
 
-FONT_FILE=../../android/assets/FreeMonoBold.ttf
+FONT_FILE=FreeMonoBold.ttf
 
 CFLAGS = -Wall -Werror -Wno-unused-result -g -I. -I../../src $(shell pkg-config sdl3--cflags)
 
@@ -17,12 +17,14 @@ build:
 	gcc -o $(TARGET) $(CFLAGS) $(SRCS) $(SRCS_COMMON) -lSDL3 -lSDL3_ttf -lm
 
 run_linux: build
-	ln -sf $(FONT_FILE) .
+	ln -sf ../../android/assets/$(FONT_FILE) .
 	./$(TARGET)
+	rm -f $(FONT_FILE) $(TARGET)
 
 run_picoc:
-	ln -sf $(FONT_FILE) .
+	ln -sf ../../android/assets/$(FONT_FILE) .
 	../../picoc/picoc $(SRCS)
+	rm -f $(FONT_FILE)
 
 clean:
 	rm -f $(TARGET) FreeMonoBold.ttf params

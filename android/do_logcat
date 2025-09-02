@@ -1,3 +1,4 @@
 #!/bin/bash
 
-adb shell logcat -s SDL -s SDL/APP -s AndroidRuntime
+adb logcat -c -b all
+adb logcat -s SDL -s SDL/APP -s AndroidRuntime

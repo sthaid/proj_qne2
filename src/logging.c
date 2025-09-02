@@ -1,54 +1,53 @@
 #include <std_hdrs.h>
-
 #include <logging.h>
 
 #ifdef ANDROID
-    //#define USE_ANDROID_LOGGING
-    #ifdef USE_ANDROID_LOGGING
-        #include <SDL3/SDL.h>
-    #endif
+    #include <SDL3/SDL.h>
+    #define ANDROID_LOG_FIFO "log_fifo"
+    static void *android_logging_thread(void *cx);
 #endif
 
-#define MAX_TIME_STR 100
+#ifdef ANDROID
 
-static char log_file[100];
+// ----------------- ANDROID LOGGING -----------------
 
-static long get_real_time_microsec(void);
-static char * time2str(char * str, long us, bool gmt, bool display_ms, bool display_date);
-
-// ----------------- LOGGING -----------------
-
-void log_init(char *log_file_arg)
+// xxx comments needed
+int log_init(void)
 {
-    FILE *fp;
     int rc;
-
-    strcpy(log_file, log_file_arg);
-
-    fp = freopen(log_file, "a", stdout);
-    if (fp == NULL) {
-        ERROR("failed to reopen stdout to file '%s', %s\n", log_file, strerror(errno));
-        return;
-    }
-
-    rc = dup2(fileno(stdout), fileno(stderr));
-    if (rc < 0) {
-        ERROR("failed to dup stdout to stderr, %s\n", strerror(errno));
-        return;
-    }
+    FILE *fp;
+    pthread_t tid;
 
     setlinebuf(stdout);
     setlinebuf(stderr);
 
-    //fprintf(stdout, "test print to stdout\n");
-    //fprintf(stderr, "test print to stderr\n");
+    mkfifo(ANDROID_LOG_FIFO, 0666);
+
+    pthread_create(&tid, NULL, android_logging_thread, NULL);
+
+    fp = freopen(ANDROID_LOG_FIFO, "w", stdout);
+    if (fp == NULL) {
+        ERROR("failed to reopen stdout, %s\n", strerror(errno));
+        return -1;
+    }
+    setlinebuf(stdout);
+
+    rc = dup2(fileno(stdout), fileno(stderr));
+    if (rc < 0) {
+        ERROR("failed to dup stdout to stderr, %s\n", strerror(errno));
+        return -1;
+    }
+
+    fprintf(stdout, "test print to stdout\n");  // xxx temp
+    fprintf(stderr, "test print to stderr\n");  // xxx temp
+
+    return 0;
 }
 
 void log_msg(char *lvl, const char *func, char *fmt, ...)
 {
     va_list ap;
     char    msg[1000];
-    char    time_str[MAX_TIME_STR];
     int     len;
 
     // construct msg
@@ -62,107 +61,83 @@ void log_msg(char *lvl, const char *func, char *fmt, ...)
         len--;
     }
 
-#ifdef USE_ANDROID_LOGGING
-    // log the message, to the Android log;
-    // use 'adb -s SDL/APP' to monitor the Android log
-    if (strcmp(lvl, "INFO") == 0) {
-        SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,
-                    "%s %s: %s\n",
-                    lvl, func, msg);
-    } else if (strcmp(lvl, "WARN") == 0) {
-        SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION,
-                    "%s %s: %s\n",
-                    lvl, func, msg);
-    } else {
-        SDL_LogError(SDL_LOG_CATEGORY_APPLICATION,
-                     "%s %s: %s\n",
-                     lvl, func, msg);
-    }
-    return;
-#endif
-
-    // log using printf to stderr
-    time2str(time_str, get_real_time_microsec(), false, true, true),
-    fprintf(stderr, "%s %s %s: %s\n", time_str, lvl, func, msg);
+    // log to stderr, which is redirected to the log fifo
+    fprintf(stderr, "%s %s: %s\n", lvl, func, msg);
 }
 
-void log_clear(void)
+// ----------------- ANDROID LOGGING THREAD   -----------------
+
+static void *android_logging_thread(void *cx)
 {
-    if (log_file[0] == '\0') {
-        return;
+    char buff[10000];
+    int len;
+    char *buffp, *p;
+
+    int fd = open(ANDROID_LOG_FIFO, O_RDONLY);
+    if (fd < 0) {
+        return NULL;
     }
 
-    freopen(log_file, "w", stdout);
-    dup2(fileno(stdout), fileno(stderr));
+    while (true) {
+        len = read(fd, buff, sizeof(buff)-1);
+        if (len <= 0) {
+            goto done;
+        }
 
+        if (buff[len-1] != '\n') {
+            buff[len-1] = '\n';
+        }
+        buff[len] = '\0';
+
+        buffp = buff;
+        while (true) {
+            p = strchr(buffp, '\n');
+            if (p == NULL) {
+                break;
+            }
+
+            *p = '\0';
+            if (strncmp(buffp, "EZAPP", 5) != 0) {
+                SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "EZAPP %s", buffp);
+            }
+            buffp = p + 1;
+        }
+    }
+
+done:
+    return NULL;
+}
+    
+#else
+
+// ------------- NOT ANDROID LOGGING SUPPORT ---------
+
+int log_init(void)
+{
     setlinebuf(stdout);
     setlinebuf(stderr);
-
-    INFO("---------- log cleared ----------\n");
+    return 0;
 }
 
-int log_size(void)
+void log_msg(char *lvl, const char *func, char *fmt, ...)
 {
-    int rc;
-    struct stat statbuf;
+    va_list ap;
+    char    msg[1000];
+    int     len;
 
-    if (log_file[0] == '\0') {
-        return 0;
+    // construct msg
+    va_start(ap, fmt);
+    len = vsnprintf(msg, sizeof(msg), fmt, ap);
+    va_end(ap);
+
+    // remove terminating newline
+    if (len > 0 && msg[len-1] == '\n') {
+        msg[len-1] = '\0';
+        len--;
     }
 
-    rc = stat(log_file, &statbuf);
-    if (rc != 0) {
-        ERROR("stat '%s' failed\n", strerror(errno));
-        return 0;
-    }
-
-    return statbuf.st_size;
+    // log to stderr, which is redirected to the log fifo
+    fprintf(stderr, "%s %s: %s\n", lvl, func, msg);
 }
 
-// -----------------  LOCAL  -------------------------
-
-static long get_real_time_microsec(void)
-{
-    struct timespec ts;
-
-    clock_gettime(CLOCK_REALTIME,&ts);
-    return ((long)ts.tv_sec * 1000000) + ((long)ts.tv_nsec / 1000);
-}
-
-static char * time2str(char * str, long us, bool gmt, bool display_ms, bool display_date)
-{
-    struct tm tm;
-    time_t secs;
-    int cnt;
-    char * s = str;
-
-    secs = us / 1000000;
-
-    if (gmt) {
-        gmtime_r(&secs, &tm);
-    } else {
-        localtime_r(&secs, &tm);
-    }
-
-    if (display_date) {
-        cnt = sprintf(s, "%02d/%02d/%02d ",
-                         tm.tm_mon+1, tm.tm_mday, tm.tm_year%100);
-        s += cnt;
-    }
-
-    cnt = sprintf(s, "%02d:%02d:%02d",
-                     tm.tm_hour, tm.tm_min, tm.tm_sec);
-    s += cnt;
-
-    if (display_ms) {
-        cnt = sprintf(s, ".%03d", (int)((us % 1000000) / 1000));
-        s += cnt;
-    }
-
-    if (gmt) {
-        strcpy(s, " GMT");
-    }
-
-    return str;
-}
-
+#endif

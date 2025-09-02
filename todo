@@ -1,3 +1,37 @@
+       fputc() writes the character c, cast to an unsigned char, to stream.
+
+       putc()  is  equivalent  to  fputc() except that it may be implemented as a macro which
+       evaluates stream more than once.
+
+       putchar(c) is equivalent to putc(c, stdout).
+
+       fputs() writes the string s to stream, without its terminating null byte ('\0').
+
+       puts() writes the string s and a trailing newline to stdout.
+
+-----
+LOGGING
+
+sdl - SDL_Log
+
+linux - log to stdout
+
+apps
+- use ERROR, WARN, INFO
+
+linux-app - log to stdout
+
+picoc-app
+
+picoc and any other calls to printf
+- also use ERRO, WARN, INFO
+
+--- remvoe ---
+logging to file in src
+
+
+----------------------
+
 make tree copy
 mv myservice and rename
 are all drawables needed

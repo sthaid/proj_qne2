@@ -229,7 +229,7 @@ static void get_permission_cb(void *userdata, const char *permission, bool grant
 
 #else
 
-static int get_permission(char *name)
+int get_permission(char *name)  //xxx was static
 {
     // return success
     return 0;

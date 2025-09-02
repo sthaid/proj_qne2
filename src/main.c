@@ -12,7 +12,6 @@
 
 // xxx
 // - update comments throughout
-// - version string
 
 //
 // defines
@@ -59,7 +58,6 @@ static char       *storage_path;
 static params_t    params;
 static pthread_t   server_tid;
 static pthread_t   waiter_tid;
-static pthread_t   test_tid;  //xxx
 
 //
 // prototypes 
@@ -81,46 +79,42 @@ int get_permission(char *name); //xxx
 
 // -----------------  MAIN  ------------------------------------------
 
-static void init(void);
+static int init(void);
 static void cleanup(void);
 static void create_default_apps(void);
 static void copy_asset_file(char *asset_filename, char *dest_dir);
 static void sigusr1_hndlr(int signum);
 
-extern void showHome(void); //xxx
-extern void showHome2(void);
+//extern void showHome(void); //xxx
+//extern void showHome2(void);
 
 int MAIN(int argc, char **argv)
 {
-    init();
+    int rc;
 
+    rc = init();
+    if (rc != 0) {
+        return 1;
+    }
+
+#if 0  // xxx mve this
     get_permission("android.permission.POST_NOTIFICATION"); //xxx
     sleep(3);
     get_permission("android.permission.FOREGROUND_SERVICE_SPECIAL_USE");
     sleep(3);
     showHome();
-
-
+#endif
 
     processing();
+
     cleanup();
+
     return 0;
 }
 
-// xxx temp service test
-static int test_count;
-static void *test_thread(void*cx)
+static int init(void)
 {
-    while (true) {
-        test_count++;
-        sleep(1);
-    }
-    return NULL;
-}
-
-static void init(void)
-{
-    char log_path[100];
+    int rc;
 
     // determine storage_path, and 
     // set current working directory to storage_path
@@ -135,8 +129,10 @@ static void init(void)
     chdir(storage_path);
 
     // init logging
-    sprintf(log_path, "%s/%s", storage_path, "log");
-    log_init(log_path);
+    rc = log_init();
+    if (rc != 0) {
+        return -1;
+    }
 
     // print startup messages
     INFO("========== STARTING: %s %s  ==========\n", VERSION, BUILD_DATE);
@@ -179,20 +175,20 @@ static void init(void)
     pthread_create(&server_tid, NULL, server_thread, NULL);
     pthread_create(&waiter_tid, NULL, waiter_thread, NULL);
 
-    // xxx service test
-    pthread_create(&test_tid, NULL, test_thread, NULL);
-
     // init sdl
     sdl_init();
     INFO("sdl_win_width,height = %d %d  sdl_char_width,height=%d %d\n",
          sdl_win_width, sdl_win_height, sdl_char_width, sdl_char_height);
+
+    // init okay
+    return 0;
 }
 
 static void cleanup(void)
 {
     INFO("TERMINATING\n");
 
-    showHome2(); //xxx
+    //showHome2(); //xxx
 
     kill_child_processes(getpid());
 
@@ -284,15 +280,11 @@ static void settings(void);
 static void processing(void)
 {
     sdl_event_t event;
-    int count = 0;  //xxx temp
 
     while (true) {
         // clear the display, and set the font to default
         sdl_display_init(BG_COLOR);
         sdl_print_init(DEFAULT_FONT, COLOR_WHITE, BG_COLOR);
-
-        // xxx temp
-        sdl_render_printf(0, sdl_win_height/2, "%d %d", count++, test_count);
 
         // display menu, and register for events
         display_menu();
@@ -647,7 +639,6 @@ static void settings(void)
     sdl_event_t event;
     sdl_loc_t  *loc;
     bool        quit = false;
-    int         size;
     char       *msg = NULL;
     long        msg_time = 0;
     char       *ipaddr;
@@ -655,7 +646,6 @@ static void settings(void)
     #define EVID_DEVEL_MODE         1000
     #define EVID_DEVEL_PORT         1001
     #define EVID_RESET_APPS         1002
-    #define EVID_LOG_FILE_CLEAR     1003
     #define EVID_COPYRIGHT          1004
 
     // get this device ipaddr
@@ -692,15 +682,6 @@ static void settings(void)
         // display Reset_Apps
         loc = sdl_render_printf(0, ROW2Y(11), "Reset_Apps");
         sdl_register_event(loc, EVID_RESET_APPS);
-
-        // display Clear_Log
-        size = log_size();
-        if (size < 1000000) {
-            loc = sdl_render_printf(0, ROW2Y(13), "Clear_Log sz=%d", size);
-        } else {
-            loc = sdl_render_printf(0, ROW2Y(13), "Clear_Log sz=%d M", size/1000000);
-        }
-        sdl_register_event(loc, EVID_LOG_FILE_CLEAR);
 
         // change print color back to white
         sdl_print_init_color(COLOR_WHITE, BG_COLOR);
@@ -760,11 +741,6 @@ static void settings(void)
                 msg_time = util_microsec_timer();
             }
             break; }
-        case EVID_LOG_FILE_CLEAR:   
-            log_clear();
-            msg = "Log file is cleared.";
-            msg_time = util_microsec_timer();
-            break;
         case EVID_COPYRIGHT:
             copyright();
             break;
