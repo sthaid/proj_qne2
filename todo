@@ -1,7 +1,7 @@
 sdl quit in main.c / Settings
-remove sdl calls from main   CHECK this
 X == SDL_BACK  ??
-allow user events in certain range  ??
+restrict event id for user
+move KEYBD event id
 
 - - -
 

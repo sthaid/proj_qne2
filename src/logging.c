@@ -98,7 +98,7 @@ static void *android_logging_thread(void *cx)
 
             *p = '\0';
             if (strncmp(buffp, "EZAPP", 5) != 0) {
-                SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "EZAPP %s", buffp);
+                SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "EZAPP %s", buffp); // xxx check string for lvl, and call appropriate SDL routine
             }
             buffp = p + 1;
         }

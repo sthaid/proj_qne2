@@ -348,6 +348,8 @@ void sdl_register_control_events(char *evstr1, char *evstr2, char *evstr3, int b
     sdl_print_restore(&print_state);
 }
 
+static int sdl_event_quit_rcvd;  //xxx cleanup
+
 // arg timeout_us:
 //   -1:     wait forever
 //    0:     don't wait
@@ -361,6 +363,14 @@ void sdl_get_event(long timeout_us, sdl_event_t *event)
     // xxx move
     memset(event, 0, sizeof(*event));
     event->event_id = -1;
+
+    // xxx comment
+    if (sdl_event_quit_rcvd > 0) {
+        INFO("XXXXX quit pending, %d\n", sdl_event_quit_rcvd);
+        sdl_event_quit_rcvd--;
+        event->event_id = EVID_QUIT;
+        return;
+    }
 
 try_again:
     // get event
@@ -505,6 +515,7 @@ static void process_sdl_event(SDL_Event *ev, sdl_event_t *event)
         // not used
         break; }
     case SDL_EVENT_QUIT: {
+        sdl_event_quit_rcvd = 10;
         event->event_id = EVID_QUIT;
         break; }
 

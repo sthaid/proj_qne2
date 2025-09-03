@@ -586,7 +586,7 @@ static void settings(void)
 {
     sdl_event_t event;
     sdl_loc_t  *loc;
-    bool        back = false;
+    bool        done = false;
     char       *msg = NULL;
     long        msg_time = 0;
     char       *ipaddr;
@@ -595,7 +595,6 @@ static void settings(void)
     #define EVID_DEVEL_PORT         1001
     #define EVID_RESET_APPS         1002
     #define EVID_COPYRIGHT          1004
-    #define EVID_BACK               1005
 
     // get this device ipaddr
     ipaddr = util_get_ipaddr();
@@ -644,7 +643,7 @@ static void settings(void)
         }
 
         // display the control event 'X' to exit this screen
-        sdl_register_control_events(NULL, NULL, "X", BG_COLOR, 0, 0, EVID_BACK);
+        sdl_register_control_events(NULL, NULL, "X", BG_COLOR, 0, 0, EVID_QUIT);
 
         // present the display
         sdl_display_present();
@@ -693,12 +692,12 @@ static void settings(void)
         case EVID_COPYRIGHT:
             copyright();
             break;
-        case EVID_BACK:
-            back = true;
+        case EVID_QUIT:
+            done = true;
             break;
         }
 
-        if (back) {
+        if (done) {
             break;
         }
     }
@@ -710,7 +709,7 @@ static void copyright(void)
     int         y_display_begin, y_display_end, y_top;
     int         len;
     sdl_event_t event;
-    bool        back = false;
+    bool        done = false;
 
     // read the copyright file
     str = util_read_file("copyright", &len);
@@ -724,14 +723,14 @@ static void copyright(void)
     y_display_end = sdl_win_height - 200;
     y_top = y_display_begin;
 
-    // display copyright, support motion (for scrolling) and exit/back events
+    // display copyright, support motion (for scrolling)
     while (true) {
         // display copyright and register for motion (scrolling) & exit events
         sdl_display_init(BG_COLOR);
         sdl_print_init(SMALLEST_FONT, COLOR_WHITE, BG_COLOR);
         sdl_register_event(NULL, EVID_MOTION);
         sdl_render_multiline_text(y_top, y_display_begin, y_display_end, str);
-        sdl_register_control_events(NULL, NULL, "X", BG_COLOR, 0, 0, EVID_BACK);
+        sdl_register_control_events(NULL, NULL, "X", BG_COLOR, 0, 0, EVID_QUIT);
         sdl_display_present();
 
         sdl_get_event(-1, &event);
@@ -742,12 +741,12 @@ static void copyright(void)
                 y_top = y_display_begin;
             }
             break;
-        case EVID_BACK:
-            back = true;
+        case EVID_QUIT:
+            done = true;
             break;
         }
 
-        if (back) {
+        if (done) {
             break;
         }
     }
