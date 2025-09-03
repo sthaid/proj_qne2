@@ -71,9 +71,6 @@ static int picoc_helper(char *args)
         if (!processing_argv_args) {
             printf("scanning %s\n", s);
             PicocPlatformScanFile(&pc, s);
-            if (argc == 0) {
-                argv[argc++] = "ez_app";
-            }
         } else {
             printf("adding argv[%d] = %s\n", argc, s);
             argv[argc++] = s;

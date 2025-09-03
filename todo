@@ -1,3 +1,22 @@
+sdl quit in main.c / Settings
+remove sdl calls from main   CHECK this
+X == SDL_BACK  ??
+allow user events in certain range  ??
+
+- - -
+
+
+
+
+----------
+
+void sdl_minimize_window(void)
+{
+    SDL_MinimizeWindow(sdl_window);
+}
+
+---------------
+
        fputc() writes the character c, cast to an unsigned char, to stream.
 
        putc()  is  equivalent  to  fputc() except that it may be implemented as a macro which

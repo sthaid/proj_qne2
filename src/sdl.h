@@ -27,7 +27,7 @@
 #define EVID_SWIPE_RIGHT       9990
 #define EVID_SWIPE_LEFT        9991
 #define EVID_MOTION            9992
-#define EVID_KEYBD             9993
+#define EVID_KEYBD             9993  // xxx move define
 #define EVID_QUIT              9999  // xxx review where this is used
 
 #define ROW2Y(r) ((r) * sdl_char_height)
@@ -232,5 +232,13 @@ void *sdl_sensor_open_by_nptype(int nptype);
 void *sdl_sensor_open_by_id(int id);
 void sdl_sensor_close(void *sensor);
 int sdl_sensor_read(void *sensor, double *values, int num_values);
+
+// --------------------
+// routines not made available in picoc
+// --------------------
+
+void sdl_minimize_window(void);
+char *sdl_get_storage_path(void);
+void sdl_copy_asset_file(char *asset_filename, char *dest_dir);
 
 #endif

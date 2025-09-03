@@ -37,6 +37,7 @@
 
 #define EVID_PAGE_DECREMENT  900
 #define EVID_PAGE_INCREMENT  901
+#define EVID_MINIMIZE        902
 
 #define TEN_MS  10000
 #define ONE_SEC 1000000
@@ -82,7 +83,6 @@ int get_permission(char *name); //xxx
 static int init(void);
 static void cleanup(void);
 static void create_default_apps(void);
-static void copy_asset_file(char *asset_filename, char *dest_dir);
 static void sigusr1_hndlr(int signum);
 
 //extern void showHome(void); //xxx
@@ -116,16 +116,9 @@ static int init(void)
 {
     int rc;
 
-    // determine storage_path, and 
+    // get storage_path, and
     // set current working directory to storage_path
-#ifdef ANDROID
-    storage_path = (char*)SDL_GetAndroidInternalStoragePath();
-#else
-    static char storage_path_buff[200];
-    getcwd(storage_path_buff, sizeof(storage_path_buff));
-    strcat(storage_path_buff, "/files");
-    storage_path = storage_path_buff;
-#endif
+    storage_path = sdl_get_storage_path();
     chdir(storage_path);
 
     // init logging
@@ -134,7 +127,7 @@ static int init(void)
         return -1;
     }
 
-    // print startup messages
+    // print startup message
     INFO("========== STARTING: %s %s  ==========\n", VERSION, BUILD_DATE);
     INFO("storage_path = %s\n", storage_path);
 
@@ -143,9 +136,9 @@ static int init(void)
     params.devel_port = util_get_int_param("devel_port", DEFAULT_DEVEL_PORT);
 
     // copy asset files to storage_path
-    copy_asset_file("apps.tar", storage_path);
-    copy_asset_file("copyright", storage_path);
-    copy_asset_file("FreeMonoBold.ttf", storage_path);
+    sdl_copy_asset_file("apps.tar", storage_path);
+    sdl_copy_asset_file("copyright", storage_path);
+    sdl_copy_asset_file("FreeMonoBold.ttf", storage_path);
 
 #ifdef DEVEL
     // for development:
@@ -212,53 +205,6 @@ static void create_default_apps(void)
     }
 }
 
-static void copy_asset_file(char *asset_filename, char *dest_dir)
-{
-    int rc;
-    char dest_path[200];
-
-    sprintf(dest_path, "%s/%s", dest_dir, asset_filename);
-
-#ifndef ANDROID
-    char cmd[250];
-
-    sprintf(cmd, "cp %s/../assets/%s %s", storage_path, asset_filename, dest_path);
-    rc = system(cmd);
-    if (rc != 0) {
-        ERROR("cmd '%s' failed\n", cmd);
-    }
-#else
-    void  *ptr;
-    size_t len;
-
-    // remove dest file, in case it already exists
-    unlink(dest_path);
-
-    // read the asset using SDL_LoadFile;
-    //
-    // Note SDL_LoadFile calls SDL_IOFromFile, which attempts to read
-    // the file as follows:
-    // - if filename begins with '/' then use fopen
-    //   else if filename begins with "content://" then use Android_JNI_OpenFileDescriptor
-    //   else fopen of file in SDL_GetAndroidInternalStoragePath
-    //   endif
-    // - if above failed then try to read the file from assets, using Android_JNI_FileOpen
-    ptr = SDL_LoadFile(asset_filename, &len);
-    if (ptr == NULL ) {
-        ERROR("failed to read apps.tar");
-        return;
-    }
-
-    // write the file to dest_path
-    rc = util_write_file(dest_path, ptr, len);
-    SDL_free(ptr);
-    if (rc != 0) {
-        ERROR("failed to write %s\n", dest_path);
-        return;
-    }
-#endif
-}
-
 static void sigusr1_hndlr(int signum)
 {
     // nothing needed here
@@ -292,9 +238,9 @@ static void processing(void)
         // register for screen bottom control events
         if (LAST_PAGE > 0) {
             sdl_register_control_events("<", ">", "X", BG_COLOR,
-                                        EVID_PAGE_DECREMENT, EVID_PAGE_INCREMENT, EVID_QUIT);
+                                        EVID_PAGE_DECREMENT, EVID_PAGE_INCREMENT, EVID_MINIMIZE);
         } else {
-            sdl_register_control_events(NULL, NULL, "X", BG_COLOR, 0, 0, EVID_QUIT);
+            sdl_register_control_events(NULL, NULL, "X", BG_COLOR, 0, 0, EVID_MINIMIZE);
         }
 
         // update the display
@@ -310,6 +256,8 @@ static void processing(void)
         INFO("proc event_id %d\n", event.event_id);
         if (event.event_id == EVID_QUIT) {
             break;
+        } else if (event.event_id == EVID_MINIMIZE) {
+            sdl_minimize_window();
         } else if (event.event_id == EVID_PAGE_DECREMENT) {
             if (--page < 0) {
                 page = LAST_PAGE;
@@ -638,7 +586,7 @@ static void settings(void)
 {
     sdl_event_t event;
     sdl_loc_t  *loc;
-    bool        quit = false;
+    bool        back = false;
     char       *msg = NULL;
     long        msg_time = 0;
     char       *ipaddr;
@@ -647,6 +595,7 @@ static void settings(void)
     #define EVID_DEVEL_PORT         1001
     #define EVID_RESET_APPS         1002
     #define EVID_COPYRIGHT          1004
+    #define EVID_BACK               1005
 
     // get this device ipaddr
     ipaddr = util_get_ipaddr();
@@ -695,7 +644,7 @@ static void settings(void)
         }
 
         // display the control event 'X' to exit this screen
-        sdl_register_control_events(NULL, NULL, "X", BG_COLOR, 0, 0, EVID_QUIT);
+        sdl_register_control_events(NULL, NULL, "X", BG_COLOR, 0, 0, EVID_BACK);
 
         // present the display
         sdl_display_present();
@@ -744,12 +693,12 @@ static void settings(void)
         case EVID_COPYRIGHT:
             copyright();
             break;
-        case EVID_QUIT:
-            quit = true;
+        case EVID_BACK:
+            back = true;
             break;
         }
 
-        if (quit) {
+        if (back) {
             break;
         }
     }
@@ -761,7 +710,7 @@ static void copyright(void)
     int         y_display_begin, y_display_end, y_top;
     int         len;
     sdl_event_t event;
-    bool        quit = false;
+    bool        back = false;
 
     // read the copyright file
     str = util_read_file("copyright", &len);
@@ -775,14 +724,14 @@ static void copyright(void)
     y_display_end = sdl_win_height - 200;
     y_top = y_display_begin;
 
-    // display copyright, support motion (for scrolling) and exit/quit events
+    // display copyright, support motion (for scrolling) and exit/back events
     while (true) {
         // display copyright and register for motion (scrolling) & exit events
         sdl_display_init(BG_COLOR);
         sdl_print_init(SMALLEST_FONT, COLOR_WHITE, BG_COLOR);
         sdl_register_event(NULL, EVID_MOTION);
         sdl_render_multiline_text(y_top, y_display_begin, y_display_end, str);
-        sdl_register_control_events(NULL, NULL, "X", BG_COLOR, 0, 0, EVID_QUIT);
+        sdl_register_control_events(NULL, NULL, "X", BG_COLOR, 0, 0, EVID_BACK);
         sdl_display_present();
 
         sdl_get_event(-1, &event);
@@ -793,12 +742,12 @@ static void copyright(void)
                 y_top = y_display_begin;
             }
             break;
-        case EVID_QUIT:
-            quit = true;
+        case EVID_BACK:
+            back = true;
             break;
         }
 
-        if (quit) {
+        if (back) {
             break;
         }
     }

@@ -16,7 +16,6 @@
 #define EVID_GAME_START          201
 #define EVID_GAME_RESET          202
 #define EVID_MOVE_PASS           203
-#define EVID_END_PROGRAM         204
 #define EVID_PLAYER_BLACK_SELECT 205
 #define EVID_PLAYER_WHITE_SELECT 206
 
@@ -35,9 +34,6 @@
 static void game_init(board_t *b);
 static bool is_game_over(board_t *b);
 static bool humans_turn(board_t *b);
-static void set_print_color(int color);
-static void set_print_size(int numchar);
-static void set_print_default(void);
 static char *player_name(int p);
 static bool event_id_is_game_move(int evid);
 
@@ -49,36 +45,30 @@ static void update_display_and_register_events(board_t *b, int game_state, char 
 
 int main(int argc, char **argv)
 {
-    bool    is_ez_app;
     int     game_state;
     board_t board;
     char    eval_str[100];
 
     // init variables
-    is_ez_app = (argc > 0 && strcmp(argv[0], "ez_app") == 0);
     game_state = GAME_STATE_READY;
     game_init(&board);
     eval_str[0] = '\0';
 
     // seed random number generator
-    srandom(util_microsec_timer());
+    // xxx commented out to compare picoc and linux
+    //srandom(util_microsec_timer());
 
-    // if not ez_app then call sdl_init
-    if (!is_ez_app && sdl_init() != 0) {
-        printf("ERROR: sdl_init failed\n");
-        return 1;
-    }
-
-    // set default print; 20 chars across display, fg=white, bg=black
-    set_print_default();
+    // init sdl
+    sdl_init();
 
     // xxx
     update_display_init();
 
     // loop until end program
     while (true) {
-        // init display to black
+        // init display to black, and init print size/color
         sdl_display_init(COLOR_BLACK);
+        sdl_print_init(20, COLOR_WHITE, COLOR_BLACK);
 
         // update the display and register events
         update_display_and_register_events(&board, game_state, eval_str);
@@ -126,7 +116,7 @@ int main(int argc, char **argv)
         // process the event
         // xxx need a way to interrupt a long running cpu_get_move
         printf("GOT EVENT %d\n", event.event_id);
-        if (event.event_id == EVID_QUIT || event.event_id == EVID_END_PROGRAM) {
+        if (event.event_id == EVID_QUIT) {
             break;
         } else if (event.event_id == EVID_GAME_RESET) {
             game_state = GAME_STATE_READY;
@@ -159,10 +149,8 @@ int main(int argc, char **argv)
     // xxx
     update_display_unload();
 
-    // if not ez_app then call sdl_exit
-    if (!is_ez_app) {
-        sdl_exit();
-    }
+    // exit sdl
+    sdl_exit();
 
     // return success
     return 0;
@@ -210,21 +198,6 @@ static bool humans_turn(board_t *b)
            (b->whose_turn == WHITE && b->player_white == HUMAN);
 }
 
-static void set_print_size(int numchar)
-{
-    sdl_print_init(numchar, COLOR_WHITE, COLOR_BLACK);
-}
-
-static void set_print_color(int color)
-{
-    sdl_print_init(20, color, COLOR_BLACK);
-}
-
-static void set_print_default(void)
-{
-    sdl_print_init(20, COLOR_WHITE, COLOR_BLACK);
-}
-
 static char *player_name(int p)
 {
     static char str[20];
@@ -250,12 +223,6 @@ static bool event_id_is_game_move(int evid)
 }
 
 // -----------------  UPDATE DISPLAY ------------------------------
-
-//
-// defines
-//
-
-#define NK2X(n,k) ((sdl_win_width/2/(n)) + (k) * (sdl_win_width/(n)))
 
 //
 // variables
@@ -364,10 +331,9 @@ static void update_display_and_register_events(board_t *b, int game_state, char 
         if (game_state == GAME_STATE_ACTIVE) {
             sdl_render_text(x_origin, y_origin+100, player_name(player));
         } else {
-            set_print_color(COLOR_LIGHT_BLUE);
+            sdl_print_init_color(COLOR_LIGHT_BLUE, COLOR_BLACK);
             ploc = sdl_render_text(x_origin, y_origin+100, player_name(player));
             sdl_register_event(ploc, evid);
-            set_print_default();
         }
 
         if (game_state == GAME_STATE_ACTIVE || game_state == GAME_STATE_OVER) {
@@ -376,16 +342,11 @@ static void update_display_and_register_events(board_t *b, int game_state, char 
         }
     }
 
-    // register for more events:
-    // - EVID_END_PROGRAM
-    // - EVID_GAME_START
-    // - EVID_GAME_RESET
-    set_print_size(10);
-    ploc = sdl_render_text_xyctr(NK2X(3,2), sdl_win_height-sdl_char_height/2, "X");
-    sdl_register_event(ploc, EVID_END_PROGRAM);
-    set_print_default();
+    // register control event to end program
+    sdl_register_control_events(NULL, NULL, "X", COLOR_BLACK, 0, 0, EVID_QUIT);
 
-    set_print_color(COLOR_LIGHT_BLUE);
+    // register game start and reset events
+    sdl_print_init_color(COLOR_LIGHT_BLUE, COLOR_BLACK);
     if (game_state == GAME_STATE_READY) {
         ploc = sdl_render_text(0, 1600, "START");
         sdl_register_event(ploc, EVID_GAME_START);
@@ -393,17 +354,16 @@ static void update_display_and_register_events(board_t *b, int game_state, char 
         ploc = sdl_render_text(0, 1600, "RESET");
         sdl_register_event(ploc, EVID_GAME_RESET);
     }
-    set_print_default();
+    sdl_print_init_color(COLOR_WHITE, COLOR_BLACK);
 
     // if the game is in progress and it is the humans turn then
     // register events for the human players possible moves
     if (game_state == GAME_STATE_ACTIVE && humans_turn(b)) {
         get_possible_moves(b, &pm);
         if (pm.max == 0) {
-            set_print_color(COLOR_LIGHT_BLUE);
+            sdl_print_init_color(COLOR_LIGHT_BLUE, COLOR_BLACK);
             ploc = sdl_render_text(0, 1750, "PASS");  // xxx move this
             sdl_register_event(ploc, EVID_MOVE_PASS);
-            set_print_default();
         } else {
             for (int i = 0; i < pm.max; i++) {
                 int r, c;

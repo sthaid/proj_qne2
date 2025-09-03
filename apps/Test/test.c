@@ -67,20 +67,14 @@ static void page_9_exit(void);
 
 int main(int argc, char **argv)
 {
-    bool is_ez_app = (argc > 0 && strcmp(argv[0], "ez_app") == 0);
-
     // print args 
     printf("argc = %d\n", argc);
     for (int i = 0; i < argc; i++) {
         printf("argv[%d] = '%s'\n", i, argv[i]);
     }
-    printf("is_ez_app = %d\n", is_ez_app);
 
-    // if not ez_app then call sdl_init
-    if (!is_ez_app && sdl_init() != 0) {
-        printf("ERROR: sdl_init failed\n");
-        return 1;
-    }
+    // init sdl
+    sdl_init();
 
     // print window and char sized, these are global variables from sdl.c;
     // the initial char size provides 20 chars across the display width
@@ -98,10 +92,8 @@ int main(int argc, char **argv)
         }
     }
 
-    // if not ez_app then call sdl_exit
-    if (!is_ez_app) {
-        sdl_exit();
-    }
+    // exit sdl
+    sdl_exit();
 
     // return success
     return 0;
@@ -130,13 +122,10 @@ static int pagenum = 0;
 #define EVID_PREV_PAGE 1
 #define EVID_NEXT_PAGE 2
 
-// xxx test the save and restore print state
 static void page_hndlr()
 {
     sdl_event_t event;
     int         new_pagenum = -1;
-
-    sdl_print_init(DEFAULT_FONT, COLOR_WHITE, COLOR_BLACK);
 
     // call the page specific init routine, if provided
     switch (pagenum) {
@@ -148,11 +137,11 @@ static void page_hndlr()
     }
 
     while (true) {
-        // init the backbuffer
+        // init the backbuffer, and print font/color
         sdl_display_init(COLOR_BLACK);
+        sdl_print_init(DEFAULT_FONT, COLOR_WHITE, COLOR_BLACK);
 
         // draw title line
-        sdl_print_init(DEFAULT_FONT, COLOR_WHITE, COLOR_BLACK);
         sdl_render_text_xyctr(sdl_win_width/2, sdl_char_height/2, page_title[pagenum]);
 
         // register control events
@@ -205,7 +194,7 @@ static void page_hndlr()
                 new_pagenum = MAX_PAGE-1;
             }
             break;      
-        case EVID_SWIPE_LEFT: case EVID_NEXT_PAGE:  // XXX xxx register for these swipe events  NO motion if swipe reg
+        case EVID_SWIPE_LEFT: case EVID_NEXT_PAGE:
             new_pagenum = pagenum + 1;
             if (new_pagenum >= MAX_PAGE) {
                 new_pagenum = 0;
@@ -314,8 +303,6 @@ static void page_2_draw(void)
 }
 
 // -----------------  PAGE 3: MULTI LINE TEXT  ----------------
-
-// XXX xxx not working correctly, probably scaling problem
 
 // This tests both
 // - sdl_render_multiline_text, and
@@ -581,6 +568,7 @@ static void page_7_draw(void)
     sdl_loc_t *loc;
     sdl_audio_state_t state;
     int y;
+    sdl_print_state_t print_state;
 
     //
     // get audio state
@@ -592,6 +580,8 @@ static void page_7_draw(void)
     // record section
     //
 
+    sdl_print_save(&print_state);
+
     sdl_print_init_color(state.state == AUDIO_STATE_RECORD ? COLOR_RED : COLOR_WHITE, COLOR_BLACK);
     loc = sdl_render_text(0, 200, "RECORD");
     sdl_register_event(loc, EVID_AUDIO_RECORD);
@@ -600,7 +590,7 @@ static void page_7_draw(void)
     loc = sdl_render_text(sdl_win_width/2, 200, "APPEND");
     sdl_register_event(loc, EVID_AUDIO_RECORD_APPEND);
 
-    sdl_print_init_color(COLOR_WHITE, COLOR_BLACK);
+    sdl_print_restore(&print_state);
 
     //
     // play section

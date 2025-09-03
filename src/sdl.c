@@ -2,6 +2,7 @@
 
 #include <sdl.h>
 #include <logging.h>
+#include <utils.h>
 
 #include <SDL3/SDL.h>
 #include <SDL3_ttf/SDL_ttf.h>
@@ -117,11 +118,18 @@ bool event_watcher(void* userdata, SDL_Event* event)
     return 0;
 }
 
+static int sdl_init_count; //xxx cleanup, move this and comments 
+
 int sdl_init(void)
 {
     int real_win_width, real_win_height;
     int num, i;
     double aspect_ratio;
+
+    if (sdl_init_count++ > 0) {
+        INFO("already initialized\n");
+        return 0;
+    }
 
 #if 0 // xxx del later
     // set hints
@@ -218,6 +226,11 @@ int sdl_init(void)
 void sdl_exit(void)
 {
     int i;
+
+    if (--sdl_init_count > 0) {
+        INFO("not exitting\n");
+        return;
+    }
 
     INFO("sdl exitting\n");
 
@@ -1382,4 +1395,74 @@ sdl_pixels_t *sdl_read_display_pixels(int x, int y, int w, int h)
     // success, return allocated sdl_pixels_t   
     return pixels;
 }
+// -----------------  ROUTINES NOT MADE AVAILABLE IN PICOC  ---------------------- 
 
+void sdl_minimize_window(void)
+{
+    SDL_MinimizeWindow(window);
+}
+
+char *sdl_get_storage_path(void)
+{
+#ifdef ANDROID
+    return (char*)SDL_GetAndroidInternalStoragePath();
+#else  // not Android
+    static char storage_path_buff[200];
+
+    if (storage_path_buff[0] == '\0') {
+        getcwd(storage_path_buff, sizeof(storage_path_buff));
+        strcat(storage_path_buff, "/files");
+    }
+
+    return storage_path_buff;
+#endif
+}
+
+void sdl_copy_asset_file(char *asset_filename, char *dest_dir)
+{
+    int rc;
+    char dest_path[200];
+
+    sprintf(dest_path, "%s/%s", dest_dir, asset_filename);
+
+#ifdef ANDROID
+    void  *ptr;
+    size_t len;
+
+    // remove dest file, because it may already exist
+    unlink(dest_path);
+
+    // read the asset using SDL_LoadFile;
+    //
+    // Note SDL_LoadFile calls SDL_IOFromFile, which attempts to read
+    // the file as follows:
+    // - if filename begins with '/' then use fopen
+    //   else if filename begins with "content://" then use Android_JNI_OpenFileDescriptor
+    //   else fopen of file in SDL_GetAndroidInternalStoragePath
+    //   endif
+    // - if above failed then try to read the file from assets, using Android_JNI_FileOpen
+    ptr = SDL_LoadFile(asset_filename, &len);
+    if (ptr == NULL ) {
+        ERROR("failed to read apps.tar");
+        return;
+    }
+
+    // write the file to dest_path
+    rc = util_write_file(dest_path, ptr, len);
+    SDL_free(ptr);
+    if (rc != 0) {
+        ERROR("failed to write %s\n", dest_path);
+        return;
+    }
+#else  // not Android
+    char cmd[250];
+    char *storage_path;
+
+    storage_path = sdl_get_storage_path();
+    sprintf(cmd, "cp %s/../assets/%s %s", storage_path, asset_filename, dest_path);
+    rc = system(cmd);
+    if (rc != 0) {
+        ERROR("cmd '%s' failed\n", cmd);
+    }
+#endif
+}
