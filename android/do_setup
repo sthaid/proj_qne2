@@ -7,38 +7,46 @@ update_build_file()
 
   echo "- updating $src to $dest"
   if [ -f "$BUILD_DIR/$dest" ]; then
-    cp $BUILD_DIR/$dest $TOP/setup_files/${src}.orig
+    cp $BUILD_DIR/$dest $TOP/setup_files/orig/${src}
   fi
-  cp $TOP/setup_files/${src} $BUILD_DIR/$dest 
+  ln -sf $TOP/setup_files/${src} $BUILD_DIR/$dest 
 }
 
 # ######### MAIN ##########
 
-# set variables
+# init variables
 PACKAGE_NAME=org.sthaid.ezApp
-SDL_VER=SDL3-3.2.20
-SDL_TTF_VER=SDL3_ttf-3.2.2
+SDL_VER=3.2.20
+SDL_TTF_VER=3.2.2
 
-# init more variables
+# directories
 TOP=`pwd`
-SDL_DIR=$TOP/$SDL_VER
-SDL_TTF_DIR=$SDL_DIR/build/$PACKAGE_NAME/app/jni/$SDL_TTF_VER
-SDL_TAR_FILE=$SDL_VER.tar.gz
-SDL_TTF_TAR_FILE=$SDL_TTF_VER.tar.gz
+SDL_DIR=$TOP/SDL3-$SDL_VER
+SDL_TTF_DIR=$SDL_DIR/build/$PACKAGE_NAME/app/jni/SDL3_ttf-$SDL_TTF_VER
 BUILD_DIR=$SDL_DIR/build/$PACKAGE_NAME
 RES_DIR=$BUILD_DIR/app/src/main/res
 
-# remove existing SDL directory tree, and existing *.orig files in setup_files
-echo "Remove existing $SDL_DIR and setup_files/*.orig"
+# sdl 
+SDL_TAR_FILE=SDL3-$SDL_VER.tar.gz
+SDL_URL=https://github.com/libsdl-org/SDL/releases/download/release-$SDL_VER/$SDL_TAR_FILE
+
+# sdl_ttf
+SDL_TTF_TAR_FILE=SDL3_ttf-$SDL_TTF_VER.tar.gz
+SDL_TTF_URL=https://www.libsdl.org/projects/SDL_ttf/release/$SDL_TTF_TAR_FILE
+
+# remove existing SDL directory tree, and setup_files/orig
+echo "Remove existing $SDL_DIR and setup_files/orig"
 rm -rf $SDL_DIR
 rm -f SDL
-rm -rf setup_files/*.orig
+rm -rf setup_files/orig
 
 # if SDL src tar files are not in the setup_files dir, then download them
 if [ ! -f setup_files/$SDL_TAR_FILE -o ! -f setup_files/$SDL_TTF_TAR_FILE ]; then
   echo "Downloading SDL3 source tar files"
   cd setup_files
-  ./get_sdl3_src
+  rm -f *.tar.gz
+  wget $SDL_URL
+  wget $SDL_TTF_URL
   cd ..
 fi
 
@@ -69,6 +77,7 @@ echo
 
 # update files in $BUILD_DIR
 echo "Updating files in $BUILD_DIR"
+mkdir $TOP/setup_files/orig
 cd $BUILD_DIR
 update_build_file app_build.gradle                                    app/build.gradle
 update_build_file app_jni_Application.mk                              app/jni/Application.mk
@@ -77,8 +86,8 @@ update_build_file app_src_main_AndroidManifest.xml                    app/src/ma
 update_build_file app_src_main_java_org_libsdl_app_MyService.java     app/src/main/java/org/libsdl/app/MyService.java
 update_build_file app_src_main_java_org_libsdl_app_SDLActivity.java   app/src/main/java/org/libsdl/app/SDLActivity.java
 echo "- updating app_src_main_res to app/src/main/res"
-mv app/src/main/res                                                   $TOP/setup_files/app_src_main_res.orig
-cp -r $TOP/setup_files/app_src_main_res                               app/src/main/res
+mv app/src/main/res                                                   $TOP/setup_files/orig/app_src_main_res
+ln -s $TOP/setup_files/app_src_main_res                               app/src/main/res
 echo
 
 # add symbolic links to the source code
