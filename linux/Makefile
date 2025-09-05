@@ -4,6 +4,7 @@ SRCS :=  \
   ../src/sdl.c \
   ../src/sdl_audio.c \
   ../src/sdl_sensor.c \
+  ../src/test.cpp \
   ../src/utils.c \
   ../src/logging.c \
   ../picoc/clibrary.c \

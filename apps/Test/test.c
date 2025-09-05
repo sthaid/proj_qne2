@@ -886,8 +886,9 @@ static void page_9_init(void)
 
 static void page_9_draw(void)
 {
-    double val[3];
+    double val[6];
     int row = 2;
+    static long last_time = 0;
 
     sdl_print_init(SMALL_FONT, COLOR_WHITE, COLOR_BLACK);
 
@@ -896,6 +897,13 @@ static void page_9_draw(void)
         if (x->sensor) {
             sdl_sensor_read(x->sensor, val, 3);
             sdl_render_printf(0, ROW2Y(row++), "%-8s %6.2f %6.2f %6.2f", x->name, val[0], val[1], val[2]);
+
+            if (x->nptype == 19 && time(NULL) != last_time) { //xxx cleanup
+                last_time = time(NULL);
+                printf("19 = %f %f %f %f %f %f\n",
+                     val[0], val[1], val[2], val[3], val[4], val[5]);
+            }
+
         }
     }
 }

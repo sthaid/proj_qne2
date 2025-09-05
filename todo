@@ -1,100 +1,18 @@
-sdl quit in main.c / Settings
-X == SDL_BACK  ??
-restrict event id for user
-move KEYBD event id
+use symlinks for setup-files and put orig in subdir
+destroy flag is not being cleared in Myervice
 
-- - -
-
-
-
-
-----------
-
-void sdl_minimize_window(void)
-{
-    SDL_MinimizeWindow(sdl_window);
-}
+permissions
+foreground service
+sensor api, and updates to test pgm
+calling java routines, pass param and return value  test.cpp name
 
 ---------------
 
-       fputc() writes the character c, cast to an unsigned char, to stream.
-
-       putc()  is  equivalent  to  fputc() except that it may be implemented as a macro which
-       evaluates stream more than once.
-
-       putchar(c) is equivalent to putc(c, stdout).
-
-       fputs() writes the string s to stream, without its terminating null byte ('\0').
-
-       puts() writes the string s and a trailing newline to stdout.
-
------
-LOGGING
-
-sdl - SDL_Log
-
-linux - log to stdout
-
-apps
-- use ERROR, WARN, INFO
-
-linux-app - log to stdout
-
-picoc-app
-
-picoc and any other calls to printf
-- also use ERRO, WARN, INFO
-
---- remvoe ---
-logging to file in src
-
+restrict event id for user
+move KEYBD event id
+update logging to use the different SDL levels
 
 ----------------------
-
-make tree copy
-mv myservice and rename
-are all drawables needed
-save changed / new files
-- make a resource subdir in save files
-start / stop service from settings
-
-logging
-
-
-files changes : /SDL3-3.2.20/build/org.sthaid.ezApp
-
-app/build.gradle   ok
-
-app/jni/Application.mk   ok
-app/jni/src/Android.mk   ok
-
-app/src/main/AndroidManifest.xml   ok
-app/src/main/java/org/libsdl/app/SDLActivity.java  ok
-app/src/main/java/org/libsdl/app/MyService.java  ok
-
-app/src/main/java/org/libsdl/app/src/main/res  ok
-src/test.cpp
-
-app_src_main_java_org_libsdl_app_src_main_res  ok
-xxxxxxxxxxxxxxxxx
-
-how to have android sdl3 app continue to run in background after exit
-
-SDL_APP_WILLENTERFOREGROUND
-SDL_EVENT_DID_ENTER_BACKGROUND
-SDL_EVENT_WILL_ENTER_FOREGROUND
-
-=================
-
-version file                                                                  DONE
-
-ezput tool, the layout file                                                   DONE
-
-fix motion scaling                                                            DONE
-
-update test program to use the swipe events, and the motion event             DONE
-
-dont write params file if value has not changed                               DONE
 
 If you want to use threads in your SDL app, it's strongly recommended that you
 do so by creating them using SDL functions. This way, the required attach/detach
@@ -103,7 +21,6 @@ means and they make calls to SDL functions, make sure that you call
 Android_JNI_SetupThread() before doing anything else otherwise SDL will attach
 your thread automatically anyway (when you make an SDL call), but it'll never
 detach it.
-
 
 primes benchmark
 

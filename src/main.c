@@ -73,10 +73,11 @@ static void kill_child_processes(pid_t pid);
 // routines to launch a C program using picoc interpreter
 //
 
-int picoc_fg(char *args);
-void picoc_bg(char *args);
+extern int picoc_fg(char *args);
+extern void picoc_bg(char *args);
 
-int get_permission(char *name); //xxx
+extern void showHome(void); //xxx names, etc
+extern void showHome2(void);
 
 // -----------------  MAIN  ------------------------------------------
 
@@ -85,25 +86,15 @@ static void cleanup(void);
 static void create_default_apps(void);
 static void sigusr1_hndlr(int signum);
 
-//extern void showHome(void); //xxx
-//extern void showHome2(void);
-
 int MAIN(int argc, char **argv)
 {
     int rc;
 
     rc = init();
     if (rc != 0) {
+        // xxx check all error return paths
         return 1;
     }
-
-#if 0  // xxx mve this
-    get_permission("android.permission.POST_NOTIFICATION"); //xxx
-    sleep(3);
-    get_permission("android.permission.FOREGROUND_SERVICE_SPECIAL_USE");
-    sleep(3);
-    showHome();
-#endif
 
     processing();
 
@@ -181,7 +172,7 @@ static void cleanup(void)
 {
     INFO("TERMINATING\n");
 
-    //showHome2(); //xxx
+    showHome2(); //xxx
 
     kill_child_processes(getpid());
 
@@ -591,10 +582,13 @@ static void settings(void)
     long        msg_time = 0;
     char       *ipaddr;
 
+    static bool fg_service_active; //xxx use param
+
     #define EVID_DEVEL_MODE         1000
     #define EVID_DEVEL_PORT         1001
     #define EVID_RESET_APPS         1002
     #define EVID_COPYRIGHT          1004
+    #define EVID_FG_SERVICE         1005
 
     // get this device ipaddr
     ipaddr = util_get_ipaddr();
@@ -630,6 +624,10 @@ static void settings(void)
         // display Reset_Apps
         loc = sdl_render_printf(0, ROW2Y(11), "Reset_Apps");
         sdl_register_event(loc, EVID_RESET_APPS);
+
+        // display Fg_Service
+        loc = sdl_render_printf(0, ROW2Y(13), "Fg_Service = %s", fg_service_active ? "ON" : "OFF");
+        sdl_register_event(loc, EVID_FG_SERVICE);
 
         // change print color back to white
         sdl_print_init_color(COLOR_WHITE, BG_COLOR);
@@ -691,6 +689,28 @@ static void settings(void)
             break; }
         case EVID_COPYRIGHT:
             copyright();
+            break;
+        case EVID_FG_SERVICE:  // xxx preliminary
+            if (!fg_service_active) {
+                if (sdl_get_permission("android.permission.POST_NOTIFICATION") != 0) {
+                    ERROR("failed to get permission POST_NOTIFICATION\n");
+                    ERROR("CONTINUING\n"); //xxx why does this fail
+                    //break;
+                }
+                if (sdl_get_permission("android.permission.ACCESS_COARSE_LOCATION") != 0) {
+                    ERROR("failed to get permission ACCESS_COARSE_LOCATION\n");
+                    break;
+                }
+                if (sdl_get_permission("android.permission.ACCESS_FINE_LOCATION") != 0) {
+                    ERROR("failed to get permission ACCESS_FINE_LOCATION\n");
+                    break;
+                }
+                showHome();
+                fg_service_active = true;
+            } else {
+                showHome2();
+                fg_service_active = false;
+            }
             break;
         case EVID_QUIT:
             done = true;

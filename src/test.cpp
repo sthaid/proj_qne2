@@ -1,12 +1,19 @@
-#include <SDL3/SDL.h>
-#include <jni.h>
+
+// xxx add logging
+// xxx update *.h for cpp
 
 // This example requires C++ and a custom Java method named "void showHome()"
 
+// xxx move these to some .h file
 extern "C" {
 void showHome(void);
 void showHome2(void);
 }
+
+#ifdef ANDROID
+
+#include <SDL3/SDL.h>
+#include <jni.h>
 
 // Calls the void showHome() method of the Java instance of the activity.
 void showHome(void)
@@ -81,3 +88,15 @@ cleanup:
     // Therefore references need to be manually deleted because otherwise the
     // references will first be cleaned if main() returns (application exit).
 }
+
+#else
+
+void showHome(void)
+{
+}
+
+void showHome2(void)
+{
+}
+
+#endif

@@ -241,4 +241,6 @@ void sdl_minimize_window(void);
 char *sdl_get_storage_path(void);
 void sdl_copy_asset_file(char *asset_filename, char *dest_dir);
 
+int sdl_get_permission(char *name);
+
 #endif

@@ -31,8 +31,6 @@ static int               max_sensor_info_tbl;
 // prototypes
 //
 
-int get_permission(char *name); //xxx was static
-
 // -----------------  INIT -------------------------------
 
 // called by sdl_init
@@ -112,7 +110,7 @@ void *sdl_sensor_open_by_nptype(int nptype)
     // get permission, if required for the requested nptype; 
     // note that the permission may also be needed in AndroidManifest.xml
     if (nptype == ASENSOR_TYPE_STEP_COUNTER) {
-        rc = get_permission("android.permission.ACTIVITY_RECOGNITION");
+        rc = sdl_get_permission("android.permission.ACTIVITY_RECOGNITION");
         if (rc < 0) {
             ERROR("failed to be granted ACTIVITY_RECOGNITION permission for STEP_COUNTER sensor\n");
             return NULL;
@@ -141,6 +139,7 @@ void sdl_sensor_close(void *sensor)
     SDL_CloseSensor(sensor);
 }
 
+// xxx simplify this api
 int sdl_sensor_read(void *sensor, double *values, int num_values)
 {
     int i;
@@ -173,69 +172,20 @@ int sdl_sensor_read(void *sensor, double *values, int num_values)
     }
 
     // convert the float_values to double values, for return to caller
-    for (i = 0; i < num_values; i++) {
-        values[i] = float_values[i];
+    if (SDL_GetSensorNonPortableType(sensor) != ASENSOR_TYPE_STEP_COUNTER) {
+        for (i = 0; i < num_values; i++) {
+            values[i] = float_values[i];
+        }
+    } else {
+        for (i = 1; i < num_values; i++) {
+            values[i] = float_values[i];
+        }
+        values[0] = *(unsigned long*)float_values;
     }
 
     // success
     return 0;
 }
-
-// -----------------  PRIVATE  ----------------------------
-
-#ifdef ANDROID
-
-static void get_permission_cb(void *userdata, const char *permission, bool granted);
-
-#define PERM_NO_RESULT    0
-#define PERM_GRANTED      1
-#define PERM_NOT_GRANTED  2
-
-int get_permission(char *name)  //xxx was static 
-{
-    bool succ;
-    int perm_result;
-
-    // request permission
-    perm_result = PERM_NO_RESULT;
-    succ = SDL_RequestAndroidPermission(name, get_permission_cb, &perm_result);
-    if (!succ) {
-        ERROR("SDL_RequestAndroidPermission failed, %s\n", SDL_GetError());
-        return -1;
-    }
-
-    // wait for permission request to be either granted or not-granted
-    while (perm_result == PERM_NO_RESULT) {
-        usleep(TEN_MS);
-    }
-
-    // if not granted then return error
-    if (perm_result != PERM_GRANTED) {
-        ERROR("%s not granted\n", name);
-        return -1;
-    }
-
-    // return success
-    return 0;
-}
-
-static void get_permission_cb(void *userdata, const char *permission, bool granted)
-{
-    int *perm_result = (int*)userdata;
-
-    INFO("permission=%s  granted=%d\n", permission, granted);
-    *perm_result = (granted ? PERM_GRANTED : PERM_NOT_GRANTED);
-}
-
-#else
-
-int get_permission(char *name)  //xxx was static
-{
-    // return success
-    return 0;
-}
-
-#endif
 
 #if 0
 // -----------------  NOTES  --------------------
@@ -428,5 +378,85 @@ ANDROID SENSORS ON MY DEVICE
   41: Palm Proximity Sensor version 2                              type=0  nptype=8
   42: Motion Sensor                                                type=0  nptype=65559
   43: Orientation Sensor                                           type=0  nptype=3
+
+--------------------------------------
+ANDROID SENSOR EVENT STRUCT, FROM NDK
+--------------------------------------
+
+/**
+ * Information that describes a sensor event, refer to
+ * <a href="/reference/android/hardware/SensorEvent">SensorEvent</a> for additional
+ * documentation.
+ *
+ * NOTE: changes to this struct has to be backward compatible and reflected in
+ * sensors_event_t
+ */
+typedef struct ASensorEvent {
+    /* sizeof(struct ASensorEvent) */
+    int32_t version;
+    /** The sensor that generates this event */
+    int32_t sensor;
+    /** Sensor type for the event, such as {@link ASENSOR_TYPE_ACCELEROMETER} */
+    int32_t type;
+    /** do not use */
+    int32_t reserved0;
+    /**
+     * The time in nanoseconds at which the event happened, and its behavior
+     * is identical to <a href="/reference/android/hardware/SensorEvent#timestamp">
+     * SensorEvent::timestamp</a> in Java API.
+     */
+    int64_t timestamp;
+    union {
+        union {
+            float           data[16];
+            ASensorVector   vector;
+            ASensorVector   acceleration;
+            ASensorVector   gyro;
+            ASensorVector   magnetic;
+            float           temperature;
+            float           distance;
+            float           light;
+            float           pressure;
+            float           relative_humidity;
+            AUncalibratedEvent uncalibrated_acceleration;
+            AUncalibratedEvent uncalibrated_gyro;
+            AUncalibratedEvent uncalibrated_magnetic;
+            AMetaDataEvent meta_data;
+            AHeartRateEvent heart_rate;
+            ADynamicSensorEvent dynamic_sensor_meta;
+            AAdditionalInfoEvent additional_info;
+            AHeadTrackerEvent head_tracker;
+            ALimitedAxesImuEvent limited_axes_imu;
+            ALimitedAxesImuUncalibratedEvent limited_axes_imu_uncalibrated;
+            AHeadingEvent heading;
+        };
+        union {
+            uint64_t        data[8];
+            uint64_t        step_counter;
+        } u64;
+    };
+
+    uint32_t flags;
+    int32_t reserved1[3];
+} ASensorEvent;
+
+typedef struct ASensorVector {
+    union {
+        float v[3];
+        struct {
+            float x;
+            float y;
+            float z;
+        };
+        struct {
+            float azimuth;
+            float pitch;
+            float roll;
+        };
+    };
+    int8_t status;
+    uint8_t reserved[3];
+} ASensorVector;
+
 
 #endif

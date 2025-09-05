@@ -373,6 +373,8 @@ void sdl_get_event(long timeout_us, sdl_event_t *event)
     }
 
 try_again:
+    //SDL_UpdateSensors(); // xxx is this needed?
+
     // get event
     got_event = SDL_PollEvent(&ev);
 
@@ -475,16 +477,19 @@ static void process_sdl_event(SDL_Event *ev, sdl_event_t *event)
             event->u.motion.yrel = ev->motion.yrel / scale;
         }
         break; }
-#if 0
     case SDL_EVENT_SENSOR_UPDATE: {
         SDL_SensorEvent *x = &ev->sensor;
         // xxx why is step counter not working
-        if (x->which == 14 || x->which == 15) 
-            INFO("SENSOR: which=%d data=%f %f %f %f %f %f timestamp=%ld\n",
+        // xxx cleanup
+        if (x->which == 14 || x->which == 15) { // xxx clean up these prints
+            long stepc = *(long*)x->data;
+            INFO("SENSOR: which=%d data=%f %f %f %f %f %f stepc=%ld timestamp=%ld\n",
                  x->which,
                  x->data[0], x->data[1], x->data[2], x->data[3], x->data[4], x->data[5],
-                 x->sensor_timestamp);
+                 stepc, x->sensor_timestamp);
+        }
         break; }
+#if 0
     case SDL_EVENT_TEXT_INPUT: {
         SDL_TextInputEvent *x = &ev->text;
         INFO("SDL_EVENT_TEXT_INPUT: '%s'\n", x->text);
@@ -1408,10 +1413,14 @@ sdl_pixels_t *sdl_read_display_pixels(int x, int y, int w, int h)
 }
 // -----------------  ROUTINES NOT MADE AVAILABLE IN PICOC  ---------------------- 
 
+// - - - - - - - - - sdl_minimize_window - - - - - - - - - - - 
+
 void sdl_minimize_window(void)
 {
     SDL_MinimizeWindow(window);
 }
+
+// - - - - - - - - - sdl_get_storage_path  - - - - - - - - - - 
 
 char *sdl_get_storage_path(void)
 {
@@ -1428,6 +1437,8 @@ char *sdl_get_storage_path(void)
     return storage_path_buff;
 #endif
 }
+
+// - - - - - - - - - sdl_copy_asset_file - - - - - - - - - - - 
 
 void sdl_copy_asset_file(char *asset_filename, char *dest_dir)
 {
@@ -1477,3 +1488,55 @@ void sdl_copy_asset_file(char *asset_filename, char *dest_dir)
     }
 #endif
 }
+
+// - - - - - - - - - sdl_get_permission  - - - - - - - - - - - 
+
+#ifdef ANDROID
+#define PERM_NO_RESULT    0
+#define PERM_GRANTED      1
+#define PERM_NOT_GRANTED  2
+static void get_permission_cb(void *userdata, const char *permission, bool granted)
+{
+    int *perm_result = (int*)userdata;
+
+    INFO("permission=%s  granted=%d\n", permission, granted);
+    *perm_result = (granted ? PERM_GRANTED : PERM_NOT_GRANTED);
+}
+#endif
+
+int sdl_get_permission(char *name)
+{
+#ifndef ANDROID
+    // when not running on Android return success
+    return 0;
+#else
+    bool succ;
+    int perm_result;
+
+    INFO("get_permission %s\n", name);
+
+    // request permission
+    perm_result = PERM_NO_RESULT;
+    succ = SDL_RequestAndroidPermission(name, get_permission_cb, &perm_result);
+    if (!succ) {
+        ERROR("SDL_RequestAndroidPermission failed, %s\n", SDL_GetError());
+        return -1;
+    }
+
+    // wait for permission request to be either granted or not-granted
+    while (perm_result == PERM_NO_RESULT) {
+        usleep(TEN_MS);
+    }
+
+    // if not granted then return error
+    if (perm_result != PERM_GRANTED) {
+        ERROR("%s not granted\n", name);
+        return -1;
+    }
+
+    // return success
+    return 0;
+#endif
+}
+
+
