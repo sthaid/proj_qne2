@@ -1,0 +1,159 @@
+SDL_ANDROID_SensorDriver
+SDL_androidsensor.c
+
+typedef struct SDL_SensorDriver
+{
+    /* Function to scan the system for sensors.
+     * sensor 0 should be the system default sensor.
+     * This function should return 0, or -1 on an unrecoverable fatal error.
+     */
+    bool (*Init)(void);
+
+    // Function to return the number of sensors available right now
+    int (*GetCount)(void);
+
+    // Function to check to see if the available sensors have changed
+    void (*Detect)(void);
+
+    // Function to get the device-dependent name of a sensor
+    const char *(*GetDeviceName)(int device_index);
+
+    // Function to get the type of a sensor
+    SDL_SensorType (*GetDeviceType)(int device_index);
+
+    // Function to get the platform dependent type of a sensor
+    int (*GetDeviceNonPortableType)(int device_index);
+
+    // Function to get the current instance id of the sensor located at device_index
+    SDL_SensorID (*GetDeviceInstanceID)(int device_index);
+
+    /* Function to open a sensor for use.
+       The sensor to open is specified by the device index.
+       It returns 0, or -1 if there is an error.
+     */
+    bool (*Open)(SDL_Sensor *sensor, int device_index);
+
+    /* Function to update the state of a sensor - called as a device poll.
+     * This function shouldn't update the sensor structure directly,
+     * but instead should call SDL_SendSensorUpdate() to deliver events
+     * and update sensor device state.
+     */
+    void (*Update)(SDL_Sensor *sensor);
+
+    // Function to close a sensor after use
+    void (*Close)(SDL_Sensor *sensor);
+
+    // Function to perform any system-specific sensor related cleanup
+    void (*Quit)(void);
+
+} SDL_SensorDriver;
+
+
+
+
+static int SDLCALL SDL_ANDROID_SensorThread(void *data)
+{
+    SDL_AndroidSensorThreadContext *ctx = (SDL_AndroidSensorThreadContext *)data;
+    int i, events;
+    ASensorEvent event;
+    struct android_poll_source *source;
+
+    SDL_SetCurrentThreadPriority(SDL_THREAD_PRIORITY_HIGH);
+
+    SDL_sensor_looper = ALooper_prepare(ALOOPER_PREPARE_ALLOW_NON_CALLBACKS);
+    SDL_SignalSemaphore(ctx->sem);
+ 
+    while (SDL_GetAtomicInt(&ctx->running)) {
+        Uint64 timestamp = SDL_GetTicksNS();
+                
+        if (ALooper_pollOnce(-1, NULL, &events, (void **)&source) == LOOPER_ID_USER) {
+            SDL_LockSensors();
+            for (i = 0; i < SDL_sensors_count; ++i) {
+                if (!SDL_sensors[i].event_queue) {
+                    continue;
+                }
+    
+                SDL_zero(event);
+                while (ASensorEventQueue_getEvents(SDL_sensors[i].event_queue, &event, 1) > 0) {
+                    SDL_SendSensorUpdate(timestamp, SDL_sensors[i].sensor, timestamp, event.data, SDL_arraysize(event.data));
+                }
+            }
+            SDL_UnlockSensors();
+        }
+    }
+    
+    SDL_sensor_looper = NULL;
+
+    return 0;
+}
+
+
+typedef struct ASensorEvent {
+    /* sizeof(struct ASensorEvent) */
+    int32_t version;
+    /** The sensor that generates this event */
+    int32_t sensor;
+    /** Sensor type for the event, such as {@link ASENSOR_TYPE_ACCELEROMETER} */
+    int32_t type;
+    /** do not use */
+    int32_t reserved0;
+    /**
+     * The time in nanoseconds at which the event happened, and its behavior
+     * is identical to <a href="/reference/android/hardware/SensorEvent#timestamp">
+     * SensorEvent::timestamp</a> in Java API.
+     */
+    int64_t timestamp;
+    union {
+        union {
+            float           data[16];
+            ASensorVector   vector;
+            ASensorVector   acceleration;
+            ASensorVector   gyro;
+            ASensorVector   magnetic;
+            float           temperature;
+            float           distance;
+            float           light;
+            float           pressure;
+            float           relative_humidity;
+            AUncalibratedEvent uncalibrated_acceleration;
+            AUncalibratedEvent uncalibrated_gyro;
+            AUncalibratedEvent uncalibrated_magnetic;
+            AMetaDataEvent meta_data;
+            AHeartRateEvent heart_rate;
+            ADynamicSensorEvent dynamic_sensor_meta;
+            AAdditionalInfoEvent additional_info;
+            AHeadTrackerEvent head_tracker;
+            ALimitedAxesImuEvent limited_axes_imu;
+            ALimitedAxesImuUncalibratedEvent limited_axes_imu_uncalibrated;
+            AHeadingEvent heading;
+        };
+        union {
+            uint64_t        data[8];
+            uint64_t        step_counter;
+        } u64;
+    };
+
+    uint32_t flags;
+    int32_t reserved1[3];
+} ASensorEvent;
+
+
+typedef struct ASensorVector {
+    union {
+        float v[3];
+        struct {
+            float x;
+            float y;
+            float z;
+        };
+        struct {
+            float azimuth;
+            float pitch;
+            float roll;
+        };
+    };
+    int8_t status;
+    uint8_t reserved[3];
+} ASensorVector;
+
+

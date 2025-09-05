@@ -482,7 +482,9 @@ static void process_sdl_event(SDL_Event *ev, sdl_event_t *event)
         // xxx why is step counter not working
         // xxx cleanup
         if (x->which == 14 || x->which == 15) { // xxx clean up these prints
-            long stepc = *(long*)x->data;
+            // xxx long stepc = *(long*)x->data;
+            unsigned long stepc;
+            memcpy(&stepc, x->data, sizeof(stepc));
             INFO("SENSOR: which=%d data=%f %f %f %f %f %f stepc=%ld timestamp=%ld\n",
                  x->which,
                  x->data[0], x->data[1], x->data[2], x->data[3], x->data[4], x->data[5],

@@ -180,7 +180,10 @@ int sdl_sensor_read(void *sensor, double *values, int num_values)
         for (i = 1; i < num_values; i++) {
             values[i] = float_values[i];
         }
-        values[0] = *(unsigned long*)float_values;
+
+        unsigned long stepc;
+        memcpy(&stepc, float_values, sizeof(stepc));
+        values[0] = stepc;
     }
 
     // success

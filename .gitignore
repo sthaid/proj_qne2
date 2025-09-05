@@ -3,6 +3,8 @@ tags
 
 *.orig
 *.tar.gz
+*.swp
+
 apps.tar
 
 src/version.h
