@@ -61,7 +61,6 @@ static void page_8_exit(void);
 
 static void page_9_init(void);
 static void page_9_draw(void);
-static void page_9_exit(void);
 
 // -----------------  MAIN  ------------------------------------------
 
@@ -222,7 +221,6 @@ static void page_hndlr()
     case 5: page_5_exit(); break;
     case 7: page_7_exit(); break;
     case 8: page_8_exit(); break;
-    case 9: page_9_exit(); break;
     }
 
     // update pagenum
@@ -832,7 +830,7 @@ static void page_8_init(void)
     y_display_end = sdl_win_height-3*sdl_char_height;
 
     for (int i = 0; i < max_sit; i++) {
-        sprintf(str, "%2d %2d %2d %s", sit[i].id, sit[i].sdltype, sit[i].nptype, sit[i].name);
+        sprintf(str, "%2d %2d %s", sit[i].id, sit[i].type, sit[i].name);
         sit_lines[i] = strdup(str);
     }
 }
@@ -856,62 +854,80 @@ static void page_8_exit(void)
 
 struct sensor_test_s {
     char *name;
-    int   nptype;
-    void *sensor;
+    int   type;
+    int   id;
 } sensor_test_tbl[MAX_SENSOR_TEST_TBL];
 
 static void page_9_init(void)
 {
-    printf("MAX %d\n", MAX_SENSOR_TEST_TBL);
-    sensor_test_tbl[0].name =  "accel";
-    sensor_test_tbl[0].nptype =  ASENSOR_TYPE_ACCELEROMETER;
+    sensor_test_tbl[0].name =  "stepc";
+    sensor_test_tbl[0].type =  ASENSOR_TYPE_STEP_COUNTER;
     sensor_test_tbl[1].name =  "magf";
-    sensor_test_tbl[1].nptype =  ASENSOR_TYPE_MAGNETIC_FIELD;
-    sensor_test_tbl[2].name =  "stepc";
-    sensor_test_tbl[2].nptype =  ASENSOR_TYPE_STEP_COUNTER;
-    sensor_test_tbl[3].name =  "stepd";
-    sensor_test_tbl[3].nptype =  ASENSOR_TYPE_STEP_DETECTOR;
-    sensor_test_tbl[4].name =  "pressure";
-    sensor_test_tbl[4].nptype =  ASENSOR_TYPE_PRESSURE;
-    sensor_test_tbl[5].name =  "gravity";
-    sensor_test_tbl[5].nptype =  ASENSOR_TYPE_GRAVITY;
+    sensor_test_tbl[1].type =  ASENSOR_TYPE_MAGNETIC_FIELD;
+    sensor_test_tbl[2].name =  "accel";
+    sensor_test_tbl[2].type =  ASENSOR_TYPE_ACCELEROMETER;
+    sensor_test_tbl[3].name =  "press";
+    sensor_test_tbl[3].type =  ASENSOR_TYPE_PRESSURE;
+    sensor_test_tbl[4].name =  "temp";
+    sensor_test_tbl[4].type =  ASENSOR_TYPE_AMBIENT_TEMPERATURE;
+    sensor_test_tbl[5].name =  "humid";
+    sensor_test_tbl[5].type =  ASENSOR_TYPE_RELATIVE_HUMIDITY; // xxx add routine for this
 
     for (int i = 0; i < MAX_SENSOR_TEST_TBL; i++) {
         struct sensor_test_s *x = &sensor_test_tbl[i];
-
-        x->sensor = sdl_sensor_open_by_nptype(x->nptype);
-        printf("open %s %d, ret %p\n", x->name, x->nptype, x->sensor);
+        x->id = sdl_sensor_find(x->type);
     }
 }
 
 static void page_9_draw(void)
 {
-    double val[6];
-    int row = 2;
-    static long last_time = 0;
+    double        data[3];
+    int           row = 2;
+    int           rc;
+    unsigned long step_count;
+    double        mag_heading, x_tilt, y_tilt, millibars, degrees_c, percent;
 
     sdl_print_init(SMALL_FONT, COLOR_WHITE, COLOR_BLACK);
 
     for (int i = 0; i < MAX_SENSOR_TEST_TBL; i++) {
         struct sensor_test_s *x = &sensor_test_tbl[i];
-        if (x->sensor) {
-            sdl_sensor_read(x->sensor, val, 3);
-            sdl_render_printf(0, ROW2Y(row++), "%-8s %6.2f %6.2f %6.2f", x->name, val[0], val[1], val[2]);
-
-            if (x->nptype == 19 && time(NULL) != last_time) { //xxx cleanup
-                last_time = time(NULL);
-                printf("19 = %f %f %f %f %f %f\n",
-                     val[0], val[1], val[2], val[3], val[4], val[5]);
-            }
-
+        if (x->id != -1) {
+            sdl_sensor_read_raw(x->id, data, 3);
+            sdl_render_printf(0, ROW2Y(row++), "%-5s %6.2f %6.2f %6.2f", x->name, data[0], data[1], data[2]);
         }
     }
-}
 
-static void page_9_exit(void)
-{
-    for (int i = 0; i < MAX_SENSOR_TEST_TBL; i++) {
-        struct sensor_test_s *x = &sensor_test_tbl[i];
-        sdl_sensor_close(x->sensor);
+    row++;
+
+    sdl_print_init(DEFAULT_FONT, COLOR_WHITE, COLOR_BLACK);
+
+    rc = sdl_sensor_read_step_counter(&step_count);
+    if (rc == 0) {
+        sdl_render_printf(0, ROW2Y(row++), "stepc = %ld", step_count);
+    }
+
+    rc = sdl_sensor_read_mag_heading(&mag_heading);
+    if (rc == 0) {
+        sdl_render_printf(0, ROW2Y(row++), "magh  = %.0f", mag_heading);
+    }
+
+    rc = sdl_sensor_read_tilt(&x_tilt, &y_tilt);
+    if (rc == 0) {
+        sdl_render_printf(0, ROW2Y(row++), "tilt  = %.1f %.1f", x_tilt, y_tilt);
+    }
+
+    rc = sdl_sensor_read_pressure(&millibars);
+    if (rc == 0) {
+        sdl_render_printf(0, ROW2Y(row++), "press = %.0f", millibars);
+    }
+
+    rc = sdl_sensor_read_temperature(&degrees_c);
+    if (rc == 0) {
+        sdl_render_printf(0, ROW2Y(row++), "temp  = %.1f", degrees_c);
+    }
+
+    rc = sdl_sensor_read_humidity(&percent);
+    if (rc == 0) {
+        sdl_render_printf(0, ROW2Y(row++), "humid = %.0f", percent);
     }
 }

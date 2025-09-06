@@ -1,3 +1,14 @@
+does sdl main keep running when AP is paused?
+- when foreground is enabled
+- if so, a pthread can be created
+
+update permission comments from here
+https://wiki.libsdl.org/SDL3/SDL_RequestAndroidPermission
+
+check on POST_NOTIFICATION permission
+- what if it is not set in the app setup?
+
+
 use symlinks for setup-files and put orig in subdir
 destroy flag is not being cleared in Myervice
 

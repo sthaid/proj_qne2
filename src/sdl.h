@@ -220,18 +220,22 @@ void sdl_audio_create_test_file(char *filename, int duration_secs, int freq);
 
 typedef struct {
     int   id;
-    int   sdltype;
-    int   nptype;
+    int   type;  // ASENSOR_TYPE
     char *name;
 } sdl_sensor_info_t;
 
-int sdl_sensor_init_private(void);
+int sdl_sensor_init_private(void);  // not available in picoc
 
-sdl_sensor_info_t *sdl_sensor_get_info_tbl(int *num_sensors);
-void *sdl_sensor_open_by_nptype(int nptype);
-void *sdl_sensor_open_by_id(int id);
-void sdl_sensor_close(void *sensor);
-int sdl_sensor_read(void *sensor, double *values, int num_values);
+sdl_sensor_info_t *sdl_sensor_get_info_tbl(int *max);
+int sdl_sensor_find(int type);  // returns sensor id, or -1 if not found
+int sdl_sensor_read_raw(int id, double *data, int num_values);
+
+int sdl_sensor_read_step_counter(unsigned long *step_count);
+int sdl_sensor_read_mag_heading(double *mag_heading);
+int sdl_sensor_read_tilt(double *x_tilt, double *y_tilt);
+int sdl_sensor_read_pressure(double *millibars);
+int sdl_sensor_read_temperature(double *degrees_c);
+int sdl_sensor_read_humidity(double *percent);
 
 // --------------------
 // routines not made available in picoc

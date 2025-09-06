@@ -11,6 +11,7 @@
 //
 
 #define MAX_SENSOR_INFO 256
+#define MAX_SENSOR_ID   256
 
 #define TEN_MS 10000
 
@@ -27,6 +28,8 @@
 static sdl_sensor_info_t sensor_info_tbl[MAX_SENSOR_INFO];
 static int               max_sensor_info_tbl;
 
+SDL_Sensor              *sensor[MAX_SENSOR_ID];  // indexed by id
+
 //
 // prototypes
 //
@@ -36,7 +39,7 @@ static int               max_sensor_info_tbl;
 // called by sdl_init
 int sdl_sensor_init_private(void)
 {
-    int            i, max, num_sensors;
+    int            i, max, num_sensors, rc;
     SDL_SensorID  *ids;
 
     // get list of sensor ids
@@ -56,25 +59,39 @@ int sdl_sensor_init_private(void)
         }
 
         // save sensor id, type, non-portable-type, and name in sensor_info_tbl
-        sensor_info_tbl[max].id      = ids[i];
-        sensor_info_tbl[max].sdltype = SDL_GetSensorTypeForID(ids[i]);
-        sensor_info_tbl[max].nptype  = SDL_GetSensorNonPortableTypeForID(ids[i]);
-        sensor_info_tbl[max].name    = (char*)SDL_GetSensorNameForID(ids[i]);
+        sensor_info_tbl[max].id    = ids[i];
+        sensor_info_tbl[max].type  = SDL_GetSensorNonPortableTypeForID(ids[i]);
+        sensor_info_tbl[max].name  = (char*)SDL_GetSensorNameForID(ids[i]);
         max++;
     }
     max_sensor_info_tbl = max;
 
     // print the info from sensor_info_tbl
     for (i = 0; i < max_sensor_info_tbl; i++) {
-        INFO("%2d %2d %2d %s\n",
+        INFO("%2d %2d %s\n",
              sensor_info_tbl[i].id, 
-             sensor_info_tbl[i].sdltype, 
-             sensor_info_tbl[i].nptype, 
+             sensor_info_tbl[i].type, 
              sensor_info_tbl[i].name);
     }
 
     // free the list of ids
     SDL_free(ids);
+
+    // if step counter sensor exists then get permission;
+    // note that the permission is also needed in AndroidManifest.xml
+    bool step_counter_sensor_exists = false;
+    for (i = 0; i < max_sensor_info_tbl; i++) {
+        if (sensor_info_tbl[max].type == ASENSOR_TYPE_STEP_COUNTER) {
+            step_counter_sensor_exists = true;
+            break;
+        }
+    }
+    if (step_counter_sensor_exists) {
+        rc = sdl_get_permission("android.permission.ACTIVITY_RECOGNITION");
+        if (rc < 0) {
+            ERROR("failed to be granted ACTIVITY_RECOGNITION permission for STEP_COUNTER sensor\n");
+        }
+    }
 
     // return success
     return 0;
@@ -88,105 +105,264 @@ sdl_sensor_info_t *sdl_sensor_get_info_tbl(int *max)
     return sensor_info_tbl;
 }
 
-void *sdl_sensor_open_by_id(int id)
+// returns sensor id, or -1 if no sensor found for 'type'
+int sdl_sensor_find(int type)
 {
-    SDL_Sensor *sensor;
+    int i;
 
-    // open the sensor
-    sensor = SDL_OpenSensor(id);
-    if (sensor == NULL) {
-        ERROR("failed to open sensor id %d, %s\n", id, SDL_GetError());
-        return NULL;
-    }
-
-    // return sensor
-    return sensor;
-}
-
-void *sdl_sensor_open_by_nptype(int nptype)
-{
-    int i, id, rc;
-
-    // get permission, if required for the requested nptype; 
-    // note that the permission may also be needed in AndroidManifest.xml
-    if (nptype == ASENSOR_TYPE_STEP_COUNTER) {
-        rc = sdl_get_permission("android.permission.ACTIVITY_RECOGNITION");
-        if (rc < 0) {
-            ERROR("failed to be granted ACTIVITY_RECOGNITION permission for STEP_COUNTER sensor\n");
-            return NULL;
-        }
-    }
-
-    // get the id of the first sensor with the requested nptype;
-    // note:  nptype = 'NonPortableType', values are platform dependant
+    // search sensor_info_tbl for 'type' requested by caller
     for (i = 0; i < max_sensor_info_tbl; i++) {
-        if (nptype == sensor_info_tbl[i].nptype) {
+        if (type == sensor_info_tbl[i].type) {
             break;
         }
     }
     if (i == max_sensor_info_tbl) {
-        ERROR("no sensor found with nptype %d\n", nptype);
-        return NULL;
+        ERROR("no sensor found with type %d\n", type);
+        return -1;
     }
-    id = sensor_info_tbl[i].id;
 
-    // open the sensor using the id
-    return sdl_sensor_open_by_id(id);
+    // return id
+    return sensor_info_tbl[i].id;
 }
 
-void sdl_sensor_close(void *sensor)
+int sdl_sensor_read_raw(int id, double *data, int num_values)
 {
-    SDL_CloseSensor(sensor);
-}
+    int   i;
+    bool  succ;
+    float float_data[16];
 
-// xxx simplify this api
-int sdl_sensor_read(void *sensor, double *values, int num_values)
-{
-    int i;
-    bool succ;
-    float float_values[16];
-    int id = SDL_GetSensorID(sensor);
+    // Note that the data are first obtained in float_data[], and 
+    // then converted to doubles for return in the data array.
+    // The reason for this is that picoc handles variables declared 
+    // float as doubles; they are both 8 bytes.
 
-    // Note that the values are first obtained in float_values[], and 
-    // then converted to doubles for return in the values array.
-    // The reason for this is that picoc treats variables declared 
-    // float as doubles.
+    // preset return data to 0
+    memset(data, 0, num_values * sizeof(double));
 
-    // verify num_values is in expected range
+    // validate args
+    if (id < 0 || id >= MAX_SENSOR_ID) {
+        ERROR("id %d is out of range\n", id);
+        return -1;  
+    }
     if (num_values < 1 || num_values > 16) {
         ERROR("num_values %d is out of range\n", num_values);
-        for (i = 0; i < num_values; i++) {
-            values[i] = 0;
-        }
         return -1;
     }
 
-    // get the sensor values, in float_values[]
-    succ = SDL_GetSensorData(sensor, float_values, num_values);
+    // if not already open then call SDL_OpenSensor
+    if (sensor[id] == NULL) {
+        sensor[id] = SDL_OpenSensor(id);
+        if (sensor[id] == NULL) {
+            ERROR("failed to open sensor id %d, %s\n", id, SDL_GetError());
+            return -1;
+        }
+    }
+
+    // get the sensor data, in float_data[]
+    succ = SDL_GetSensorData(sensor[id], float_data, num_values);
     if (!succ) {
         ERROR("SDL_GetSensorData failed for id %d, %s\n", id, SDL_GetError());
-        for (i = 0; i < num_values; i++) {
-            values[i] = 0;
-        }
         return -1;
     }
 
-    // convert the float_values to double values, for return to caller
-    if (SDL_GetSensorNonPortableType(sensor) != ASENSOR_TYPE_STEP_COUNTER) {
+    // convert the float_data to double data, for return to caller
+    if (SDL_GetSensorNonPortableType(sensor[id]) != ASENSOR_TYPE_STEP_COUNTER) {
         for (i = 0; i < num_values; i++) {
-            values[i] = float_values[i];
+            data[i] = float_data[i];
         }
     } else {
-        for (i = 1; i < num_values; i++) {
-            values[i] = float_values[i];
-        }
-
-        unsigned long stepc;
-        memcpy(&stepc, float_values, sizeof(stepc));
-        values[0] = stepc;
+        // the step_counter sensor is a special case, returning a 64 bit integer;
+        // refer to NDK ASensorEvent, which is included in the comment section
+        // at the end of this file
+        unsigned long step_count;
+        memcpy(&step_count, float_data, sizeof(step_count));
+        data[0] = step_count;
     }
 
     // success
+    return 0;
+}
+
+// - - - - - - - - - - - - - - - - - - - - - - - - - 
+
+int sdl_sensor_read_step_counter(unsigned long *step_count)
+{
+    double data[3];
+    
+    static bool first_call = true;
+    static int  id = -1;
+    static unsigned long first_step_count;
+
+    // preset return value
+    *step_count = 0;
+
+    // if first call then find the sensor id;
+    // if not found then return error
+    if (first_call) {
+        first_call = false;
+        id = sdl_sensor_find(ASENSOR_TYPE_STEP_COUNTER);
+    }
+    if (id == -1) {
+        return -1;
+    }
+
+    // read raw sensor data
+    sdl_sensor_read_raw(id, data, 3);
+
+    // return step count
+    *step_count = data[0];
+    if (first_step_count == 0) {
+        first_step_count = *step_count;
+    }
+    *step_count -= first_step_count;
+    return 0;
+}
+
+int sdl_sensor_read_mag_heading(double *mag_heading)
+{
+    double data[3];
+
+    static bool first_call = true;
+    static int  id = -1;
+
+    // preset return value
+    *mag_heading = 0;
+
+    // if first call then find the sensor id;
+    // if not found then return error
+    if (first_call) {
+        first_call = false;
+        id = sdl_sensor_find(ASENSOR_TYPE_MAGNETIC_FIELD);
+    }
+    if (id == -1) {
+        return -1;
+    }
+
+    // read raw sensor data
+    sdl_sensor_read_raw(id, data, 3);
+
+    // return magnetic heading
+    *mag_heading = atan2(-data[0], data[1]) * (180 / M_PI);
+    if (*mag_heading < 0) {
+        *mag_heading += 360;
+    }
+    return 0;
+}
+
+int sdl_sensor_read_tilt(double *x_tilt, double *y_tilt)
+{
+    double data[3];
+
+    static bool first_call = true;
+    static int  id = -1;
+
+    // preset return value
+    *x_tilt = 0;
+    *y_tilt = 0;
+
+    // if first call then find the sensor id;
+    // if not found then return error
+    if (first_call) {
+        first_call = false;
+        id = sdl_sensor_find(ASENSOR_TYPE_ACCELEROMETER);
+    }
+    if (id == -1) {
+        return -1;
+    }
+
+    // read raw sensor data
+    sdl_sensor_read_raw(id, data, 3);
+
+    // return tilt
+    // xxx todo
+    *x_tilt = 1;
+    *y_tilt = 2;
+    return 0;
+}
+
+int sdl_sensor_read_pressure(double *millibars)
+{
+    double data[3];
+
+    static bool first_call = true;
+    static int  id = -1;
+
+    // preset return value
+    *millibars = 0;
+
+    // if first call then find the sensor id;
+    // if not found then return error
+    if (first_call) {
+        first_call = false;
+        id = sdl_sensor_find(ASENSOR_TYPE_PRESSURE);
+    }
+    if (id == -1) {
+        return -1;
+    }
+
+    // read raw sensor data
+    sdl_sensor_read_raw(id, data, 3);
+
+    // return pressure
+    *millibars = data[0];
+    return 0;
+}
+
+// xxx not tested
+int sdl_sensor_read_temperature(double *degrees_c)
+{
+    double data[3];
+
+    static bool first_call = true;
+    static int  id = -1;
+
+    // preset return value
+    *degrees_c = 0;
+
+    // if first call then find the sensor id;
+    // if not found then return error
+    if (first_call) {
+        first_call = false;
+        id = sdl_sensor_find(ASENSOR_TYPE_AMBIENT_TEMPERATURE);
+    }
+    if (id == -1) {
+        return -1;
+    }
+
+    // read raw sensor data
+    sdl_sensor_read_raw(id, data, 3);
+
+    // return temperature
+    *degrees_c = data[0];
+    return 0;
+}
+
+// xxx not tested
+int sdl_sensor_read_humidity(double *percent)
+{
+    double data[3];
+
+    static bool first_call = true;
+    static int  id = -1;
+
+    // preset return value
+    *percent = 0;
+
+    // if first call then find the sensor id;
+    // if not found then return error
+    if (first_call) {
+        first_call = false;
+        id = sdl_sensor_find(ASENSOR_TYPE_RELATIVE_HUMIDITY);
+    }
+    if (id == -1) {
+        return -1;
+    }
+
+    // read raw sensor data
+    sdl_sensor_read_raw(id, data, 3);
+
+    // return humidity
+    *percent = data[0];
     return 0;
 }
 
@@ -460,6 +636,5 @@ typedef struct ASensorVector {
     int8_t status;
     uint8_t reserved[3];
 } ASensorVector;
-
 
 #endif

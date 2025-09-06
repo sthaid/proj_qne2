@@ -504,44 +504,87 @@ void Sdl_sensor_get_info_tbl (struct ParseState *Parser, struct Value *ReturnVal
     ReturnValue->Val->Pointer = sit;
 }
 
-void Sdl_sensor_open_by_nptype (struct ParseState *Parser, struct Value *ReturnValue,
+void Sdl_sensor_find (struct ParseState *Parser, struct Value *ReturnValue,
 	struct Value **Param, int NumArgs)
 {
-    int nptype = Param[0]->Val->Integer;
-    void *sensor;
+    int type = Param[0]->Val->Integer;
+    int id;
 
-    sensor = sdl_sensor_open_by_nptype(nptype);
-    ReturnValue->Val->Pointer = sensor;
+    id = sdl_sensor_find(type);
+    ReturnValue->Val->Integer = id;
 }
 
-void Sdl_sensor_open_by_id (struct ParseState *Parser, struct Value *ReturnValue,
+void Sdl_sensor_read_raw (struct ParseState *Parser, struct Value *ReturnValue,
 	struct Value **Param, int NumArgs)
 {
-    int id = Param[0]->Val->Integer;
-    void *sensor;
-
-    sensor = sdl_sensor_open_by_id(id);
-    ReturnValue->Val->Pointer = sensor;
-}
-
-void Sdl_sensor_close (struct ParseState *Parser, struct Value *ReturnValue,
-	struct Value **Param, int NumArgs)
-{
-    void *sensor = Param[0]->Val->Pointer;
-
-    sdl_sensor_close(sensor);
-}
-
-void Sdl_sensor_read (struct ParseState *Parser, struct Value *ReturnValue,
-	struct Value **Param, int NumArgs)
-{
-    void   *sensor     = Param[0]->Val->Pointer;
-    double *values     = Param[1]->Val->Pointer;
+    int     id         = Param[0]->Val->Integer;
+    double *data       = Param[1]->Val->Pointer;
     int     num_values = Param[2]->Val->Integer;
     int     rc;
 
-    rc = sdl_sensor_read(sensor, values, num_values);
-    ReturnValue->Val->Integer = rc; 
+    rc = sdl_sensor_read_raw(id, data, num_values);
+    ReturnValue->Val->Integer = rc;
+}
+
+void Sdl_sensor_read_step_counter (struct ParseState *Parser, struct Value *ReturnValue,
+	struct Value **Param, int NumArgs)
+{
+    unsigned long *step_count = Param[0]->Val->Pointer;
+    int            rc;
+
+    rc = sdl_sensor_read_step_counter(step_count);
+    ReturnValue->Val->Integer = rc;
+}
+
+void Sdl_sensor_read_mag_heading (struct ParseState *Parser, struct Value *ReturnValue,
+	struct Value **Param, int NumArgs)
+{
+    double *mag_heading = Param[0]->Val->Pointer;
+    int     rc;
+
+    rc = sdl_sensor_read_mag_heading(mag_heading);
+    ReturnValue->Val->Integer = rc;
+}
+
+void Sdl_sensor_read_tilt (struct ParseState *Parser, struct Value *ReturnValue,
+	struct Value **Param, int NumArgs)
+{
+    double *x_tilt = Param[0]->Val->Pointer;
+    double *y_tilt = Param[1]->Val->Pointer;
+    int     rc;
+
+    rc = sdl_sensor_read_tilt(x_tilt, y_tilt);
+    ReturnValue->Val->Integer = rc;
+}
+
+void Sdl_sensor_read_pressure (struct ParseState *Parser, struct Value *ReturnValue,
+	struct Value **Param, int NumArgs)
+{
+    double *millibars = Param[0]->Val->Pointer;
+    int     rc;
+
+    rc = sdl_sensor_read_pressure(millibars);
+    ReturnValue->Val->Integer = rc;
+}
+
+void Sdl_sensor_read_temperature (struct ParseState *Parser, struct Value *ReturnValue,
+	struct Value **Param, int NumArgs)
+{
+    double *degrees_c = Param[0]->Val->Pointer;
+    int     rc;
+
+    rc = sdl_sensor_read_temperature(degrees_c);
+    ReturnValue->Val->Integer = rc;
+}
+
+void Sdl_sensor_read_humidity (struct ParseState *Parser, struct Value *ReturnValue,
+	struct Value **Param, int NumArgs)
+{
+    double *percent = Param[0]->Val->Pointer;
+    int     rc;
+
+    rc = sdl_sensor_read_humidity(percent);
+    ReturnValue->Val->Integer = rc;
 }
 
 //
@@ -623,10 +666,14 @@ struct LibraryFunction SdlFunctions[] = {
 
     // sensors
     { Sdl_sensor_get_info_tbl,          "sdl_sensor_info_t *sdl_sensor_get_info_tbl(int *num_sensors);" },
-    { Sdl_sensor_open_by_nptype,        "void *sdl_sensor_open_by_nptype(int nptype);" },
-    { Sdl_sensor_open_by_id,            "void *sdl_sensor_open_by_id(int id);" },
-    { Sdl_sensor_close,                 "void sdl_sensor_close(void *sensor);" },
-    { Sdl_sensor_read,                  "int sdl_sensor_read(void *sensor, double *values, int num_values);" },
+    { Sdl_sensor_find,                  "int sdl_sensor_find(int type);" },
+    { Sdl_sensor_read_raw,              "int sdl_sensor_read_raw(int id, double *data, int num_values);" },
+    { Sdl_sensor_read_step_counter,     "int sdl_sensor_read_step_counter(unsigned long *step_count);" },
+    { Sdl_sensor_read_mag_heading,      "int sdl_sensor_read_mag_heading(double *mag_heading);" },
+    { Sdl_sensor_read_tilt,             "int sdl_sensor_read_tilt(double *x_tilt, double *y_tilt);" },
+    { Sdl_sensor_read_pressure,         "int sdl_sensor_read_pressure(double *millibars);" },
+    { Sdl_sensor_read_temperature,      "int sdl_sensor_read_temperature(double *degrees_c);" },
+    { Sdl_sensor_read_humidity,         "int sdl_sensor_read_humidity(double *percent);" },
 
     { NULL, NULL } };
 
@@ -671,8 +718,7 @@ typedef struct { \n\
 } sdl_audio_state_t; \n\
 typedef struct { \n\
     int   id; \n\
-    int   sdltype; \n\
-    int   nptype; \n\
+    int   type; \n\
     char *name; \n\
 } sdl_sensor_info_t; \n\
 typedef struct { \n\
