@@ -244,7 +244,12 @@ int sdl_sensor_read_humidity(double *percent);
 void sdl_minimize_window(void);
 char *sdl_get_storage_path(void);
 void sdl_copy_asset_file(char *asset_filename, char *dest_dir);
-
 int sdl_get_permission(char *name);
+
+#define sdl_create_detached_thread(thread_fn, cx) \
+    do { \
+        SDL_Thread *x = SDL_CreateThread(thread_fn, #thread_fn, cx); \
+        SDL_DetachThread(x); \
+    } while (0)
 
 #endif

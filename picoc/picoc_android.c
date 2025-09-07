@@ -24,6 +24,8 @@ void picoc_bg(char *args)
 
 // ----------------- SUPPORT -------------------------
 
+// xxx should use sdl thread
+
 static void *picoc_thread(void *cx)
 {
     char *args = (char*)cx;
@@ -80,6 +82,7 @@ static int picoc_helper(char *args)
     // run program
     PicocCallMain(&pc, argc, argv);
 
+// xxx callback with the completion
     // cleanup and return
     printf("EXIT normal, %d\n", pc.PicocExitValue);
     PicocCleanup(&pc);

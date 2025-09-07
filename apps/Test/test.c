@@ -8,7 +8,7 @@
 #include <sdl.h>
 #include <utils.h>
 
-#include "common.h"
+#include "apps/Test/common.h"
 
 //
 // defines
@@ -24,6 +24,8 @@
 //
 
 static bool end_program;
+
+static char *app_dir;
 
 //
 // prototypes
@@ -71,6 +73,9 @@ int main(int argc, char **argv)
     for (int i = 0; i < argc; i++) {
         printf("argv[%d] = '%s'\n", i, argv[i]);
     }
+
+    // xxx
+    app_dir = argv[0];
 
     // init sdl
     sdl_init();
@@ -467,7 +472,7 @@ static void page_5_draw(void)
     if (pixels == NULL || pixels->magic != PIXELS_MAGIC) {
         printf("ERROR: failed to read unit_test_pixels, pixels==NULL\n");
     } else {
-        ret = util_write_file("unit_test_pixels", pixels, pixels->struct_len);
+        ret = util_write_file(app_dir, "unit_test_pixels", pixels, pixels->struct_len);
         if (ret != 0) {
             printf("ERROR: failed to write file unit_test_pixels\n");
         }
@@ -478,7 +483,7 @@ static void page_5_draw(void)
     // read the unit_test_pixels file that as created above
     // create a texture from the pixels, and
     // display the texture
-    pixels = util_read_file("unit_test_pixels", &file_length);
+    pixels = util_read_file(app_dir, "unit_test_pixels", &file_length);
     if (pixels == NULL || pixels->magic != PIXELS_MAGIC || pixels->struct_len != file_length) {
         if (pixels == NULL) {
             printf("ERROR: failed to read unit_test_pixels, pixels==NULL\n");
@@ -671,7 +676,7 @@ static void page_7_process_event(sdl_event_t *ev)
     switch (ev->event_id) {
     case EVID_AUDIO_PLAY_TONE:
         sdl_audio_create_test_file("audio_test.raw", 10, 1000);
-        rc = sdl_audio_play("audio_test.raw");
+        rc = sdl_audio_play("audio_test.raw");  //xxx
         if (rc != 0) {
             printf("ERROR: sdl_audio_play audio_test.raw failed\n");
         }

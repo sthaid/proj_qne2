@@ -1,4 +1,4 @@
-#include <common.h>
+#include <apps/Reversi/common.h>
 
 //
 // notes:
@@ -27,6 +27,8 @@
 // variables
 //
 
+static char *app_dir;
+
 //
 // prototypes
 //
@@ -48,6 +50,8 @@ int main(int argc, char **argv)
     int     game_state;
     board_t board;
     char    eval_str[100];
+
+    app_dir = argv[0]; //xxx comment
 
     // init variables
     game_state = GAME_STATE_READY;
@@ -125,11 +129,11 @@ int main(int argc, char **argv)
         } else if (event.event_id == EVID_PLAYER_BLACK_SELECT) {
             board.player_black++;
             if (board.player_black > CPU(6)) board.player_black = HUMAN;  // xxx 3 on Android
-            util_set_int_param("player_black", board.player_black);
+            util_set_int_param(app_dir, "player_black", board.player_black);
         } else if (event.event_id == EVID_PLAYER_WHITE_SELECT) {
             board.player_white++;
             if (board.player_white > CPU(6)) board.player_white = HUMAN;  // xxx 3 on Android
-            util_set_int_param("player_white", board.player_white);
+            util_set_int_param(app_dir, "player_white", board.player_white);
         } else if (event.event_id == EVID_GAME_START) {
             game_state = GAME_STATE_ACTIVE;
         } else if (game_state == GAME_STATE_ACTIVE && 
@@ -167,8 +171,8 @@ static void game_init(board_t *b)
     b->black_cnt      = 2;
     b->white_cnt      = 2;
     b->whose_turn     = BLACK;
-    b->player_black   = util_get_int_param("player_black", HUMAN);
-    b->player_white   = util_get_int_param("player_white", CPU(2));
+    b->player_black   = util_get_int_param(app_dir, "player_black", HUMAN);
+    b->player_white   = util_get_int_param(app_dir, "player_white", CPU(2));
 }
 
 static bool is_game_over(board_t *b)

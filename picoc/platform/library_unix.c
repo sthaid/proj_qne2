@@ -591,6 +591,7 @@ void Sdl_sensor_read_humidity (struct ParseState *Parser, struct Value *ReturnVa
 // SDL REGISTRATION
 //
 
+char stop_requested[100]; //xxx should be extern here
 void SdlSetupFunction(Picoc *pc)
 {
     #define PLATFORM_VAR(name, type, writeable) \
@@ -603,6 +604,9 @@ void SdlSetupFunction(Picoc *pc)
     PLATFORM_VAR(sdl_win_height, IntType, false);
     PLATFORM_VAR(sdl_char_width, IntType, false);
     PLATFORM_VAR(sdl_char_height, IntType, false);
+
+    VariableDefinePlatformVar(pc, NULL, "stop_requested", pc->CharArrayType, 
+                              (union AnyValue*)stop_requested, true);
 }
 
 struct LibraryFunction SdlFunctions[] = {
@@ -842,23 +846,25 @@ void Util_time2str (struct ParseState *Parser, struct Value *ReturnValue,
 void Util_write_file (struct ParseState *Parser, struct Value *ReturnValue,
 	struct Value **Param, int NumArgs)
 {
-    char *path = Param[0]->Val->Pointer;
-    void *data = Param[1]->Val->Pointer;
-    int   len  = Param[2]->Val->Integer;
+    char *dir  = Param[0]->Val->Pointer;
+    char *fn   = Param[1]->Val->Pointer;
+    void *data = Param[2]->Val->Pointer;
+    int   len  = Param[3]->Val->Integer;
     int   ret;
 
-    ret = util_write_file(path, data, len);
+    ret = util_write_file(dir, fn, data, len);
     ReturnValue->Val->Integer = ret;
 }
 
 void Util_read_file (struct ParseState *Parser, struct Value *ReturnValue,
 	struct Value **Param, int NumArgs)
 {
-    char *path = Param[0]->Val->Pointer;
-    int  *len  = Param[1]->Val->Pointer;
+    char *dir  = Param[0]->Val->Pointer;
+    char *fn   = Param[1]->Val->Pointer;
+    int  *len  = Param[2]->Val->Pointer;
     void *file_contents;
 
-    file_contents = util_read_file(path, len);
+    file_contents = util_read_file(dir, fn, len);
     ReturnValue->Val->Pointer = file_contents;
 }
 
@@ -869,47 +875,53 @@ void Util_read_file (struct ParseState *Parser, struct Value *ReturnValue,
 void Util_get_str_param(struct ParseState *Parser, struct Value *ReturnValue,
         struct Value **Param, int NumArgs)
 {
-    char *name          = Param[0]->Val->Pointer;
-    char *default_value = Param[1]->Val->Pointer;
+    char *dir           = Param[0]->Val->Pointer;
+    char *name          = Param[1]->Val->Pointer;
+    char *default_value = Param[2]->Val->Pointer;
     char *value;
 
-    value = util_get_str_param(name, default_value);
+    value = util_get_str_param(dir, name, default_value);
     ReturnValue->Val->Pointer = value;
 }
 
 void Util_set_str_param(struct ParseState *Parser, struct Value *ReturnValue,
         struct Value **Param, int NumArgs)
 {
-    char *name  = Param[0]->Val->Pointer;
-    char *value = Param[1]->Val->Pointer;
+    char *dir   = Param[0]->Val->Pointer;
+    char *name  = Param[1]->Val->Pointer;
+    char *value = Param[2]->Val->Pointer;
 
-    util_set_str_param(name, value);
+    util_set_str_param(dir, name, value);
 }
 
 void Util_get_int_param(struct ParseState *Parser, struct Value *ReturnValue,
         struct Value **Param, int NumArgs)
 {
-    char *name          = Param[0]->Val->Pointer;
-    int   default_value = Param[1]->Val->Integer;
+    char *dir           = Param[0]->Val->Pointer;
+    char *name          = Param[1]->Val->Pointer;
+    int   default_value = Param[2]->Val->Integer;
     int   value;
 
-    value = util_get_int_param(name, default_value);
+    value = util_get_int_param(dir, name, default_value);
     ReturnValue->Val->Integer = value;
 }
 
 void Util_set_int_param(struct ParseState *Parser, struct Value *ReturnValue,
         struct Value **Param, int NumArgs)
 {
-    char *name  = Param[0]->Val->Pointer;
-    int   value = Param[1]->Val->Integer;
+    char *dir   = Param[0]->Val->Pointer;
+    char *name  = Param[1]->Val->Pointer;
+    int   value = Param[2]->Val->Integer;
 
-    util_set_int_param(name, value);
+    util_set_int_param(dir, name, value);
 }
 
 void Util_print_params(struct ParseState *Parser, struct Value *ReturnValue,
         struct Value **Param, int NumArgs)
 {
-    util_print_params();
+    char *dir = Param[0]->Val->Pointer;
+
+    util_print_params(dir);
 }
 
 //
@@ -939,14 +951,14 @@ struct LibraryFunction UtilsFunctions[] = {
     { Util_get_real_time_microsec, "long util_get_real_time_microsec(void);" },
     { Util_time2str,         "char *util_time2str(char * str, long us, bool gmt, bool display_ms, bool display_date);" },
     // file read/write
-    { Util_write_file,       "int util_write_file(char *path, void *data, int len);" },
-    { Util_read_file,        "void *util_read_file(char *path, int *len);" },
+    { Util_write_file,       "int util_write_file(char *dir, char *fn, void *data, int len);" },
+    { Util_read_file,        "void *util_read_file(char *dir, char *fn, int *len);" },
     // params get/set
-    { Util_get_str_param,    "char *util_get_str_param(char *name, char *default_value);" },
-    { Util_set_str_param,    "void util_set_str_param(char *name, char *value);" },
-    { Util_get_int_param,    "int util_get_int_param(char *name, int default_value);" },
-    { Util_set_int_param,    "void util_set_int_param(char *name, int value);" },
-    { Util_print_params,     "void util_print_params(void);" },
+    { Util_get_str_param,    "char *util_get_str_param(char *dir, char *name, char *default_value);" },
+    { Util_set_str_param,    "void util_set_str_param(char *dir, char *name, char *value);" },
+    { Util_get_int_param,    "int util_get_int_param(char *dir, char *name, int default_value);" },
+    { Util_set_int_param,    "void util_set_int_param(char *dir, char *name, int value);" },
+    { Util_print_params,     "void util_print_params(char *dir);" },
     // network
     { Util_get_ipaddr,       "char *util_get_ipaddr(void);" },
 

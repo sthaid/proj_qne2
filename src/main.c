@@ -4,9 +4,9 @@
 #include <utils.h>
 #include <logging.h>
 
-#ifdef ANDROID
+//#ifdef ANDROID  //xxx shouldnt need this commented out
 #include <SDL3/SDL.h>
-#endif
+#//endif
 
 #include "version.h"
 
@@ -57,16 +57,16 @@ typedef struct {
 
 static char       *storage_path;
 static params_t    params;
-static pthread_t   server_tid;
-static pthread_t   waiter_tid;
+//static pthread_t   server_tid;
+//static pthread_t   waiter_tid;
 
 //
 // prototypes 
 //
 
 static void processing(void);
-static void *server_thread(void *cx);
-static void *waiter_thread(void *cx);
+static int server_thread(void *cx);
+static int waiter_thread(void *cx);
 static void kill_child_processes(pid_t pid);
 
 //
@@ -76,8 +76,10 @@ static void kill_child_processes(pid_t pid);
 extern int picoc_fg(char *args);
 extern void picoc_bg(char *args);
 
+#ifdef ANDROID
 extern void showHome(void); //xxx names, etc
 extern void showHome2(void);
+#endif
 
 // -----------------  MAIN  ------------------------------------------
 
@@ -103,6 +105,21 @@ int MAIN(int argc, char **argv)
     return 0;
 }
 
+#ifdef ANDROID
+static bool fg_service_active; //xxx use param
+#if 0
+static int test_thread(void *cx)
+{
+    int cnt=0;
+    while (cnt < 30) {
+        INFO("cnt = %d\n", cnt++);
+        sleep(1);
+    }
+    return 0;
+}
+#endif
+#endif
+
 static int init(void)
 {
     int rc;
@@ -123,20 +140,20 @@ static int init(void)
     INFO("storage_path = %s\n", storage_path);
 
     // get params, if they don't exist, set to default value
-    params.devel_mode = util_get_int_param("devel_mode", 0);
-    params.devel_port = util_get_int_param("devel_port", DEFAULT_DEVEL_PORT);
+    params.devel_mode = util_get_int_param(".", "devel_mode", 0);
+    params.devel_port = util_get_int_param(".", "devel_port", DEFAULT_DEVEL_PORT);
 
-    // copy asset files to storage_path
-    sdl_copy_asset_file("apps.tar", storage_path);
-    sdl_copy_asset_file("copyright", storage_path);
-    sdl_copy_asset_file("FreeMonoBold.ttf", storage_path);
+    // copy asset files to the working directory
+    sdl_copy_asset_file("apps.tar", ".");
+    sdl_copy_asset_file("copyright", ".");
+    sdl_copy_asset_file("FreeMonoBold.ttf", ".");
 
 #ifdef DEVEL
     // for development:
     // - enable developer mode
     // - init apps to default
     params.devel_mode = 1;
-    util_set_int_param("devel_mode", 1);
+    util_set_int_param(".", "devel_mode", 1);
     create_default_apps();
 #else
     // if apps dir struct doesn't exist then create it
@@ -156,13 +173,24 @@ static int init(void)
     sigaction(SIGUSR2, &action, NULL);
 
     // create server threads
-    pthread_create(&server_tid, NULL, server_thread, NULL);
-    pthread_create(&waiter_tid, NULL, waiter_thread, NULL);
+    //pthread_create(&server_tid, NULL, server_thread, NULL); //xxx rename
+    //pthread_create(&waiter_tid, NULL, waiter_thread, NULL);
+    sdl_create_detached_thread(server_thread, NULL);
+    sdl_create_detached_thread(waiter_thread, NULL);
 
     // init sdl
     sdl_init();
     INFO("sdl_win_width,height = %d %d  sdl_char_width,height=%d %d\n",
          sdl_win_width, sdl_win_height, sdl_char_width, sdl_char_height);
+
+    // xxx
+#ifdef ANDROID
+    showHome();
+    fg_service_active = true;
+    //pthread_t tid;
+    //pthread_create(&tid, NULL, test_thread, NULL);
+    //sdl_create_detached_thread(test_thread, NULL);
+#endif
 
     // init okay
     return 0;
@@ -172,7 +200,9 @@ static void cleanup(void)
 {
     INFO("TERMINATING\n");
 
+#ifdef ANDROID
     showHome2(); //xxx
+#endif
 
     kill_child_processes(getpid());
 
@@ -209,11 +239,12 @@ static char *apps[MAX_APPS];
 static int   max_apps;
 static int   page;
 
-static void run_app(int id);
+static void run_app(int id, bool fg);
 static void display_menu(void);
 static void get_list_of_apps(void);
 static void settings(void);
 
+extern char stop_requested[100];
 static void processing(void)
 {
     sdl_event_t event;
@@ -263,51 +294,70 @@ static void processing(void)
                 ERROR("apps[%d] is NULL\n", id);
             } else if (strcmp(apps[id], "Settings") == 0) {
                 settings();
+            } else if (strcmp(apps[id], "t1") == 0) {
+                run_app(id, false);
             } else {
-                run_app(id);
+                run_app(id, true);
             }
         }
     }
 }
 
-static void run_app(int id)
+static void run_app(int id, bool fg)
 {
-    char           app_dir[100], picoc_args[1000];
-    int            rc;
+    char           app_dir[100];
+    int            rc, len;
     DIR           *dir;
     struct dirent *dirent;
+
+    static char picoc_args[1000];
 
     INFO("running %s\n", apps[id]);
 
     // chdir to the directory containing the app files
-    sprintf(app_dir, "apps/%s", apps[id]);
-    chdir(app_dir);
+    sprintf(app_dir, "apps/%s/", apps[id]);
+    //chdir(app_dir);
 
     // construct list of *.c files in this dir
     picoc_args[0] = '\0';
-    dir = opendir(".");
+    //dir = opendir(".");
+    dir = opendir(app_dir);
     while ((dirent = readdir(dir)) != NULL) {
         char *fn = dirent->d_name;
         int len = strlen(fn);
         if (len > 2 && strcmp(fn+len-2, ".c") == 0) {
+            strcat(picoc_args, app_dir);
             strcat(picoc_args, fn);
             strcat(picoc_args, " ");
         }
     }
     closedir(dir);
 
+    // xxx
+    len = strlen(app_dir);
+    app_dir[len-1] = '\0';
+    strcat(picoc_args, " - ");
+    strcat(picoc_args, app_dir);
+    strcat(picoc_args, " ");
+    strcat(picoc_args, "5");
+
     // if list of *.c files is empty then error
     // else run the app using the picoc c language interpreter
     if (picoc_args[0] == '\0') {
         ERROR("no source code in %s\n", app_dir);
     } else {
-        INFO("picoc_args = %s\n", picoc_args);
-        rc = picoc_fg(picoc_args);  // args
-        INFO("done %s, rc=%d\n", apps[id], rc);
+        INFO("picoc_args = %s  fg=%d\n", picoc_args, fg);
+        if (fg) {
+            rc = picoc_fg(picoc_args);  // args
+            INFO("fg done %s, rc=%d\n", apps[id], rc);
+        } else {
+            picoc_bg(picoc_args);  // args  xxx no rc ?
+            INFO("bg done %s\n", apps[id]);
+        }
     }
 
     // chdir back to storage_path, which is the 'files' dir
-    chdir(storage_path);
+    //chdir(storage_path);
 }
 
 // -----------------  DISPLAY MENU  -------------------------------
@@ -582,13 +632,14 @@ static void settings(void)
     long        msg_time = 0;
     char       *ipaddr;
 
-    static bool fg_service_active; //xxx use param
+    //static bool fg_service_active; //xxx use param
 
     #define EVID_DEVEL_MODE         1000
     #define EVID_DEVEL_PORT         1001
     #define EVID_RESET_APPS         1002
     #define EVID_COPYRIGHT          1004
     #define EVID_FG_SERVICE         1005
+    #define EVID_STOP_REQUESTED     1006
 
     // get this device ipaddr
     ipaddr = util_get_ipaddr();
@@ -625,9 +676,14 @@ static void settings(void)
         loc = sdl_render_printf(0, ROW2Y(11), "Reset_Apps");
         sdl_register_event(loc, EVID_RESET_APPS);
 
+        // display t1
+        loc = sdl_render_printf(0, ROW2Y(13), "stop_requested = %d", stop_requested[5]);
+        sdl_register_event(loc, EVID_STOP_REQUESTED);
+#ifdef ANDROID
         // display Fg_Service
         loc = sdl_render_printf(0, ROW2Y(13), "Fg_Service = %s", fg_service_active ? "ON" : "OFF");
         sdl_register_event(loc, EVID_FG_SERVICE);
+#endif
 
         // change print color back to white
         sdl_print_init_color(COLOR_WHITE, BG_COLOR);
@@ -658,10 +714,10 @@ static void settings(void)
         switch (event.event_id) {
         case EVID_DEVEL_MODE:
             params.devel_mode = (params.devel_mode ? 0 : 1);
-            util_set_int_param("devel_mode", params.devel_mode);
+            util_set_int_param(".", "devel_mode", params.devel_mode);
             if (!params.devel_mode) {
                 INFO("sending SIGUSR2 to server_thread\n");
-                pthread_kill(server_tid, SIGUSR2);
+                //pthread_kill(server_tid, SIGUSR2);
             }
             break;
         case EVID_DEVEL_PORT: {
@@ -671,10 +727,10 @@ static void settings(void)
             cnt = sscanf(str, "%d", &port);
             if (cnt == 1 && (port >= 1024 && port <= 49151)) {
                 params.devel_port = port;
-                util_set_int_param("devel_port", port);
+                util_set_int_param(".", "devel_port", port);
                 if (params.devel_mode) {
                     INFO("sending SIGUSR2 to server_thread\n");
-                    pthread_kill(server_tid, SIGUSR2);
+                    //pthread_kill(server_tid, SIGUSR2);
                 }
             }
             break; }
@@ -690,6 +746,7 @@ static void settings(void)
         case EVID_COPYRIGHT:
             copyright();
             break;
+#ifdef ANDROID
         case EVID_FG_SERVICE:  // xxx preliminary
             if (!fg_service_active) {
                 if (sdl_get_permission("android.permission.POST_NOTIFICATION") != 0) {
@@ -712,6 +769,10 @@ static void settings(void)
                 fg_service_active = false;
             }
             break;
+#endif
+        case EVID_STOP_REQUESTED: 
+            stop_requested[5] = true;
+            break;
         case EVID_QUIT:
             done = true;
             break;
@@ -732,7 +793,7 @@ static void copyright(void)
     bool        done = false;
 
     // read the copyright file
-    str = util_read_file("copyright", &len);
+    str = util_read_file(".", "copyright", &len);
     if (str == NULL) {
         ERROR("failed to read copyright file\n");
         return;
@@ -779,14 +840,14 @@ static void copyright(void)
 
 #define MAX_PID_TBL 20
 
-static void *process_req_thread(void *cx);
+static int process_req_thread(void *cx);
 static void process_req_using_android_sh(int sockfd, char *cmd);
 
-static void *server_thread(void *cx)
+static int server_thread(void *cx)
 {
     struct sockaddr_in server_address;
     int                listen_sockfd, ret;
-    pthread_t          tid;
+    //pthread_t          tid;
 
 again:
     // wait for developer mode to be enabled
@@ -801,7 +862,7 @@ again:
     listen_sockfd = socket(AF_INET, SOCK_STREAM, 0);
     if (listen_sockfd == -1) {
         ERROR("socket, %s\n", strerror(errno));
-        return NULL;
+        return 0;
     }
 
     // set socket options
@@ -809,7 +870,7 @@ again:
     ret = setsockopt(listen_sockfd, SOL_SOCKET, SO_REUSEADDR, (const char*)&reuseaddr, sizeof(reuseaddr));
     if (ret == -1) {
         ERROR("setsockopt SO_REUSEADDR, %s\n", strerror(errno));
-        return NULL;
+        return 0;
     }
 
     // bind socket to any ip addr, for specified port
@@ -831,7 +892,7 @@ again:
     ret = listen(listen_sockfd, 5);
     if (ret == -1) {
         ERROR("listen, %s\n", strerror(errno));
-        return NULL;
+        return 0;
     }
 
     // accept and process connections
@@ -850,7 +911,8 @@ again:
         }
 
         // create thread to process the client request
-        pthread_create(&tid, NULL, process_req_thread, (void*)(long)sockfd);
+        //pthread_create(&tid, NULL, process_req_thread, (void*)(long)sockfd);
+        sdl_create_detached_thread(process_req_thread, (void*)(long)sockfd);
     }
 
     // close listen socket
@@ -864,10 +926,10 @@ again:
 
     // not reached
     INFO("SERVER_THREAD TERMINATING\n");
-    return NULL;
+    return 0;
 }
 
-static void *process_req_thread(void *cx)
+static int process_req_thread(void *cx)
 {
     int sockfd = (int)(long)cx;
     pid_t pid;
@@ -883,7 +945,7 @@ static void *process_req_thread(void *cx)
         if (ret != 1) {
             ERROR("failed to read ch from sockfd %d, %s\n", sockfd, strerror(errno));
             close(sockfd);
-            return NULL;
+            return 0;
         }
         if (ch == '\n') {
             break;
@@ -900,7 +962,7 @@ static void *process_req_thread(void *cx)
 
     // parent is done with sockfd
     close(sockfd);
-    return NULL;
+    return 0;
 }
 
 static void process_req_using_android_sh(int sockfd, char *cmd)
@@ -929,7 +991,7 @@ static void process_req_using_android_sh(int sockfd, char *cmd)
     exit(1);
 }
 
-static void *waiter_thread(void *cx)
+static int waiter_thread(void *cx)
 {
     pid_t pid;
 
@@ -948,7 +1010,7 @@ static void *waiter_thread(void *cx)
         }
     }
 
-    return NULL;
+    return 0;
 }
 
 static void kill_child_processes(pid_t pid)

@@ -1,6 +1,6 @@
 #include <stdio.h>
 
-#include "common.h"
+#include "apps/Test/common.h"
 
 void test1_proc(void)
 {

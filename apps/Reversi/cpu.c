@@ -1,4 +1,4 @@
-#include <common.h>
+#include <apps/Reversi/common.h>
 
 //
 // defines

@@ -43,10 +43,10 @@ static sdl_audio_state_t state;
 static int audio_open(bool record);
 static int calc_volume(void *buff, int bytes);
 
-static void *play_file_thread(void *cx);
+static int play_file_thread(void *cx);
 static void play_buff(char *buff, int buff_len, bool *stop_req, int *queued_bytes);
-static void *record_thread(void *cx);
-static void *tones_thread(void *cx);
+static int record_thread(void *cx);
+static int tones_thread(void *cx);
 
 // -----------------  OPEN / CLOSE  -----------------------
 
@@ -190,7 +190,6 @@ int sdl_audio_play(char *filename)
     int rc, fd=-1;
     void *buff=MAP_FAILED;
     struct stat statbuf;
-    pthread_t tid;
     play_file_cx_t *cx=NULL;
 
     // open audio for playback
@@ -230,7 +229,7 @@ int sdl_audio_play(char *filename)
     cx = malloc(sizeof(play_file_cx_t));
     cx->buff = buff;
     cx->buff_len = statbuf.st_size;
-    pthread_create(&tid, NULL, play_file_thread, cx);
+    sdl_create_detached_thread(play_file_thread, cx);
 
     // success
     return 0;
@@ -250,7 +249,7 @@ error:
     return -1;
 }
 
-static void *play_file_thread(void *cx_arg)
+static int play_file_thread(void *cx_arg)
 {
     play_file_cx_t *cx = (play_file_cx_t*)cx_arg;
     int queued_bytes = 0;
@@ -281,7 +280,7 @@ done:
     munmap(cx->buff, cx->buff_len);
     free(cx);
     memset(&state, 0, sizeof(state));
-    return NULL;
+    return 0;
 }
 
 static void play_buff(char *buff, int buff_len, bool *stop_req, int *queued_bytes)
@@ -355,7 +354,6 @@ int sdl_audio_record(char *filename, int max_duration_secs, int auto_stop_secs, 
 {
     int rc, fd=-1;
     record_cx_t *cx=NULL;
-    pthread_t tid;
     int existing_bytes;
     struct stat statbuf;
 
@@ -402,7 +400,7 @@ int sdl_audio_record(char *filename, int max_duration_secs, int auto_stop_secs, 
     cx->total_secs      = state.total_secs; 
     cx->auto_stop_secs  = auto_stop_secs;
     cx->existing_bytes  = existing_bytes;
-    pthread_create(&tid, NULL, record_thread, cx);
+    sdl_create_detached_thread(record_thread, cx);
 
     // success
     return 0;
@@ -419,7 +417,7 @@ error:
     return -1;
 }
 
-static void *record_thread(void *cx_arg)
+static int record_thread(void *cx_arg)
 {
     record_cx_t *cx = (record_cx_t*)cx_arg;
     short        buff[4096];
@@ -522,7 +520,7 @@ static void *record_thread(void *cx_arg)
     close(cx->fd);
     free(cx);
     memset(&state, 0, sizeof(state));
-    return NULL;
+    return 0;
 }
 
 // -----------------  PLAY TONES  -------------------------
@@ -546,7 +544,6 @@ static sine_wave_t *sine_waves[MAX_TONE_FREQ+1];
 int sdl_audio_play_tones(int time_units_ms, sdl_tone_t *tones)
 {
     int num_tones, duration_ms, i, rc;
-    pthread_t tid;
     play_tones_cx_t *cx;
 
     // open audio for playback
@@ -577,13 +574,13 @@ int sdl_audio_play_tones(int time_units_ms, sdl_tone_t *tones)
     cx->time_units_ms  = time_units_ms;
     cx->num_tones = num_tones;
     memcpy(cx->tones, tones, num_tones * sizeof(sdl_tone_t));
-    pthread_create(&tid, NULL, tones_thread, cx);
+    sdl_create_detached_thread(tones_thread, cx);
 
     // success
     return 0;
 }
 
-static void *tones_thread(void *cx_arg)
+static int tones_thread(void *cx_arg)
 {
     play_tones_cx_t *cx = (play_tones_cx_t*)cx_arg;
     int              queued_bytes = 0;
@@ -683,5 +680,5 @@ done:
     free(cx);
     free(buff);
     memset(&state, 0, sizeof(state));
-    return NULL;
+    return 0;
 }

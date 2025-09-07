@@ -59,9 +59,12 @@ char *util_time2str(char * str, long us, int gmt, int display_ms, int display_da
 
 // -----------------  FILE READ/WRITE  -----------------------
 
-int util_write_file(char *path, void *buf, int len)
+int util_write_file(char *dir, char *fn, void *buf, int len)
 {
     int fd, ret;
+    char path[200];
+
+    sprintf(path, "%s/%s", dir, fn);
 
     fd = open(path, O_CREAT | O_TRUNC | O_WRONLY, 0666);
     if (fd < 0) {
@@ -78,11 +81,14 @@ int util_write_file(char *path, void *buf, int len)
 }
 
 // xxx comment on extra byte
-void *util_read_file(char *path, int *len_ret)
+void *util_read_file(char *dir, char *fn, int *len_ret)
 {
     int fd, ret;
     struct stat statbuf;
     char *buf;
+    char path[200];
+
+    sprintf(path, "%s/%s", dir, fn);
 
     ret = stat(path, &statbuf);
     if (ret < 0) {
@@ -116,11 +122,11 @@ void *util_read_file(char *path, int *len_ret)
 
 // -----------------  GET / SET PARAMS  ----------------------
 
-char *util_get_str_param(char *name, char *default_value);
-void util_set_str_param(char *name, char *value);
-int util_get_int_param(char *name, int default_value);
-void util_set_int_param(char *name, int value);
-void util_print_params(void);
+char *util_get_str_param(char *dir, char *name, char *default_value);
+void util_set_str_param(char *dir, char *name, char *value);
+int util_get_int_param(char *dir, char *name, int default_value);
+void util_set_int_param(char *dir, char *name, int value);
+void util_print_params(char *dir);
 
 #define MAX_PARAMS 32
 
@@ -140,25 +146,24 @@ static void remove_trailing_newline(char *s)
     }
 }
 
-static void read_params_file(void)
+static void read_params_file(char *dir)
 {
-    char s[200], name[100];
+    char s[200], name[100], params_path[100];
     int cnt, n;
     FILE *fp;
-    char current_dir[100];
 
-    getcwd(current_dir, sizeof(current_dir));
-    if (strcmp(current_dir, params_dir) == 0) {
+    if (strcmp(dir, params_dir) == 0) {
         return;
     }
-    strcpy(params_dir, current_dir);
+    strcpy(params_dir, dir);
 
-    printf("INFO %s: reading params file in dir '%s'\n", __func__, current_dir);
+    printf("INFO %s: reading params file in dir '%s'\n", __func__, dir);
 
     memset(params, 0, sizeof(params));
     max_params = 0;
 
-    fp = fopen("params", "r");
+    sprintf(params_path, "%s/params", dir);
+    fp = fopen(params_path, "r");
     if (fp == NULL) {
         printf("INFO %s: params file does not exist\n", __func__);
         return;
@@ -187,24 +192,24 @@ static void read_params_file(void)
     }
 }
 
-static void write_params_file(void)
+static void write_params_file(char *dir)
 {
     FILE *fp;
-    char current_dir[100];
+    char params_path[100];
 
-    getcwd(current_dir, sizeof(current_dir));
-    if (strcmp(current_dir, params_dir) != 0) {
-        printf("ERROR %s: write_params_file, current_dir=%s params_dir=%s\n",
-               __func__, current_dir, params_dir);
+    if (strcmp(dir, params_dir) != 0) {
+        printf("ERROR %s: write_params_file, dir=%s params_dir=%s\n",
+               __func__, dir, params_dir);
         return;
     }
 
-    printf("INFO %s: writing params file in dir '%s'\n", __func__, current_dir);
+    printf("INFO %s: writing params file in dir '%s'\n", __func__, dir);
     printf("INFO %s: max_params=%d\n", __func__, max_params);
     for (int i = 0; i < max_params; i++) {
         printf("INFO %s:   %s = %s\n", __func__, params[i].name, params[i].value);
     }
 
+    sprintf(params_path, "%s/params", dir);
     fp = fopen("params", "w");
     if (fp == NULL) {
         printf("ERROR %s: write_params_file, fopen failed, %s\n", __func__, strerror(errno));
@@ -218,12 +223,14 @@ static void write_params_file(void)
     fclose(fp);
 }
 
-char *util_get_str_param(char *name, char *default_value)
+char *util_get_str_param(char *dir, char *name, char *default_value)
 {
     int i;
 
+    // xxx locking needed
+
     // if haven't read the params file then do so
-    read_params_file();
+    read_params_file(dir);
 
     // search for matching name
     for (i = 0; i < max_params; i++) {
@@ -247,17 +254,19 @@ char *util_get_str_param(char *name, char *default_value)
         params[max_params].name = strdup(name);
         params[max_params].value = strdup(default_value);
         max_params++;
-        write_params_file();
+        write_params_file(dir);
         return default_value;
     }
 }
 
-void util_set_str_param(char *name, char *value)
+void util_set_str_param(char *dir, char *name, char *value)
 {
     int i;
 
+    // xxx locking needed
+
     // if haven't read the params file then do so
-    read_params_file();
+    read_params_file(dir);
 
     // search for matching name
     for (i = 0; i < max_params; i++) {
@@ -289,10 +298,10 @@ void util_set_str_param(char *name, char *value)
     }
 
     // write the params file
-    write_params_file();
+    write_params_file(dir);
 }
 
-int util_get_int_param(char *name, int dflt_val)
+int util_get_int_param(char *dir, char *name, int dflt_val)
 {
     char  dflt_val_str[20];
     char *value_str;
@@ -302,7 +311,7 @@ int util_get_int_param(char *name, int dflt_val)
     // create the default value string, and
     // call util_get_str_param to get the value_str
     sprintf(dflt_val_str, "%d", dflt_val);
-    value_str = util_get_str_param(name, dflt_val_str);
+    value_str = util_get_str_param(dir, name, dflt_val_str);
 
     // convert value_str, returned by util_get_str_param, to value_int
     cnt = sscanf(value_str, "%d", &value_int);
@@ -311,7 +320,7 @@ int util_get_int_param(char *name, int dflt_val)
     // if the conversion fails then call util_set_int_param, and 
     // return the default value
     if (cnt != 1) {
-        util_set_int_param(name, dflt_val);
+        util_set_int_param(dir, name, dflt_val);
         return dflt_val;
     }
 
@@ -319,21 +328,23 @@ int util_get_int_param(char *name, int dflt_val)
     return value_int;
 }
 
-void util_set_int_param(char *name, int value)
+void util_set_int_param(char *dir, char *name, int value)
 {
     char value_str[20];
 
     // create value string, and
     // call util_set_str_param to set it
     sprintf(value_str, "%d", value);
-    util_set_str_param(name, value_str);
+    util_set_str_param(dir, name, value_str);
 }    
 
-void util_print_params(void)
+void util_print_params(char *dir)
 {
     int i;
 
-    read_params_file();
+    // xxx locking
+
+    read_params_file(dir);
 
     printf("INFO %s: max_params=%d\n", __func__, max_params);
     for (i = 0; i < max_params; i++) {

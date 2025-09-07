@@ -111,9 +111,9 @@ public class MyService extends Service {
         // It's the developer's responsibility to stop the service when finished.
         // stopSelf();
 
-        Log.v(TAG, "XXX in MyService onStartCommand create thread");
-        MyExtendedThread thrd = new MyExtendedThread(); 
-        thrd.start();
+        //Log.v(TAG, "XXX in MyService onStartCommand create thread");
+        //MyExtendedThread thrd = new MyExtendedThread(); 
+        //thrd.start();
 
         Log.v(TAG, "XXX in MyService onStartCommand  DONE");
         // xxx do we really want to restart here

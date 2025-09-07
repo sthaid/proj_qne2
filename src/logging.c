@@ -1,10 +1,11 @@
 #include <std_hdrs.h>
 #include <logging.h>
+#include <sdl.h>
 
 #ifdef ANDROID
     #include <SDL3/SDL.h>
     #define ANDROID_LOG_FIFO "log_fifo"
-    static void *android_logging_thread(void *cx);
+    static int android_logging_thread(void *cx);
 #endif
 
 #ifdef ANDROID
@@ -16,14 +17,13 @@ int log_init(void)
 {
     int rc;
     FILE *fp;
-    pthread_t tid;
 
     setlinebuf(stdout);
     setlinebuf(stderr);
 
     mkfifo(ANDROID_LOG_FIFO, 0666);
 
-    pthread_create(&tid, NULL, android_logging_thread, NULL);
+    sdl_create_detached_thread(android_logging_thread, NULL);
 
     fp = freopen(ANDROID_LOG_FIFO, "w", stdout);
     if (fp == NULL) {
@@ -67,7 +67,7 @@ void log_msg(char *lvl, const char *func, char *fmt, ...)
 
 // ----------------- ANDROID LOGGING THREAD   -----------------
 
-static void *android_logging_thread(void *cx)
+static int android_logging_thread(void *cx)
 {
     char buff[10000];
     int len;
@@ -75,7 +75,7 @@ static void *android_logging_thread(void *cx)
 
     int fd = open(ANDROID_LOG_FIFO, O_RDONLY);
     if (fd < 0) {
-        return NULL;
+        return 0;
     }
 
     while (true) {
@@ -98,6 +98,7 @@ static void *android_logging_thread(void *cx)
 
             *p = '\0';
             if (strncmp(buffp, "EZAPP", 5) != 0) {
+                // xxx or call SDL_Log(  and without category?
                 SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "EZAPP %s", buffp); // xxx check string for lvl, and call appropriate SDL routine
             }
             buffp = p + 1;
@@ -105,7 +106,7 @@ static void *android_logging_thread(void *cx)
     }
 
 done:
-    return NULL;
+    return 0;
 }
     
 #else

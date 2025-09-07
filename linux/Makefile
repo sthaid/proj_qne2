@@ -45,6 +45,9 @@ $(TARGET):
 	ln -s ../../android/assets/FreeMonoBold.ttf assets
 	ln -s ../../android/assets/copyright assets
 
+run: $(TARGET)
+	ezApp
+
 clean:
 	rm -rf $(TARGET) files assets ../src/version.h
 
