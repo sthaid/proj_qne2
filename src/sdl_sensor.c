@@ -185,6 +185,9 @@ int sdl_sensor_read_raw(int id, double *data, int num_values)
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - 
 
+#define RAD_TO_DEG (180 / M_PI)
+#define DEG_TO_RAD (M_PI / 180)
+
 int sdl_sensor_read_step_counter(unsigned long *step_count)
 {
     double data[3];
@@ -218,9 +221,48 @@ int sdl_sensor_read_step_counter(unsigned long *step_count)
     return 0;
 }
 
+int sdl_sensor_read_tilt(double *roll, double *pitch)
+{
+    double data[3];
+    double ax, ay, az;
+
+    static bool first_call = true;
+    static int  id = -1;
+
+    // preset return value
+    *roll = 0;
+    *pitch = 0;
+
+    // if first call then find the sensor id;
+    // if not found then return error
+    if (first_call) {
+        first_call = false;
+        id = sdl_sensor_find(ASENSOR_TYPE_ACCELEROMETER);
+    }
+    if (id == -1) {
+        return -1;
+    }
+
+    // read raw sensor data
+    sdl_sensor_read_raw(id, data, 3);
+
+    // return roll and pitch; 
+    // - positive pitch means top of phone points upward
+    // - positive roll means right side of phone is below the left side
+    ay = data[0];
+    ax = data[1];
+    az = data[2];
+    *roll  = -atan(ay / sqrt(ax*ax + az*az)) * RAD_TO_DEG;
+    *pitch = -atan(-ax / sqrt(ay*ay + az*az)) * RAD_TO_DEG;
+    return 0;
+}
+
 int sdl_sensor_read_mag_heading(double *mag_heading)
 {
     double data[3];
+    double mx, my, mz;
+    double roll, pitch; 
+    double mprimex, mprimey;
 
     static bool first_call = true;
     static int  id = -1;
@@ -240,43 +282,27 @@ int sdl_sensor_read_mag_heading(double *mag_heading)
 
     // read raw sensor data
     sdl_sensor_read_raw(id, data, 3);
+    my = data[0];
+    mx = data[1];
+    mz = -data[2];
+
+    // get roll and pitch
+    sdl_sensor_read_tilt(&roll, &pitch);
+    roll  *= -DEG_TO_RAD;
+    pitch *= -DEG_TO_RAD;
+
+    // compensate
+    mprimex = mx * cos(pitch) + 
+              my * sin(roll) * sin(pitch) - 
+              mz * cos(roll) * sin(pitch);
+    mprimey = my * cos(roll) + 
+              mz * sin(roll);
 
     // return magnetic heading
-    *mag_heading = atan2(-data[0], data[1]) * (180 / M_PI);
+    *mag_heading = atan2(-mprimey, mprimex) * (180 / M_PI);
     if (*mag_heading < 0) {
         *mag_heading += 360;
     }
-    return 0;
-}
-
-int sdl_sensor_read_tilt(double *x_tilt, double *y_tilt)
-{
-    double data[3];
-
-    static bool first_call = true;
-    static int  id = -1;
-
-    // preset return value
-    *x_tilt = 0;
-    *y_tilt = 0;
-
-    // if first call then find the sensor id;
-    // if not found then return error
-    if (first_call) {
-        first_call = false;
-        id = sdl_sensor_find(ASENSOR_TYPE_ACCELEROMETER);
-    }
-    if (id == -1) {
-        return -1;
-    }
-
-    // read raw sensor data
-    sdl_sensor_read_raw(id, data, 3);
-
-    // return tilt
-    // xxx todo
-    *x_tilt = 1;
-    *y_tilt = 2;
     return 0;
 }
 

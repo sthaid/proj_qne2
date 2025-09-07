@@ -232,7 +232,7 @@ int sdl_sensor_read_raw(int id, double *data, int num_values);
 
 int sdl_sensor_read_step_counter(unsigned long *step_count);
 int sdl_sensor_read_mag_heading(double *mag_heading);
-int sdl_sensor_read_tilt(double *x_tilt, double *y_tilt);
+int sdl_sensor_read_tilt(double *roll, double *pitch);
 int sdl_sensor_read_pressure(double *millibars);
 int sdl_sensor_read_temperature(double *degrees_c);
 int sdl_sensor_read_humidity(double *percent);

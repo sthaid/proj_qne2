@@ -885,7 +885,7 @@ static void page_9_draw(void)
     int           row = 2;
     int           rc;
     unsigned long step_count;
-    double        mag_heading, x_tilt, y_tilt, millibars, degrees_c, percent;
+    double        mag_heading, roll, pitch, millibars, degrees_c, percent;
 
     sdl_print_init(SMALL_FONT, COLOR_WHITE, COLOR_BLACK);
 
@@ -911,9 +911,9 @@ static void page_9_draw(void)
         sdl_render_printf(0, ROW2Y(row++), "magh  = %.0f", mag_heading);
     }
 
-    rc = sdl_sensor_read_tilt(&x_tilt, &y_tilt);
+    rc = sdl_sensor_read_tilt(&roll, &pitch);
     if (rc == 0) {
-        sdl_render_printf(0, ROW2Y(row++), "tilt  = %.1f %.1f", x_tilt, y_tilt);
+        sdl_render_printf(0, ROW2Y(row++), "tilt  = %.1f %.1f", roll, pitch);
     }
 
     rc = sdl_sensor_read_pressure(&millibars);
