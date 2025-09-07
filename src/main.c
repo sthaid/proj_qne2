@@ -4,9 +4,9 @@
 #include <utils.h>
 #include <logging.h>
 
-//#ifdef ANDROID  //xxx shouldnt need this commented out
+#ifdef ANDROID
 #include <SDL3/SDL.h>
-#//endif
+#endif
 
 #include "version.h"
 
@@ -57,8 +57,6 @@ typedef struct {
 
 static char       *storage_path;
 static params_t    params;
-//static pthread_t   server_tid;
-//static pthread_t   waiter_tid;
 
 //
 // prototypes 
@@ -104,21 +102,6 @@ int MAIN(int argc, char **argv)
 
     return 0;
 }
-
-#ifdef ANDROID
-static bool fg_service_active; //xxx use param
-#if 0
-static int test_thread(void *cx)
-{
-    int cnt=0;
-    while (cnt < 30) {
-        INFO("cnt = %d\n", cnt++);
-        sleep(1);
-    }
-    return 0;
-}
-#endif
-#endif
 
 static int init(void)
 {
@@ -173,8 +156,6 @@ static int init(void)
     sigaction(SIGUSR2, &action, NULL);
 
     // create server threads
-    //pthread_create(&server_tid, NULL, server_thread, NULL); //xxx rename
-    //pthread_create(&waiter_tid, NULL, waiter_thread, NULL);
     sdl_create_detached_thread(server_thread, NULL);
     sdl_create_detached_thread(waiter_thread, NULL);
 
@@ -183,13 +164,24 @@ static int init(void)
     INFO("sdl_win_width,height = %d %d  sdl_char_width,height=%d %d\n",
          sdl_win_width, sdl_win_height, sdl_char_width, sdl_char_height);
 
-    // xxx
 #ifdef ANDROID
+    // xxx
+    if (sdl_get_permission("android.permission.POST_NOTIFICATION") != 0) {
+        ERROR("failed to get permission POST_NOTIFICATION\n");
+        ERROR("CONTINUING\n"); //xxx why does this fail
+        //break;
+    }
+    if (sdl_get_permission("android.permission.ACCESS_COARSE_LOCATION") != 0) {
+        ERROR("failed to get permission ACCESS_COARSE_LOCATION\n");
+        break;
+    }
+    if (sdl_get_permission("android.permission.ACCESS_FINE_LOCATION") != 0) {
+        ERROR("failed to get permission ACCESS_FINE_LOCATION\n");
+        break;
+    }
+
+    // xxx
     showHome();
-    fg_service_active = true;
-    //pthread_t tid;
-    //pthread_create(&tid, NULL, test_thread, NULL);
-    //sdl_create_detached_thread(test_thread, NULL);
 #endif
 
     // init okay
@@ -632,13 +624,10 @@ static void settings(void)
     long        msg_time = 0;
     char       *ipaddr;
 
-    //static bool fg_service_active; //xxx use param
-
     #define EVID_DEVEL_MODE         1000
     #define EVID_DEVEL_PORT         1001
     #define EVID_RESET_APPS         1002
     #define EVID_COPYRIGHT          1004
-    #define EVID_FG_SERVICE         1005
     #define EVID_STOP_REQUESTED     1006
 
     // get this device ipaddr
@@ -676,14 +665,9 @@ static void settings(void)
         loc = sdl_render_printf(0, ROW2Y(11), "Reset_Apps");
         sdl_register_event(loc, EVID_RESET_APPS);
 
-        // display t1
+        // display t1 xxx unit test
         loc = sdl_render_printf(0, ROW2Y(13), "stop_requested = %d", stop_requested[5]);
         sdl_register_event(loc, EVID_STOP_REQUESTED);
-#ifdef ANDROID
-        // display Fg_Service
-        loc = sdl_render_printf(0, ROW2Y(13), "Fg_Service = %s", fg_service_active ? "ON" : "OFF");
-        sdl_register_event(loc, EVID_FG_SERVICE);
-#endif
 
         // change print color back to white
         sdl_print_init_color(COLOR_WHITE, BG_COLOR);
@@ -717,7 +701,7 @@ static void settings(void)
             util_set_int_param(".", "devel_mode", params.devel_mode);
             if (!params.devel_mode) {
                 INFO("sending SIGUSR2 to server_thread\n");
-                //pthread_kill(server_tid, SIGUSR2);
+                //xxx pthread_kill(server_tid, SIGUSR2);
             }
             break;
         case EVID_DEVEL_PORT: {
@@ -730,7 +714,7 @@ static void settings(void)
                 util_set_int_param(".", "devel_port", port);
                 if (params.devel_mode) {
                     INFO("sending SIGUSR2 to server_thread\n");
-                    //pthread_kill(server_tid, SIGUSR2);
+                    //xxx pthread_kill(server_tid, SIGUSR2);
                 }
             }
             break; }
@@ -746,30 +730,6 @@ static void settings(void)
         case EVID_COPYRIGHT:
             copyright();
             break;
-#ifdef ANDROID
-        case EVID_FG_SERVICE:  // xxx preliminary
-            if (!fg_service_active) {
-                if (sdl_get_permission("android.permission.POST_NOTIFICATION") != 0) {
-                    ERROR("failed to get permission POST_NOTIFICATION\n");
-                    ERROR("CONTINUING\n"); //xxx why does this fail
-                    //break;
-                }
-                if (sdl_get_permission("android.permission.ACCESS_COARSE_LOCATION") != 0) {
-                    ERROR("failed to get permission ACCESS_COARSE_LOCATION\n");
-                    break;
-                }
-                if (sdl_get_permission("android.permission.ACCESS_FINE_LOCATION") != 0) {
-                    ERROR("failed to get permission ACCESS_FINE_LOCATION\n");
-                    break;
-                }
-                showHome();
-                fg_service_active = true;
-            } else {
-                showHome2();
-                fg_service_active = false;
-            }
-            break;
-#endif
         case EVID_STOP_REQUESTED: 
             stop_requested[5] = true;
             break;
@@ -847,7 +807,6 @@ static int server_thread(void *cx)
 {
     struct sockaddr_in server_address;
     int                listen_sockfd, ret;
-    //pthread_t          tid;
 
 again:
     // wait for developer mode to be enabled
@@ -911,7 +870,6 @@ again:
         }
 
         // create thread to process the client request
-        //pthread_create(&tid, NULL, process_req_thread, (void*)(long)sockfd);
         sdl_create_detached_thread(process_req_thread, (void*)(long)sockfd);
     }
 

@@ -1542,4 +1542,18 @@ int sdl_get_permission(char *name)
 #endif
 }
 
+// - - - - - - - - - sdl_create_detached_thread_private  - - - - - - - 
+
+int sdl_create_detached_thread_private(int (*thread_fn)(void*), char *thread_name, void *cx)
+{
+    SDL_Thread *x;
+
+    x = SDL_CreateThread(thread_fn, thread_name, cx);
+    if (x == NULL) {
+        return -1;
+    }
+
+    SDL_DetachThread(x);
+    return 0;
+}
 

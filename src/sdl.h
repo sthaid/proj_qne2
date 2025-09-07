@@ -245,11 +245,10 @@ void sdl_minimize_window(void);
 char *sdl_get_storage_path(void);
 void sdl_copy_asset_file(char *asset_filename, char *dest_dir);
 int sdl_get_permission(char *name);
-
+int sdl_create_detached_thread_private(int (*thread_fn)(void*), char *thread_name, void *cx);
 #define sdl_create_detached_thread(thread_fn, cx) \
     do { \
-        SDL_Thread *x = SDL_CreateThread(thread_fn, #thread_fn, cx); \
-        SDL_DetachThread(x); \
+        sdl_create_detached_thread_private(thread_fn, #thread_fn, cx); \
     } while (0)
 
 #endif
