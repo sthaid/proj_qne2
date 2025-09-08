@@ -83,8 +83,8 @@ extern void showHome2(void);
 
 static int init(void);
 static void cleanup(void);
-static void create_default_apps(void);
-static void sigusr1_hndlr(int signum);
+static void create_default_apps(void); //xxx and services
+static void sigusr1_hndlr(int signum);  //xxx sigusr1,  ?  sigusr2
 
 int MAIN(int argc, char **argv)
 {
@@ -92,7 +92,7 @@ int MAIN(int argc, char **argv)
 
     rc = init();
     if (rc != 0) {
-        // xxx check all error return paths
+        // xxx check all error return paths, should print
         return 1;
     }
 
@@ -168,16 +168,12 @@ static int init(void)
     // xxx
     if (sdl_get_permission("android.permission.POST_NOTIFICATION") != 0) {
         ERROR("failed to get permission POST_NOTIFICATION\n");
-        ERROR("CONTINUING\n"); //xxx why does this fail
-        //break;
     }
     if (sdl_get_permission("android.permission.ACCESS_COARSE_LOCATION") != 0) {
         ERROR("failed to get permission ACCESS_COARSE_LOCATION\n");
-        break;
     }
     if (sdl_get_permission("android.permission.ACCESS_FINE_LOCATION") != 0) {
         ERROR("failed to get permission ACCESS_FINE_LOCATION\n");
-        break;
     }
 
     // xxx
@@ -192,15 +188,16 @@ static void cleanup(void)
 {
     INFO("TERMINATING\n");
 
-#ifdef ANDROID
-    showHome2(); //xxx
-#endif
+//#ifdef ANDROID
+//    showHome2(); //xxx
+//#endif
 
     kill_child_processes(getpid());
 
     sdl_exit();
 }
 
+// xxx and services
 static void create_default_apps(void)
 {
     int rc;
@@ -231,12 +228,12 @@ static char *apps[MAX_APPS];
 static int   max_apps;
 static int   page;
 
-static void run_app(int id, bool fg);
+static int run_app(char *name, int svc_id);
 static void display_menu(void);
 static void get_list_of_apps(void);
 static void settings(void);
+static void services(void);
 
-extern char stop_requested[100];
 static void processing(void)
 {
     sdl_event_t event;
@@ -286,70 +283,60 @@ static void processing(void)
                 ERROR("apps[%d] is NULL\n", id);
             } else if (strcmp(apps[id], "Settings") == 0) {
                 settings();
-            } else if (strcmp(apps[id], "t1") == 0) {
-                run_app(id, false);
+            } else if (strcmp(apps[id], "Services") == 0) {
+                services();
             } else {
-                run_app(id, true);
+                run_app(apps[id], -1);
             }
         }
     }
 }
 
-static void run_app(int id, bool fg)
+//xxx make this a common routine
+static int run_app(char *name, int svc_id)
 {
     char           app_dir[100];
-    int            rc, len;
+    int            rc;
     DIR           *dir;
     struct dirent *dirent;
+    char          *p;
 
     static char picoc_args[1000];
 
-    INFO("running %s\n", apps[id]);
-
-    // chdir to the directory containing the app files
-    sprintf(app_dir, "apps/%s/", apps[id]);
-    //chdir(app_dir);
-
-    // construct list of *.c files in this dir
+    // construct list of *.c files in the app_dir
+    sprintf(app_dir, "apps/%s", name);
     picoc_args[0] = '\0';
-    //dir = opendir(".");
     dir = opendir(app_dir);
+    p = picoc_args;
     while ((dirent = readdir(dir)) != NULL) {
         char *fn = dirent->d_name;
         int len = strlen(fn);
         if (len > 2 && strcmp(fn+len-2, ".c") == 0) {
-            strcat(picoc_args, app_dir);
-            strcat(picoc_args, fn);
-            strcat(picoc_args, " ");
+            p += sprintf(p, "%s/%s ", app_dir, fn);
         }
     }
     closedir(dir);
 
-    // xxx
-    len = strlen(app_dir);
-    app_dir[len-1] = '\0';
-    strcat(picoc_args, " - ");
-    strcat(picoc_args, app_dir);
-    strcat(picoc_args, " ");
-    strcat(picoc_args, "5");
-
-    // if list of *.c files is empty then error
-    // else run the app using the picoc c language interpreter
+    // error if no source code found in app_dir
     if (picoc_args[0] == '\0') {
-        ERROR("no source code in %s\n", app_dir);
-    } else {
-        INFO("picoc_args = %s  fg=%d\n", picoc_args, fg);
-        if (fg) {
-            rc = picoc_fg(picoc_args);  // args
-            INFO("fg done %s, rc=%d\n", apps[id], rc);
-        } else {
-            picoc_bg(picoc_args);  // args  xxx no rc ?
-            INFO("bg done %s\n", apps[id]);
-        }
+        ERROR("%s: no source code in %s\n", name, app_dir);
+        return 99;
     }
 
-    // chdir back to storage_path, which is the 'files' dir
-    //chdir(storage_path);
+    // xxx comment
+    if (svc_id == -1) {
+        p += sprintf(p, " - %s", app_dir);
+    } else {
+        p += sprintf(p, " - %s %d", app_dir, svc_id);
+    }
+
+    // run the app using the picoc c language interpreter
+    INFO("%s: starting, args = %s\n", name, picoc_args);
+    rc = picoc_fg(picoc_args);  // xxx get rid of picoc_bg
+    INFO("%s: completed, rc = %d\n", name, rc);
+
+    // return completion status
+    return rc;
 }
 
 // -----------------  DISPLAY MENU  -------------------------------
@@ -450,72 +437,36 @@ static void display_menu(void)
     }
 }
 
-// -----------------  GET LIST OF APPS  ---------------------------
-
-// The list of apps is created from either:
-// - the 'layout' file, if that file exists, or
-// - the subdirectoires of apps dir; in this case the apps
-//   are displayed in alphabetic order
-// 
-// Using the 'layout' file provides the ability to organize the 
-// location of the apps.
-
-static void get_list_of_apps_from_layout_file(char *layout_file_path);
-static void get_list_of_apps_from_apps_dirs(char *apps_dir_path);
-
 static void get_list_of_apps(void)
 {
-    char layout_file_path[100];
-    char apps_dir_path[100];
-    int rc;
+    const char *layout_file_path = "apps/layout";
     struct stat statbuf;
+    int         rc, i, cnt;
+    FILE       *fp;
+    char        str[200], s[3][100];
+    bool        reading_apps = false;
 
     static long layout_file_mtime;
-    static long apps_dir_mtime;
 
-    // if layout file exists
-    //   if layout file has changed then
-    //     get_list_of_apps_from_layout_file
-    //   endif
-    // endif
-    sprintf(layout_file_path, "%s/apps/layout", storage_path);
+    // if layout file doesn't exist then return 0 apps
     rc = stat(layout_file_path, &statbuf);
-    if (rc == 0) {
-        if (statbuf.st_mtime != layout_file_mtime) {
-            get_list_of_apps_from_layout_file(layout_file_path);
-            layout_file_mtime = statbuf.st_mtime;
+    if (rc != 0) {
+        for (i = 0; i < max_apps; i++) {
+            free(apps[i]);
+            apps[i] = NULL;
         }
-        apps_dir_mtime = 0;
+        max_apps = 0;
         return;
     }
 
-    // if apps dir exists
-    //   if apps dir has changed then
-    //     get_list_of_apps_from_apps_dirs
-    //   endif
-    // endif
-    sprintf(apps_dir_path, "%s/apps", storage_path);
-    rc = stat(apps_dir_path, &statbuf);
-    if (rc == 0) {
-        if (statbuf.st_mtime != apps_dir_mtime) {
-            get_list_of_apps_from_apps_dirs(apps_dir_path);
-            apps_dir_mtime = statbuf.st_mtime;
-        }
-        layout_file_mtime = 0;
+    // if layout file has not changed then 
+    // return without updating the list of apps
+    if (statbuf.st_mtime == layout_file_mtime) {
         return;
     }
+    layout_file_mtime = statbuf.st_mtime;
 
-    ERROR("failed to stat %s, %s\n", apps_dir_path, strerror(errno));
-    apps_dir_mtime = 0;
-    layout_file_mtime = 0;
-    return;
-}
-
-static void get_list_of_apps_from_layout_file(char *layout_file_path)
-{
-    char str[200], s[3][50];
-    int i, cnt;
-    FILE *fp;
+    // obtain the list of apps from the layout file ...
 
     // free the current apps names
     for (i = 0; i < max_apps; i++) {
@@ -524,12 +475,24 @@ static void get_list_of_apps_from_layout_file(char *layout_file_path)
     }
     max_apps = 0;
 
-    // read the app names, which are the same as their dir names,
-    // from the layout file
+    // read the app names, which are the same as their dir names, from the layout file
     fp = fopen(layout_file_path, "r");
     while (fgets(str, sizeof(str), fp)) {
         // ignore lines that are blank or begin with comment char
         if (str[0] == '\n' || str[0] == '#') {
+            continue;
+        }
+
+        // xxx
+        if (strncmp(str, "APPS", 3) == 0) {
+            reading_apps = true;
+            continue;
+        }
+        if (strncmp(str, "SERVICES", 8) == 0) {
+            reading_apps = false;
+            break;
+        }
+        if (!reading_apps) {
             continue;
         }
 
@@ -540,7 +503,7 @@ static void get_list_of_apps_from_layout_file(char *layout_file_path)
             break;
         }
 
-        // store the app names just read in the apps[] array;
+        // store the app names, just read, to the apps[] array;
         // ignoring app names that are "-"
         for (i = 0; i < 3; i++) {
             if (strcmp(s[i], "-") != 0) {
@@ -560,55 +523,358 @@ static void get_list_of_apps_from_layout_file(char *layout_file_path)
     }
 }
 
-static int qsort_compare(const void *a, const void *b)
+// -----------------  SERVICES  -----------------------------------
+
+// xxx 
+// - locking
+// - statics
+// - comments
+// - name of svcs va layout
+
+#define SERVICE_STATE_STOPPED           0     // white
+#define SERVICE_STATE_RUNNING           1     // green
+#define SERVICE_STATE_STOPPING          2     // yellow
+#define SERVICE_STATE_STOPPED_BY_ERROR  3     // red
+
+#define SERVICE_STATE_STR(z) \
+    ((z) == SERVICE_STATE_STOPPED           ? "STOPPED"          : \
+     (z) == SERVICE_STATE_RUNNING           ? "RUNNING"          : \
+     (z) == SERVICE_STATE_STOPPING          ? "STOPPING"         : \
+     (z) == SERVICE_STATE_STOPPED_BY_ERROR  ? "STOPPED_BY_ERROR" : \
+                                              "????")
+
+#define MAX_SERVICES 100
+typedef struct {
+    char *name;
+    int   state;
+    bool  start_pending;
+    bool  delete_pending;
+} service_t;
+
+static service_t services_tbl[MAX_SERVICES];
+static char     *svcs[MAX_SERVICES];
+static int       max_svcs;
+
+char             stop_requested[MAX_SERVICES];
+
+void run_svc(int id);
+void process_new_svc_names(void);
+void get_list_of_svcs(bool *new_names);
+int alloc_service(char *name);
+void free_service(int id);
+bool is_name_in_layout(char *name);
+bool is_name_in_services_tbl(char *name);
+
+static void services(void)
 {
-    const char *str_a = *(char **)a;
-    const char *str_b = *(char **)b;
-    int rc;
+    sdl_event_t event;
+    int         id;
+    bool        done = false;
+    bool        new_names;
 
-    rc = strcmp(str_a, str_b);
-    return rc;
-}
+    // handle the setting display
+    while (true) {
+        // init display and display title line
+        sdl_display_init(BG_COLOR);
+        sdl_print_init(DEFAULT_FONT, COLOR_WHITE, BG_COLOR);
+        sdl_render_text_xyctr(sdl_win_width/2, sdl_char_height/2, "Services");
 
-static void get_list_of_apps_from_apps_dirs(char *apps_dir_path)
-{
-    DIR           *apps_dir;
-    struct dirent *dirent;
-    int            i;
+        // xxx comment
+        get_list_of_svcs(&new_names);
+        if (new_names) {
+            process_new_svc_names();
+        }
 
-    // free the current apps names
-    for (i = 0; i < max_apps; i++) {
-        free(apps[i]);
-        apps[i] = NULL;
-    }
-    max_apps = 0;
+// XXX
+        // display name and controls for each service
+        for (id = 0; id < MAX_SERVICES; id++) {
+            //service_t *x = &services_tbl[id];
+            // xxx todo
+        }
 
-    // obtain apps directory content,
-    // these are the names of the apps
-    apps_dir = opendir(apps_dir_path);
-    while ((dirent = readdir(apps_dir)) != NULL) {
-        if (dirent->d_name[0] == '.') {
+        // display the control event 'X' to exit this
+        sdl_register_control_events(NULL, NULL, "X", BG_COLOR, 0, 0, EVID_QUIT);
+
+        // present the display
+        sdl_display_present();
+
+        // wait for an event, with 10 ms timeout;
+        // if no event received then re-display
+        sdl_get_event(TEN_MS, &event);
+        if (event.event_id == -1) {
             continue;
         }
-        apps[max_apps++] = strdup(dirent->d_name);
-    }
-    closedir(apps_dir);
 
-    // add Settings; Settings is a special 'app', 
-    // it is implemented by the settings() routine in this
-    // file; it is not executed by picoc as the other apps are
-    apps[max_apps++] = strdup("Settings");
+        // process the event
+// XXX
+        INFO("proc event_id %d\n", event.event_id);
+        switch (event.event_id) {
+        case EVID_QUIT:
+            done = true;
+            break;
+        }
 
-    // sort list alphabetical
-    qsort(apps, max_apps, sizeof(char*), qsort_compare);
-
-    // debug print the list of apps names
-    INFO("max_apps = %d\n", max_apps);
-    for (i = 0; i < max_apps; i++) {
-        if (apps[i] != NULL) {
-            INFO("apps[%d] = %s\n", i, apps[i]);
+        if (done) {
+            break;
         }
     }
+}
+
+// - - - - - - - - - process event routines  - - - - - - - - - - - - - 
+
+void process_new_svc_names(void)
+{
+    int id, i;
+
+    // loop over all defined services
+    for (id = 0; id < MAX_SERVICES; id++) {
+        service_t *x = &services_tbl[id];
+        if (x->name == NULL) {
+            continue;
+        }
+        if (is_name_in_layout(x->name) == false) {
+            if (x->state == SERVICE_STATE_RUNNING) {
+                x->delete_pending = true;
+                stop_requested[id] = true;
+            } else if (x->state == SERVICE_STATE_STOPPING) {
+                x->delete_pending = true;
+            } else {
+                free_service(id);
+            }
+        }
+    }
+
+    // loop over all svc names from the layout file
+    for (i = 0; i < MAX_SERVICES; i++) {
+        char *name = svcs[i];
+        if (name == NULL) {
+            continue;
+        }
+        if (is_name_in_services_tbl(name) == false) {
+            alloc_service(name);
+        }
+    }
+}
+
+void process_start_req(int id)
+{
+    service_t *x = &services_tbl[id];
+
+    if (x->name == NULL || x->state != SERVICE_STATE_STOPPED) {
+        ERROR("id=%d name=%s state=%s\n", id, x->name, SERVICE_STATE_STR(x->state));
+        return;
+    }
+    
+    x->state = SERVICE_STATE_RUNNING;
+    run_svc(id);
+}
+
+void process_stop_req(int id)
+{
+    service_t *x = &services_tbl[id];
+
+    if (x->name == NULL || x->state != SERVICE_STATE_STOPPED) {
+        ERROR("id=%d name=%s state=%s\n", id, x->name, SERVICE_STATE_STR(x->state));
+        return;
+    }
+
+    stop_requested[id] = true;
+}
+
+void process_restart_req(int id)
+{
+    service_t *x = &services_tbl[id];
+
+    if (x->name == NULL || x->state != SERVICE_STATE_RUNNING) {
+        ERROR("id=%d name=%s state=%s\n", id, x->name, SERVICE_STATE_STR(x->state));
+        return;
+    }
+
+    x->start_pending = true;
+    stop_requested[id] = true;
+}
+
+void process_stopped_callback(int id, int rc)
+{
+    service_t *x = &services_tbl[id];
+
+    if (x->name == NULL || x->state != SERVICE_STATE_STOPPING) {
+        ERROR("id=%d name=%s state=%s\n", id, x->name, SERVICE_STATE_STR(x->state));
+        return;
+    }
+
+    x->state = (rc == 0 ? SERVICE_STATE_STOPPED : SERVICE_STATE_STOPPED_BY_ERROR);
+
+    if (x->delete_pending) {
+        x->delete_pending = false;
+        free_service(id);
+    } else if (x->start_pending) {
+        x->start_pending = false;
+        x->state = SERVICE_STATE_RUNNING;
+        run_svc(id);
+    }
+}   
+
+// - - - - - - - - - run the svc - - - - - - - - - - - - - - 
+
+int service_thread(void *cx);
+
+void run_svc(int id)
+{
+    sdl_create_detached_thread(service_thread, (void*)(long)id);
+}
+
+int service_thread(void *cx)
+{
+    int id = (int)(long)cx;
+    service_t *x = &services_tbl[id];
+    int rc;
+
+    rc = run_app(x->name, id);
+
+    process_stopped_callback(id, rc);
+
+    return 0;
+}
+
+// - - - - - - - - - get list of svcs from layout file - - - - - - - - - - 
+
+void get_list_of_svcs(bool *new_names)
+{
+    const char *layout_file_path = "apps/layout";
+    struct stat statbuf;
+    int         rc, i, cnt, linenum=0;
+    FILE       *fp;
+    char        str[200], svc_name[100];
+    bool        reading_svcs = false;
+
+    static long layout_file_mtime;
+
+    // if layout file doesn't exist then return 0 svcs
+    rc = stat(layout_file_path, &statbuf);
+    if (rc != 0) {
+        for (i = 0; i < max_svcs; i++) {
+            free(svcs[i]);
+            svcs[i] = NULL;
+        }
+        *new_names = (max_svcs > 0);
+        max_svcs = 0;
+        return;
+    }
+
+    // if layout file has not changed then 
+    // return without updating the list of svcs
+    if (statbuf.st_mtime == layout_file_mtime) {
+        *new_names = false;
+        return;
+    }
+    layout_file_mtime = statbuf.st_mtime;
+
+    // obtain the list of svcs from the layout file ...
+
+    // free the current svcs names
+    for (i = 0; i < max_svcs; i++) {
+        free(svcs[i]);
+        svcs[i] = NULL;
+    }
+    max_svcs = 0;
+
+    // read the svcs names, which are the same as their dir names, from the layout file
+    fp = fopen(layout_file_path, "r");
+    while (fgets(str, sizeof(str), fp)) {
+        linenum++;
+
+        // ignore lines that are blank or begin with comment char
+        if (str[0] == '\n' || str[0] == '#') {
+            continue;
+        }
+
+        // xxx
+        if (strncmp(str, "SERVICES", 8) == 0) {
+            reading_svcs = true;
+            continue;
+        }
+        if (!reading_svcs) {
+            continue;
+        }
+
+        // read 1 svc names from each line of the layout file
+        cnt = sscanf(str, "%s", svc_name);
+        if (cnt != 1) {
+            ERROR("invalid line %d in layout file\n", linenum);
+            break;
+        }
+
+        // store the svc names, just read, to the svcs[] array;
+        svcs[max_svcs++] = strdup(svc_name);
+    }
+    fclose(fp);
+
+    // debug print the list of svcs
+    INFO("max_svcs = %d\n", max_svcs);
+    for (i = 0; i < max_svcs; i++) {
+        INFO("svcs[%d] = %s\n", i, svcs[i]);
+    }
+
+    // service names may have changed
+    *new_names = true;
+    return;
+}
+
+// - - - - - - - - - misc support routines - - - - - - - - - - 
+
+int alloc_service(char *name)
+{
+    int id;
+
+    for (id = MAX_SERVICES-1; id > 0; id--) {
+        if (services_tbl[id].name == NULL && services_tbl[id-1].name != NULL) {
+            break;
+        }
+    }
+
+    if (services_tbl[id].name != NULL) {
+        return -1;
+    }
+    INFO("allocated %d\n", id);
+
+    service_t *x = &services_tbl[id];
+    memset(x, 0, sizeof(service_t));
+    x->name = strdup(name);
+
+    return id;
+}
+
+void free_service(int id)
+{
+    service_t *x = &services_tbl[id];
+
+    free(x->name);
+    x->name = NULL;
+    memset(x, 0, sizeof(service_t));
+}
+
+bool is_name_in_layout(char *name)  // xxx name of this routine ?
+{
+    for (int i = 0; i < max_svcs; i++) {
+        if (strcmp(svcs[i], name) == 0) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+bool is_name_in_services_tbl(char *name)
+{
+    for (int id = 0; id < MAX_SERVICES; id++) {
+        service_t *x = &services_tbl[id];
+        if (x->name && strcmp(name, x->name) == 0) {
+            return true;
+        }
+    }
+
+    return false;
 }
 
 // -----------------  SETTINGS  -----------------------------------
@@ -628,7 +894,7 @@ static void settings(void)
     #define EVID_DEVEL_PORT         1001
     #define EVID_RESET_APPS         1002
     #define EVID_COPYRIGHT          1004
-    #define EVID_STOP_REQUESTED     1006
+    #define EVID_STOP_REQUESTED     1006 //xxx del
 
     // get this device ipaddr
     ipaddr = util_get_ipaddr();
@@ -636,7 +902,7 @@ static void settings(void)
 
     // handle the setting display
     while (true) {
-        // init disaplay and display title line
+        // init display and display title line
         sdl_display_init(BG_COLOR);
         sdl_print_init(DEFAULT_FONT, COLOR_WHITE, BG_COLOR);
         sdl_render_text_xyctr(sdl_win_width/2, sdl_char_height/2, "Settings");
@@ -730,9 +996,9 @@ static void settings(void)
         case EVID_COPYRIGHT:
             copyright();
             break;
-        case EVID_STOP_REQUESTED: 
-            stop_requested[5] = true;
-            break;
+//      case EVID_STOP_REQUESTED:  xxx 
+//          stop_requested[5] = true;
+//          break;
         case EVID_QUIT:
             done = true;
             break;

@@ -1,17 +1,22 @@
-# -------- Page 0 --------
+APPS
 
+# -------- Page 0 --------
 Primes      Reversi     Test
 -           -           -
 -           -           -
 -           -           -
 -           -           -
-t1          -           Settings
+-           Services    Settings
 
 # -------- Page 1 --------
-
 Test        -           -
 -           -           -
 -           -           -
 -           -           -
 -           -           -
--           -           Settings
+-           Services    Settings
+
+SERVICES
+
+svc_t1
+svc_t2

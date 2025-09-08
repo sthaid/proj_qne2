@@ -1,3 +1,8 @@
+remove picoc_bg
+fixup picoc.c args
+
+xxxxxxxxxxxxxxxx
+
 Services selection
 - name   start            name = RED=error GREEN=running WHITE=stopped
 - name   stop restart      
