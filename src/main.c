@@ -307,6 +307,10 @@ static int run_app(char *name, int svc_id)
     sprintf(app_dir, "apps/%s", name);
     picoc_args[0] = '\0';
     dir = opendir(app_dir);
+    if (dir == NULL) {
+        ERROR("%s: failed to opendir %s, %s\n", name, app_dir, strerror(errno));
+        return 99;
+    }
     p = picoc_args;
     while ((dirent = readdir(dir)) != NULL) {
         char *fn = dirent->d_name;
@@ -530,18 +534,30 @@ static void get_list_of_apps(void)
 // - statics
 // - comments
 // - name of svcs va layout
+// - maybe use ORANGE instead of YELLOS
+// - support restart
+// - use macro for state transitions to ensure all fields are set
+// - auto start services, if so marked in layout
+// - update layout file fails, does this also fail for the apps section;
+//   why does it fail
 
 #define SERVICE_STATE_STOPPED           0     // white
 #define SERVICE_STATE_RUNNING           1     // green
 #define SERVICE_STATE_STOPPING          2     // yellow
 #define SERVICE_STATE_STOPPED_BY_ERROR  3     // red
 
-#define SERVICE_STATE_STR(z) \
-    ((z) == SERVICE_STATE_STOPPED           ? "STOPPED"          : \
-     (z) == SERVICE_STATE_RUNNING           ? "RUNNING"          : \
-     (z) == SERVICE_STATE_STOPPING          ? "STOPPING"         : \
-     (z) == SERVICE_STATE_STOPPED_BY_ERROR  ? "STOPPED_BY_ERROR" : \
-                                              "????")
+#define SERVICE_STATE_STR(state) \
+    ((state) == SERVICE_STATE_STOPPED           ? "STOPPED"          : \
+     (state) == SERVICE_STATE_RUNNING           ? "RUNNING"          : \
+     (state) == SERVICE_STATE_STOPPING          ? "STOPPING"         : \
+     (state) == SERVICE_STATE_STOPPED_BY_ERROR  ? "STOPPED_BY_ERROR" : \
+                                                  "????")
+
+#define SERVICE_STATE_TO_COLOR(state) \
+    ((state) == SERVICE_STATE_STOPPED           ? COLOR_WHITE  : \
+     (state) == SERVICE_STATE_RUNNING           ? COLOR_GREEN  : \
+     (state) == SERVICE_STATE_STOPPING          ? COLOR_YELLOW : \
+                                                  COLOR_RED)
 
 #define MAX_SERVICES 100
 typedef struct {
@@ -557,8 +573,12 @@ static int       max_svcs;
 
 char             stop_requested[MAX_SERVICES];
 
-void run_svc(int id);
 void process_new_svc_names(void);
+void process_start_req(int id);
+void process_stop_req(int id);
+void process_restart_req(int id);
+void process_stopped_callback(int id, int rc);
+void run_svc(int id);
 void get_list_of_svcs(bool *new_names);
 int alloc_service(char *name);
 void free_service(int id);
@@ -571,6 +591,13 @@ static void services(void)
     int         id;
     bool        done = false;
     bool        new_names;
+    sdl_loc_t  *loc;
+    double      row;
+
+    // xxx use MAX_SERVICES in these defines
+    #define EVID_SVC_START    100
+    #define EVID_SVC_STOP     200
+    #define EVID_SVC_RESTART  300
 
     // handle the setting display
     while (true) {
@@ -585,11 +612,30 @@ static void services(void)
             process_new_svc_names();
         }
 
-// XXX
         // display name and controls for each service
+        // xxx truncate name, and remove leading "svc_"
+        row = 2;
         for (id = 0; id < MAX_SERVICES; id++) {
-            //service_t *x = &services_tbl[id];
-            // xxx todo
+            service_t *x = &services_tbl[id];
+
+            if (x->name == NULL) {
+                continue;
+            }
+        
+            sdl_print_init_color(SERVICE_STATE_TO_COLOR(x->state), BG_COLOR);
+            sdl_render_printf(0, ROW2Y(row), "%-s", x->name);
+
+            sdl_print_init_color(COLOR_LIGHT_BLUE, BG_COLOR);
+            if (x->state == SERVICE_STATE_STOPPED || x->state == SERVICE_STATE_STOPPED_BY_ERROR) {
+                loc = sdl_render_printf(COL2X(10), ROW2Y(row), "start");
+                sdl_register_event(loc, EVID_SVC_START+id);
+            } else if (x->state == SERVICE_STATE_RUNNING) {
+                loc = sdl_render_printf(COL2X(10), ROW2Y(row), "stop");
+                sdl_register_event(loc, EVID_SVC_STOP+id);
+                // xxx also restart
+            }
+
+            row += 1.5;
         }
 
         // display the control event 'X' to exit this
@@ -600,15 +646,23 @@ static void services(void)
 
         // wait for an event, with 10 ms timeout;
         // if no event received then re-display
+        // xxx not sure if short timeout will be needed
         sdl_get_event(TEN_MS, &event);
         if (event.event_id == -1) {
             continue;
         }
 
         // process the event
-// XXX
         INFO("proc event_id %d\n", event.event_id);
         switch (event.event_id) {
+        case EVID_SVC_START ... EVID_SVC_START + MAX_SERVICES - 1:
+            id = event.event_id - EVID_SVC_START;
+            process_start_req(id);
+            break;
+        case EVID_SVC_STOP ... EVID_SVC_STOP + MAX_SERVICES - 1:
+            id = event.event_id - EVID_SVC_STOP;
+            process_stop_req(id);
+            break;
         case EVID_QUIT:
             done = true;
             break;
@@ -626,6 +680,8 @@ void process_new_svc_names(void)
 {
     int id, i;
 
+    INFO("called\n");
+
     // loop over all defined services
     for (id = 0; id < MAX_SERVICES; id++) {
         service_t *x = &services_tbl[id];
@@ -634,8 +690,9 @@ void process_new_svc_names(void)
         }
         if (is_name_in_layout(x->name) == false) {
             if (x->state == SERVICE_STATE_RUNNING) {
-                x->delete_pending = true;
+                x->state = SERVICE_STATE_STOPPING;
                 stop_requested[id] = true;
+                x->delete_pending = true;
             } else if (x->state == SERVICE_STATE_STOPPING) {
                 x->delete_pending = true;
             } else {
@@ -660,12 +717,17 @@ void process_start_req(int id)
 {
     service_t *x = &services_tbl[id];
 
-    if (x->name == NULL || x->state != SERVICE_STATE_STOPPED) {
+    INFO("called for id=%d name=%s\n", id, x->name);
+
+    if ((x->name == NULL) || 
+        (x->state != SERVICE_STATE_STOPPED && x->state != SERVICE_STATE_STOPPED_BY_ERROR))
+    {
         ERROR("id=%d name=%s state=%s\n", id, x->name, SERVICE_STATE_STR(x->state));
         return;
     }
     
     x->state = SERVICE_STATE_RUNNING;
+    stop_requested[id] = false;
     run_svc(id);
 }
 
@@ -673,11 +735,14 @@ void process_stop_req(int id)
 {
     service_t *x = &services_tbl[id];
 
-    if (x->name == NULL || x->state != SERVICE_STATE_STOPPED) {
+    INFO("called for id=%d name=%s\n", id, x->name);
+
+    if (x->name == NULL || x->state != SERVICE_STATE_RUNNING) {
         ERROR("id=%d name=%s state=%s\n", id, x->name, SERVICE_STATE_STR(x->state));
         return;
     }
 
+    x->state = SERVICE_STATE_STOPPING;
     stop_requested[id] = true;
 }
 
@@ -685,12 +750,15 @@ void process_restart_req(int id)
 {
     service_t *x = &services_tbl[id];
 
+    INFO("called for id=%d name=%s\n", id, x->name);
+
     if (x->name == NULL || x->state != SERVICE_STATE_RUNNING) {
         ERROR("id=%d name=%s state=%s\n", id, x->name, SERVICE_STATE_STR(x->state));
         return;
     }
 
-    x->start_pending = true;
+    x->start_pending = true; // xxx rename to restart_pending
+    x->state = SERVICE_STATE_STOPPING;
     stop_requested[id] = true;
 }
 
@@ -698,7 +766,11 @@ void process_stopped_callback(int id, int rc)
 {
     service_t *x = &services_tbl[id];
 
-    if (x->name == NULL || x->state != SERVICE_STATE_STOPPING) {
+    INFO("called for id=%d name=%s rc=%d\n", id, x->name, rc);
+
+    if ((x->name == NULL) || 
+        (x->state != SERVICE_STATE_STOPPING && x->state != SERVICE_STATE_RUNNING))
+    {
         ERROR("id=%d name=%s state=%s\n", id, x->name, SERVICE_STATE_STR(x->state));
         return;
     }
@@ -711,7 +783,12 @@ void process_stopped_callback(int id, int rc)
     } else if (x->start_pending) {
         x->start_pending = false;
         x->state = SERVICE_STATE_RUNNING;
+        stop_requested[id] = false;
         run_svc(id);
+    } else if (rc == 0) {
+        x->state = SERVICE_STATE_STOPPED;
+    } else {
+        x->state = SERVICE_STATE_STOPPED_BY_ERROR;  // xxx display error code too
     }
 }   
 
@@ -894,7 +971,6 @@ static void settings(void)
     #define EVID_DEVEL_PORT         1001
     #define EVID_RESET_APPS         1002
     #define EVID_COPYRIGHT          1004
-    #define EVID_STOP_REQUESTED     1006 //xxx del
 
     // get this device ipaddr
     ipaddr = util_get_ipaddr();
@@ -930,10 +1006,6 @@ static void settings(void)
         // display Reset_Apps
         loc = sdl_render_printf(0, ROW2Y(11), "Reset_Apps");
         sdl_register_event(loc, EVID_RESET_APPS);
-
-        // display t1 xxx unit test
-        loc = sdl_render_printf(0, ROW2Y(13), "stop_requested = %d", stop_requested[5]);
-        sdl_register_event(loc, EVID_STOP_REQUESTED);
 
         // change print color back to white
         sdl_print_init_color(COLOR_WHITE, BG_COLOR);
@@ -996,9 +1068,6 @@ static void settings(void)
         case EVID_COPYRIGHT:
             copyright();
             break;
-//      case EVID_STOP_REQUESTED:  xxx 
-//          stop_requested[5] = true;
-//          break;
         case EVID_QUIT:
             done = true;
             break;
