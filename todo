@@ -1,9 +1,7 @@
+auto start svcs
 ezput all
-get list of services
-revert layout file
-a service is not an app, and can't be in the layout section for apps
-millisecs in loop
-EOF in layout file
+get rid of 1 sec delay in layout
+android test too
 
 xxxxxxxxxxxxx
 

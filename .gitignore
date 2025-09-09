@@ -3,9 +3,8 @@ tags
 
 *.orig
 *.tar.gz
+*.tar
 *.swp
-
-apps.tar
 
 src/version.h
 
@@ -19,6 +18,7 @@ linux/assets
 
 android/SDL3-3.2.20
 android/SDL
+android/setup_files/orig
 
 apps/Primes/primes
 apps/Reversi/reversi

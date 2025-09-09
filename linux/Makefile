@@ -41,7 +41,7 @@ $(TARGET):
 	../tools/gen_version
 	gcc -o $@ $(CFLAGS) $(SRCS) -lSDL3 -lSDL3_ttf -lm
 	rm -rf files assets; mkdir files assets;
-	gen_apps_tar linux/assets/apps.tar
+	../tools/gen_tar linux/assets/apps_and_svcs.tar
 	ln -s ../../android/assets/FreeMonoBold.ttf assets
 	ln -s ../../android/assets/copyright assets
 

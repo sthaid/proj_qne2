@@ -11,14 +11,7 @@ fi
 
 rm -f $dest_path
 
-find apps -type f \
-          ! -name params \
-          ! -name README \
-          ! -name Makefile \
-          ! -name "*.swp" \
-          ! -name "recording.raw" \
-          ! -executable \
-    > /tmp/files.txt;
+git ls-files apps svcs | grep -v Makefile > /tmp/files.txt
 
 tar -cf $dest_path --files-from /tmp/files.txt;
 

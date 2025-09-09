@@ -1,7 +1,7 @@
 #!/bin/bash
 
-# remove and reconstruct assets/apps.tar
-gen_apps_tar android/assets/apps.tar
+# remove and reconstruct assets/apps_and_svcs.tar
+../tools/gen_tar android/assets/apps_and_svcs.tar
 
 # construct version info
 ../tools/gen_version

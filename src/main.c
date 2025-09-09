@@ -39,8 +39,8 @@
 #define EVID_PAGE_INCREMENT  901
 #define EVID_MINIMIZE        902
 
-#define TEN_MS  10000
-#define ONE_SEC 1000000
+#define MS  1000
+#define SEC 1000000
 
 //
 // typedefs
@@ -83,7 +83,7 @@ extern void showHome2(void);
 
 static int init(void);
 static void cleanup(void);
-static void create_default_apps(void); //xxx and services
+static void create_default_apps_and_svcs(void); //xxx and services
 static void sigusr1_hndlr(int signum);  //xxx sigusr1,  ?  sigusr2
 
 int MAIN(int argc, char **argv)
@@ -127,7 +127,7 @@ static int init(void)
     params.devel_port = util_get_int_param(".", "devel_port", DEFAULT_DEVEL_PORT);
 
     // copy asset files to the working directory
-    sdl_copy_asset_file("apps.tar", ".");
+    sdl_copy_asset_file("apps_and_svcs.tar", ".");
     sdl_copy_asset_file("copyright", ".");
     sdl_copy_asset_file("FreeMonoBold.ttf", ".");
 
@@ -137,14 +137,14 @@ static int init(void)
     // - init apps to default
     params.devel_mode = 1;
     util_set_int_param(".", "devel_mode", 1);
-    create_default_apps();
+    create_default_apps_and_svcs();
 #else
     // if apps dir struct doesn't exist then create it
     int rc;
     struct stat statbuf;
-    rc = stat("apps", &statbuf);
+    rc = stat("apps", &statbuf);  // xxx svcs
     if (rc != 0 || !S_ISDIR(statbuf.st_mode)) {
-        create_default_apps();
+        create_default_apps_and_svcs();
     }
 #endif
 
@@ -198,20 +198,20 @@ static void cleanup(void)
 }
 
 // xxx and services
-static void create_default_apps(void)
+static void create_default_apps_and_svcs(void)
 {
     int rc;
 
-    // remove existing apps dir struct
-    rc = system("rm -rf apps");
+    // remove existing apps and svcs
+    rc = system("rm -rf apps svcs");
     if (rc != 0) {
-        ERROR("rm -rf apps, failed\n");
+        ERROR("rm -rf apps svcs, failed\n");
     }
 
     // extract apps.tar
-    rc = system("tar -xvf apps.tar");
+    rc = system("tar -xvf apps_and_svcs.tar");
     if (rc != 0) {
-        ERROR("tar -xvf apps.tar, failed\n");
+        ERROR("tar -xvf apps_and_svcs.tar, failed\n");
     }
 }
 
@@ -228,7 +228,7 @@ static char *apps[MAX_APPS];
 static int   max_apps;
 static int   page;
 
-static int run_app(char *name, int svc_id);
+static int run(char *name, int svc_id);
 static void display_menu(void);
 static void get_list_of_apps(void);
 static void settings(void);
@@ -258,7 +258,7 @@ static void processing(void)
         sdl_display_present();
 
         // wait for an event, 1 sec timeout
-        sdl_get_event(ONE_SEC, &event);
+        sdl_get_event(1*SEC, &event);
         if (event.event_id == -1) {
             continue;
         }
@@ -286,16 +286,16 @@ static void processing(void)
             } else if (strcmp(apps[id], "Services") == 0) {
                 services();
             } else {
-                run_app(apps[id], -1);
+                run(apps[id], -1);
             }
         }
     }
 }
 
-//xxx make this a common routine
-static int run_app(char *name, int svc_id)
+//xxx comment on arg
+static int run(char *name, int svc_id)
 {
-    char           app_dir[100];
+    char           dir_path[100];
     int            rc;
     DIR           *dir;
     struct dirent *dirent;
@@ -303,12 +303,18 @@ static int run_app(char *name, int svc_id)
 
     static char picoc_args[1000];
 
-    // construct list of *.c files in the app_dir
-    sprintf(app_dir, "apps/%s", name);
+    // xxx comment
+    if (svc_id == -1) {
+        sprintf(dir_path, "apps/%s", name);
+    } else {
+        sprintf(dir_path, "svcs/%s", name);
+    }
+
+    // construct list of *.c files in the dir
     picoc_args[0] = '\0';
-    dir = opendir(app_dir);
+    dir = opendir(dir_path);
     if (dir == NULL) {
-        ERROR("%s: failed to opendir %s, %s\n", name, app_dir, strerror(errno));
+        ERROR("%s: failed to opendir %s, %s\n", name, dir_path, strerror(errno));
         return 99;
     }
     p = picoc_args;
@@ -316,22 +322,22 @@ static int run_app(char *name, int svc_id)
         char *fn = dirent->d_name;
         int len = strlen(fn);
         if (len > 2 && strcmp(fn+len-2, ".c") == 0) {
-            p += sprintf(p, "%s/%s ", app_dir, fn);
+            p += sprintf(p, "%s/%s ", dir_path, fn);
         }
     }
     closedir(dir);
 
-    // error if no source code found in app_dir
+    // error if no source code found in dir_path
     if (picoc_args[0] == '\0') {
-        ERROR("%s: no source code in %s\n", name, app_dir);
+        ERROR("%s: no source code in %s\n", name, dir_path);
         return 99;
     }
 
     // xxx comment
     if (svc_id == -1) {
-        p += sprintf(p, " - %s", app_dir);
+        p += sprintf(p, " - %s", dir_path);
     } else {
-        p += sprintf(p, " - %s %d", app_dir, svc_id);
+        p += sprintf(p, " - %s %d", dir_path, svc_id);
     }
 
     // run the app using the picoc c language interpreter
@@ -360,7 +366,7 @@ static void display_menu(void)
 
     // get the list of apps: 
     // - this initializes the apps[] array of  app names
-    // - the dir names are the same as the app names
+    // - the dir names must be the same as the app names
     // - the apps array is indexed by the location on the display, for
     //   example idx=0 is top left, and idx=17 is bottom right
     get_list_of_apps();
@@ -441,6 +447,7 @@ static void display_menu(void)
     }
 }
 
+// xxx make this reliable
 static void get_list_of_apps(void)
 {
     const char *layout_file_path = "apps/layout";
@@ -448,11 +455,11 @@ static void get_list_of_apps(void)
     int         rc, i, cnt;
     FILE       *fp;
     char        str[200], s[3][100];
-    bool        reading_apps = false;
 
     static long layout_file_mtime;
 
     // if layout file doesn't exist then return 0 apps
+    // xxx dont change
     rc = stat(layout_file_path, &statbuf);
     if (rc != 0) {
         for (i = 0; i < max_apps; i++) {
@@ -472,6 +479,9 @@ static void get_list_of_apps(void)
 
     // obtain the list of apps from the layout file ...
 
+    // xxx explain why,  may be a better way
+    sleep(1);
+
     // free the current apps names
     for (i = 0; i < max_apps; i++) {
         free(apps[i]);
@@ -484,19 +494,6 @@ static void get_list_of_apps(void)
     while (fgets(str, sizeof(str), fp)) {
         // ignore lines that are blank or begin with comment char
         if (str[0] == '\n' || str[0] == '#') {
-            continue;
-        }
-
-        // xxx
-        if (strncmp(str, "APPS", 3) == 0) {
-            reading_apps = true;
-            continue;
-        }
-        if (strncmp(str, "SERVICES", 8) == 0) {
-            reading_apps = false;
-            break;
-        }
-        if (!reading_apps) {
             continue;
         }
 
@@ -644,10 +641,10 @@ static void services(void)
         // present the display
         sdl_display_present();
 
-        // wait for an event, with 10 ms timeout;
+        // wait for an event, with 100 ms timeout;
         // if no event received then re-display
         // xxx not sure if short timeout will be needed
-        sdl_get_event(TEN_MS, &event);
+        sdl_get_event(100*MS, &event);
         if (event.event_id == -1) {
             continue;
         }
@@ -704,7 +701,7 @@ void process_new_svc_names(void)
     // loop over all svc names from the layout file
     for (i = 0; i < MAX_SERVICES; i++) {
         char *name = svcs[i];
-        if (name == NULL) {
+        if (name == NULL) { // xxx cant be
             continue;
         }
         if (is_name_in_services_tbl(name) == false) {
@@ -807,96 +804,85 @@ int service_thread(void *cx)
     service_t *x = &services_tbl[id];
     int rc;
 
-    rc = run_app(x->name, id);
+    rc = run(x->name, id);
 
     process_stopped_callback(id, rc);
 
     return 0;
 }
 
-// - - - - - - - - - get list of svcs from layout file - - - - - - - - - - 
+// - - - - - - - - - get list of svcs from layout file xxx - - - - - - - - - - 
 
-void get_list_of_svcs(bool *new_names)
+// xxxxxxxxxxxx in prog
+int compare(const void *a_arg, const void *b_arg)
 {
-    const char *layout_file_path = "apps/layout";
-    struct stat statbuf;
-    int         rc, i, cnt, linenum=0;
-    FILE       *fp;
-    char        str[200], svc_name[100];
-    bool        reading_svcs = false;
+    char *a = *(char**)a_arg;
+    char *b = *(char**)b_arg;
+    return strcmp(a,b);
+}
 
-    static long layout_file_mtime;
+void get_list_of_svcs(bool *new_svc_names)
+{
+    int            rc;
+    struct stat    statbuf;
+    DIR           *dir;
+    struct dirent *dirent;
+    char          *svcs_dir_path = "svcs";
 
-    // if layout file doesn't exist then return 0 svcs
-    rc = stat(layout_file_path, &statbuf);
+    static long svcs_dir_mtime;
+
+    // preset return flag
+    *new_svc_names = false;
+
+    // if svcs dir doesn't exist then return without changing list of svcs
+    rc = stat(svcs_dir_path, &statbuf);
     if (rc != 0) {
-        for (i = 0; i < max_svcs; i++) {
-            free(svcs[i]);
-            svcs[i] = NULL;
-        }
-        *new_names = (max_svcs > 0);
-        max_svcs = 0;
         return;
     }
 
-    // if layout file has not changed then 
-    // return without updating the list of svcs
-    if (statbuf.st_mtime == layout_file_mtime) {
-        *new_names = false;
+    // if svcs dir has not changed then return
+    if (statbuf.st_mtime == svcs_dir_mtime) {
         return;
     }
-    layout_file_mtime = statbuf.st_mtime;
-
-    // obtain the list of svcs from the layout file ...
+    svcs_dir_mtime = statbuf.st_mtime;
 
     // free the current svcs names
-    for (i = 0; i < max_svcs; i++) {
+    for (int i = 0; i < max_svcs; i++) {
         free(svcs[i]);
         svcs[i] = NULL;
     }
     max_svcs = 0;
 
-    // read the svcs names, which are the same as their dir names, from the layout file
-    fp = fopen(layout_file_path, "r");
-    while (fgets(str, sizeof(str), fp)) {
-        linenum++;
-
-        // ignore lines that are blank or begin with comment char
-        if (str[0] == '\n' || str[0] == '#') {
-            continue;
-        }
-
-        // xxx
-        if (strncmp(str, "SERVICES", 8) == 0) {
-            reading_svcs = true;
-            continue;
-        }
-        if (!reading_svcs) {
-            continue;
-        }
-
-        // read 1 svc names from each line of the layout file
-        cnt = sscanf(str, "%s", svc_name);
-        if (cnt != 1) {
-            ERROR("invalid line %d in layout file\n", linenum);
-            break;
-        }
-
-        // store the svc names, just read, to the svcs[] array;
-        svcs[max_svcs++] = strdup(svc_name);
+    // make list of svcs subdirs
+    dir = opendir(svcs_dir_path);
+    if (dir == NULL) {
+        ERROR("opendir %s failed, %s\n", svcs_dir_path, strerror(errno));
+        return;
     }
-    fclose(fp);
+    while ((dirent = readdir(dir)) != NULL) {
+        char *name = dirent->d_name;
+        int   type = dirent->d_type;
+        if (type == DT_DIR && name[0] != '.') {
+            svcs[max_svcs++] = strdup(name);
+        }
+    }
+    closedir(dir);
+
+    // sort the svcs names
+    qsort(svcs, max_svcs, sizeof(char*), compare);
 
     // debug print the list of svcs
     INFO("max_svcs = %d\n", max_svcs);
-    for (i = 0; i < max_svcs; i++) {
+    for (int i = 0; i < max_svcs; i++) {
         INFO("svcs[%d] = %s\n", i, svcs[i]);
     }
 
-    // service names may have changed
-    *new_names = true;
-    return;
+    // return flag indicating that there are probably 
+    // some changes to the svc names
+    *new_svc_names = true;
 }
+
+// xxx add lineno to the get layout routine
 
 // - - - - - - - - - misc support routines - - - - - - - - - - 
 
@@ -967,10 +953,10 @@ static void settings(void)
     long        msg_time = 0;
     char       *ipaddr;
 
-    #define EVID_DEVEL_MODE         1000
-    #define EVID_DEVEL_PORT         1001
-    #define EVID_RESET_APPS         1002
-    #define EVID_COPYRIGHT          1004
+    #define EVID_DEVEL_MODE           1000
+    #define EVID_DEVEL_PORT           1001
+    #define EVID_RESET_APPS_AND_SVCS  1002
+    #define EVID_COPYRIGHT            1004
 
     // get this device ipaddr
     ipaddr = util_get_ipaddr();
@@ -1004,8 +990,8 @@ static void settings(void)
         sdl_register_event(loc, EVID_DEVEL_PORT);
 
         // display Reset_Apps
-        loc = sdl_render_printf(0, ROW2Y(11), "Reset_Apps");
-        sdl_register_event(loc, EVID_RESET_APPS);
+        loc = sdl_render_printf(0, ROW2Y(11), "Reset_Apps/Svcs");
+        sdl_register_event(loc, EVID_RESET_APPS_AND_SVCS);
 
         // change print color back to white
         sdl_print_init_color(COLOR_WHITE, BG_COLOR);
@@ -1024,9 +1010,9 @@ static void settings(void)
         // present the display
         sdl_display_present();
 
-        // wait for an event, with 10 ms timeout;
+        // wait for an event, with 100 ms timeout;
         // if no event received then re-display
-        sdl_get_event(TEN_MS, &event);
+        sdl_get_event(100*MS, &event);
         if (event.event_id == -1) {
             continue;
         }
@@ -1056,12 +1042,12 @@ static void settings(void)
                 }
             }
             break; }
-        case EVID_RESET_APPS: {
+        case EVID_RESET_APPS_AND_SVCS: {
             char *str; 
-            str = sdl_get_input_str("Reset Apps y/n?", false, BG_COLOR);
+            str = sdl_get_input_str("Reset y/n?", false, BG_COLOR);
             if (strcasecmp(str, "y") == 0) {
-                create_default_apps();
-                msg = "Apps are reset.";
+                create_default_apps_and_svcs();
+                msg = "Apps/Svcs are reset.";
                 msg_time = util_microsec_timer();
             }
             break; }
