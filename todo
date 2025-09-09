@@ -1,63 +1,31 @@
-auto start svcs
-ezput all
+auto start svcs, how to control that
+add restart svc control
 get rid of 1 sec delay in layout
-android test too
 
-xxxxxxxxxxxxx
+need a mutex in the logging code
 
-( flock 99; ls ) 99>lock
+ezput all
 
-(; flock 99; ls ;) 99>lock
+run unit test of apps and svcs, probbly needs work to make this build
 
-copy new layout file to a layout.new
+write service to store sensors values
 
-
-remove picoc_bg
-fixup picoc.c args
+picoc
+- remove picoc_bg
+- fixup picoc.c args
+- why doesn't it have an 'open' call;  try adding that
+- does picoc support read/write files, or are we doing that from util
+   - where is the util to read/write a file being used
+- picoc return value - probably okay
 
 xxxxxxxxxxxxxxxx
-
-Services selection
-- name   start            name = RED=error GREEN=running WHITE=stopped
-- name   stop restart      
+xxxxxxxxxxxxxxxx
+xxxxxxxxxxxxxxxx
 
 what happens to main sdl thread when paused, is it blocked on the event,
 - is renderer being cleared
 
-how to start 
-- remove the picoc bg
-- create thread and call picoc from the thread
-
-how to terminate / stop service
-- wake service out of sleep ?
-- poll for term flag, and return
-- the status returned back to the thread will indicate an eror on not
-
-example structure of service to read temperature and write to file
-while (true) {
-    if should stop then break
-    do some work
-    sleep(1)
-}
-
-where to save the service files, probably in same directory as service
-
-does picoc support read/write files, or are we doing that from util
-- where is the util to read/write a file being used
-
-picoc return value
-
-
-dont chdir
-- picoc list of files                        DONE
-- params - single file at top level          DONE
-- util read/write file
-- copy asset file
-- create picoc pgm with args -  id  and dir
-
-create services dir and put services in there
-
-need to handle ondestroy to kill off the services
+need to handle ondestroy to kill off the android services
 - and also just kill off the pthreads when exitting
 
 ---------------
@@ -69,7 +37,6 @@ https://www.google.com/search?q=how+to+combine+magnetic+field+and+roll%2Fpitch+d
 
 ---------------
 
-
 does sdl main keep running when AP is paused?
 - when foreground is enabled
 - if so, a pthread can be created
@@ -79,7 +46,6 @@ https://wiki.libsdl.org/SDL3/SDL_RequestAndroidPermission
 
 check on POST_NOTIFICATION permission
 - what if it is not set in the app setup?
-
 
 use symlinks for setup-files and put orig in subdir
 destroy flag is not being cleared in Myervice
@@ -125,31 +91,7 @@ try doxygen
 
 updaes to picoc ...
 
-------------
-code cleanup:
-------------
-
-src/std_hdrs.h          OK
-src/sdl.h              OK
-src/logging.h          OK
-src/utils.h           OK
-
-src/logging.c         OK
-src/utils.c             OK
-src/sdl_audio.c        OK
-src/main.c            <== in progress
-src/sdl_sensor.c
-src/sdl.c
-
-apps/Test/test.c        <=== in progress
-apps/Test/test1.c
-apps/Primes/primes.c
-apps/Reversi/reversi.c
-apps/Reversi/cpu.c
-
 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-
-// xxx pthread_create_detached
 
 is recording volume control needed
 

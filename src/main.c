@@ -63,6 +63,7 @@ static params_t    params;
 //
 
 static void processing(void);
+void stop_all_services(void);
 static int server_thread(void *cx);
 static int waiter_thread(void *cx);
 static void kill_child_processes(pid_t pid);
@@ -106,6 +107,7 @@ int MAIN(int argc, char **argv)
 static int init(void)
 {
     int rc;
+    static int xxx_test = 5;
 
     // get storage_path, and
     // set current working directory to storage_path
@@ -117,6 +119,9 @@ static int init(void)
     if (rc != 0) {
         return -1;
     }
+
+    INFO("XXXXXXXXXX %d\n", xxx_test);
+    xxx_test++;
 
     // print startup message
     INFO("========== STARTING: %s %s  ==========\n", VERSION, BUILD_DATE);
@@ -187,6 +192,8 @@ static int init(void)
 static void cleanup(void)
 {
     INFO("TERMINATING\n");
+
+    stop_all_services();
 
 //#ifdef ANDROID
 //    showHome2(); //xxx
@@ -885,6 +892,52 @@ void get_list_of_svcs(bool *new_svc_names)
 // xxx add lineno to the get layout routine
 
 // - - - - - - - - - misc support routines - - - - - - - - - - 
+
+void stop_all_services(void)
+{
+    int id, duration_ms = 0;
+    bool all_stopped;
+
+    INFO("stopping all services\n");
+
+    for (id = 0; id < MAX_SERVICES; id++) {
+        service_t *x = &services_tbl[id];
+        if (x->name && x->state == SERVICE_STATE_RUNNING) {
+            stop_requested[id] = true;
+        }
+    }
+
+    while (true) {
+        all_stopped = true;
+        for (id = 0; id < MAX_SERVICES; id++) {
+            service_t *x = &services_tbl[id];
+            if (x->name && x->state != SERVICE_STATE_STOPPED) {
+                all_stopped = false;
+                break;
+            }
+        }
+
+        if (all_stopped) {
+            INFO("all services are stopped\n");
+            break;
+        }
+
+        if (duration_ms > 5000) {
+            ERROR("the following services have failed to stop ...\n");
+            for (id = 0; id < MAX_SERVICES; id++) {
+                service_t *x = &services_tbl[id];
+                if (x->name && x->state != SERVICE_STATE_STOPPED) {
+                    ERROR("- %-12s %s\n", x->name, SERVICE_STATE_STR(x->state));
+                }
+            }
+            break;
+        }
+
+        usleep(100*MS);
+        duration_ms += 100;
+    }
+}
+
 
 int alloc_service(char *name)
 {
