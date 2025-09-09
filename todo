@@ -1,3 +1,19 @@
+ezput all
+get list of services
+revert layout file
+a service is not an app, and can't be in the layout section for apps
+millisecs in loop
+EOF in layout file
+
+xxxxxxxxxxxxx
+
+( flock 99; ls ) 99>lock
+
+(; flock 99; ls ;) 99>lock
+
+copy new layout file to a layout.new
+
+
 remove picoc_bg
 fixup picoc.c args
 

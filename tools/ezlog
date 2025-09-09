@@ -1,6 +1,0 @@
-#!/bin/bash
-
-while true; do
-  ezsh "tail -n 100 -F log"
-  sleep 1
-done
