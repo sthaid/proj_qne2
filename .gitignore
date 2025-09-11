@@ -1,10 +1,13 @@
-cscope.out
-tags
 
 *.orig
 *.tar.gz
 *.tar
 *.swp
+
+cscope.out
+tags
+
+FreeMonoBold.ttf
 
 src/version.h
 
@@ -20,11 +23,11 @@ android/SDL3-3.2.20
 android/SDL
 android/setup_files/orig
 
-apps/Primes/primes
-apps/Reversi/reversi
-apps/Test/test
-apps/Test/recording.raw
-apps/*/params
+apps/Reversi/Reversi
+apps/Test/Test
+apps/*/apps
+apps/*/data_dir
 
 svcs/t1/t1
 svcs/t2/t2
+svcs/*/data_dir
