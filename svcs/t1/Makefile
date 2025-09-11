@@ -1,6 +1,6 @@
-TARGET = t1
+TARGET  = t1
 
-SRCS   = t1.c
+SRCS    = t1.c
 
 SRCS_COMMON = \
        ../../src/sdl.c \
@@ -9,25 +9,22 @@ SRCS_COMMON = \
        ../../src/utils.c \
        ../../src/logging.c
 
-FONT_FILE=FreeMonoBold.ttf
+CFLAGS = -Wall -Werror -Wno-unused-result -g -I. -I../../src -fcommon $(shell pkg-config sdl3--cflags)
 
-CFLAGS = -Wall -Werror -Wno-unused-result -g -I. -I../../src $(shell pkg-config sdl3--cflags)
-
-build:
+build: setup
 	gcc -o $(TARGET) $(CFLAGS) $(SRCS) $(SRCS_COMMON) -lSDL3 -lSDL3_ttf -lm
 
-run_linux: build
-	ln -sf ../../android/assets/$(FONT_FILE) .
-	./$(TARGET)
-	rm -f $(FONT_FILE) $(TARGET)
+run_linux: setup
+	gcc -o $(TARGET) $(CFLAGS) $(SRCS) $(SRCS_COMMON) -lSDL3 -lSDL3_ttf -lm
+	$(TARGET) data_dir 0
 
-run_picoc:
-	ln -sf ../../android/assets/$(FONT_FILE) .
-	../../picoc/picoc $(SRCS) - apps/t1 123456789abcd
-	rm -f $(FONT_FILE)
+run_picoc: setup
+	../../picoc/picoc -n $(TARGET) $(SRCS) - data_dir 0
+
+setup:
+	mkdir -p data_dir
 
 clean:
-	rm -f $(TARGET) FreeMonoBold.ttf params
-	rm -f recording.raw
+	rm -rf $(TARGET) data_dir
 
-.PHONY: build clean
+.PHONY: build setup clean

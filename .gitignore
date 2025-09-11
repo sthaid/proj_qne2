@@ -25,3 +25,6 @@ apps/Reversi/reversi
 apps/Test/test
 apps/Test/recording.raw
 apps/*/params
+
+svcs/t1/t1
+svcs/t2/t2

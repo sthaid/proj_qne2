@@ -60,10 +60,12 @@ static params_t    params;
 
 //
 // prototypes 
+// xxx put all prototypes here
 //
 
 static void processing(void);
-void stop_all_services(void);
+static void init_services(void);
+static void stop_all_services(void);
 static int server_thread(void *cx);
 static int waiter_thread(void *cx);
 static void kill_child_processes(pid_t pid);
@@ -184,6 +186,9 @@ static int init(void)
     // xxx
     showHome();
 #endif
+
+    // start services that are configured for autostart
+    init_services();
 
     // init okay
     return 0;
@@ -313,7 +318,7 @@ static int run(char *name, int svc_id)
     struct dirent *dirent;
     char          *p;
 
-    static char picoc_args[1000];
+    char picoc_args[1000];
 
     // xxx comment
     if (svc_id == -1) {
@@ -586,7 +591,7 @@ static service_t services_tbl[MAX_SERVICES];
 static char     *svcs[MAX_SERVICES];
 static int       max_svcs;
 
-char             stop_requested[MAX_SERVICES];
+extern char      stop_requested[MAX_SERVICES];
 
 void process_new_svc_names(void);
 void process_start_req(int id);
@@ -599,6 +604,37 @@ int alloc_service(char *name);
 void free_service(int id);
 bool is_name_in_layout(char *name);
 bool is_name_in_services_tbl(char *name);
+
+static void init_services(void)
+{
+    int i, id, rc;
+    struct stat statbuf;
+    char autostart[100];
+    bool new_names;
+
+    get_list_of_svcs(&new_names);
+
+    for (i = 0; i < max_svcs; i++) {
+        alloc_service(svcs[i]);
+    }
+
+    // xxx maybe do one at a time
+    for (id = 0; id < MAX_SERVICES; id++) {
+        service_t *x = &services_tbl[id];
+        if (x->name == NULL) {
+            continue;
+        }
+
+        sprintf(autostart, "svcs/%s/autostart", x->name);
+        rc = stat(autostart, &statbuf);
+        if (rc == 0) {
+            INFO("autostarting service %s\n", x->name);
+            x->state = SERVICE_STATE_RUNNING;
+            stop_requested[id] = false;
+            run_svc(id);
+        }
+    }
+}
 
 static void services(void)
 {
@@ -717,11 +753,8 @@ void process_new_svc_names(void)
     }
 
     // loop over all svc names from the layout file
-    for (i = 0; i < MAX_SERVICES; i++) {
+    for (i = 0; i < max_svcs; i++) {
         char *name = svcs[i];
-        if (name == NULL) { // xxx cant be
-            continue;
-        }
         if (is_name_in_services_tbl(name) == false) {
             alloc_service(name);
         }
@@ -792,13 +825,15 @@ void process_stopped_callback(int id, int rc)
 
     x->state = (rc == 0 ? SERVICE_STATE_STOPPED : SERVICE_STATE_STOPPED_BY_ERROR);
 
+    // xxx needs a review,  and locking
+    stop_requested[id] = false;
+
     if (x->delete_pending) {
         x->delete_pending = false;
         free_service(id);
     } else if (x->start_pending) {
         x->start_pending = false;
         x->state = SERVICE_STATE_RUNNING;
-        stop_requested[id] = false;
         run_svc(id);
     } else if (rc == 0) {
         x->state = SERVICE_STATE_STOPPED;
@@ -839,7 +874,7 @@ int compare(const void *a_arg, const void *b_arg)
     return strcmp(a,b);
 }
 
-void get_list_of_svcs(bool *new_svc_names)
+void get_list_of_svcs(bool *new_svc_names)  // xxx rename arg
 {
     int            rc;
     struct stat    statbuf;
@@ -904,7 +939,7 @@ void get_list_of_svcs(bool *new_svc_names)
 
 // - - - - - - - - - misc support routines - - - - - - - - - - 
 
-void stop_all_services(void)
+static void stop_all_services(void)
 {
     int id, duration_ms = 0;
     bool all_stopped;

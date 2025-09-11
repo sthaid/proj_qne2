@@ -6,7 +6,7 @@
 #define PICOC_STACK_SIZE (128000*4)  // xxx check this
 
 static int picoc_helper(char *args);
-static void *picoc_thread(void *cx);
+//static void *picoc_thread(void *cx);
 
 // ----------------- API: RUN PICOC PROG -------------
 
@@ -15,17 +15,19 @@ int picoc_fg(char *args)
     return picoc_helper(args);
 }
 
+#if 0 //xxx cleanup
 void picoc_bg(char *args)
 {
     pthread_t tid;
 
     pthread_create(&tid, NULL, picoc_thread, args); //xxx detached
 }
+#endif
 
 // ----------------- SUPPORT -------------------------
 
+#if 0
 // xxx should use sdl thread
-
 static void *picoc_thread(void *cx)
 {
     char *args = (char*)cx;
@@ -35,6 +37,7 @@ static void *picoc_thread(void *cx)
 
     return (void*)(long)rc;
 }
+#endif
 
 static int picoc_helper(char *args)
 {
@@ -45,6 +48,7 @@ static int picoc_helper(char *args)
     int   argc = 0;
     bool  processing_argv_args = false;
     bool  first = true;
+    char *saveptr;
 
     // init pc
     PicocInitialize(&pc, PICOC_STACK_SIZE);
@@ -59,7 +63,7 @@ static int picoc_helper(char *args)
     // tokenize args
     strcpy(args_copy, args);
     while (true) {
-        s = strtok(first ? args_copy : NULL, " ");
+        s = strtok_r(first ? args_copy : NULL, " ", &saveptr);
         first = false;
         if (s == NULL) {
             break;

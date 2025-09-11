@@ -13,6 +13,9 @@ FONT_FILE = FreeMonoBold.ttf
 
 CFLAGS = -Wall -Werror -Wno-unused-result -g -I. -I../../src -fcommon $(shell pkg-config sdl3--cflags)
 
+build: setup
+	gcc -o $(TARGET) $(CFLAGS) $(SRCS) $(SRCS_COMMON) -lSDL3 -lSDL3_ttf -lm
+
 run_linux: setup
 	gcc -o $(TARGET) $(CFLAGS) $(SRCS) $(SRCS_COMMON) -lSDL3 -lSDL3_ttf -lm
 	$(TARGET) data_dir
@@ -29,4 +32,4 @@ setup:
 clean:
 	rm -rf $(TARGET) $(FONT_FILE) data_dir apps
 
-.PHONY: setup clean
+.PHONY: build setup clean

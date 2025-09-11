@@ -594,6 +594,8 @@ void Sdl_sensor_read_humidity (struct ParseState *Parser, struct Value *ReturnVa
 // SDL REGISTRATION
 //
 
+char stop_requested[100];
+
 void SdlSetupFunction(Picoc *pc)
 {
     #define PLATFORM_VAR(name, type, writeable) \
@@ -607,11 +609,8 @@ void SdlSetupFunction(Picoc *pc)
     PLATFORM_VAR(sdl_char_width, IntType, false);
     PLATFORM_VAR(sdl_char_height, IntType, false);
 
-#if 0 //xxx
-    extern char stop_requested[];
     VariableDefinePlatformVar(pc, NULL, "stop_requested", pc->CharArrayType, 
                               (union AnyValue*)stop_requested, true);
-#endif
 }
 
 struct LibraryFunction SdlFunctions[] = {

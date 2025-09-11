@@ -5,34 +5,39 @@
 
 #include <sdl.h>
 
-static char *app_dir;
+#ifdef __GNUC__
+static char stop_requested[100];
+#endif
+
+static char *progname;
+static char *svc_dir;
 static int   id;
 
 int main(int argc, char **argv)
 {
-    int rc;
+    int    rc, cnt = 0;
     double mag_heading;
-    int cnt = 0;
 
-    app_dir = argv[0];
-    sscanf(argv[1], "%d", &id);
+    // xxx does sdl_init need to be called for service
 
-    printf("starting, app_dir = %s id = %d \n", app_dir, id);
+    progname = argv[0];
+    svc_dir = argv[1];
+    sscanf(argv[2], "%d", &id);
+
+    printf("INFO %s: starting, svc_dir = %s id = %d \n", progname, svc_dir, id);
 
     while (++cnt < 2000000) {
         if (stop_requested[id]) {
-            printf("got stop request\n");
+            printf("INFO %s: got stop request\n", progname);
             break;
         }
 
         rc = sdl_sensor_read_mag_heading(&mag_heading);
-        printf("t2: do some work, rc=%d mag_heading = %.0f\n", rc, mag_heading);
+        printf("INFO %s: do some work, rc=%d mag_heading = %.0f\n", progname, rc, mag_heading);
 
         sleep(1);
     }
 
-    printf("terminating\n");
-    stop_requested[5] = 0; // xxx need better way
-    printf("terminating 2\n");
+    printf("INFO %s: terminating\n", progname);
     return 0;
 }
