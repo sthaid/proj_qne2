@@ -2,17 +2,43 @@
 #include <logging.h>
 #include <sdl.h>
 
-#ifdef ANDROID
-    #include <SDL3/SDL.h>
-    #define ANDROID_LOG_FIFO "log_fifo"
-    static int android_logging_thread(void *cx);
-#endif
+// xxx comments needed, this file
+
+void log_msg(char *lvl, const char *func, char *fmt, ...)
+{
+    va_list ap;
+    char    msg[1000];
+    int     len;
+
+    static pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
+
+    pthread_mutex_lock(&mutex);
+
+    // construct msg
+    va_start(ap, fmt);
+    len = vsnprintf(msg, sizeof(msg), fmt, ap);
+    va_end(ap);
+
+    // remove terminating newline
+    if (len > 0 && msg[len-1] == '\n') {
+        msg[len-1] = '\0';
+        len--;
+    }
+
+    // log to stderr, which is redirected to the log fifo
+    fprintf(stderr, "%s %s: %s\n", lvl, func, msg);
+
+    pthread_mutex_unlock(&mutex);
+}
 
 #ifdef ANDROID
 
 // ----------------- ANDROID LOGGING -----------------
 
-// xxx comments needed
+#include <SDL3/SDL.h>
+#define ANDROID_LOG_FIFO "log_fifo"
+static int android_logging_thread(void *cx);
+
 int log_init(void)
 {
     int rc;
@@ -43,29 +69,6 @@ int log_init(void)
 
     return 0;
 }
-
-void log_msg(char *lvl, const char *func, char *fmt, ...)
-{
-    va_list ap;
-    char    msg[1000];
-    int     len;
-
-    // construct msg
-    va_start(ap, fmt);
-    len = vsnprintf(msg, sizeof(msg), fmt, ap);
-    va_end(ap);
-
-    // remove terminating newline
-    if (len > 0 && msg[len-1] == '\n') {
-        msg[len-1] = '\0';
-        len--;
-    }
-
-    // log to stderr, which is redirected to the log fifo
-    fprintf(stderr, "%s %s: %s\n", lvl, func, msg);
-}
-
-// ----------------- ANDROID LOGGING THREAD   -----------------
 
 static int android_logging_thread(void *cx)
 {
@@ -118,27 +121,6 @@ int log_init(void)
     setlinebuf(stdout);
     setlinebuf(stderr);
     return 0;
-}
-
-void log_msg(char *lvl, const char *func, char *fmt, ...)
-{
-    va_list ap;
-    char    msg[1000];
-    int     len;
-
-    // construct msg
-    va_start(ap, fmt);
-    len = vsnprintf(msg, sizeof(msg), fmt, ap);
-    va_end(ap);
-
-    // remove terminating newline
-    if (len > 0 && msg[len-1] == '\n') {
-        msg[len-1] = '\0';
-        len--;
-    }
-
-    // log to stderr, which is redirected to the log fifo
-    fprintf(stderr, "%s %s: %s\n", lvl, func, msg);
 }
 
 #endif

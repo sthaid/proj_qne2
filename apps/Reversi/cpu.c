@@ -34,7 +34,7 @@ int cpu_get_move(int level, board_t *b, char *eval_str)
 
     // sanity check level arg
     if (level < 1 || level > 8) {
-        printf("ERROR: invlaid level %d\n", level);
+        printf("ERROR %s: invlaid level %d\n", progname, level);
         return MOVE_PASS;
     }
 
@@ -43,7 +43,6 @@ int cpu_get_move(int level, board_t *b, char *eval_str)
 
     // get lookahead depth
     depth = ((b->black_cnt + b->white_cnt) >= (56 - level)) ? 20 : level;
-    printf("xxx level=%d  piececnt=%d  DEPTH %d\n", level, b->black_cnt+b->white_cnt, depth);
 
     // call alphabeta to get the best move, and associated heuristic value
     value = alphabeta(b, depth, -INFIN, INFIN, true, &best_move);
@@ -380,8 +379,9 @@ static void init_edge_gateway_to_corner(void)
     }
     initialized = true;
         
-    printf("XXXXXXXXXXXXXXXXXXXXXX MAX_BLACK_GATEWAY_TO_CORNER_PATTERNS = %d\n",
-           (int)MAX_BLACK_GATEWAY_TO_CORNER_PATTERNS);
+    // xxx
+    printf("ERROR %s: FIXME MAX_BLACK_GATEWAY_TO_CORNER_PATTERNS = %d\n",
+           progname, (int)MAX_BLACK_GATEWAY_TO_CORNER_PATTERNS);
 
     int i,j;
     unsigned short edge, edge_reversed;

@@ -220,6 +220,9 @@ static void create_default_apps_and_svcs(void)
     if (rc != 0) {
         ERROR("tar -xvf apps_and_svcs.tar, failed\n");
     }
+
+    // create data directories for the apps and svcs
+    system("mkdir -p apps_data svcs_data");
 }
 
 static void sigusr1_hndlr(int signum)
@@ -303,6 +306,8 @@ static void processing(void)
 static int run(char *name, int svc_id)
 {
     char           dir_path[100];
+    char           data_dir_path[100];
+    char           cmd[120];
     int            rc;
     DIR           *dir;
     struct dirent *dirent;
@@ -313,9 +318,15 @@ static int run(char *name, int svc_id)
     // xxx comment
     if (svc_id == -1) {
         sprintf(dir_path, "apps/%s", name);
+        sprintf(data_dir_path, "apps_data/%s", name);
     } else {
         sprintf(dir_path, "svcs/%s", name);
+        sprintf(data_dir_path, "svcs_data/%s", name);
     }
+
+    // xxx
+    sprintf(cmd, "mkdir -p %s", data_dir_path);
+    system(cmd);
 
     // construct list of *.c files in the dir
     picoc_args[0] = '\0';
@@ -342,9 +353,9 @@ static int run(char *name, int svc_id)
 
     // xxx comment
     if (svc_id == -1) {
-        p += sprintf(p, " - %s", dir_path);
+        p += sprintf(p, " - %s %s", dir_path, data_dir_path);
     } else {
-        p += sprintf(p, " - %s %d", dir_path, svc_id);
+        p += sprintf(p, " - %s %s %d", dir_path, data_dir_path, svc_id);
     }
 
     // run the app using the picoc c language interpreter

@@ -27,7 +27,7 @@
 // variables
 //
 
-static char *app_dir;
+static char *data_dir;
 
 //
 // prototypes
@@ -51,7 +51,10 @@ int main(int argc, char **argv)
     board_t board;
     char    eval_str[100];
 
-    app_dir = argv[0]; //xxx comment
+    // save arg values
+    progname  = argv[0];
+    data_dir = argv[1];
+    printf("INFO %s: starting, data_dir=%s\n", progname, data_dir);
 
     // init variables
     game_state = GAME_STATE_READY;
@@ -119,7 +122,6 @@ int main(int argc, char **argv)
 
         // process the event
         // xxx need a way to interrupt a long running cpu_get_move
-        printf("GOT EVENT %d\n", event.event_id);
         if (event.event_id == EVID_QUIT) {
             break;
         } else if (event.event_id == EVID_GAME_RESET) {
@@ -129,11 +131,11 @@ int main(int argc, char **argv)
         } else if (event.event_id == EVID_PLAYER_BLACK_SELECT) {
             board.player_black++;
             if (board.player_black > CPU(6)) board.player_black = HUMAN;  // xxx 3 on Android
-            util_set_int_param(app_dir, "player_black", board.player_black);
+            util_set_int_param(data_dir, "player_black", board.player_black);
         } else if (event.event_id == EVID_PLAYER_WHITE_SELECT) {
             board.player_white++;
             if (board.player_white > CPU(6)) board.player_white = HUMAN;  // xxx 3 on Android
-            util_set_int_param(app_dir, "player_white", board.player_white);
+            util_set_int_param(data_dir, "player_white", board.player_white);
         } else if (event.event_id == EVID_GAME_START) {
             game_state = GAME_STATE_ACTIVE;
         } else if (game_state == GAME_STATE_ACTIVE && 
@@ -146,7 +148,7 @@ int main(int argc, char **argv)
                 game_state = GAME_STATE_OVER;
             }
         } else {
-            printf("ERROR: unexpected event_id %d\n", event.event_id);
+            printf("ERROR %s: unexpected event_id %d\n", progname, event.event_id);
         }
     }
 
@@ -157,6 +159,7 @@ int main(int argc, char **argv)
     sdl_exit();
 
     // return success
+    printf("INFO %s: terminating\n", progname);
     return 0;
 }
 
@@ -171,8 +174,8 @@ static void game_init(board_t *b)
     b->black_cnt      = 2;
     b->white_cnt      = 2;
     b->whose_turn     = BLACK;
-    b->player_black   = util_get_int_param(app_dir, "player_black", HUMAN);
-    b->player_white   = util_get_int_param(app_dir, "player_white", CPU(2));
+    b->player_black   = util_get_int_param(data_dir, "player_black", HUMAN);
+    b->player_white   = util_get_int_param(data_dir, "player_white", CPU(2));
 }
 
 static bool is_game_over(board_t *b)
@@ -463,7 +466,7 @@ void apply_move(board_t *b, int move)
     succ = false;
     move_to_rc(move, &r, &c);
     if (b->pos[r][c] != NONE) {
-        printf("ERROR: pos[%d][%d] is occupied, color=%d\n", r, c, b->pos[r][c]);
+        printf("ERROR %s: pos[%d][%d] is occupied, color=%d\n", progname, r, c, b->pos[r][c]);
         return;
     }
 
@@ -506,7 +509,7 @@ void apply_move(board_t *b, int move)
     }
 
     if (!succ) {
-        printf("ERROR: invalid call to apply_move, move=%d\n", move);
+        printf("ERROR %s: invalid call to apply_move, move=%d\n", progname, move);
         return;
     }
 

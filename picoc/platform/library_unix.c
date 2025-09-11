@@ -427,23 +427,25 @@ void Sdl_read_display_pixels (struct ParseState *Parser, struct Value *ReturnVal
 void Sdl_audio_play (struct ParseState *Parser, struct Value *ReturnValue,
 	struct Value **Param, int NumArgs)
 {
-    char *filename = Param[0]->Val->Pointer;
+    char *dir      = Param[0]->Val->Pointer;
+    char *filename = Param[1]->Val->Pointer;
     int rc;
 
-    rc = sdl_audio_play(filename);
+    rc = sdl_audio_play(dir, filename);
     ReturnValue->Val->Integer = rc; 
 }
 
 void Sdl_audio_record (struct ParseState *Parser, struct Value *ReturnValue,
 	struct Value **Param, int NumArgs)
 {
-    char *filename           = Param[0]->Val->Pointer;
-    int   max_duration_secs  = Param[1]->Val->Integer;
-    int   auto_stop_secs     = Param[2]->Val->Integer;
-    bool  append             = Param[3]->Val->Integer;
+    char *dir                = Param[0]->Val->Pointer;
+    char *filename           = Param[1]->Val->Pointer;
+    int   max_duration_secs  = Param[2]->Val->Integer;
+    int   auto_stop_secs     = Param[3]->Val->Integer;
+    bool  append             = Param[4]->Val->Integer;
     int   rc;
 
-    rc = sdl_audio_record(filename, max_duration_secs, auto_stop_secs, append);
+    rc = sdl_audio_record(dir, filename, max_duration_secs, auto_stop_secs, append);
     ReturnValue->Val->Integer = rc; 
 }
 
@@ -483,11 +485,12 @@ void Sdl_audio_print_device_info (struct ParseState *Parser, struct Value *Retur
 void Sdl_audio_create_test_file (struct ParseState *Parser, struct Value *ReturnValue,
 	struct Value **Param, int NumArgs)
 {
-    char *filename      = Param[0]->Val->Pointer;
-    int   duration_secs = Param[1]->Val->Integer;
-    int   freq          = Param[2]->Val->Integer;
+    char *dir           = Param[0]->Val->Pointer;
+    char *filename      = Param[1]->Val->Pointer;
+    int   duration_secs = Param[2]->Val->Integer;
+    int   freq          = Param[3]->Val->Integer;
 
-    sdl_audio_create_test_file(filename, duration_secs, freq);
+    sdl_audio_create_test_file(dir, filename, duration_secs, freq);
 }
 
 //
@@ -604,9 +607,11 @@ void SdlSetupFunction(Picoc *pc)
     PLATFORM_VAR(sdl_char_width, IntType, false);
     PLATFORM_VAR(sdl_char_height, IntType, false);
 
+#if 0 //xxx
     extern char stop_requested[];
     VariableDefinePlatformVar(pc, NULL, "stop_requested", pc->CharArrayType, 
                               (union AnyValue*)stop_requested, true);
+#endif
 }
 
 struct LibraryFunction SdlFunctions[] = {
@@ -660,13 +665,13 @@ struct LibraryFunction SdlFunctions[] = {
     { Sdl_read_display_pixels,          "void *sdl_read_display_pixels(int x, int y, int w, int h);" },
 
     // audio
-    { Sdl_audio_play,                   "int sdl_audio_play(char *filename);" },
-    { Sdl_audio_record,                 "int sdl_audio_record(char *filename, int max_duration_secs, int auto_stop_secs, bool append); "},
+    { Sdl_audio_play,                   "int sdl_audio_play(char *dir, char *filename);" },
+    { Sdl_audio_record,                 "int sdl_audio_record(char *dir, char *filename, int max_duration_secs, int auto_stop_secs, bool append); "},
     { Sdl_audio_play_tones,             "int sdl_audio_play_tones(int time_units_ms, sdl_tone_t *tones);" },
     { Sdl_audio_ctl,                    "void sdl_audio_ctl(int req);" },
     { Sdl_audio_state,                  "void sdl_audio_state(sdl_audio_state_t * state);" },
     { Sdl_audio_print_device_info,      "void sdl_audio_print_devices_info(void);" },
-    { Sdl_audio_create_test_file,       "void sdl_audio_create_test_file(char *filename, int duration_secs, int freq);" },
+    { Sdl_audio_create_test_file,       "void sdl_audio_create_test_file(char *dir, char *filename, int duration_secs, int freq);" },
 
     // sensors
     { Sdl_sensor_get_info_tbl,          "sdl_sensor_info_t *sdl_sensor_get_info_tbl(int *num_sensors);" },

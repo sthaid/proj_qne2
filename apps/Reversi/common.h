@@ -35,6 +35,9 @@ typedef struct {
     int max;
 } possible_moves_t;
 
+// program name from argv[0]
+char *progname;
+
 // this routine utilizes the Alpha-beta pruning algorithm to 
 // determine the CPU move
 int cpu_get_move(int level, board_t *b, char *eval_str);

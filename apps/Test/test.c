@@ -23,9 +23,8 @@
 // variables
 //
 
-static bool end_program;
-
-static char *app_dir;
+static char *data_dir;
+static bool  end_program;
 
 //
 // prototypes
@@ -68,22 +67,18 @@ static void page_9_draw(void);
 
 int main(int argc, char **argv)
 {
-    // print args 
-    printf("argc = %d\n", argc);
-    for (int i = 0; i < argc; i++) {
-        printf("argv[%d] = '%s'\n", i, argv[i]);
-    }
-
-    // xxx
-    app_dir = argv[0];
+    // save args
+    progname = argv[0];
+    data_dir = argv[1];
+    printf("INFO %s: starting, data_dir=%s\n", progname, data_dir);
 
     // init sdl
     sdl_init();
 
     // print window and char sized, these are global variables from sdl.c;
     // the initial char size provides 20 chars across the display width
-    printf("sdl_win_width/height  = %d %d\n", sdl_win_width, sdl_win_height);
-    printf("sdl_char_width/height = %d %d\n", sdl_char_width, sdl_char_height);
+    printf("INFO %s: sdl_win_width/height  = %d %d\n", progname, sdl_win_width, sdl_win_height);
+    printf("INFO %s: sdl_char_width/height = %d %d\n", progname, sdl_char_width, sdl_char_height);
 
     // test calling a routine that is defined in another file
     test1_proc();
@@ -100,6 +95,7 @@ int main(int argc, char **argv)
     sdl_exit();
 
     // return success
+    printf("INFO %s: terminating\n", progname);
     return 0;
 }
 
@@ -172,7 +168,7 @@ static void page_hndlr()
         case 8: page_8_draw(); break;
         case 9: page_9_draw(); break;
         default:
-            printf("ERROR invalid pagenum %d\n", pagenum);
+            printf("ERROR %s: invalid pagenum %d\n", progname, pagenum);
             end_program = true;
             return;
         }
@@ -470,11 +466,11 @@ static void page_5_draw(void)
     // create unit_test_pixels file from the top row of the display
     pixels = sdl_read_display_pixels(0, 0, sdl_win_width, sdl_char_height);
     if (pixels == NULL || pixels->magic != PIXELS_MAGIC) {
-        printf("ERROR: failed to read unit_test_pixels, pixels==NULL\n");
+        printf("ERROR %s: failed to read unit_test_pixels, pixels==NULL\n", progname);
     } else {
-        ret = util_write_file(app_dir, "unit_test_pixels", pixels, pixels->struct_len);
+        ret = util_write_file(data_dir, "unit_test_pixels", pixels, pixels->struct_len);
         if (ret != 0) {
-            printf("ERROR: failed to write file unit_test_pixels\n");
+            printf("ERROR %s: failed to write file unit_test_pixels\n", progname);
         }
     }
     free(pixels);
@@ -483,13 +479,13 @@ static void page_5_draw(void)
     // read the unit_test_pixels file that as created above
     // create a texture from the pixels, and
     // display the texture
-    pixels = util_read_file(app_dir, "unit_test_pixels", &file_length);
+    pixels = util_read_file(data_dir, "unit_test_pixels", &file_length);
     if (pixels == NULL || pixels->magic != PIXELS_MAGIC || pixels->struct_len != file_length) {
         if (pixels == NULL) {
-            printf("ERROR: failed to read unit_test_pixels, pixels==NULL\n");
+            printf("ERROR %s: failed to read unit_test_pixels, pixels==NULL\n", progname);
         } else {
-            printf("ERROR: unit_test_pixels file invalid, magic=0x%x struct_len=%d file_length=%d\n",
-                   pixels->magic, pixels->struct_len, file_length);
+            printf("ERROR %s: unit_test_pixels file invalid, magic=0x%x struct_len=%d file_length=%d\n",
+                   progname, pixels->magic, pixels->struct_len, file_length);
         }
     } else {
         t = sdl_create_texture_from_pixels(pixels);
@@ -675,17 +671,17 @@ static void page_7_process_event(sdl_event_t *ev)
 
     switch (ev->event_id) {
     case EVID_AUDIO_PLAY_TONE:
-        sdl_audio_create_test_file("audio_test.raw", 10, 1000);
-        rc = sdl_audio_play("audio_test.raw");  //xxx
+        sdl_audio_create_test_file(data_dir, "audio_test.raw", 10, 1000);
+        rc = sdl_audio_play(data_dir, "audio_test.raw");
         if (rc != 0) {
-            printf("ERROR: sdl_audio_play audio_test.raw failed\n");
+            printf("ERROR %s: sdl_audio_play audio_test.raw failed\n", progname);
         }
         unlink("audio_test.raw");
         break;
     case EVID_AUDIO_PLAY_RECORDING:
-        rc = sdl_audio_play("recording.raw");
+        rc = sdl_audio_play(data_dir, "recording.raw");
         if (rc != 0) {
-            printf("ERROR: sdl_audio_play recording.raw failed\n");
+            printf("ERROR %s: sdl_audio_play recording.raw failed\n", progname);
         }
         break;
     case EVID_AUDIO_PLAY_FREQ_SWEEP:
@@ -718,9 +714,9 @@ static void page_7_process_event(sdl_event_t *ev)
         }
 
         // 30 sec max, 3 sec auto stop, new recording
-        rc = sdl_audio_record("recording.raw", 30, 3, false);
+        rc = sdl_audio_record(data_dir, "recording.raw", 30, 3, false);
         if (rc != 0) {
-            printf("ERROR: sdl_audio_record failed\n");
+            printf("ERROR %s: sdl_audio_record failed\n", progname);
         }
         break;
     case EVID_AUDIO_RECORD_APPEND:
@@ -731,9 +727,9 @@ static void page_7_process_event(sdl_event_t *ev)
         }
 
         // 30 sec max, 3 sec auto stop, append
-        rc = sdl_audio_record("recording.raw", 30, 3, true);
+        rc = sdl_audio_record(data_dir, "recording.raw", 30, 3, true);
         if (rc != 0) {
-            printf("ERROR: sdl_audio_record append failed\n");
+            printf("ERROR %s: sdl_audio_record append failed\n", progname);
         }
         break;
     case EVID_AUDIO_STOP:
@@ -827,7 +823,7 @@ static void page_8_init(void)
 
     sit = sdl_sensor_get_info_tbl(&max_sit);
     if (sit == NULL) {
-        printf("ERROR: sdl_sensor_get_info_tbl failed\n");
+        printf("ERROR %s: sdl_sensor_get_info_tbl failed\n", progname);
     }
 
     y_top = ROW2Y(2); 

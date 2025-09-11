@@ -112,12 +112,13 @@ void sdl_audio_print_devices_info(void)
     }
 }
 
-void sdl_audio_create_test_file(char *filename, int duration_secs, int freq)
+void sdl_audio_create_test_file(char *dir, char *filename, int duration_secs, int freq)
 {
     int    frames = duration_secs * FRAMES_PER_SEC;
     int    n = FRAMES_PER_SEC / freq;
     int    i, fd;
     short *buff;
+    char   path[100];
 
     // allocate and init buffer, that will be written to the test file
     buff = malloc(frames*2);
@@ -126,9 +127,10 @@ void sdl_audio_create_test_file(char *filename, int duration_secs, int freq)
     }
 
     // write the buffer to test file
-    fd = open(filename, O_WRONLY|O_CREAT|O_TRUNC, 0666);
+    sprintf(path, "%s/%s", dir, filename);
+    fd = open(path, O_WRONLY|O_CREAT|O_TRUNC, 0666);
     if (fd < 0) {
-        ERROR("failed to create '%s', %s\n", filename, strerror(errno));
+        ERROR("failed to create '%s', %s\n", path, strerror(errno));
         return;
     }
     write(fd, buff, frames*2);
@@ -185,12 +187,13 @@ typedef struct {
     int   buff_len;
 } play_file_cx_t;
 
-int sdl_audio_play(char *filename)
+int sdl_audio_play(char *dir, char *filename)
 {
     int rc, fd=-1;
     void *buff=MAP_FAILED;
     struct stat statbuf;
     play_file_cx_t *cx=NULL;
+    char path[100];
 
     // open audio for playback
     rc = audio_open(PLAYBACK);
@@ -200,21 +203,22 @@ int sdl_audio_play(char *filename)
     }
 
     // obtain size of file, and map it
-    rc = stat(filename, &statbuf);
+    sprintf(path, "%s/%s", dir, filename);
+    rc = stat(path, &statbuf);
     if (rc < 0) {
-        ERROR("failed to stat '%s', %s\n", filename, strerror(errno));
+        ERROR("failed to stat '%s', %s\n", path, strerror(errno));
         goto error;
     }
-    fd = open(filename, O_RDONLY);
+    fd = open(path, O_RDONLY);
     if (fd < 0) {
-        ERROR("failed to open '%s', %s\n", filename, strerror(errno));
+        ERROR("failed to open '%s', %s\n", path, strerror(errno));
         goto error;
     }
     buff = mmap(NULL, statbuf.st_size, PROT_READ, MAP_PRIVATE, fd, 0);
     close(fd);
     fd = -1;
     if (buff == MAP_FAILED) {
-        ERROR("failed to map '%s', %s\n", filename, strerror(errno));
+        ERROR("failed to map '%s', %s\n", path, strerror(errno));
         goto error;
     }
 
@@ -350,12 +354,13 @@ typedef struct {
     int  existing_bytes;
 } record_cx_t;
 
-int sdl_audio_record(char *filename, int max_duration_secs, int auto_stop_secs, bool append)
+int sdl_audio_record(char *dir, char *filename, int max_duration_secs, int auto_stop_secs, bool append)
 {
     int rc, fd=-1;
     record_cx_t *cx=NULL;
     int existing_bytes;
     struct stat statbuf;
+    char path[100];
 
     // open audio to record
     rc = audio_open(RECORD);
@@ -370,17 +375,18 @@ int sdl_audio_record(char *filename, int max_duration_secs, int auto_stop_secs, 
     //   open existing recording file, in append mode
     //   determine the size of the existing file
     // endif
+    sprintf(path, "%s/%s", dir, filename);
     if (!append) {
-        fd = open(filename, O_WRONLY|O_CREAT|O_TRUNC, 0666);
+        fd = open(path, O_WRONLY|O_CREAT|O_TRUNC, 0666);
         if (fd < 0) {
-            ERROR("failed to create '%s', %s\n", filename, strerror(errno));
+            ERROR("failed to create '%s', %s\n", path, strerror(errno));
             goto error;
         }
         existing_bytes = 0;
     } else {
-        fd = open(filename, O_WRONLY|O_APPEND);
+        fd = open(path, O_WRONLY|O_APPEND);
         if (fd < 0) {
-            ERROR("failed to open for append '%s', %s\n", filename, strerror(errno));
+            ERROR("failed to open for append '%s', %s\n", path, strerror(errno));
             goto error;
         }
         fstat(fd, &statbuf);

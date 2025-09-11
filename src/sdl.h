@@ -169,15 +169,15 @@ typedef struct {
     char filename[100];
 } sdl_audio_state_t;
 
-int sdl_audio_play(char *filename);
-int sdl_audio_record(char *filename, int max_duration_secs, int auto_stop_secs, bool append);
+int sdl_audio_play(char *dir, char *filename);
+int sdl_audio_record(char *dir, char *filename, int max_duration_secs, int auto_stop_secs, bool append);
 int sdl_audio_play_tones(int time_units_ms, sdl_tone_t *tones);
 
 void sdl_audio_ctl(int req);
 void sdl_audio_state(sdl_audio_state_t * state);
 
 void sdl_audio_print_devices_info(void);
-void sdl_audio_create_test_file(char *filename, int duration_secs, int freq);
+void sdl_audio_create_test_file(char *dir, char *filename, int duration_secs, int freq);
 
 // --------------------
 // sensors

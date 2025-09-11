@@ -210,7 +210,7 @@ static void write_params_file(char *dir)
     }
 
     sprintf(params_path, "%s/params", dir);
-    fp = fopen("params", "w");
+    fp = fopen(params_path, "w");
     if (fp == NULL) {
         printf("ERROR %s: write_params_file, fopen failed, %s\n", __func__, strerror(errno));
         return;

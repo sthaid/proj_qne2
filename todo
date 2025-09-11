@@ -1,3 +1,8 @@
+auto start services
+store data in file/data of services
+
+-----------
+
 auto start svcs, how to control that
 add restart svc control
 get rid of 1 sec delay in layout
