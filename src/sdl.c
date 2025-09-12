@@ -1565,6 +1565,16 @@ int sdl_get_permission(char *name)
 
 // - - - - - - - - - sdl_create_detached_thread_private  - - - - - - - 
 
+// from SDL doc ...
+//
+// If you want to use threads in your SDL app, it's strongly recommended that you
+// do so by creating them using SDL functions. This way, the required attach/detach
+// handling is managed by SDL automagically. If you have threads created by other
+// means and they make calls to SDL functions, make sure that you call
+// Android_JNI_SetupThread() before doing anything else otherwise SDL will attach
+// your thread automatically anyway (when you make an SDL call), but it'll never
+// detach it.
+
 int sdl_create_detached_thread_private(int (*thread_fn)(void*), char *thread_name, void *cx)
 {
     SDL_Thread *x;

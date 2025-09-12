@@ -7,6 +7,7 @@ SRCS :=  \
   ../src/test.cpp \
   ../src/utils.c \
   ../src/logging.c \
+  ../picoc/picoc_ezapp.c \
   ../picoc/clibrary.c \
   ../picoc/debug.c \
   ../picoc/expression.c \
@@ -14,7 +15,6 @@ SRCS :=  \
   ../picoc/include.c \
   ../picoc/lex.c \
   ../picoc/parse.c \
-  ../picoc/picoc_android.c \
   ../picoc/platform.c \
   ../picoc/table.c \
   ../picoc/type.c \

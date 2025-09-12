@@ -1,27 +1,18 @@
-auto start services
-store data in file/data of services
-
------------
-
-auto start svcs, how to control that
-add restart svc control
+cleanups
 get rid of 1 sec delay in layout
-
+add restart svc control - not needed
 need a mutex in the logging code
-
-ezput all
-
-run unit test of apps and svcs, probbly needs work to make this build
-
 write service to store sensors values
 
 picoc
 - remove picoc_bg
-- fixup picoc.c args
 - why doesn't it have an 'open' call;  try adding that
 - does picoc support read/write files, or are we doing that from util
    - where is the util to read/write a file being used
 - picoc return value - probably okay
+
+ezput all
+when service exits, save any error info
 
 xxxxxxxxxxxxxxxx
 xxxxxxxxxxxxxxxx
@@ -34,6 +25,8 @@ need to handle ondestroy to kill off the android services
 - and also just kill off the pthreads when exitting
 
 ---------------
+
+maybe add these to sdl_sensor comments ...
 
 magnetic field compensation for roll and pitch
 https://www.google.com/search?q=how+to+caclulate+magnetic+heading+from+magnetic+field+strength+and+sensor+tilt&oq=how+to+caclulate+magnetic+heading+from+magnetic+field+strength+and+sensor+tilt&gs_lcrp=EgZjaHJvbWUyBggAEEUYOTIHCAEQIRiPAjIHCAIQIRiPAtIBCTIxNzAyajBqN6gCCLACAfEFUqpUJ6MY3DU&sourceid=chrome&ie=UTF-8
@@ -52,7 +45,6 @@ https://wiki.libsdl.org/SDL3/SDL_RequestAndroidPermission
 check on POST_NOTIFICATION permission
 - what if it is not set in the app setup?
 
-use symlinks for setup-files and put orig in subdir
 destroy flag is not being cleared in Myervice
 
 permissions
@@ -67,14 +59,6 @@ move KEYBD event id
 update logging to use the different SDL levels
 
 ----------------------
-
-If you want to use threads in your SDL app, it's strongly recommended that you
-do so by creating them using SDL functions. This way, the required attach/detach
-handling is managed by SDL automagically. If you have threads created by other
-means and they make calls to SDL functions, make sure that you call
-Android_JNI_SetupThread() before doing anything else otherwise SDL will attach
-your thread automatically anyway (when you make an SDL call), but it'll never
-detach it.
 
 primes benchmark
 

@@ -74,8 +74,7 @@ static void kill_child_processes(pid_t pid);
 // routines to launch a C program using picoc interpreter
 //
 
-extern int picoc_fg(char *args);
-extern void picoc_bg(char *args);
+extern int picoc_ezapp(char *args);
 
 #ifdef ANDROID
 extern void showHome(void); //xxx names, etc
@@ -86,8 +85,8 @@ extern void showHome2(void);
 
 static int init(void);
 static void cleanup(void);
-static void create_default_apps_and_svcs(void); //xxx and services
-static void sigusr1_hndlr(int signum);  //xxx sigusr1,  ?  sigusr2
+static void create_default_apps_and_svcs(void);
+static void sigusr2_hndlr(int signum);
 
 int MAIN(int argc, char **argv)
 {
@@ -109,7 +108,6 @@ int MAIN(int argc, char **argv)
 static int init(void)
 {
     int rc;
-    static int xxx_test = 5;
 
     // get storage_path, and
     // set current working directory to storage_path
@@ -121,9 +119,6 @@ static int init(void)
     if (rc != 0) {
         return -1;
     }
-
-    INFO("XXXXXXXXXX %d\n", xxx_test);
-    xxx_test++;
 
     // print startup message
     INFO("========== STARTING: %s %s  ==========\n", VERSION, BUILD_DATE);
@@ -159,7 +154,7 @@ static int init(void)
     // when developer mode is disabled or developer mode port is changed
     struct sigaction action;
     memset(&action, 0, sizeof(action));
-    action.sa_handler = sigusr1_hndlr;
+    action.sa_handler = sigusr2_hndlr;
     sigaction(SIGUSR2, &action, NULL);
 
     // create server threads
@@ -172,7 +167,7 @@ static int init(void)
          sdl_win_width, sdl_win_height, sdl_char_width, sdl_char_height);
 
 #ifdef ANDROID
-    // xxx
+    // get permissions when running on Android
     if (sdl_get_permission("android.permission.POST_NOTIFICATION") != 0) {
         ERROR("failed to get permission POST_NOTIFICATION\n");
     }
@@ -182,9 +177,13 @@ static int init(void)
     if (sdl_get_permission("android.permission.ACCESS_FINE_LOCATION") != 0) {
         ERROR("failed to get permission ACCESS_FINE_LOCATION\n");
     }
+    if (sdl_get_permission("android.permission.ACTIVITY_RECOGNITION") != 0) {
+        ERROR("failed to get permission ACTIVITY_RECOGNITION\n");
+    }
 
-    // xxx
-    showHome();
+    // elevate service to foreground;
+    // this is needed for tasks that need to run continuously
+    showHome(); // xxx name
 #endif
 
     // start services that are configured for autostart
@@ -200,16 +199,11 @@ static void cleanup(void)
 
     stop_all_services();
 
-//#ifdef ANDROID
-//    showHome2(); //xxx
-//#endif
-
     kill_child_processes(getpid());
 
     sdl_exit();
 }
 
-// xxx and services
 static void create_default_apps_and_svcs(void)
 {
     int rc;
@@ -218,19 +212,21 @@ static void create_default_apps_and_svcs(void)
     rc = system("rm -rf apps svcs");
     if (rc != 0) {
         ERROR("rm -rf apps svcs, failed\n");
+        return;
     }
 
-    // extract apps.tar
+    // extract apps_and_svcs.tar
     rc = system("tar -xvf apps_and_svcs.tar");
     if (rc != 0) {
         ERROR("tar -xvf apps_and_svcs.tar, failed\n");
+        return;
     }
 
     // create data directories for the apps and svcs
     system("mkdir -p apps_data svcs_data");
 }
 
-static void sigusr1_hndlr(int signum)
+static void sigusr2_hndlr(int signum)
 {
     // nothing needed here
 }
@@ -307,7 +303,11 @@ static void processing(void)
     }
 }
 
-//xxx comment on arg
+// args:
+// - name: the name of the app or svc
+// - svc_id: use -1 for app; else the svc_id is >= 0, and will be passed 
+//           in argv to the svc; the svc uses this value when polling for
+//           svc_stop_requested
 static int run(char *name, int svc_id)
 {
     char           dir_path[100];
@@ -317,8 +317,7 @@ static int run(char *name, int svc_id)
     DIR           *dir;
     struct dirent *dirent;
     char          *p;
-
-    char picoc_args[1000];
+    char           picoc_args[1000];
 
     // xxx comment
     if (svc_id == -1) {
@@ -365,7 +364,7 @@ static int run(char *name, int svc_id)
 
     // run the app using the picoc c language interpreter
     INFO("%s: starting, args = %s\n", name, picoc_args);
-    rc = picoc_fg(picoc_args);  // xxx get rid of picoc_bg
+    rc = picoc_ezapp(picoc_args);  // xxx get rid of picoc_bg
     INFO("%s: completed, rc = %d\n", name, rc);
 
     // return completion status
@@ -550,14 +549,8 @@ static void get_list_of_apps(void)
 // -----------------  SERVICES  -----------------------------------
 
 // xxx 
-// - locking
-// - statics
 // - comments
-// - name of svcs va layout
-// - maybe use ORANGE instead of YELLOS
-// - support restart
-// - use macro for state transitions to ensure all fields are set
-// - auto start services, if so marked in layout
+// - use macro for state transitions to ensure all fields are set  ??
 // - update layout file fails, does this also fail for the apps section;
 //   why does it fail
 
@@ -580,45 +573,47 @@ static void get_list_of_apps(void)
                                                   COLOR_RED)
 
 #define MAX_SERVICES 100
+
+#define LOCK do { pthread_mutex_lock(&services_mutex); } while (0)
+#define UNLOCK do { pthread_mutex_unlock(&services_mutex); } while (0)
+
 typedef struct {
     char *name;
     int   state;
-    bool  start_pending;
     bool  delete_pending;
 } service_t;
 
-static service_t services_tbl[MAX_SERVICES];
-static char     *svcs[MAX_SERVICES];
-static int       max_svcs;
+static pthread_mutex_t services_mutex = PTHREAD_MUTEX_INITIALIZER;
+static service_t       services_tbl[MAX_SERVICES];
+static char           *svcs[MAX_SERVICES];
+static int             max_svcs;
 
 extern char      stop_requested[MAX_SERVICES];
 
-void process_new_svc_names(void);
-void process_start_req(int id);
-void process_stop_req(int id);
-void process_restart_req(int id);
-void process_stopped_callback(int id, int rc);
-void run_svc(int id);
-void get_list_of_svcs(bool *new_names);
-int alloc_service(char *name);
-void free_service(int id);
-bool is_name_in_layout(char *name);
-bool is_name_in_services_tbl(char *name);
+static void process_changed_svc_names(void);
+static void process_start_req(int id);
+static void process_stop_req(int id);
+static void process_stopped_callback(int id, int rc);
+static void run_svc(int id);
+static void get_list_of_svcs(bool *changed);
+static int alloc_service(char *name);
+static void free_service(int id);
+static bool is_name_in_svcs(char *name);
+static bool is_name_in_services(char *name);
 
 static void init_services(void)
 {
     int i, id, rc;
     struct stat statbuf;
     char autostart[100];
-    bool new_names;
+    bool changed;
 
-    get_list_of_svcs(&new_names);
+    get_list_of_svcs(&changed);
 
     for (i = 0; i < max_svcs; i++) {
         alloc_service(svcs[i]);
     }
 
-    // xxx maybe do one at a time
     for (id = 0; id < MAX_SERVICES; id++) {
         service_t *x = &services_tbl[id];
         if (x->name == NULL) {
@@ -641,7 +636,7 @@ static void services(void)
     sdl_event_t event;
     int         id;
     bool        done = false;
-    bool        new_names;
+    bool        changed;
     sdl_loc_t  *loc;
     double      row;
 
@@ -649,6 +644,8 @@ static void services(void)
     #define EVID_SVC_START    100
     #define EVID_SVC_STOP     200
     #define EVID_SVC_RESTART  300
+
+    LOCK;
 
     // handle the setting display
     while (true) {
@@ -658,9 +655,9 @@ static void services(void)
         sdl_render_text_xyctr(sdl_win_width/2, sdl_char_height/2, "Services");
 
         // xxx comment
-        get_list_of_svcs(&new_names);
-        if (new_names) {
-            process_new_svc_names();
+        get_list_of_svcs(&changed);
+        if (changed) {
+            process_changed_svc_names();
         }
 
         // display name and controls for each service
@@ -683,7 +680,6 @@ static void services(void)
             } else if (x->state == SERVICE_STATE_RUNNING) {
                 loc = sdl_render_printf(COL2X(10), ROW2Y(row), "stop");
                 sdl_register_event(loc, EVID_SVC_STOP+id);
-                // xxx also restart
             }
 
             row += 1.5;
@@ -697,8 +693,9 @@ static void services(void)
 
         // wait for an event, with 100 ms timeout;
         // if no event received then re-display
-        // xxx not sure if short timeout will be needed
+        UNLOCK;
         sdl_get_event(100*MS, &event);
+        LOCK;
         if (event.event_id == -1) {
             continue;
         }
@@ -723,11 +720,13 @@ static void services(void)
             break;
         }
     }
+
+    UNLOCK;
 }
 
 // - - - - - - - - - process event routines  - - - - - - - - - - - - - 
 
-void process_new_svc_names(void)
+static void process_changed_svc_names(void)
 {
     int id, i;
 
@@ -739,7 +738,7 @@ void process_new_svc_names(void)
         if (x->name == NULL) {
             continue;
         }
-        if (is_name_in_layout(x->name) == false) {
+        if (is_name_in_svcs(x->name) == false) {
             if (x->state == SERVICE_STATE_RUNNING) {
                 x->state = SERVICE_STATE_STOPPING;
                 stop_requested[id] = true;
@@ -752,16 +751,17 @@ void process_new_svc_names(void)
         }
     }
 
-    // loop over all svc names from the layout file
+    // loop over all names in svcs table;
+    // if not in services_tbl then add it
     for (i = 0; i < max_svcs; i++) {
         char *name = svcs[i];
-        if (is_name_in_services_tbl(name) == false) {
+        if (is_name_in_services(name) == false) {
             alloc_service(name);
         }
     }
 }
 
-void process_start_req(int id)
+static void process_start_req(int id)
 {
     service_t *x = &services_tbl[id];
 
@@ -779,7 +779,7 @@ void process_start_req(int id)
     run_svc(id);
 }
 
-void process_stop_req(int id)
+static void process_stop_req(int id)
 {
     service_t *x = &services_tbl[id];
 
@@ -794,25 +794,11 @@ void process_stop_req(int id)
     stop_requested[id] = true;
 }
 
-void process_restart_req(int id)
+static void process_stopped_callback(int id, int rc)
 {
     service_t *x = &services_tbl[id];
 
-    INFO("called for id=%d name=%s\n", id, x->name);
-
-    if (x->name == NULL || x->state != SERVICE_STATE_RUNNING) {
-        ERROR("id=%d name=%s state=%s\n", id, x->name, SERVICE_STATE_STR(x->state));
-        return;
-    }
-
-    x->start_pending = true; // xxx rename to restart_pending
-    x->state = SERVICE_STATE_STOPPING;
-    stop_requested[id] = true;
-}
-
-void process_stopped_callback(int id, int rc)
-{
-    service_t *x = &services_tbl[id];
+    LOCK;
 
     INFO("called for id=%d name=%s rc=%d\n", id, x->name, rc);
 
@@ -820,6 +806,7 @@ void process_stopped_callback(int id, int rc)
         (x->state != SERVICE_STATE_STOPPING && x->state != SERVICE_STATE_RUNNING))
     {
         ERROR("id=%d name=%s state=%s\n", id, x->name, SERVICE_STATE_STR(x->state));
+        UNLOCK;
         return;
     }
 
@@ -831,27 +818,25 @@ void process_stopped_callback(int id, int rc)
     if (x->delete_pending) {
         x->delete_pending = false;
         free_service(id);
-    } else if (x->start_pending) {
-        x->start_pending = false;
-        x->state = SERVICE_STATE_RUNNING;
-        run_svc(id);
     } else if (rc == 0) {
         x->state = SERVICE_STATE_STOPPED;
     } else {
         x->state = SERVICE_STATE_STOPPED_BY_ERROR;  // xxx display error code too
     }
+
+    UNLOCK;
 }   
 
 // - - - - - - - - - run the svc - - - - - - - - - - - - - - 
 
-int service_thread(void *cx);
+static int service_thread(void *cx);
 
-void run_svc(int id)
+static void run_svc(int id)
 {
     sdl_create_detached_thread(service_thread, (void*)(long)id);
 }
 
-int service_thread(void *cx)
+static int service_thread(void *cx)
 {
     int id = (int)(long)cx;
     service_t *x = &services_tbl[id];
@@ -864,17 +849,16 @@ int service_thread(void *cx)
     return 0;
 }
 
-// - - - - - - - - - get list of svcs from layout file xxx - - - - - - - - - - 
+// - - - - - - - - - get list of svcs - - - - - - - - - - 
 
-// xxxxxxxxxxxx in prog
-int compare(const void *a_arg, const void *b_arg)
+static int compare(const void *a_arg, const void *b_arg)
 {
     char *a = *(char**)a_arg;
     char *b = *(char**)b_arg;
     return strcmp(a,b);
 }
 
-void get_list_of_svcs(bool *new_svc_names)  // xxx rename arg
+static void get_list_of_svcs(bool *changed)
 {
     int            rc;
     struct stat    statbuf;
@@ -885,7 +869,7 @@ void get_list_of_svcs(bool *new_svc_names)  // xxx rename arg
     static long svcs_dir_mtime;
 
     // preset return flag
-    *new_svc_names = false;
+    *changed = false;
 
     // if svcs dir doesn't exist then return without changing list of svcs
     rc = stat(svcs_dir_path, &statbuf);
@@ -930,9 +914,9 @@ void get_list_of_svcs(bool *new_svc_names)  // xxx rename arg
         INFO("svcs[%d] = %s\n", i, svcs[i]);
     }
 
-    // return flag indicating that there are probably 
-    // some changes to the svc names
-    *new_svc_names = true;
+    // return flag indicating that there may have been
+    // changes to the list of svc names
+    *changed = true;
 }
 
 // xxx add lineno to the get layout routine
@@ -984,8 +968,7 @@ static void stop_all_services(void)
     }
 }
 
-
-int alloc_service(char *name)
+static int alloc_service(char *name)
 {
     int id;
 
@@ -1007,7 +990,7 @@ int alloc_service(char *name)
     return id;
 }
 
-void free_service(int id)
+static void free_service(int id)
 {
     service_t *x = &services_tbl[id];
 
@@ -1016,7 +999,7 @@ void free_service(int id)
     memset(x, 0, sizeof(service_t));
 }
 
-bool is_name_in_layout(char *name)  // xxx name of this routine ?
+static bool is_name_in_svcs(char *name)
 {
     for (int i = 0; i < max_svcs; i++) {
         if (strcmp(svcs[i], name) == 0) {
@@ -1027,7 +1010,7 @@ bool is_name_in_layout(char *name)  // xxx name of this routine ?
     return false;
 }
 
-bool is_name_in_services_tbl(char *name)
+static bool is_name_in_services(char *name)
 {
     for (int id = 0; id < MAX_SERVICES; id++) {
         service_t *x = &services_tbl[id];

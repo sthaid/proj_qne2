@@ -39,7 +39,7 @@ SDL_Sensor              *sensor[MAX_SENSOR_ID];  // indexed by id
 // called by sdl_init
 int sdl_sensor_init_private(void)
 {
-    int            i, max, num_sensors, rc;
+    int            i, max, num_sensors;
     SDL_SensorID  *ids;
 
     // get list of sensor ids
@@ -77,6 +77,7 @@ int sdl_sensor_init_private(void)
     // free the list of ids
     SDL_free(ids);
 
+#if 0 // xxx del
     // if step counter sensor exists then get permission;
     // note that the permission is also needed in AndroidManifest.xml
     // xxx move this to main.c
@@ -93,6 +94,7 @@ int sdl_sensor_init_private(void)
             ERROR("failed to be granted ACTIVITY_RECOGNITION permission for STEP_COUNTER sensor\n");
         }
     }
+#endif
 
     // return success
     return 0;

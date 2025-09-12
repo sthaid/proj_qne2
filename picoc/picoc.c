@@ -11,7 +11,6 @@
     external interfaces, no internals from interpreter.h */
 #include "picoc.h"
 
-
 #if defined(UNIX_HOST) || defined(WIN32)
 #include "LICENSE.h"
 
@@ -67,7 +66,6 @@ int main(int argc, char **argv)
             return pc.PicocExitValue;
         }
 
-        // xxx always add arg0
         for (; ParamCount < argc && strcmp(argv[ParamCount], "-") != 0; ParamCount++)
             PicocPlatformScanFile(&pc, argv[ParamCount]);
 

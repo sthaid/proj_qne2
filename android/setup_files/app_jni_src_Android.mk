@@ -8,6 +8,7 @@ LOCAL_MODULE := main
 LOCAL_SRC_FILES :=  \
   src/main.c src/sdl.c src/sdl_audio.c src/sdl_sensor.c src/utils.c src/logging.c \
   src/test.cpp \
+  picoc/picoc_ezapp.c \
   picoc/clibrary.c \
   picoc/debug.c \
   picoc/expression.c \
@@ -15,7 +16,6 @@ LOCAL_SRC_FILES :=  \
   picoc/include.c \
   picoc/lex.c \
   picoc/parse.c \
-  picoc/picoc_android.c \
   picoc/platform.c \
   picoc/table.c \
   picoc/type.c \

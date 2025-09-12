@@ -1,48 +1,13 @@
 #include <libgen.h>
-#include <pthread.h>
 
 #include "picoc.h"
 
 #define PICOC_STACK_SIZE (128000*4)  // xxx check this
 
-static int picoc_helper(char *args);
-//static void *picoc_thread(void *cx);
-
-// ----------------- API: RUN PICOC PROG -------------
-
-int picoc_fg(char *args)
-{
-    return picoc_helper(args);
-}
-
-#if 0 //xxx cleanup
-void picoc_bg(char *args)
-{
-    pthread_t tid;
-
-    pthread_create(&tid, NULL, picoc_thread, args); //xxx detached
-}
-#endif
-
-// ----------------- SUPPORT -------------------------
-
-#if 0
-// xxx should use sdl thread
-static void *picoc_thread(void *cx)
-{
-    char *args = (char*)cx;
-    int rc;
-
-    rc = picoc_helper(args);
-
-    return (void*)(long)rc;
-}
-#endif
-
-static int picoc_helper(char *args)
+int picoc_ezapp(char *args)
 {
     Picoc pc;
-    char  args_copy[10000];  // xxx malloc
+    char  args_copy[1000];
     char *argv[20];
     char *s;
     int   argc = 0;
@@ -55,7 +20,7 @@ static int picoc_helper(char *args)
 
     // setjmp for error condition
     if (PicocPlatformSetExitPoint(&pc)) {
-        printf("EXIT jmp, %d\n", pc.PicocExitValue);
+        printf("ERROR PICOC: longjmp error exit, exit_code=%d\n", pc.PicocExitValue);
         PicocCleanup(&pc);
         return pc.PicocExitValue;
     }
@@ -75,10 +40,10 @@ static int picoc_helper(char *args)
         }
 
         if (!processing_argv_args) {
-            printf("scanning %s\n", s);
+            printf("INFO PICOC: scanning %s\n", s);
             PicocPlatformScanFile(&pc, s);
         } else {
-            printf("adding argv[%d] = %s\n", argc, s);
+            printf("INFO PICOC: adding argv[%d] = %s\n", argc, s);
             argv[argc++] = s;
         }
     }
@@ -86,9 +51,8 @@ static int picoc_helper(char *args)
     // run program
     PicocCallMain(&pc, argc, argv);
 
-// xxx callback with the completion
     // cleanup and return
-    printf("EXIT normal, %d\n", pc.PicocExitValue);
+    printf("INFO PICOC: normal exit, exit_code=%d\n", pc.PicocExitValue);
     PicocCleanup(&pc);
     return pc.PicocExitValue;
 }
