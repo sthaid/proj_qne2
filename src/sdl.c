@@ -48,6 +48,7 @@ int sdl_win_width;
 int sdl_win_height;
 int sdl_char_width;
 int sdl_char_height;
+char stop_requested[100];  // xxx name
 
 //
 // variables
@@ -118,19 +119,6 @@ bool event_watcher(void* userdata, SDL_Event* event)
     return 0;
 }
 
-static int sdl_init_count; //xxx cleanup, move this and comments 
-
-int sdl_init(void)
-{
-    int real_win_width, real_win_height;
-    int num, i;
-    double aspect_ratio;
-
-    if (sdl_init_count++ > 0) {
-        INFO("already initialized\n");
-        return 0;
-    }
-
 #if 0 // xxx del later
     // set hints
     bool succ;
@@ -144,79 +132,112 @@ int sdl_init(void)
     }
 #endif
 
-    // display available and current video drivers
-    num = SDL_GetNumVideoDrivers();
-    INFO("Available Video Drivers: ");
-    for (i = 0; i < num; i++) {
-        INFO("   %s\n",  SDL_GetVideoDriver(i));
-    }
-
-    // initialize Simple DirectMedia Layer  (SDL)
-    if (!SDL_Init(SDL_INIT_VIDEO|SDL_INIT_AUDIO|SDL_INIT_SENSOR)) {
-        ERROR("SDL_Init failed\n");
-        return -1;
-    }
-
-    // create SDL Window and Renderer xxx simplify
-#ifdef ANDROID
-    if (!SDL_CreateWindowAndRenderer("ezApp", 0, 0, SDL_WINDOW_FULLSCREEN, &window, &renderer)) {
-        ERROR("SDL_CreateWindowAndRenderer failed\n");
-        return -1;
-    }
-#else
-    // xxx test with larger win width
-    if (!SDL_CreateWindowAndRenderer("ezApp", 450, 975, 0, &window, &renderer)) {
-        ERROR("SDL_CreateWindowAndRenderer failed\n");
-        return -1;
-    }
-#endif
-
-    // xxx temp
-    // Add the event watcher
-    SDL_AddEventWatch(event_watcher, NULL);
-
-    // get real windows size and aspect ratio
-    SDL_GetWindowSize(window, &real_win_width, &real_win_height);
-    aspect_ratio = (double)real_win_height / real_win_width;
-    INFO("real win_width x height = %d %d  aspect = %f\n", real_win_width, real_win_height, aspect_ratio);
-
-    // xxx
-    sdl_win_width  = 1000;
-    sdl_win_height = rint(1000 * aspect_ratio);
-    scale = (double)real_win_width / sdl_win_width;
-    INFO("logical sdl_win_width x height = %d %d  scale = %f\n", sdl_win_width, sdl_win_height, scale);
-
-    // initialize True Type Font
-    if (!TTF_Init()) {
-        ERROR("TTF_Init failed\n");
-        return -1;
-    }
-
 #if 0 //xxx make this a font routine
-    // debug code to print font info
-    for (int ptsize = MIN_FONT_PTSIZE; ptsize < MAX_FONT_PTSIZE; ptsize++) {
-        TTF_Font *f = TTF_OpenFont(FONT_FILE_PATH, ptsize);
-        TTF_SizeText(f, "X", &chw, &chh);
-        TTF_CloseFont(f);
-        INFO("font ptsize = %d  chw/chh = %d %d\n", ptsize, chw, chh);
-    }
+        // debug code to print font info
+        for (int ptsize = MIN_FONT_PTSIZE; ptsize < MAX_FONT_PTSIZE; ptsize++) {
+            TTF_Font *f = TTF_OpenFont(FONT_FILE_PATH, ptsize);
+            TTF_SizeText(f, "X", &chw, &chh);
+            TTF_CloseFont(f);
+            INFO("font ptsize = %d  chw/chh = %d %d\n", ptsize, chw, chh);
+        }
 #endif
 
-    // init default fontsize, where DEFAULT_FONT is num chars across display;
-    // and validate expected character size and columns
-    sdl_print_init(DEFAULT_FONT, COLOR_WHITE, COLOR_BLACK);
-    INFO("sdl_print_init(%d) sdl_char_width=%d sdl_char_height=%d\n", 
-         DEFAULT_FONT, sdl_char_width, sdl_char_height);
-    if (sdl_char_width != 50 || sdl_char_height != 83) {
-        ERROR("chw,chh, expected = 50,83  actual = %d,%d\n", sdl_char_width, sdl_char_height);
+static int sdl_init_count; //xxx cleanup, move this and comments 
+
+int sdl_init(int subsys)
+{
+    int real_win_width, real_win_height;
+    int num, i;
+    double aspect_ratio;
+
+    if (sdl_init_count++ > 0) {
+        INFO("already initialized\n");
+        return 0;
     }
 
-    // init sensor code
-    sdl_sensor_init_private();
+    // subsys video init
+    if (subsys & SUBSYS_VIDEO) {
+        // display available and current video drivers
+        num = SDL_GetNumVideoDrivers();
+        INFO("Available Video Drivers: ");
+        for (i = 0; i < num; i++) {
+            INFO("   %s\n",  SDL_GetVideoDriver(i));
+        }
 
-    // this is needed so that the first actual display present works
-    sdl_display_init(COLOR_BLACK);
-    sdl_display_present();
+        // initialize SDL video
+        if (!SDL_Init(SDL_INIT_VIDEO)) {
+            ERROR("SDL_Init VIDEO failed, %s\n", SDL_GetError());
+            return -1;
+        }
+
+        // create SDL Window and Renderer xxx simplify
+#ifdef ANDROID
+        if (!SDL_CreateWindowAndRenderer("ezApp", 0, 0, SDL_WINDOW_FULLSCREEN, &window, &renderer)) {
+            ERROR("SDL_CreateWindowAndRenderer failed\n");
+            return -1;
+        }
+#else
+        // xxx test with larger win width
+        if (!SDL_CreateWindowAndRenderer("ezApp", 450, 975, 0, &window, &renderer)) {
+            ERROR("SDL_CreateWindowAndRenderer failed\n");
+            return -1;
+        }
+#endif
+
+        // add the event watcher  xxx tbd
+        SDL_AddEventWatch(event_watcher, NULL);
+
+        // get real windows size and aspect ratio
+        SDL_GetWindowSize(window, &real_win_width, &real_win_height);
+        aspect_ratio = (double)real_win_height / real_win_width;
+        INFO("real win_width x height = %d %d  aspect = %f\n", real_win_width, real_win_height, aspect_ratio);
+
+        // xxx comment
+        sdl_win_width  = 1000;
+        sdl_win_height = rint(1000 * aspect_ratio);
+        scale = (double)real_win_width / sdl_win_width;
+        INFO("logical sdl_win_width x height = %d %d  scale = %f\n", sdl_win_width, sdl_win_height, scale);
+
+        // initialize True Type Font
+        if (!TTF_Init()) {
+            ERROR("TTF_Init failed\n");
+            return -1;
+        }
+
+        // init default fontsize, where DEFAULT_FONT is num chars across display;
+        // and validate expected character size and columns
+        sdl_print_init(DEFAULT_FONT, COLOR_WHITE, COLOR_BLACK);
+        INFO("sdl_print_init(%d) sdl_char_width=%d sdl_char_height=%d\n", 
+             DEFAULT_FONT, sdl_char_width, sdl_char_height);
+        if (sdl_char_width != 50 || sdl_char_height != 83) {
+            ERROR("chw,chh, expected = 50,83  actual = %d,%d\n", sdl_char_width, sdl_char_height);
+        }
+
+        // this is needed so that the first actual display present works
+        sdl_display_init(COLOR_BLACK);
+        sdl_display_present();
+    }
+
+    // subsys audio init
+    if (subsys & SUBSYS_AUDIO) {
+        // initialize SDL audio
+        if (!SDL_Init(SDL_INIT_AUDIO)) {
+            ERROR("SDL_Init AUDIO failed, %s\n", SDL_GetError());
+            return -1;
+        }
+    }
+
+    // subsys sensor init
+    if (subsys & SUBSYS_SENSOR) {
+        // initialize SDL sensor
+        if (!SDL_Init(SDL_INIT_SENSOR)) {
+            ERROR("SDL_Init SENSOR failed, %s\n", SDL_GetError());
+            return -1;
+        }
+
+        // init sensor code
+        sdl_sensor_init_private();
+    }
 
     // return success
     INFO("success\n");
@@ -241,8 +262,8 @@ void sdl_exit(void)
     }
     TTF_Quit();
 
-    SDL_DestroyRenderer(renderer);
-    SDL_DestroyWindow(window);
+    SDL_DestroyRenderer(renderer);  //xxx needed?
+    SDL_DestroyWindow(window);  //xxx needed?
     SDL_Quit();
 
     INFO("done\n");

@@ -66,7 +66,7 @@ int main(int argc, char **argv)
     //srandom(util_microsec_timer());
 
     // init sdl
-    sdl_init();
+    sdl_init(SUBSYS_VIDEO);
 
     // xxx
     update_display_init();

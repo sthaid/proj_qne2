@@ -20,9 +20,10 @@ int StdioBasePrintf(struct ParseState *Parser, FILE *Stream, char *StrOut,
 void Sdl_init (struct ParseState *Parser, struct Value *ReturnValue,
 	struct Value **Param, int NumArgs)
 {
+    int subsys = Param[0]->Val->Integer;
     int ret;
 
-    ret = sdl_init();
+    ret = sdl_init(subsys);
 
     ReturnValue->Val->Integer = ret;
 }
@@ -594,28 +595,25 @@ void Sdl_sensor_read_humidity (struct ParseState *Parser, struct Value *ReturnVa
 // SDL REGISTRATION
 //
 
-char stop_requested[100];
-
 void SdlSetupFunction(Picoc *pc)
 {
     #define PLATFORM_VAR(name, type, writeable) \
         do { \
-            VariableDefinePlatformVar(pc, NULL, #name, &pc->type, \
+            VariableDefinePlatformVar(pc, NULL, #name, type, \
                                       (union AnyValue *)&name, writeable); \
         } while (0)
         
-    PLATFORM_VAR(sdl_win_width, IntType, false);
-    PLATFORM_VAR(sdl_win_height, IntType, false);
-    PLATFORM_VAR(sdl_char_width, IntType, false);
-    PLATFORM_VAR(sdl_char_height, IntType, false);
+    PLATFORM_VAR(sdl_win_width, &pc->IntType, false);
+    PLATFORM_VAR(sdl_win_height, &pc->IntType, false);
+    PLATFORM_VAR(sdl_char_width, &pc->IntType, false);
+    PLATFORM_VAR(sdl_char_height, &pc->IntType, false);
 
-    VariableDefinePlatformVar(pc, NULL, "stop_requested", pc->CharArrayType, 
-                              (union AnyValue*)stop_requested, true);
+    PLATFORM_VAR(stop_requested, pc->CharArrayType, false);
 }
 
 struct LibraryFunction SdlFunctions[] = {
     // sdl initialization and termination, must be done once
-    { Sdl_init,            "int sdl_init(void);" },
+    { Sdl_init,            "int sdl_init(int subsys);" },
     { Sdl_exit,            "void sdl_exit(void);" },
 
     // display init and present, must be done for every display update
@@ -756,6 +754,10 @@ typedef struct { \n\
 #define COLOR_LIGHT_GRAY ( 192  |  192<<8 |  192<<16 |  255<<24 ) \n\
 #define COLOR_GRAY       ( 128  |  128<<8 |  128<<16 |  255<<24 ) \n\
 #define COLOR_DARK_GRAY  (  64  |   64<<8 |   64<<16 |  255<<24 ) \n\
+\n\
+#define SUBSYS_VIDEO  1 \n\
+#define SUBSYS_AUDIO  2 \n\
+#define SUBSYS_SENSOR 4 \n\
 \n\
 #define ROW2Y(r) ((r) * sdl_char_height) \n\
 #define COL2X(c) ((c) * sdl_char_width) \n\

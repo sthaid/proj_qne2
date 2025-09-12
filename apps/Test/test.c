@@ -73,7 +73,7 @@ int main(int argc, char **argv)
     printf("INFO %s: starting, data_dir=%s\n", progname, data_dir);
 
     // init sdl
-    sdl_init();
+    sdl_init(SUBSYS_VIDEO | SUBSYS_AUDIO | SUBSYS_SENSOR);
 
     // print window and char sized, these are global variables from sdl.c;
     // the initial char size provides 20 chars across the display width

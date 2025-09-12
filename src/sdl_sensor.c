@@ -79,6 +79,7 @@ int sdl_sensor_init_private(void)
 
     // if step counter sensor exists then get permission;
     // note that the permission is also needed in AndroidManifest.xml
+    // xxx move this to main.c
     bool step_counter_sensor_exists = false;
     for (i = 0; i < max_sensor_info_tbl; i++) {
         if (sensor_info_tbl[max].type == ASENSOR_TYPE_STEP_COUNTER) {
@@ -420,6 +421,9 @@ REFERENCES
 ---------------
 SDL API
 ---------------
+
+// "In order to use these functions, SDL_Init() must have been called with the SDL_INIT_SENSOR flag.
+// This causes SDL to scan the system for sensors, and load appropriate drivers.
 
 // get list of sensors
 SDL_GetSensors                     : SDL_SensorID * SDL_GetSensors(int *count);    // returns uint32[]

@@ -167,7 +167,7 @@ static int init(void)
     sdl_create_detached_thread(waiter_thread, NULL);
 
     // init sdl
-    sdl_init();
+    sdl_init(SUBSYS_VIDEO | SUBSYS_AUDIO | SUBSYS_SENSOR);
     INFO("sdl_win_width,height = %d %d  sdl_char_width,height=%d %d\n",
          sdl_win_width, sdl_win_height, sdl_char_width, sdl_char_height);
 

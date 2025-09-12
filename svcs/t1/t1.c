@@ -5,10 +5,6 @@
 
 #include <sdl.h>
 
-#ifdef __GNUC__
-static char stop_requested[100];
-#endif
-
 static char *progname;
 static char *svc_dir;
 static int   id;
@@ -18,7 +14,7 @@ int main(int argc, char **argv)
     int    rc, cnt = 0;
     double mag_heading;
 
-    // xxx does sdl_init need to be called for service
+    sdl_init(SUBSYS_SENSOR);
 
     progname = argv[0];
     svc_dir = argv[1];
@@ -37,6 +33,8 @@ int main(int argc, char **argv)
 
         sleep(1);
     }
+
+    sdl_exit();
 
     printf("INFO %s: terminating\n", progname);
     return 0;

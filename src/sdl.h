@@ -33,6 +33,10 @@
 #define ROW2Y(r) ((r) * sdl_char_height)
 #define COL2X(c) ((c) * sdl_char_width)
 
+#define SUBSYS_VIDEO  1
+#define SUBSYS_AUDIO  2
+#define SUBSYS_SENSOR 4
+
 //
 // typedefs
 //
@@ -84,13 +88,14 @@ extern int sdl_win_width;
 extern int sdl_win_height;
 extern int sdl_char_width;
 extern int sdl_char_height;
+extern char stop_requested[];
 
 //
 // prototypes
 //
 
 // sdl initialization and termination, must be done once
-int sdl_init(void);
+int sdl_init(int subsys);
 void sdl_exit(void);
 
 // display init and present, must be done for every display update
@@ -224,8 +229,6 @@ typedef struct {
     char *name;
 } sdl_sensor_info_t;
 
-int sdl_sensor_init_private(void);  // not available in picoc
-
 sdl_sensor_info_t *sdl_sensor_get_info_tbl(int *max);
 int sdl_sensor_find(int type);  // returns sensor id, or -1 if not found
 int sdl_sensor_read_raw(int id, double *data, int num_values);
@@ -241,6 +244,7 @@ int sdl_sensor_read_humidity(double *percent);
 // routines not made available in picoc
 // --------------------
 
+int sdl_sensor_init_private(void);
 void sdl_minimize_window(void);
 char *sdl_get_storage_path(void);
 void sdl_copy_asset_file(char *asset_filename, char *dest_dir);
