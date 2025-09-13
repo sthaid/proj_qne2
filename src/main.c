@@ -57,6 +57,7 @@ typedef struct {
 
 static char       *storage_path;
 static params_t    params;
+static pthread_t   server_tid;
 
 //
 // prototypes 
@@ -613,7 +614,7 @@ static service_t       services_tbl[MAX_SERVICES];
 static char           *svcs[MAX_SERVICES];
 static int             max_svcs;
 
-extern char      stop_requested[MAX_SERVICES];
+extern char stop_requested[MAX_SERVICES];
 
 static void process_changed_svc_names(void);
 static void process_start_req(int id);
@@ -1132,7 +1133,7 @@ static void settings(void)
             util_set_int_param(".", "devel_mode", params.devel_mode);
             if (!params.devel_mode) {
                 INFO("sending SIGUSR2 to server_thread\n");
-                //xxx pthread_kill(server_tid, SIGUSR2);
+                pthread_kill(server_tid, SIGUSR2);
             }
             break;
         case EVID_DEVEL_PORT: {
@@ -1145,7 +1146,7 @@ static void settings(void)
                 util_set_int_param(".", "devel_port", port);
                 if (params.devel_mode) {
                     INFO("sending SIGUSR2 to server_thread\n");
-                    //xxx pthread_kill(server_tid, SIGUSR2);
+                    pthread_kill(server_tid, SIGUSR2);
                 }
             }
             break; }
@@ -1235,6 +1236,9 @@ static int server_thread(void *cx)
 {
     struct sockaddr_in server_address;
     int                listen_sockfd, ret;
+
+    // save server thread id in global, so that signals can be sent to this thread
+    server_tid = pthread_self();
 
 again:
     // wait for developer mode to be enabled
