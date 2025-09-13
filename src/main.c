@@ -470,12 +470,11 @@ static void display_menu(void)
     }
 }
 
-// xxx make this reliable
 static void get_list_of_apps(void)
 {
     const char *layout_file_path = "apps/layout";
     struct stat statbuf;
-    int         rc, i, cnt, secs, n;
+    int         rc, i, cnt, secs, n, line_num;
     FILE       *fp;
     char        str[200], s[3][100];
 
@@ -500,7 +499,7 @@ static void get_list_of_apps(void)
     // obtain the list of apps from the layout file ...
 
     // the layut file may currently being updated;
-    // waitsfor the layout file to not have any processes having it currently open
+    // wait for the layout file to not have any processes having it open
     if (!first_call) {
         secs = 0;
         while (true) {
@@ -535,8 +534,11 @@ static void get_list_of_apps(void)
     max_apps = 0;
 
     // read the app names, which must be the same as their dir names, from the layout file
+    line_num = 0;
     fp = fopen(layout_file_path, "r");
     while (fgets(str, sizeof(str), fp)) {
+        line_num++;
+
         // xxx cleanup input str by removing terminating newline 
         // and removing leading spaces
 
@@ -548,7 +550,7 @@ static void get_list_of_apps(void)
         // read 3 app names from each line of the layout file
         cnt = sscanf(str, "%s %s %s", s[0], s[1], s[2]);
         if (cnt != 3) {
-            ERROR("invalid line '%s'\n", str);
+            ERROR("invalid line, line_num = %d\n", line_num);
             break;
         }
 
@@ -576,9 +578,7 @@ static void get_list_of_apps(void)
 
 // xxx 
 // - comments
-// - use macro for state transitions to ensure all fields are set  ??
-// - update layout file fails, does this also fail for the apps section;
-//   why does it fail
+// - full review
 
 #define SERVICE_STATE_STOPPED           0     // white
 #define SERVICE_STATE_RUNNING           1     // green
@@ -838,7 +838,6 @@ static void process_stopped_callback(int id, int rc)
 
     x->state = (rc == 0 ? SERVICE_STATE_STOPPED : SERVICE_STATE_STOPPED_BY_ERROR);
 
-    // xxx needs a review,  and locking
     stop_requested[id] = false;
 
     if (x->delete_pending) {
@@ -847,7 +846,7 @@ static void process_stopped_callback(int id, int rc)
     } else if (rc == 0) {
         x->state = SERVICE_STATE_STOPPED;
     } else {
-        x->state = SERVICE_STATE_STOPPED_BY_ERROR;  // xxx display error code too
+        x->state = SERVICE_STATE_STOPPED_BY_ERROR;
     }
 
     UNLOCK;
@@ -944,8 +943,6 @@ static void get_list_of_svcs(bool *changed)
     // changes to the list of svc names
     *changed = true;
 }
-
-// xxx add lineno to the get layout routine
 
 // - - - - - - - - - misc support routines - - - - - - - - - - 
 
