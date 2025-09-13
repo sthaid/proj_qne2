@@ -14,6 +14,7 @@ fi
 # endif
 if [ "$1" = "" ]; then
   filename_list="*.[ch]"
+  # xxx layout should exist
   if [ -f ../layout ]; then
     filename_list="$filename_list ../layout"
   fi

@@ -474,21 +474,18 @@ static void get_list_of_apps(void)
 {
     const char *layout_file_path = "apps/layout";
     struct stat statbuf;
-    int         rc, i, cnt;
+    int         rc, i, cnt, secs, n;
     FILE       *fp;
     char        str[200], s[3][100];
 
     static long layout_file_mtime;
+    static bool first_call = true;
 
-    // if layout file doesn't exist then return 0 apps
-    // xxx dont change
+    // if layout file doesn't exist then
+    // return without changing the list of apps,
+    // because the file may have just been temporarily deleted
     rc = stat(layout_file_path, &statbuf);
     if (rc != 0) {
-        for (i = 0; i < max_apps; i++) {
-            free(apps[i]);
-            apps[i] = NULL;
-        }
-        max_apps = 0;
         return;
     }
 
@@ -501,8 +498,33 @@ static void get_list_of_apps(void)
 
     // obtain the list of apps from the layout file ...
 
-    // xxx explain why,  may be a better way
-    sleep(1);
+    // the layut file may currently being updated;
+    // waitsfor the layout file to not have any processes having it currently open
+    if (!first_call) {
+        secs = 0;
+        while (true) {
+            str[0] = '\0';
+            fp = popen("lsof apps/layout | wc -l", "r");
+            fgets(str, sizeof(str), fp);
+            pclose(fp);
+            cnt = sscanf(str, "%d", &n);
+            if (cnt != 1) {
+                ERROR("invalid output from wc, '%s'\n", str);
+                break;
+            }
+            if (n == 0) {
+                INFO("layout file not open by any processes, secs=%d\n", secs);
+                break;
+            }
+            if (secs >= 3) {
+                ERROR("timedout waiting for layout file\n");
+                break;
+            }
+            sleep(1);
+            secs++;
+        }
+    }
+    first_call = false;
 
     // free the current apps names
     for (i = 0; i < max_apps; i++) {
@@ -511,9 +533,12 @@ static void get_list_of_apps(void)
     }
     max_apps = 0;
 
-    // read the app names, which are the same as their dir names, from the layout file
+    // read the app names, which must be the same as their dir names, from the layout file
     fp = fopen(layout_file_path, "r");
     while (fgets(str, sizeof(str), fp)) {
+        // xxx cleanup input str by removing terminating newline 
+        // and removing leading spaces
+
         // ignore lines that are blank or begin with comment char
         if (str[0] == '\n' || str[0] == '#') {
             continue;

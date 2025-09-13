@@ -1,15 +1,15 @@
-cleanups
 get rid of 1 sec delay in layout
-add restart svc control - not needed
-need a mutex in the logging code
+
+save error prints, or all prints in log screen
+
 write service to store sensors values
 
+cleanups
+
 picoc
-- remove picoc_bg
 - why doesn't it have an 'open' call;  try adding that
-- does picoc support read/write files, or are we doing that from util
-   - where is the util to read/write a file being used
 - picoc return value - probably okay
+
 
 ezput all
 when service exits, save any error info
