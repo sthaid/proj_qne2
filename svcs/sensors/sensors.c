@@ -53,8 +53,8 @@ int main(int argc, char **argv)
     }
 
     // xxx
-    sdl_plot_test(pressure_file);
-    return 1;
+    //sdl_plot_test(pressure_file);
+    //return 1;
 
     // loop until stop request recieved
     while (true) {

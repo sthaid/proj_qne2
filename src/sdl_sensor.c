@@ -216,6 +216,7 @@ int sdl_sensor_read_step_counter(unsigned long *step_count)
     sdl_sensor_read_raw(id, data, 3);
 
     // return step count
+// xxx dont subtract here ??
     *step_count = data[0];
     if (first_step_count == 0) {
         first_step_count = *step_count;

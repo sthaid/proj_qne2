@@ -6,30 +6,34 @@
 #include <sdl.h>
 
 static char *progname;
-static char *svc_dir;
+static char *data_dir;
 static int   id;
 
 int main(int argc, char **argv)
 {
-    int    rc, cnt = 0;
-    double mag_heading;
-
-    sdl_init(SUBSYS_SENSOR);
+    int    rc;
+    double pressure;
 
     progname = argv[0];
-    svc_dir = argv[1];
+    data_dir = argv[1];
     sscanf(argv[2], "%d", &id);
 
-    printf("INFO %s: starting, svc_dir = %s id = %d \n", progname, svc_dir, id);
+    printf("INFO %s: starting, data_dir = %s id = %d \n", progname, data_dir, id);
 
-    while (++cnt < 2000000) {
+    rc = sdl_init(SUBSYS_SENSOR);
+    if (rc != 0) {
+        printf("ERROR %s: sdl_init failed\n", progname);
+        return 1;
+    }
+
+    while (true) {
         if (stop_requested[id]) {
             printf("INFO %s: got stop request\n", progname);
             break;
         }
 
-        rc = sdl_sensor_read_mag_heading(&mag_heading);
-        printf("INFO %s: do some work, rc=%d mag_heading = %.0f\n", progname, rc, mag_heading);
+        rc = sdl_sensor_read_pressure(&pressure);
+        printf("INFO %s: doing some work rc=%d pressure=%.0f\n", progname, rc, pressure);
 
         sleep(1);
     }
