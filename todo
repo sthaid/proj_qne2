@@ -1,3 +1,12 @@
+break up sdl.c -
+- sdl_main.c
+- sdl_video.c
+- sdl_event.c
+
+
+-------
+
+
 void *cx sdl_plot_open(dir, filename, create_flag, samples, interval_secs)
 sdl_plot_add(cx, sample, which_bin)
    - how to calc which time bin
