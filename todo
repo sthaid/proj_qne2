@@ -1,4 +1,18 @@
-shell should accept cmd recall, and vi
+void *cx sdl_plot_open(dir, filename, create_flag, samples, interval_secs)
+sdl_plot_add(cx, sample, which_bin)
+   - how to calc which time bin
+
+
+struct {
+    start_time
+    total_samples
+    num_samples
+    idx of next sample
+} hdr
+
+
+---------
+
 
 save error prints, or all prints in log screen
 
@@ -10,9 +24,10 @@ picoc
 - why doesn't it have an 'open' call;  try adding that
 - picoc return value - probably okay
 
-
 ezput all
 when service exits, save any error info
+
+shell should accept cmd recall, and vi
 
 xxxxxxxxxxxxxxxx
 xxxxxxxxxxxxxxxx

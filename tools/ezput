@@ -2,20 +2,20 @@
 
 # verify parent directory is 'apps'
 parent_dir=$(basename $(dirname $PWD))
-if [ "$parent_dir" != apps ]; then
-    echo "ERROR: parent_dir must be apps"
+if [ "$parent_dir" != apps -a "$parent_dir" != svcs ]; then
+    echo "ERROR: parent_dir must be apps or svcs"
     exit 1
 fi
 
 # if no args provided then 
-#   set filename_lsit to all source files in this directory plus the ../layout file
+#   set filename_lsit to all source files in this directory, 
+#   plus layout file when in subdir of apps
 # else
 #   else the filename_list are the args
 # endif
 if [ "$1" = "" ]; then
   filename_list="*.[ch]"
-  # xxx layout should exist
-  if [ -f ../layout ]; then
+  if [ "$parent_dir" = apps ]; then
     filename_list="$filename_list ../layout"
   fi
 else
@@ -24,8 +24,18 @@ fi
 
 # determine the destination dir (on android), and whether it exists
 this_dir="$(basename $PWD)"
-android_dir="apps/$this_dir"
+if [ "$parent_dir" = apps ]; then
+  android_dir="apps/$this_dir"
+else
+  android_dir="svcs/$this_dir"
+fi
 android_dir_exists=$(ezsh "if [ ! -d $android_dir ]; then echo NO; else echo YES; fi")
+
+# if no response received then ezApp may not be running or developer mode not entabled
+if [ "$android_dir_exists" != NO -a "$android_dir_exists" != YES ]; then
+  echo "ERROR: response not received"
+  exit 1
+fi
 
 # if the android_dir does not exist then prompt user to create it
 if [ "$android_dir_exists" != YES ]; then

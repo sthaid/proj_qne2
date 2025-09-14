@@ -6,6 +6,7 @@
 
 #include <sdl.h>
 
+#define SECS_PER_HOUR 10  // xxx 3600
 static char *progname;
 static char *data_dir;
 static int   id;
@@ -14,6 +15,8 @@ static int   id;
 void *sdl_plot_open(char *dir, char *file);
 void sdl_plot_close(void *cx);
 void sdl_plot_add_value(void *cx, double value, time_t t);
+
+void sdl_plot_test(void *cx);
 
 int main(int argc, char **argv)
 {
@@ -49,6 +52,10 @@ int main(int argc, char **argv)
         return 1;
     }
 
+    // xxx
+    sdl_plot_test(pressure_file);
+    return 1;
+
     // loop until stop request recieved
     while (true) {
         // if request to stop received then break out of loop
@@ -59,20 +66,21 @@ int main(int argc, char **argv)
 
         // determine if the hour has changed
         t = time(NULL);
-        hour = t / 3600;
+        hour = t / SECS_PER_HOUR;
         hour_changed = (hour != hour_last);
         hour_last = hour;
 
         // read sensor value and save value to data file
         if (hour_changed) {
             rc = sdl_sensor_read_pressure(&pressure_value);
-            if (rc == 0) {
+            //xxx if (rc == 0) {
+                pressure_value = 1234;
                 sdl_plot_add_value(pressure_file, pressure_value, t);
-            }
+            //xxx }
         }
 
         // sleep 10 secs
-        sleep(10);
+        sleep(1); //xxx 10
     }
 
     // cleanup
@@ -178,7 +186,7 @@ void *sdl_plot_open(char *dir, char *file)
     // init the memory mapped file
     if (created) {
         x->hdr.magic = DATA_FILE_MAGIC;
-        x->hdr.start_time = (time(NULL) / 3600) * 3600;
+        x->hdr.start_time = (time(NULL) / SECS_PER_HOUR) * SECS_PER_HOUR;
         for (i = 0; i < MAX_DATA; i++) {
             x->data[i] = NAN;
         }
@@ -213,7 +221,7 @@ void sdl_plot_add_value(void *cx, double value, time_t t)
     unsigned long addr;
     int idx, rc;
 
-    idx = (t - x->hdr.start_time) / 3600;
+    idx = (t - x->hdr.start_time) / SECS_PER_HOUR;
     printf("INFO %s: idx = %d\n", progname, idx);
 
     if (idx < 0 || idx >= MAX_DATA) {
@@ -231,3 +239,15 @@ void sdl_plot_add_value(void *cx, double value, time_t t)
     }
 }
 
+// xxx test code
+void sdl_plot_test(void *cx)
+{
+    int i;
+    data_file_t *x = (data_file_t*)cx;
+
+    for (i = 0; i < MAX_DATA; i++) {
+        if (!isnan(x->data[i])) {
+            printf("%d %f\n", i, x->data[i]);
+        }
+    }
+}
