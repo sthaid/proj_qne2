@@ -48,7 +48,32 @@ static void play_buff(char *buff, int buff_len, bool *stop_req, int *queued_byte
 static int record_thread(void *cx);
 static int tones_thread(void *cx);
 
-// -----------------  OPEN / CLOSE  -----------------------
+// -----------------INIT / EXIT  -------------------------------
+
+int sdl_audio_init(void)
+{
+    INFO("initializing\n");
+
+    // initialize SDL audio
+    if (!SDL_InitSubSystem(SDL_INIT_AUDIO)) {
+        ERROR("SDL_Init AUDIO failed, %s\n", SDL_GetError());
+        return -1;
+    }
+
+    // success
+    INFO("success\n");
+    return 0;
+}
+
+void sdl_audio_quit(void)
+{
+    INFO("quitting\n");
+
+    // quit SDL audio
+    SDL_QuitSubSystem(SDL_INIT_AUDIO);
+}
+
+// -----------------  OPEN AUDIO FOR PLAYBACK OR RECORD --------------------
 
 static int audio_open(bool record)
 {

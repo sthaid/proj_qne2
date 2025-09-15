@@ -28,10 +28,12 @@ void Sdl_init (struct ParseState *Parser, struct Value *ReturnValue,
     ReturnValue->Val->Integer = ret;
 }
 
-void Sdl_exit (struct ParseState *Parser, struct Value *ReturnValue,
+void Sdl_quit(struct ParseState *Parser, struct Value *ReturnValue,
 	struct Value **Param, int NumArgs)
 {
-    sdl_exit();
+    int subsys = Param[0]->Val->Integer;
+
+    sdl_quit(subsys);
 }
 
 //
@@ -614,7 +616,7 @@ void SdlSetupFunction(Picoc *pc)
 struct LibraryFunction SdlFunctions[] = {
     // sdl initialization and termination, must be done once
     { Sdl_init,            "int sdl_init(int subsys);" },
-    { Sdl_exit,            "void sdl_exit(void);" },
+    { Sdl_quit,            "void sdl_quit(int subsys);" },
 
     // display init and present, must be done for every display update
     { Sdl_display_init,    "void sdl_display_init(int color);" },
@@ -735,7 +737,9 @@ typedef struct { \n\
     int fg_color; \n\
 } sdl_print_state_t; \n\
 \n\
-#define PIXELS_MAGIC 0x11223344 \n\
+#define SUBSYS_VIDEO  1 \n\
+#define SUBSYS_AUDIO  2 \n\
+#define SUBSYS_SENSOR 4 \n\
 \n\
 #define BYTES_PER_PIXEL  4 \n\
 #define COLOR_BLACK      (   0  |    0<<8 |    0<<16 |  255<<24 ) \n\
@@ -755,12 +759,15 @@ typedef struct { \n\
 #define COLOR_GRAY       ( 128  |  128<<8 |  128<<16 |  255<<24 ) \n\
 #define COLOR_DARK_GRAY  (  64  |   64<<8 |   64<<16 |  255<<24 ) \n\
 \n\
-#define SUBSYS_VIDEO  1 \n\
-#define SUBSYS_AUDIO  2 \n\
-#define SUBSYS_SENSOR 4 \n\
-\n\
+#define SMALLEST_FONT 40 \n\
+#define SMALL_FONT    30 \n\
+#define DEFAULT_FONT  20 \n\
+#define LARGE_FONT    10 \n\
+ \n\
 #define ROW2Y(r) ((r) * sdl_char_height) \n\
 #define COL2X(c) ((c) * sdl_char_width) \n\
+\n\
+#define PIXELS_MAGIC 0x11223344 \n\
 \n\
 #define EVID_SWIPE_RIGHT       9990 \n\
 #define EVID_SWIPE_LEFT        9991 \n\

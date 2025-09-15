@@ -2,7 +2,18 @@
 #define __SDL_H__
 
 // --------------------
-// rendering
+// init / quit
+// --------------------
+
+#define SUBSYS_VIDEO  1
+#define SUBSYS_AUDIO  2
+#define SUBSYS_SENSOR 4
+
+int sdl_init(int subsys);
+void sdl_quit(int subsys);
+
+// --------------------
+// video    
 // --------------------
 
 // https://www.w3schools.com/colors/colors_converter.asp
@@ -24,18 +35,13 @@
 #define COLOR_GRAY       ( 128  |  128<<8 |  128<<16 |  255<<24 )
 #define COLOR_DARK_GRAY  (  64  |   64<<8 |   64<<16 |  255<<24 )
 
-#define EVID_SWIPE_RIGHT       9990
-#define EVID_SWIPE_LEFT        9991
-#define EVID_MOTION            9992
-#define EVID_KEYBD             9993  // xxx move define
-#define EVID_QUIT              9999  // xxx review where this is used
-
 #define ROW2Y(r) ((r) * sdl_char_height)
 #define COL2X(c) ((c) * sdl_char_width)
 
-#define SUBSYS_VIDEO  1
-#define SUBSYS_AUDIO  2
-#define SUBSYS_SENSOR 4
+#define SMALLEST_FONT 40
+#define SMALL_FONT    30
+#define DEFAULT_FONT  20
+#define LARGE_FONT    10
 
 //
 // typedefs
@@ -50,18 +56,6 @@ typedef struct {
 } sdl_point_t;
 
 typedef struct sdl_texture sdl_texture_t;
-
-typedef struct {
-    int event_id;
-    union {
-        struct {
-            double x, y, xrel, yrel;
-        } motion;
-        struct {
-            int ch;
-        } keybd;
-    } u;
-} sdl_event_t;
 
 #define PIXELS_MAGIC 0x11223344
 typedef struct {
@@ -88,25 +82,15 @@ extern int sdl_win_width;
 extern int sdl_win_height;
 extern int sdl_char_width;
 extern int sdl_char_height;
-extern char stop_requested[];
+extern char stop_requested[]; // xxx where should this be defined?
 
 //
 // prototypes
 //
 
-// sdl initialization and termination, must be done once
-int sdl_init(int subsys);
-void sdl_exit(void);
-
 // display init and present, must be done for every display update
 void sdl_display_init(int color);
 void sdl_display_present(void);
-
-// event registration and query
-void sdl_register_event(sdl_loc_t *loc, int event_id);
-void sdl_register_control_events(char *evstr1, char *evstr2, char *evstr3, int bg_color,
-                                 int evid1, int evid2, int evid3);
-void sdl_get_event(long timeout_us, sdl_event_t *event);
 
 // create colors
 int sdl_create_color(int r, int g, int b, int a);
@@ -142,9 +126,6 @@ void sdl_render_texture(int x, int y, int w, int h, double angle, sdl_texture_t 
 void sdl_destroy_texture(sdl_texture_t *texture);
 void sdl_query_texture(sdl_texture_t *texture, int *w, int *h);
 sdl_pixels_t *sdl_read_display_pixels(int x, int y, int w, int h);
-
-// get string, from virtual keyboard when on Android
-char *sdl_get_input_str(char *prompt, bool numeric_keybd, int bg_color);
 
 // --------------------
 // audio
@@ -241,11 +222,57 @@ int sdl_sensor_read_temperature(double *degrees_c);
 int sdl_sensor_read_humidity(double *percent);
 
 // --------------------
-// routines not made available in picoc
+// events   
 // --------------------
 
-int sdl_sensor_init_private(void);
+#define EVID_SWIPE_RIGHT       9990
+#define EVID_SWIPE_LEFT        9991
+#define EVID_MOTION            9992
+#define EVID_KEYBD             9993  // xxx move define
+#define EVID_QUIT              9999  // xxx review where this is used
+
+typedef struct {
+    int event_id;
+    union {
+        struct {
+            double x, y, xrel, yrel;
+        } motion;
+        struct {
+            int ch;
+        } keybd;
+    } u;
+} sdl_event_t;
+
+// event registration and query
+void sdl_register_event(sdl_loc_t *loc, int event_id);
+void sdl_register_control_events(char *evstr1, char *evstr2, char *evstr3, int bg_color,
+                                 int evid1, int evid2, int evid3);
+void sdl_get_event(long timeout_us, sdl_event_t *event);
+
+// get string, from virtual keyboard when on Android
+char *sdl_get_input_str(char *prompt, bool numeric_keybd, int bg_color);
+
+// --------------------
+// not made available in picoc
+// --------------------
+
+// sdl_video.c
+int sdl_video_init(void);
+void sdl_video_quit(void);
 void sdl_minimize_window(void);
+
+// sdl_audio.c
+int sdl_audio_init(void);
+void sdl_audio_quit(void);
+
+// sdl_sensor.c
+int sdl_sensor_init(void);
+void sdl_sensor_quit(void);
+
+// sdl_event.c
+void sdl_reset_events(void);
+
+// sdl_misc.c
 char *sdl_get_storage_path(void);
 void sdl_copy_asset_file(char *asset_filename, char *dest_dir);
 int sdl_get_permission(char *name);

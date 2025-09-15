@@ -95,7 +95,6 @@ int MAIN(int argc, char **argv)
 
     rc = init();
     if (rc != 0) {
-        // xxx check all error return paths, should print
         return 1;
     }
 
@@ -162,7 +161,7 @@ static int init(void)
     sdl_create_detached_thread(server_thread, NULL);
     sdl_create_detached_thread(waiter_thread, NULL);
 
-    // init sdl
+    // init sdl xxx move
     sdl_init(SUBSYS_VIDEO | SUBSYS_AUDIO | SUBSYS_SENSOR);
     INFO("sdl_win_width,height = %d %d  sdl_char_width,height=%d %d\n",
          sdl_win_width, sdl_win_height, sdl_char_width, sdl_char_height);
@@ -202,7 +201,7 @@ static void cleanup(void)
 
     kill_child_processes(getpid());
 
-    sdl_exit();
+    sdl_quit(SUBSYS_VIDEO | SUBSYS_AUDIO | SUBSYS_SENSOR);
 }
 
 static void create_default_apps_and_svcs(void)
@@ -964,7 +963,10 @@ static void stop_all_services(void)
         all_stopped = true;
         for (id = 0; id < MAX_SERVICES; id++) {
             service_t *x = &services_tbl[id];
-            if (x->name && x->state != SERVICE_STATE_STOPPED) {
+            if (x->name && 
+                (x->state != SERVICE_STATE_STOPPED && 
+                 x->state != SERVICE_STATE_STOPPED_BY_ERROR))
+            {
                 all_stopped = false;
                 break;
             }

@@ -156,7 +156,7 @@ int main(int argc, char **argv)
     update_display_unload();
 
     // exit sdl
-    sdl_exit();
+    sdl_quit(SUBSYS_VIDEO);
 
     // return success
     printf("INFO %s: terminating\n", progname);

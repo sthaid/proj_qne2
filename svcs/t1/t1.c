@@ -38,7 +38,7 @@ int main(int argc, char **argv)
         sleep(1);
     }
 
-    sdl_exit();
+    sdl_quit(SUBSYS_SENSOR);
 
     printf("INFO %s: terminating\n", progname);
     return 0;

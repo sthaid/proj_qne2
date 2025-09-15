@@ -3,9 +3,11 @@ TARGET  = t1
 SRCS    = t1.c
 
 SRCS_COMMON = \
-       ../../src/sdl.c \
+       ../../src/sdl_misc.c \
+       ../../src/sdl_video.c \
        ../../src/sdl_audio.c \
        ../../src/sdl_sensor.c \
+       ../../src/sdl_event.c \
        ../../src/utils.c \
        ../../src/logging.c
 

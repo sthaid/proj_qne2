@@ -14,11 +14,6 @@
 // defines
 //
 
-#define SMALLEST_FONT 40
-#define SMALL_FONT    30
-#define DEFAULT_FONT  20
-#define LARGE_FONT    10
-
 //
 // variables
 //
@@ -67,13 +62,19 @@ static void page_9_draw(void);
 
 int main(int argc, char **argv)
 {
+    int rc;
+
     // save args
     progname = argv[0];
     data_dir = argv[1];
     printf("INFO %s: starting, data_dir=%s\n", progname, data_dir);
 
     // init sdl
-    sdl_init(SUBSYS_VIDEO | SUBSYS_AUDIO | SUBSYS_SENSOR);
+    rc = sdl_init(SUBSYS_VIDEO | SUBSYS_AUDIO | SUBSYS_SENSOR);
+    if (rc != 0) {
+        printf("ERROR %s: sdl_init failed\n", progname);
+        return 1;
+    }
 
     // print window and char sized, these are global variables from sdl.c;
     // the initial char size provides 20 chars across the display width
@@ -92,7 +93,7 @@ int main(int argc, char **argv)
     }
 
     // exit sdl
-    sdl_exit();
+    sdl_quit(SUBSYS_VIDEO | SUBSYS_AUDIO | SUBSYS_SENSOR);
 
     // return success
     printf("INFO %s: terminating\n", progname);

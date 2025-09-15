@@ -36,11 +36,18 @@ SDL_Sensor              *sensor[MAX_SENSOR_ID];  // indexed by id
 
 // -----------------  INIT -------------------------------
 
-// called by sdl_init
-int sdl_sensor_init_private(void)
+int sdl_sensor_init(void)
 {
     int            i, max, num_sensors;
     SDL_SensorID  *ids;
+
+    INFO("initializing\n");
+
+    // initialize SDL sensor
+    if (!SDL_InitSubSystem(SDL_INIT_SENSOR)) {
+        ERROR("SDL_Init SENSOR failed, %s\n", SDL_GetError());
+        return -1;
+    }
 
     // get list of sensor ids
     ids = SDL_GetSensors(&num_sensors);
@@ -77,27 +84,17 @@ int sdl_sensor_init_private(void)
     // free the list of ids
     SDL_free(ids);
 
-#if 0 // xxx del
-    // if step counter sensor exists then get permission;
-    // note that the permission is also needed in AndroidManifest.xml
-    // xxx move this to main.c
-    bool step_counter_sensor_exists = false;
-    for (i = 0; i < max_sensor_info_tbl; i++) {
-        if (sensor_info_tbl[max].type == ASENSOR_TYPE_STEP_COUNTER) {
-            step_counter_sensor_exists = true;
-            break;
-        }
-    }
-    if (step_counter_sensor_exists) {
-        rc = sdl_get_permission("android.permission.ACTIVITY_RECOGNITION");
-        if (rc < 0) {
-            ERROR("failed to be granted ACTIVITY_RECOGNITION permission for STEP_COUNTER sensor\n");
-        }
-    }
-#endif
-
     // return success
+    INFO("success\n");
     return 0;
+}
+
+void sdl_sensor_quit(void)
+{
+    INFO("quitting\n");
+
+    // quit SDL sensor
+    SDL_QuitSubSystem(SDL_INIT_SENSOR);
 }
 
 // -----------  APIS AVAILABLE IN PICOC  --------------
