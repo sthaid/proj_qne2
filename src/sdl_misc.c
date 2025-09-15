@@ -7,6 +7,12 @@
 #include <SDL3/SDL.h>
 
 //
+// defines
+//
+
+#define TEN_MS 10000
+
+//
 // variables
 //
 

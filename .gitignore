@@ -30,4 +30,5 @@ apps/*/data_dir
 
 svcs/t1/t1
 svcs/t2/t2
+svcs/sensors/sensors
 svcs/*/data_dir
