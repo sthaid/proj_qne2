@@ -123,7 +123,7 @@ void *util_read_file(char *dir, char *fn, int *len_ret)
 
 // -----------------  FILE MAP -------------------------------
 
-#define PAGE_SIZE        0x4000  // 16k
+#define PAGE_SIZE        0x1000    // xxx 0x4000  // 16k  need to support 16k too
 #define MAX_FILE_MAP_TBL 20
 
 static pthread_mutex_t file_map_mutex = PTHREAD_MUTEX_INITIALIZER;
@@ -139,21 +139,28 @@ void *util_map_file(char *dir, char *file, int len, bool create_if_needed)
 {
     char   path[100];
     int    tbl_idx, i, fd, rc;
-    int    file_exists, file_len, file_inode;
+    int    file_exists, file_len;
+    ino_t  file_inode;
     void  *addr = NULL;
     struct stat statbuf;
+    char   *zero;
 
     // lock mutex
     pthread_mutex_lock(&file_map_mutex);
 
+    // print message
+    sprintf(path, "%s/%s", dir, file);
+    INFO("mapping %s len=%d create_if_needed=%d\n", path, len, create_if_needed);
+
     // round len up to multiple of pagesize
     if (len & (PAGE_SIZE-1)) {
         len = (len + PAGE_SIZE) & ~(PAGE_SIZE-1);
+        INFO("len adjusted to %d\n", len);
     }
 
     // find free entry in file_map_tbl, if not found then return error
     for (tbl_idx = 0; tbl_idx < MAX_FILE_MAP_TBL; tbl_idx++) {
-        if (file_map_tbl[tbl_idx].addr != NULL) {
+        if (file_map_tbl[tbl_idx].addr == NULL) {
             break;
         }
     }
@@ -163,11 +170,11 @@ void *util_map_file(char *dir, char *file, int len, bool create_if_needed)
     }
 
     // stat the file to determine if it exists, and its length and inode number
-    sprintf(path, "%s/%s", dir, file);
     rc = stat(path, &statbuf);
     file_exists = (rc == 0) && S_ISREG(statbuf.st_mode);
     file_len    = file_exists ? statbuf.st_size : 0;
     file_inode  = file_exists ? statbuf.st_ino : 0;
+    INFO("file exists=%d len=%d inode=%ld\n", file_exists, file_len, file_inode);
 
     // if the file exists then 
     //   search table for an existing mapping
@@ -182,6 +189,7 @@ void *util_map_file(char *dir, char *file, int len, bool create_if_needed)
             if (x->ino == file_inode && x->len == len) {
                 x->refcnt++;
                 addr = x->addr;
+                INFO("existing mapping found, returning addr %p\n", addr);
                 goto done;
             }
         }
@@ -197,22 +205,18 @@ void *util_map_file(char *dir, char *file, int len, bool create_if_needed)
     // endif
     if (!file_exists || file_len != len) {
         if (create_if_needed) {
-            char zero=0;
+            INFO("creating %s len=%d\n", path, len);
             unlink(path);
             fd = open(path, O_CREAT|O_EXCL|O_RDWR, 0666);
             if (fd < 0) {
                 ERROR("failed to open/create %s, %s\n", path, strerror(errno));
                 goto done;  
             }
-            rc = lseek(fd, len-1, SEEK_SET);
-            if (rc != len-1) {
-                ERROR("lseek %s failed, %s\n", path, strerror(errno));
-                close(fd);
-                goto done;  
-            }
-            rc = write(fd, &zero, 1);
-            if (rc != 1) {
-                ERROR("write %s failed, %s\n", path, strerror(errno));
+            zero = calloc(len, 1);
+            rc = write(fd, zero, len);
+            free(zero);
+            if (rc != len) {
+                ERROR("write zero to %s, len=%d, failed, %s\n", path, len, strerror(errno));
                 close(fd);
                 goto done;  
             }
@@ -225,7 +229,8 @@ void *util_map_file(char *dir, char *file, int len, bool create_if_needed)
     }
 
     // map the file
-    fd = open(path, O_CREAT|O_RDWR|O_TRUNC, 0666);
+    INFO("mapping %s len=%d\n", path, len);
+    fd = open(path, O_RDWR, 0666);
     if (fd < 0) {
         ERROR("failed to open %s, %s\n", path, strerror(errno));
         goto done;  
@@ -236,6 +241,7 @@ void *util_map_file(char *dir, char *file, int len, bool create_if_needed)
         close(fd);
         goto done;  
     }
+    INFO("mmap returned addr %p\n", addr);
     rc = fstat(fd, &statbuf);
     if (rc != 0) {
         ERROR("failed to stat %s, %s\n", path, strerror(errno));
@@ -251,11 +257,17 @@ void *util_map_file(char *dir, char *file, int len, bool create_if_needed)
     file_map_tbl[tbl_idx].len    = len;
     file_map_tbl[tbl_idx].ino    = statbuf.st_ino;
     file_map_tbl[tbl_idx].refcnt = 1;
+    INFO("added file_map_tbl[%d] addr=%p len=%d ino=%ld refcnt=%d\n",
+         tbl_idx,
+         file_map_tbl[tbl_idx].addr,
+         file_map_tbl[tbl_idx].len,
+         file_map_tbl[tbl_idx].ino,
+         file_map_tbl[tbl_idx].refcnt);
 
+done:
     // unlock mutex
     pthread_mutex_unlock(&file_map_mutex);
 
-done:
     // return mapped addr
     return addr;
 }
@@ -266,6 +278,15 @@ void util_unmap_file(void *addr)
 
     // lock mutex
     pthread_mutex_lock(&file_map_mutex);
+
+    // print starting msg
+    INFO("unmapping addr %p\n", addr);
+
+    // sanity check addr arg
+    if (addr == NULL) {
+        ERROR("addr is NULL\n");
+        goto done;
+    }
 
     // find addr in file_map_tbl, if not found return error
     for (tbl_idx = 0; tbl_idx < MAX_FILE_MAP_TBL; tbl_idx++) {
@@ -286,9 +307,12 @@ void util_unmap_file(void *addr)
     }
 
     // if file_map_tbl refcnt is 1 then unmap and clear the file_map_tbl entry
-    if (x->refcnt == 1) {
+    if (--x->refcnt == 0) {
+        INFO("calling unmap %p %d\n", x->addr, x->len);
         munmap(x->addr, x->len);
         memset(x, 0, sizeof(struct file_map_tbl_s));
+    } else {
+        INFO("decremented refcnt, refcnt=%d\n", x->refcnt);
     }
 
 done:
@@ -298,12 +322,19 @@ done:
 
 void util_sync_file(void *addr, int len)
 {
-    unsigned long first_page = (unsigned long)addr & ~(PAGE_SIZE-1);
-    unsigned long last_page = ((unsigned long)addr + len) & ~(PAGE_SIZE-1);
+    int           rc;
+    unsigned long first_page    = (unsigned long)addr & ~(PAGE_SIZE-1);
+    unsigned long last_page     = ((unsigned long)addr + len) & ~(PAGE_SIZE-1);
+    void         *adjusted_addr = (void*)first_page;
+    int           adjusted_len  = last_page - first_page + PAGE_SIZE;
 
-    msync((void*)first_page,
-          last_page - first_page + PAGE_SIZE,
-          MS_SYNC);
+    INFO("addr=%p len=%d - adjusted addr=%p len=%d\n", 
+         addr, len, adjusted_addr, adjusted_len);
+
+    rc = msync(adjusted_addr, adjusted_len, MS_SYNC);
+    if (rc != 0) {
+        ERROR("msync %p %d failed, %s\n", adjusted_addr, adjusted_len, strerror(errno));
+    }
 }
 
 // -----------------  GET / SET PARAMS  ----------------------
