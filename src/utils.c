@@ -1,7 +1,7 @@
-// xxx why aren't logging macros used here
 #include <std_hdrs.h>
 
 #include <utils.h>
+#include <logging.h>
 
 // ----------------- TIME --------------------
 
@@ -158,7 +158,7 @@ void *util_map_file(char *dir, char *file, int len, bool create_if_needed)
         }
     }
     if (tbl_idx == MAX_FILE_MAP_TBL) {
-        printf("ERROR %s: no free tbl entries\n", __func__);
+        ERROR("no free tbl entries\n");
         goto done;  
     }
 
@@ -201,25 +201,25 @@ void *util_map_file(char *dir, char *file, int len, bool create_if_needed)
             unlink(path);
             fd = open(path, O_CREAT|O_EXCL|O_RDWR, 0666);
             if (fd < 0) {
-                printf("ERROR %s: failed to open/create %s, %s\n", __func__, path, strerror(errno));
+                ERROR("failed to open/create %s, %s\n", path, strerror(errno));
                 goto done;  
             }
             rc = lseek(fd, len-1, SEEK_SET);
             if (rc != len-1) {
-                printf("ERROR %s: lseek %s failed, %s\n", __func__, path, strerror(errno));
+                ERROR("lseek %s failed, %s\n", path, strerror(errno));
                 close(fd);
                 goto done;  
             }
             rc = write(fd, &zero, 1);
             if (rc != 1) {
-                printf("ERROR %s: write %s failed, %s\n", __func__, path, strerror(errno));
+                ERROR("write %s failed, %s\n", path, strerror(errno));
                 close(fd);
                 goto done;  
             }
             close(fd);
         } else {
-            printf("ERROR %s: file doesnt exist or has wrong len, file_exists=%d file_len=%d len=%d\n", 
-                   __func__, file_exists, file_len, len);
+            ERROR("file doesnt exist or has wrong len, file_exists=%d file_len=%d len=%d\n", 
+                   file_exists, file_len, len);
             goto done;  
         }
     }
@@ -227,18 +227,18 @@ void *util_map_file(char *dir, char *file, int len, bool create_if_needed)
     // map the file
     fd = open(path, O_CREAT|O_RDWR|O_TRUNC, 0666);
     if (fd < 0) {
-        printf("ERROR %s: failed to open %s, %s\n", __func__, path, strerror(errno));
+        ERROR("failed to open %s, %s\n", path, strerror(errno));
         goto done;  
     }
     addr = mmap(NULL, len, PROT_READ|PROT_WRITE, MAP_SHARED, fd, 0);
     if (addr == NULL) {
-        printf("ERROR %s: mmap %s failed, %s\n", __func__, path, strerror(errno));
+        ERROR("mmap %s failed, %s\n", path, strerror(errno));
         close(fd);
         goto done;  
     }
     rc = fstat(fd, &statbuf);
     if (rc != 0) {
-        printf("ERROR %s: failed to stat %s, %s\n", __func__, path, strerror(errno));
+        ERROR("failed to stat %s, %s\n", path, strerror(errno));
         munmap(addr, len);
         close(fd);
         addr = NULL;
@@ -274,14 +274,14 @@ void util_unmap_file(void *addr)
         }
     }
     if (tbl_idx == MAX_FILE_MAP_TBL) {
-        printf("ERROR %s: %p not found in file_map_tbl\n", __func__, addr);
+        ERROR("%p not found in file_map_tbl\n", addr);
         goto done;
     }
 
     // if file_map_tbl entry refcnt is already 0 then return error
     struct file_map_tbl_s *x = &file_map_tbl[tbl_idx];
     if (x->refcnt <= 0) {
-        printf("ERROR: %s refcnt is already zero\n", __func__);
+        ERROR("refcnt is already zero\n");
         goto done;
     }
 
@@ -343,7 +343,7 @@ static void read_params_file(char *dir)
     }
     strcpy(params_dir, dir);
 
-    printf("INFO %s: reading params file in dir '%s'\n", __func__, dir);
+    INFO("reading params file in dir '%s'\n", dir);
 
     memset(params, 0, sizeof(params));
     max_params = 0;
@@ -351,7 +351,7 @@ static void read_params_file(char *dir)
     sprintf(params_path, "%s/params", dir);
     fp = fopen(params_path, "r");
     if (fp == NULL) {
-        printf("INFO %s: params file does not exist\n", __func__);
+        INFO("params file does not exist\n");
         return;
     }
 
@@ -360,7 +360,7 @@ static void read_params_file(char *dir)
         n = 0;
         cnt = sscanf(s, "%s = %n", name, &n);
         if (cnt != 1 || n == 0) {
-            printf("ERROR %s: read_params_file '%s'\n", __func__, s);
+            ERROR("read_params_file '%s'\n", s);
             fclose(fp);
             return;
         }
@@ -372,9 +372,9 @@ static void read_params_file(char *dir)
 
     fclose(fp);
 
-    printf("INFO %s: max_params=%d\n", __func__, max_params);
+    INFO("max_params=%d\n", max_params);
     for (int i = 0; i < max_params; i++) {
-        printf("INFO %s:   %s = %s\n", __func__, params[i].name, params[i].value);
+        INFO("  %s = %s\n", params[i].name, params[i].value);
     }
 }
 
@@ -384,21 +384,20 @@ static void write_params_file(char *dir)
     char params_path[100];
 
     if (strcmp(dir, params_dir) != 0) {
-        printf("ERROR %s: write_params_file, dir=%s params_dir=%s\n",
-               __func__, dir, params_dir);
+        ERROR("write_params_file, dir=%s params_dir=%s\n", dir, params_dir);
         return;
     }
 
-    printf("INFO %s: writing params file in dir '%s'\n", __func__, dir);
-    printf("INFO %s: max_params=%d\n", __func__, max_params);
+    INFO("writing params file in dir '%s'\n", dir);
+    INFO("max_params=%d\n", max_params);
     for (int i = 0; i < max_params; i++) {
-        printf("INFO %s:   %s = %s\n", __func__, params[i].name, params[i].value);
+        INFO("  %s = %s\n", params[i].name, params[i].value);
     }
 
     sprintf(params_path, "%s/params", dir);
     fp = fopen(params_path, "w");
     if (fp == NULL) {
-        printf("ERROR %s: write_params_file, fopen failed, %s\n", __func__, strerror(errno));
+        ERROR("write_params_file, fopen failed, %s\n", strerror(errno));
         return;
     }
 
@@ -434,7 +433,7 @@ char *util_get_str_param(char *dir, char *name, char *default_value)
         return params[i].value;
     } else {
         if (max_params >= MAX_PARAMS) {
-            printf("ERROR %s: params tbl is full\n", __func__);
+            ERROR("params tbl is full\n");
             return default_value;
         }
         params[max_params].name = strdup(name);
@@ -475,7 +474,7 @@ void util_set_str_param(char *dir, char *name, char *value)
         params[i].value = strdup(value);
     } else {
         if (max_params >= MAX_PARAMS) {
-            printf("ERROR %s: params tbl is full\n", __func__);
+            ERROR("params tbl is full\n");
             return;
         }
         params[max_params].name = strdup(name);
@@ -532,9 +531,9 @@ void util_print_params(char *dir)
 
     read_params_file(dir);
 
-    printf("INFO %s: max_params=%d\n", __func__, max_params);
+    INFO("max_params=%d\n", max_params);
     for (i = 0; i < max_params; i++) {
-        printf("INFO %s:   %s = %s\n", __func__, params[i].name, params[i].value);
+        INFO("  %s = %s\n", params[i].name, params[i].value);
     }
 }
 
@@ -551,7 +550,7 @@ char *util_get_ipaddr(void)
 
     rc = getifaddrs(&ifap_orig);
     if (rc != 0) {
-        printf("ERROR %s: getifaddrs, %s\n", __func__, strerror(errno));
+        ERROR("getifaddrs, %s\n", strerror(errno));
         return ipaddr;
     }
 
@@ -619,7 +618,7 @@ next:
 
         fclose(fp);
     } else {
-        printf("ERROR %s: popen failed, %s\n", __func__, strerror(errno));
+        ERROR("popen failed, %s\n", strerror(errno));
     }
 
     return ipaddr;
