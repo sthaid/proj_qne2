@@ -52,6 +52,11 @@ int main(int argc, char **argv)
         return 1;
     }
 
+    void *xxx = sdl_plot_open(data_dir, "pressure.dat");
+    printf("XXX %p %p\n", pressure_file, xxx);
+
+
+
     // xxx
     //sdl_plot_test(pressure_file);
     //return 1;
@@ -85,7 +90,7 @@ int main(int argc, char **argv)
 
     // cleanup
     sdl_plot_close(pressure_file);
-    sdl_exit();
+    sdl_quit(SUBSYS_SENSOR);
 
     // end program
     printf("INFO %s: terminating\n", progname);

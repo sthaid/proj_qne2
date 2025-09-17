@@ -1,3 +1,4 @@
+// xxx why aren't logging macros used here
 #include <std_hdrs.h>
 
 #include <utils.h>
@@ -118,6 +119,191 @@ void *util_read_file(char *dir, char *fn, int *len_ret)
 
     *len_ret = statbuf.st_size;
     return buf;
+}
+
+// -----------------  FILE MAP -------------------------------
+
+#define PAGE_SIZE        0x4000  // 16k
+#define MAX_FILE_MAP_TBL 20
+
+static pthread_mutex_t file_map_mutex = PTHREAD_MUTEX_INITIALIZER;
+
+static struct file_map_tbl_s {
+    void *addr;
+    int   len;
+    ino_t ino;
+    int   refcnt;
+} file_map_tbl[MAX_FILE_MAP_TBL];
+
+void *util_map_file(char *dir, char *file, int len, bool create_if_needed)
+{
+    char   path[100];
+    int    tbl_idx, i, fd, rc;
+    int    file_exists, file_len, file_inode;
+    void  *addr = NULL;
+    struct stat statbuf;
+
+    // lock mutex
+    pthread_mutex_lock(&file_map_mutex);
+
+    // round len up to multiple of pagesize
+    if (len & (PAGE_SIZE-1)) {
+        len = (len + PAGE_SIZE) & ~(PAGE_SIZE-1);
+    }
+
+    // find free entry in file_map_tbl, if not found then return error
+    for (tbl_idx = 0; tbl_idx < MAX_FILE_MAP_TBL; tbl_idx++) {
+        if (file_map_tbl[tbl_idx].addr != NULL) {
+            break;
+        }
+    }
+    if (tbl_idx == MAX_FILE_MAP_TBL) {
+        printf("ERROR %s: no free tbl entries\n", __func__);
+        goto done;  
+    }
+
+    // stat the file to determine if it exists, and its length and inode number
+    sprintf(path, "%s/%s", dir, file);
+    rc = stat(path, &statbuf);
+    file_exists = (rc == 0) && S_ISREG(statbuf.st_mode);
+    file_len    = file_exists ? statbuf.st_size : 0;
+    file_inode  = file_exists ? statbuf.st_ino : 0;
+
+    // if the file exists then 
+    //   search table for an existing mapping
+    //   if match found then 
+    //     increment ref count
+    //     return the existing mapped addr
+    //   endif
+    // endif
+    if (file_exists) {
+        for (i = 0; i < MAX_FILE_MAP_TBL; i++) {
+            struct file_map_tbl_s *x = &file_map_tbl[i];
+            if (x->ino == file_inode && x->len == len) {
+                x->refcnt++;
+                addr = x->addr;
+                goto done;
+            }
+        }
+    }
+
+    // if the file doesnt exist, or has the wrong length then
+    //   if create flag is set
+    //     unlink the file
+    //     create the file with the proper length
+    //   else
+    //     return error
+    //   endif
+    // endif
+    if (!file_exists || file_len != len) {
+        if (create_if_needed) {
+            char zero=0;
+            unlink(path);
+            fd = open(path, O_CREAT|O_EXCL|O_RDWR, 0666);
+            if (fd < 0) {
+                printf("ERROR %s: failed to open/create %s, %s\n", __func__, path, strerror(errno));
+                goto done;  
+            }
+            rc = lseek(fd, len-1, SEEK_SET);
+            if (rc != len-1) {
+                printf("ERROR %s: lseek %s failed, %s\n", __func__, path, strerror(errno));
+                close(fd);
+                goto done;  
+            }
+            rc = write(fd, &zero, 1);
+            if (rc != 1) {
+                printf("ERROR %s: write %s failed, %s\n", __func__, path, strerror(errno));
+                close(fd);
+                goto done;  
+            }
+            close(fd);
+        } else {
+            printf("ERROR %s: file doesnt exist or has wrong len, file_exists=%d file_len=%d len=%d\n", 
+                   __func__, file_exists, file_len, len);
+            goto done;  
+        }
+    }
+
+    // map the file
+    fd = open(path, O_CREAT|O_RDWR|O_TRUNC, 0666);
+    if (fd < 0) {
+        printf("ERROR %s: failed to open %s, %s\n", __func__, path, strerror(errno));
+        goto done;  
+    }
+    addr = mmap(NULL, len, PROT_READ|PROT_WRITE, MAP_SHARED, fd, 0);
+    if (addr == NULL) {
+        printf("ERROR %s: mmap %s failed, %s\n", __func__, path, strerror(errno));
+        close(fd);
+        goto done;  
+    }
+    rc = fstat(fd, &statbuf);
+    if (rc != 0) {
+        printf("ERROR %s: failed to stat %s, %s\n", __func__, path, strerror(errno));
+        munmap(addr, len);
+        close(fd);
+        addr = NULL;
+        goto done;  
+    }
+    close(fd);
+
+    // add mapping entry to table
+    file_map_tbl[tbl_idx].addr   = addr;
+    file_map_tbl[tbl_idx].len    = len;
+    file_map_tbl[tbl_idx].ino    = statbuf.st_ino;
+    file_map_tbl[tbl_idx].refcnt = 1;
+
+    // unlock mutex
+    pthread_mutex_unlock(&file_map_mutex);
+
+done:
+    // return mapped addr
+    return addr;
+}
+
+void util_unmap_file(void *addr)
+{
+    int tbl_idx;
+
+    // lock mutex
+    pthread_mutex_lock(&file_map_mutex);
+
+    // find addr in file_map_tbl, if not found return error
+    for (tbl_idx = 0; tbl_idx < MAX_FILE_MAP_TBL; tbl_idx++) {
+        if (file_map_tbl[tbl_idx].addr == addr) {
+            break;
+        }
+    }
+    if (tbl_idx == MAX_FILE_MAP_TBL) {
+        printf("ERROR %s: %p not found in file_map_tbl\n", __func__, addr);
+        goto done;
+    }
+
+    // if file_map_tbl entry refcnt is already 0 then return error
+    struct file_map_tbl_s *x = &file_map_tbl[tbl_idx];
+    if (x->refcnt <= 0) {
+        printf("ERROR: %s refcnt is already zero\n", __func__);
+        goto done;
+    }
+
+    // if file_map_tbl refcnt is 1 then unmap and clear the file_map_tbl entry
+    if (x->refcnt == 1) {
+        munmap(x->addr, x->len);
+        memset(x, 0, sizeof(struct file_map_tbl_s));
+    }
+
+done:
+    // unlock mutex
+    pthread_mutex_unlock(&file_map_mutex);
+}
+
+void util_sync_file(void *addr, int len)
+{
+    unsigned long first_page = (unsigned long)addr & ~(PAGE_SIZE-1);
+    unsigned long last_page = ((unsigned long)addr + len) & ~(PAGE_SIZE-1);
+
+    msync((void*)first_page,
+          last_page - first_page + PAGE_SIZE,
+          MS_SYNC);
 }
 
 // -----------------  GET / SET PARAMS  ----------------------

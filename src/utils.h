@@ -12,6 +12,12 @@ char *util_time2str(char * str, long us, int gmt, int display_ms, int display_da
 int util_write_file(char *dir, char *fn, void *data, int len);
 void *util_read_file(char *dir, char *fn, int *len);
 
+// -----------------  FILE MAP -------------------------------
+
+void *util_map_file(char *dir, char *file, int len, bool create_if_needed);
+void util_unmap_file(void *addr);
+void util_sync_file(void *addr, int len);
+
 // -----------------  GET / SET PARAMS  ----------------------
 
 char *util_get_str_param(char *dir, char *name, char *default_value);
