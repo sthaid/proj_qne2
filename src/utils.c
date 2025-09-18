@@ -328,8 +328,8 @@ void util_sync_file(void *addr, int len)
     void         *adjusted_addr = (void*)first_page;
     int           adjusted_len  = last_page - first_page + PAGE_SIZE;
 
-    INFO("addr=%p len=%d - adjusted addr=%p len=%d\n", 
-         addr, len, adjusted_addr, adjusted_len);
+    // INFO("addr=%p len=%d - adjusted addr=%p len=%d\n", 
+    //      addr, len, adjusted_addr, adjusted_len);
 
     rc = msync(adjusted_addr, adjusted_len, MS_SYNC);
     if (rc != 0) {

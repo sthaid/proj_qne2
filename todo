@@ -1,40 +1,16 @@
-break up sdl.c -
-- sdl_main.c
-- sdl_video.c
-- sdl_event.c
+add app for pressure and maybe temperature/ humidity
+idelete t1 and t2
+move services to within settings
+change olor for devel mode, or use title line
+log screen
 
-
--------
-
-
-void *cx sdl_plot_open(dir, filename, create_flag, samples, interval_secs)
-sdl_plot_add(cx, sample, which_bin)
-   - how to calc which time bin
-
-
-struct {
-    start_time
-    total_samples
-    num_samples
-    idx of next sample
-} hdr
-
-
----------
-
-
-save error prints, or all prints in log screen
-
-write service to store sensors values
-
-cleanups
+---------------
 
 picoc
 - why doesn't it have an 'open' call;  try adding that
 - picoc return value - probably okay
 
 ezput all
-when service exits, save any error info
 
 shell should accept cmd recall, and vi
 

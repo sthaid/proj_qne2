@@ -97,10 +97,10 @@ int main(int argc, char **argv)
             sdl_sensor_read_temperature(&x->temperature);
             sdl_sensor_read_humidity(&x->humidity);
 
-            printf("INFO %s: %02d/%02d/%02d %02d: steps=%.0f pressure=%.0f temp=%.0f humidity=%.0f\n",
-                   progname,
-                   x->month, x->day, x->year, x->hour,
-                   x->step_count, x->pressure, x->temperature, x->humidity);
+            // printf("INFO %s: %02d/%02d/%02d %02d: steps=%.0f pressure=%.0f temp=%.0f humidity=%.0f\n",
+            //        progname,
+            //        x->month, x->day, x->year, x->hour,
+            //        x->step_count, x->pressure, x->temperature, x->humidity);
 
             // sync value struct to file
             util_sync_file(x, sizeof(struct sensor_value_s));
