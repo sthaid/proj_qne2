@@ -188,13 +188,13 @@ int sdl_sensor_read_raw(int id, double *data, int num_values)
 #define RAD_TO_DEG (180 / M_PI)
 #define DEG_TO_RAD (M_PI / 180)
 
-int sdl_sensor_read_step_counter(unsigned long *step_count)
+int sdl_sensor_read_step_counter(double *step_count)
 {
     double data[3];
     
-    static bool first_call = true;
-    static int  id = -1;
-    static unsigned long first_step_count;
+    static bool   first_call = true;
+    static int    id = -1;
+    static double first_step_count = -1;
 
     // preset return value
     *step_count = 0;
@@ -209,16 +209,16 @@ int sdl_sensor_read_step_counter(unsigned long *step_count)
         return -1;
     }
 
-    // read raw sensor data
+    // read step counter sensor
     sdl_sensor_read_raw(id, data, 3);
 
-    // return step count
-// xxx dont subtract here ??
-    *step_count = data[0];
-    if (first_step_count == 0) {
-        first_step_count = *step_count;
+    // save the first step count value read
+    if (first_step_count == -1) {
+        first_step_count = data[0];
     }
-    *step_count -= first_step_count;
+
+    // return step count sensor value minus first step count value read
+    *step_count = data[0] - first_step_count;
     return 0;
 }
 
