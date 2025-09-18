@@ -196,9 +196,6 @@ int sdl_sensor_read_step_counter(double *step_count)
     static int    id = -1;
     static double first_step_count = -1;
 
-    // preset return value
-    *step_count = 0;
-
     // if first call then find the sensor id;
     // if not found then return error
     if (first_call) {
@@ -206,6 +203,7 @@ int sdl_sensor_read_step_counter(double *step_count)
         id = sdl_sensor_find(ASENSOR_TYPE_STEP_COUNTER);
     }
     if (id == -1) {
+        *step_count = INVALID_SENSOR_VALUE;
         return -1;
     }
 
@@ -230,10 +228,6 @@ int sdl_sensor_read_tilt(double *roll, double *pitch)
     static bool first_call = true;
     static int  id = -1;
 
-    // preset return value
-    *roll = 0;
-    *pitch = 0;
-
     // if first call then find the sensor id;
     // if not found then return error
     if (first_call) {
@@ -241,6 +235,8 @@ int sdl_sensor_read_tilt(double *roll, double *pitch)
         id = sdl_sensor_find(ASENSOR_TYPE_ACCELEROMETER);
     }
     if (id == -1) {
+        *roll = INVALID_SENSOR_VALUE;
+        *pitch = INVALID_SENSOR_VALUE;
         return -1;
     }
 
@@ -268,9 +264,6 @@ int sdl_sensor_read_mag_heading(double *mag_heading)
     static bool first_call = true;
     static int  id = -1;
 
-    // preset return value
-    *mag_heading = 0;
-
     // if first call then find the sensor id;
     // if not found then return error
     if (first_call) {
@@ -278,6 +271,7 @@ int sdl_sensor_read_mag_heading(double *mag_heading)
         id = sdl_sensor_find(ASENSOR_TYPE_MAGNETIC_FIELD);
     }
     if (id == -1) {
+        *mag_heading = INVALID_SENSOR_VALUE;
         return -1;
     }
 
@@ -314,9 +308,6 @@ int sdl_sensor_read_pressure(double *millibars)
     static bool first_call = true;
     static int  id = -1;
 
-    // preset return value
-    *millibars = 0;
-
     // if first call then find the sensor id;
     // if not found then return error
     if (first_call) {
@@ -324,6 +315,7 @@ int sdl_sensor_read_pressure(double *millibars)
         id = sdl_sensor_find(ASENSOR_TYPE_PRESSURE);
     }
     if (id == -1) {
+        *millibars = INVALID_SENSOR_VALUE;
         return -1;
     }
 
@@ -343,9 +335,6 @@ int sdl_sensor_read_temperature(double *degrees_c)
     static bool first_call = true;
     static int  id = -1;
 
-    // preset return value
-    *degrees_c = 0;
-
     // if first call then find the sensor id;
     // if not found then return error
     if (first_call) {
@@ -353,6 +342,7 @@ int sdl_sensor_read_temperature(double *degrees_c)
         id = sdl_sensor_find(ASENSOR_TYPE_AMBIENT_TEMPERATURE);
     }
     if (id == -1) {
+        *degrees_c = INVALID_SENSOR_VALUE;
         return -1;
     }
 
@@ -372,9 +362,6 @@ int sdl_sensor_read_humidity(double *percent)
     static bool first_call = true;
     static int  id = -1;
 
-    // preset return value
-    *percent = 0;
-
     // if first call then find the sensor id;
     // if not found then return error
     if (first_call) {
@@ -382,6 +369,7 @@ int sdl_sensor_read_humidity(double *percent)
         id = sdl_sensor_find(ASENSOR_TYPE_RELATIVE_HUMIDITY);
     }
     if (id == -1) {
+        *percent = INVALID_SENSOR_VALUE;
         return -1;
     }
 

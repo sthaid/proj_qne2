@@ -23,12 +23,13 @@ android/SDL3-3.2.20
 android/SDL
 android/setup_files/orig
 
-apps/Reversi/Reversi
-apps/Test/Test
 apps/*/apps
 apps/*/data_dir
+apps/Reversi/Reversi
+apps/Test/Test
 
+svcs/*/svcs
+svcs/*/data_dir
 svcs/t1/t1
 svcs/t2/t2
 svcs/sensors/sensors
-svcs/*/data_dir

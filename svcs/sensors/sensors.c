@@ -7,7 +7,7 @@
 #include <sdl.h>
 #include <utils.h>
 
-#include "sensors.h"
+#include "svcs/sensors/sensors.h"
 
 // xxx todo 
 // - check for file full (next == max)
@@ -73,23 +73,27 @@ int main(int argc, char **argv)
         localtime_r(&t, &tm);
 
         // if hour has changed then add new sensor data to sensors.dat
-        if (tm.tm_hour != tm_last.tm_hour) {
+        if (true || tm.tm_hour != tm_last.tm_hour) {  //xxx true is temp
             struct sensor_value_s *x = &data->values[data->hdr.next];
 
             // the step counter sensor value requires special attention
             // because the sensor value continuously increases
             sdl_sensor_read_step_counter(&stepc_now);
-            stepc_change = stepc_now - stepc_last;
+            if (stepc_now == INVALID_SENSOR_VALUE || stepc_last == INVALID_SENSOR_VALUE) {
+                stepc_change = INVALID_SENSOR_VALUE;
+            } else {
+                stepc_change = stepc_now - stepc_last;
+            }
             stepc_last = stepc_now;
 
-            // init sensor_value_s; 
+            // init new sensor_value_s; 
             // note x->year is the actual year - 2000
             x->month = tm_last.tm_mon + 1;
             x->day   = tm_last.tm_mday;
             x->year  = tm_last.tm_year - 100;
             x->hour  = tm_last.tm_hour;
             x->step_count = stepc_change;
-            sdl_sensor_read_pressure(&x->pressure);  // xxx return a bad value on error
+            sdl_sensor_read_pressure(&x->pressure);
             sdl_sensor_read_temperature(&x->temperature);
             sdl_sensor_read_humidity(&x->humidity);
 

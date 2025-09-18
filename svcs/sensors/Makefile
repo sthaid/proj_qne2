@@ -25,8 +25,10 @@ run_picoc: setup
 
 setup:
 	mkdir -p data_dir
+	mkdir -p svcs/sensors
+	ln -sf 	../../sensors.h svcs/sensors
 
 clean:
-	rm -rf $(TARGET) data_dir
+	rm -rf $(TARGET) data_dir svcs
 
 .PHONY: build setup clean

@@ -51,6 +51,13 @@ void StdLocaltime(struct ParseState *Parser, struct Value *ReturnValue,
     ReturnValue->Val->Pointer = localtime(Param[0]->Val->Pointer);
 }
 
+void StdLocaltime_r(struct ParseState *Parser, struct Value *ReturnValue,
+    struct Value **Param, int NumArgs)
+{
+    ReturnValue->Val->Pointer = localtime_r(Param[0]->Val->Pointer,
+                                            Param[1]->Val->Pointer);
+}
+
 void StdMktime(struct ParseState *Parser, struct Value *ReturnValue,
     struct Value **Param, int NumArgs)
 {
@@ -98,7 +105,7 @@ void StdTimegm(struct ParseState *Parser, struct Value *ReturnValue,
 const char StdTimeDefs[] = "\
 typedef int time_t; \
 typedef int clock_t; \
-struct tm { int tm_sec; int tm_min; int tm_hour; int tm_mday; int tm_mon; int tm_year; int tm_wday; int tm_yday; int tm_isdst; }; \
+struct tm { int tm_sec; int tm_min; int tm_hour; int tm_mday; int tm_mon; int tm_year; int tm_wday; int tm_yday; int tm_isdst; char reserved[64]; }; \
 ";
 
 /* all string.h functions */
@@ -110,6 +117,7 @@ struct LibraryFunction StdTimeFunctions[] =
     {StdDifftime, "double difftime(int, int);"},
     {StdGmtime, "struct tm *gmtime(int *);"},
     {StdLocaltime, "struct tm *localtime(int *);"},
+    {StdLocaltime_r, "struct tm *localtime_r(int *, struct tm *);"},
     {StdMktime, "int mktime(struct tm *ptm);"},
     {StdTime, "int time(int *);"},
     {StdStrftime, "int strftime(char *, int, char *, struct tm *);"},

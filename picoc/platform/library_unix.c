@@ -535,8 +535,8 @@ void Sdl_sensor_read_raw (struct ParseState *Parser, struct Value *ReturnValue,
 void Sdl_sensor_read_step_counter (struct ParseState *Parser, struct Value *ReturnValue,
 	struct Value **Param, int NumArgs)
 {
-    unsigned long *step_count = Param[0]->Val->Pointer;
-    int            rc;
+    double *step_count = Param[0]->Val->Pointer;
+    int     rc;
 
     rc = sdl_sensor_read_step_counter(step_count);
     ReturnValue->Val->Integer = rc;
@@ -676,7 +676,7 @@ struct LibraryFunction SdlFunctions[] = {
     { Sdl_sensor_get_info_tbl,          "sdl_sensor_info_t *sdl_sensor_get_info_tbl(int *num_sensors);" },
     { Sdl_sensor_find,                  "int sdl_sensor_find(int type);" },
     { Sdl_sensor_read_raw,              "int sdl_sensor_read_raw(int id, double *data, int num_values);" },
-    { Sdl_sensor_read_step_counter,     "int sdl_sensor_read_step_counter(unsigned long *step_count);" },
+    { Sdl_sensor_read_step_counter,     "int sdl_sensor_read_step_counter(double *step_count);" },
     { Sdl_sensor_read_mag_heading,      "int sdl_sensor_read_mag_heading(double *mag_heading);" },
     { Sdl_sensor_read_tilt,             "int sdl_sensor_read_tilt(double *roll, double *pitch);" },
     { Sdl_sensor_read_pressure,         "int sdl_sensor_read_pressure(double *millibars);" },
@@ -818,6 +818,8 @@ typedef struct { \n\
 #define ASENSOR_TYPE_ACCELEROMETER_LIMITED_AXES_UNCALIBRATED 40 \n\
 #define ASENSOR_TYPE_GYROSCOPE_LIMITED_AXES_UNCALIBRATED 41 \n\
 #define ASENSOR_TYPE_HEADING 42 \n\
+\n\
+#define INVALID_SENSOR_VALUE 999999999 \n\
 ";
 
 // -----------------  UTILS PLATFORM ROUTINES  --------------------------
@@ -879,6 +881,40 @@ void Util_read_file (struct ParseState *Parser, struct Value *ReturnValue,
 
     file_contents = util_read_file(dir, fn, len);
     ReturnValue->Val->Pointer = file_contents;
+}
+
+//
+// utils file map routines
+//
+
+void Util_map_file (struct ParseState *Parser, struct Value *ReturnValue,
+	struct Value **Param, int NumArgs)
+{
+    char *dir              = Param[0]->Val->Pointer;
+    char *file             = Param[1]->Val->Pointer;
+    int   len              = Param[2]->Val->Integer;
+    bool  create_if_needed = Param[3]->Val->Integer;
+    void *addr;
+
+    addr = util_map_file(dir, file, len, create_if_needed);
+    ReturnValue->Val->Pointer = addr;
+}
+
+void Util_unmap_file (struct ParseState *Parser, struct Value *ReturnValue,
+	struct Value **Param, int NumArgs)
+{
+    char *addr = Param[0]->Val->Pointer;
+
+    util_unmap_file(addr);
+}
+
+void Util_sync_file (struct ParseState *Parser, struct Value *ReturnValue,
+	struct Value **Param, int NumArgs)
+{
+    char *addr = Param[0]->Val->Pointer;
+    int   len  = Param[1]->Val->Integer;
+
+    util_sync_file(addr, len);
 }
 
 //
@@ -966,6 +1002,10 @@ struct LibraryFunction UtilsFunctions[] = {
     // file read/write
     { Util_write_file,       "int util_write_file(char *dir, char *fn, void *data, int len);" },
     { Util_read_file,        "void *util_read_file(char *dir, char *fn, int *len);" },
+    // file map
+    { Util_map_file,         "void *util_map_file(char *dir, char *file, int len, bool create_if_needed);" },
+    { Util_unmap_file,       "void util_unmap_file(void *addr);" },
+    { Util_sync_file,        "void util_sync_file(void *addr, int len);" },
     // params get/set
     { Util_get_str_param,    "char *util_get_str_param(char *dir, char *name, char *default_value);" },
     { Util_set_str_param,    "void util_set_str_param(char *dir, char *name, char *value);" },
