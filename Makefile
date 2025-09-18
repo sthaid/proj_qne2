@@ -1,9 +1,8 @@
 
 SUBDIRS = \
+    svcs/sensors \
     apps/Reversi \
     apps/Test \
-    svcs/t1 \
-    svcs/t2 \
     picoc \
     linux \
     android \

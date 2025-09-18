@@ -883,11 +883,11 @@ static void page_9_init(void)
 
 static void page_9_draw(void)
 {
-    double        data[3];
-    int           row = 2;
-    int           rc;
-    unsigned long step_count;
-    double        mag_heading, roll, pitch, millibars, degrees_c, percent;
+    double data[3];
+    int    row = 2;
+    int    rc;
+    double step_count;
+    double mag_heading, roll, pitch, millibars, degrees_c, percent;
 
     sdl_print_init(SMALL_FONT, COLOR_WHITE, COLOR_BLACK);
 
@@ -905,7 +905,7 @@ static void page_9_draw(void)
 
     rc = sdl_sensor_read_step_counter(&step_count);
     if (rc == 0) {
-        sdl_render_printf(0, ROW2Y(row++), "stepc = %ld", step_count);
+        sdl_render_printf(0, ROW2Y(row++), "stepc = %.0f", step_count);
     }
 
     rc = sdl_sensor_read_mag_heading(&mag_heading);
