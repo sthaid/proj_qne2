@@ -7,8 +7,6 @@
 cscope.out
 tags
 
-FreeMonoBold.ttf
-
 src/version.h
 
 tools/ezsh
@@ -16,20 +14,11 @@ tools/ezsh
 picoc/my_tests
 
 linux/ezApp
-linux/files
-linux/assets
 
 android/SDL3-3.2.20
 android/SDL
 android/setup_files/orig
 
-apps/*/apps
-apps/*/data_dir
-apps/Reversi/Reversi
-apps/Test/Test
-
-svcs/*/svcs
-svcs/*/data_dir
-svcs/t1/t1
-svcs/t2/t2
-svcs/sensors/sensors
+files/apps_data
+files/svcs_data
+files/params

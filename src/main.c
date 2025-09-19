@@ -23,7 +23,6 @@
 #define MAIN main
 #endif
 
-#define DEVEL
 #define DEFAULT_DEVEL_PORT 9000   // IANA registered port range 1024 - 49151
 
 #define LAST_PAGE ((max_apps - 1) / 18)
@@ -86,8 +85,10 @@ extern void showHome2(void);
 
 static int init(void);
 static void cleanup(void);
-static void create_default_apps_and_svcs(void);
 static void sigusr2_hndlr(int signum);
+#ifdef ANDROID
+static void create_default_apps_and_svcs(void);
+#endif
 
 int MAIN(int argc, char **argv)
 {
@@ -128,34 +129,26 @@ static int init(void)
     params.devel_mode = util_get_int_param(".", "devel_mode", 0);
     params.devel_port = util_get_int_param(".", "devel_port", DEFAULT_DEVEL_PORT);
 
-#if 0
+    // xxx temporary for development
+    params.devel_mode = 1;
+    util_set_int_param(".", "devel_mode", 1);
+
+#ifdef ANDROID
     // copy asset files to the working directory
     sdl_copy_asset_file("apps_and_svcs.tar", ".");
     sdl_copy_asset_file("copyright", ".");
     sdl_copy_asset_file("FreeMonoBold.ttf", ".");
 
-#ifdef DEVEL
-    // for development:
-    // - enable developer mode
-    // - init apps to default
-    params.devel_mode = 1;
-    util_set_int_param(".", "devel_mode", 1);
-    create_default_apps_and_svcs();
-#else
+#if 0  // xxx
     // if apps dir struct doesn't exist then create it
-    int rc;
     struct stat statbuf;
-    rc = stat("apps", &statbuf);  // xxx svcs
+    rc = stat("apps", &statbuf);  // xxx svcs too ?
     if (rc != 0 || !S_ISDIR(statbuf.st_mode)) {
         create_default_apps_and_svcs();
     }
-#endif
-
 #else
-
-    params.devel_mode = 1;
-    util_set_int_param(".", "devel_mode", 1);
-
+    create_default_apps_and_svcs();
+#endif
 #endif
 
     // allocate SIGUSR2, this signal is sent to the server_thread
@@ -212,6 +205,7 @@ static void cleanup(void)
     sdl_quit(SUBSYS_VIDEO | SUBSYS_AUDIO | SUBSYS_SENSOR);
 }
 
+#ifdef ANDROID
 static void create_default_apps_and_svcs(void)
 {
     int rc;
@@ -230,9 +224,10 @@ static void create_default_apps_and_svcs(void)
         return;
     }
 
-    // create data directories for the apps and svcs
+    // create top level data directories for the apps and svcs
     system("mkdir -p apps_data svcs_data");
 }
+#endif
 
 static void sigusr2_hndlr(int signum)
 {
@@ -1104,9 +1099,11 @@ static void settings(void)
         loc = sdl_render_printf(0, ROW2Y(9), "Devel_Port = %d", params.devel_port);
         sdl_register_event(loc, EVID_DEVEL_PORT);
 
+#ifdef ANDROID
         // display Reset_Apps
         loc = sdl_render_printf(0, ROW2Y(11), "Reset_Apps/Svcs");
         sdl_register_event(loc, EVID_RESET_APPS_AND_SVCS);
+#endif
 
         // change print color back to white
         sdl_print_init_color(COLOR_WHITE, BG_COLOR);
@@ -1157,6 +1154,7 @@ static void settings(void)
                 }
             }
             break; }
+#ifdef ANDROID
         case EVID_RESET_APPS_AND_SVCS: {
             char *str; 
             str = sdl_get_input_str("Reset y/n?", false, BG_COLOR);
@@ -1166,6 +1164,7 @@ static void settings(void)
                 msg_time = util_microsec_timer();
             }
             break; }
+#endif
         case EVID_COPYRIGHT:
             copyright();
             break;

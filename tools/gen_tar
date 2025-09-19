@@ -3,17 +3,18 @@
 topdir=$(git rev-parse --show-toplevel)
 cd $topdir
 
-dest_path=$1
-if [ "$dest_path" == "" ]; then
+if [ "$1" == "" ]; then
   echo "ERROR dest_path required"
   exit 1
 fi
 
+dest_path=$topdir/$1
+
 rm -f $dest_path
 
+cd files
 git ls-files apps svcs | grep -v Makefile > /tmp/files.txt
-
-tar -cf $dest_path --files-from /tmp/files.txt;
+tar -cf $dest_path --files-from /tmp/files.txt
 
 rm -f /tmp/files.txt
 
