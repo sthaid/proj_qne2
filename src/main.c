@@ -128,6 +128,7 @@ static int init(void)
     params.devel_mode = util_get_int_param(".", "devel_mode", 0);
     params.devel_port = util_get_int_param(".", "devel_port", DEFAULT_DEVEL_PORT);
 
+#if 0
     // copy asset files to the working directory
     sdl_copy_asset_file("apps_and_svcs.tar", ".");
     sdl_copy_asset_file("copyright", ".");
@@ -148,6 +149,13 @@ static int init(void)
     if (rc != 0 || !S_ISDIR(statbuf.st_mode)) {
         create_default_apps_and_svcs();
     }
+#endif
+
+#else
+
+    params.devel_mode = 1;
+    util_set_int_param(".", "devel_mode", 1);
+
 #endif
 
     // allocate SIGUSR2, this signal is sent to the server_thread

@@ -42,16 +42,12 @@ CFLAGS = -Wall -Werror -Wno-unused-result -g -I../src $(shell pkg-config sdl3--c
 $(TARGET):
 	../tools/gen_version
 	gcc -o $@ $(CFLAGS) $(SRCS) -lSDL3 -lSDL3_ttf -lm
-	rm -rf files assets; mkdir files assets;
-	../tools/gen_tar linux/assets/apps_and_svcs.tar
-	ln -s ../../android/assets/FreeMonoBold.ttf assets
-	ln -s ../../android/assets/copyright assets
 
 run: $(TARGET)
-	ezApp
+	cd ../files; ../linux/$(TARGET)
 
 clean:
-	rm -rf $(TARGET) files assets ../src/version.h
+	rm -f $(TARGET) ../src/version.h
 
 .PHONY: $(TARGET)
 

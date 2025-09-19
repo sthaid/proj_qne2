@@ -8,7 +8,7 @@
 #include <sdl.h>
 #include <utils.h>
 
-#include "svcs/sensors/sensors.h"
+#include "svcs/Sensors/sensors.h"
 
 //
 // defines

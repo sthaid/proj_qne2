@@ -7,7 +7,7 @@
 #include <sdl.h>
 #include <utils.h>
 
-#include "svcs/sensors/sensors.h"
+#include "svcs/Sensors/sensors.h"
 
 // xxx todo 
 // - check for file full (next == max)
@@ -26,6 +26,10 @@ int main(int argc, char **argv)
     double    stepc_now, stepc_change, stepc_last;
 
     // save args
+    if (argc != 3) {
+        printf("ERROR: args expected: data_dir, id\n");
+        return 1;
+    }
     progname = argv[0];
     data_dir = argv[1];
     sscanf(argv[2], "%d", &id);
