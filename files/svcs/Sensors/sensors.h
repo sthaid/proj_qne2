@@ -24,6 +24,6 @@ typedef struct {
         double temperature;
         double humidity;
     } values[MAX_SENSOR_VALUES];
-} data_t;
+} sensors_data_t;
 
 #endif

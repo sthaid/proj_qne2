@@ -1,3 +1,23 @@
+gen.tar
+tools -> bin
+no Makefiles
+update top level Makefile
+script to build linux needs to gen_version
+
+Apps
+- env
+- hex_calc
+- pong
+- steps
+- compass
+- level
+- clock
+- morse_code
+- flashlight  (white or red)
+- lat/long/elevation
+
+-------------
+
 add app for pressure and maybe temperature/ humidity
 move services to within settings
 change color for devel mode, or use title line
