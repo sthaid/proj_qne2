@@ -87,7 +87,7 @@ static int init(void);
 static void cleanup(void);
 static void sigusr2_hndlr(int signum);
 #ifdef ANDROID
-static void create_default_apps_and_svcs(void);
+static void create_default_files(void);
 #endif
 
 int MAIN(int argc, char **argv)
@@ -135,19 +135,18 @@ static int init(void)
 
 #ifdef ANDROID
     // copy asset files to the working directory
-    sdl_copy_asset_file("apps_and_svcs.tar", ".");
-    sdl_copy_asset_file("copyright", ".");
-    sdl_copy_asset_file("FreeMonoBold.ttf", ".");
+    sdl_copy_asset_file("files.tar", ".");
+
+    // xxx
+    create_default_files();
 
 #if 0  // xxx
     // if apps dir struct doesn't exist then create it
     struct stat statbuf;
     rc = stat("apps", &statbuf);  // xxx svcs too ?
     if (rc != 0 || !S_ISDIR(statbuf.st_mode)) {
-        create_default_apps_and_svcs();
+        create_default_files();
     }
-#else
-    create_default_apps_and_svcs();
 #endif
 #endif
 
@@ -206,21 +205,21 @@ static void cleanup(void)
 }
 
 #ifdef ANDROID
-static void create_default_apps_and_svcs(void)
+static void create_default_files(void)
 {
     int rc;
 
-    // remove existing apps and svcs
-    rc = system("rm -rf apps svcs");
+    // remove existing directories and files
+    rc = system("rm -rf apps svcs copyright FreeMonoBold.ttf");
     if (rc != 0) {
-        ERROR("rm -rf apps svcs, failed\n");
+        ERROR("rm failed\n");
         return;
     }
 
-    // extract apps_and_svcs.tar
-    rc = system("tar -xvf apps_and_svcs.tar");
+    // extract files.tar
+    rc = system("tar -xvf files.tar");
     if (rc != 0) {
-        ERROR("tar -xvf apps_and_svcs.tar, failed\n");
+        ERROR("tar extract failed\n");
         return;
     }
 
@@ -1159,7 +1158,7 @@ static void settings(void)
             char *str; 
             str = sdl_get_input_str("Reset y/n?", false, BG_COLOR);
             if (strcasecmp(str, "y") == 0) {
-                create_default_apps_and_svcs();
+                create_default_files();
                 msg = "Apps/Svcs are reset.";
                 msg_time = util_microsec_timer();
             }

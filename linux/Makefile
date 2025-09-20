@@ -40,7 +40,7 @@ TARGET = ezApp
 CFLAGS = -Wall -Werror -Wno-unused-result -g -I../src $(shell pkg-config sdl3--cflags)
 
 $(TARGET):
-	../tools/gen_version
+	../bin/gen_version
 	gcc -o $@ $(CFLAGS) $(SRCS) -lSDL3 -lSDL3_ttf -lm
 
 run: $(TARGET)

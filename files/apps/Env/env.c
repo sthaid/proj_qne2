@@ -35,7 +35,6 @@ typedef struct {
 
 static char *progname;
 static char *data_dir;
-static bool  end_program;
 
 //
 // prototypes
@@ -45,8 +44,10 @@ static bool  end_program;
 
 int main(int argc, char **argv)
 {
-    int rc;
-    sdl_event_t event;
+    int             rc, idx;
+    sdl_event_t     event;
+    bool            end_program = false;
+    sensors_data_t *data;
 
     // get args
     progname = argv[0];
@@ -58,7 +59,7 @@ int main(int argc, char **argv)
     util_get_int_param(data_dir, "max_pressure", 1050);
 
     // map the sensors.dat file
-    data = util_map_file("svcs_data/Sensors" "sensors.dat", sizeof(sensors_data_t), false);
+    data = util_map_file("svcs_data/Sensors", "sensors.dat", sizeof(sensors_data_t), false);
     if (data == NULL) {
         printf("ERROR %s: failed to map sensors.dat\n", progname);
         return 1;
@@ -85,15 +86,12 @@ int main(int argc, char **argv)
         // register xxx events
         //sdl_register_event(NULL, EVID_MOTION);
         idx = data->hdr.next-1;
-        plot(idx,
-             params.min_pressure,
-             params.max_pressure,
-             DURATION_WEEK,
-             PRESSURE_SENSOR);
-
-
-idx, pressure, ymin, ymax, duration);
-        
+        printf("INFO %s: idx %d\n", progname, idx);
+//      plot(idx,
+//           params.min_pressure,
+//           params.max_pressure,
+//           DURATION_WEEK,
+//           PRESSURE);
 
         // present the display
         sdl_display_present();

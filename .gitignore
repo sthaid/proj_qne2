@@ -9,7 +9,7 @@ tags
 
 src/version.h
 
-tools/ezsh
+bin/ezsh
 
 picoc/my_tests
 

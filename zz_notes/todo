@@ -1,8 +1,10 @@
 gen.tar
-tools -> bin
-no Makefiles
-update top level Makefile
-script to build linux needs to gen_version
+tools -> bin                                           done
+no Makefiles                                            done
+update top level Makefile                               done
+script to build linux needs to gen_version               okay
+look at use of picoc '-'                                 no
+is gen_ver needed in test_app                           no
 
 Apps
 - env

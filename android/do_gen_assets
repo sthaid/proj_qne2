@@ -1,0 +1,6 @@
+#!/bin/bash
+
+cd ../files
+git ls-files > /tmp/files.txt
+tar -cf ../android/assets/files.tar --files-from /tmp/files.txt
+rm -f /tmp/files.txt
