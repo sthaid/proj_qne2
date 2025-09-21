@@ -1,3 +1,18 @@
+test_app compile fails but still runs linux
+
+file exists because size not dramatically changed
+
+util_map file could take an id arg to veirfy signature of file
+
+
+test_app
+file version checking
+xxxxxxxxxxx
+
+env sensor sim, test with gaps
+add plot routine
+
+
 
 Apps
 - env

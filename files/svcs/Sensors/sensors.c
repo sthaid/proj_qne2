@@ -13,6 +13,12 @@
 // - check for file full (next == max)
 // - add unit test code to simulate sensor data
 
+// defines
+#define SECS_PER_DAY 86400
+#define SECS_PER_HOUR 3600
+
+#define VERSION 3   // xxx use common version number,  Env also needs to validate file version
+
 // args
 static char *progname;
 static char *data_dir;
@@ -21,9 +27,7 @@ static int   id;
 int main(int argc, char **argv)
 {
     sensors_data_t *data = NULL;
-    int             rc;
-    time_t          t;
-    struct tm       tm, tm_last;
+    int             rc, idx, hour_last, hour_now;
     double          stepc_now, stepc_change, stepc_last;
 
     // save args
@@ -36,7 +40,7 @@ int main(int argc, char **argv)
     sscanf(argv[2], "%d", &id);
 
     // print starting message
-    printf("INFO %s: starting, data_dir = %s id = %d \n", progname, data_dir, id);
+    printf("INFO %s: starting, data_dir = %s id = %d VERSION = %d\n", progname, data_dir, id, VERSION);
     printf("INFO %s: sizeof sensors_data_t = %zd\n", progname, sizeof(sensors_data_t));
 
     // init the SDL sensor subsystem
@@ -50,22 +54,31 @@ int main(int argc, char **argv)
     // or if the file exists but is the wrong size
     data = util_map_file(data_dir, "sensors.dat", sizeof(sensors_data_t), true);
     if (data == NULL) {
-        printf("ERROR %s: failed to map sensors.dat\n", progname);
+        printf("ERROR %s: failed to map or create sensors.dat\n", progname);
         return 1;
     }
 
     // if sensors.dat is not initialized (it was probably just created) then
     // initialize non zero value fields
     if (data->hdr.initialized != SENSOR_DATA_INITIALIZED) {
+        printf("INFO %s: initializing sesnsors.dat\n", progname);
+        for (int i = 0; i < MAX_SENSOR_VALUES; i++) {
+            for (int j = 0; j < MAX_SENSORS; j++) {
+                data->values[i].sensors[j] = INVALID_SENSOR_VALUE;
+            }
+        }
+
+        data->hdr.start_hour = time(NULL) / SECS_PER_HOUR;
+        data->hdr.last_idx   = -1;
+        data->hdr.pad        = 0;
         data->hdr.initialized = SENSOR_DATA_INITIALIZED;
-        data->hdr.max = MAX_SENSOR_VALUES;
-        util_sync_file(&data->hdr, sizeof(data->hdr));
+
+        util_sync_file(data, sizeof(sensors_data_t));
     }
 
     // init variables used in the loop below
     sdl_sensor_read_step_counter(&stepc_last);
-    t = time(NULL);
-    localtime_r(&t, &tm_last);
+    hour_last = time(NULL) / SECS_PER_HOUR;
 
     // loop
     while (true) {
@@ -75,13 +88,20 @@ int main(int argc, char **argv)
             break;
         }  
 
-        // get time now
-        t = time(NULL);
-        localtime_r(&t, &tm);
+        // get hour now
+        hour_now = time(NULL) / SECS_PER_HOUR;
 
-        // if hour has changed then add new sensor data to sensors.dat
-        if (tm.tm_hour != tm_last.tm_hour) {
-            struct sensor_value_s *x = &data->values[data->hdr.next];
+        // if hour has changed then add new sensor data to sensors.dat for 
+        // the preceeding hour
+        if (hour_now != hour_last) {
+            // xxx comment
+            //printf("INFO %s: hour has changed from %d -> %d\n", progname, hour_last, hour_now);
+            idx = hour_now - data->hdr.start_hour - 1;
+            if (idx < 0 || idx >= MAX_SENSOR_VALUES) {
+                printf("ERROR %s: idx %d out of range\n", progname, idx);
+                sleep(5);
+                continue;
+            }
 
             // the step counter sensor value requires special attention
             // because the sensor value continuously increases; but what
@@ -94,38 +114,34 @@ int main(int argc, char **argv)
             }
             stepc_last = stepc_now;
 
-            // init new sensor_value_s; 
-            // note x->year is the actual year - 2000
-            x->time  = t;
-            x->month = tm_last.tm_mon + 1;
-            x->day   = tm_last.tm_mday;
-            x->year  = tm_last.tm_year - 100;
-            x->hour  = tm_last.tm_hour;
+            // write sensor values to memory mapped sensors.dat, and
+            // sync update to sensors.dat file
+            struct sensor_value_s *x = &data->values[idx];
             x->sensors[STEP_COUNT] = stepc_change;
             sdl_sensor_read_pressure(&x->sensors[PRESSURE]);
             sdl_sensor_read_temperature(&x->sensors[TEMPERATURE]);
             sdl_sensor_read_humidity(&x->sensors[HUMIDITY]);
+            util_sync_file(x, sizeof(struct sensor_value_s));
 
-            printf("INFO %s: %02d/%02d/%02d %02d: steps=%.0f pressure=%.0f temp=%.0f humidity=%.0f\n",
-                   progname,
-                   x->month, x->day, x->year, x->hour,
+            // update hdr.last_idx 
+            data->hdr.last_idx = idx;
+            util_sync_file(&data->hdr.last_idx, sizeof(data->hdr.last_idx));
+
+            // print values just added to sensors.dat
+            time_t t = (data->hdr.start_hour + idx) * SECS_PER_HOUR;
+            struct tm tm;
+            gmtime_r(&t, &tm);
+            printf("INFO %s: added values[%d] utc=%02d/%02d/%02d %02d:%02d:%02d) steps=%.0f pressure=%.0f temp=%.0f humidity=%.0f\n",
+                   progname, idx,
+                   tm.tm_mon + 1, tm.tm_mday, tm.tm_year - 100, tm.tm_hour, tm.tm_min, tm.tm_sec,
                    x->sensors[STEP_COUNT], 
                    x->sensors[PRESSURE], 
                    x->sensors[TEMPERATURE], 
                    x->sensors[HUMIDITY]);
 
-            // sync value struct to file
-            util_sync_file(x, sizeof(struct sensor_value_s));
-
-            // increment hdr.next field, which will make the just
-            // published sensor_value_s available to readers of the
-            // sensors.dat file
-            data->hdr.next++;
-            util_sync_file(&data->hdr, sizeof(data->hdr));
+            // save hour_last for next loop
+            hour_last = hour_now;
         }
-
-        // save tm for comparison on next loop
-        tm_last = tm;
 
         // sleep 5 sec
         sleep(5);

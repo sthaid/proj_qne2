@@ -3,6 +3,9 @@
 # create src/version.h
 ../bin/gen_version
 
+# create assets/files.tar
+./do_gen_assets
+
 # rebuild
 cd SDL/build/org.sthaid.ezApp
 ./gradlew assembleDebug

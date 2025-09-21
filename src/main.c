@@ -216,6 +216,9 @@ static void create_default_files(void)
         return;
     }
 
+    // xxx temp
+    system("rm -rf apps_data svcs_data");
+
     // extract files.tar
     rc = system("tar -xvf files.tar");
     if (rc != 0) {

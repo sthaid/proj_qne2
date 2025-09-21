@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <stdbool.h>
+#include <time.h>
 //#include <unistd.h>
-//#include <time.h>
 //#include <string.h>
 //#include <stdlib.h>
 
@@ -19,6 +19,10 @@
 //
 // defines
 //
+
+#define SECS_PER_HOUR 3600 //xxx
+
+#define VERSION 1
 
 //
 // typedefs
@@ -42,17 +46,35 @@ static char *data_dir;
 
 // -----------------  MAIN  ------------------------------------------
 
+#define MAX_STR_TBL 8
+char *str(double x)
+{
+    static char str_tbl[MAX_STR_TBL][50];
+    static int  n;
+    char *s;
+
+    if (x == INVALID_SENSOR_VALUE) {
+        return "invld";
+    } else {
+        s = str_tbl[n];
+        n = (n + 1) % MAX_STR_TBL;
+        sprintf(s, "%.0f", x);
+        return s;
+    }
+}
+
 int main(int argc, char **argv)
 {
-    int             rc, idx;
+    int             rc;
     sdl_event_t     event;
     bool            end_program = false;
     sensors_data_t *data;
+    bool            first = true;
 
     // get args
     progname = argv[0];
     data_dir = argv[1];
-    printf("INFO %s: starting, data_dir=%s\n", progname, data_dir);
+    printf("INFO %s: starting, data_dir=%s version=%d\n", progname, data_dir, VERSION);
 
     // get params
     util_get_int_param(data_dir, "min_pressure", 950);
@@ -83,10 +105,42 @@ int main(int argc, char **argv)
                                     COLOR_BLACK,
                                     0, 0, EVID_QUIT);
 
+        // print last 10 sensor values
+        int start_hour, last_idx, i, idx;
+        double pressure, step_count;
+        time_t t;
+        struct tm tm;
+        int r = 2;
+
+        start_hour = data->hdr.start_hour;
+        last_idx   = data->hdr.last_idx;
+        for (i = 0; i < 10; i++) {
+            idx = last_idx - i;
+            if (idx < 0 || idx >= MAX_SENSOR_VALUES) {
+                break;
+            }
+
+            t = (start_hour + idx) * SECS_PER_HOUR;
+            pressure = data->values[idx].sensors[PRESSURE];
+            step_count = data->values[idx].sensors[STEP_COUNT];
+            gmtime_r(&t, &tm);
+
+            if (first) {
+                printf("INFO %s: utc=%02d/%02d/%02d %02d:%02d:%02d) pressure=%s  step_count=%s\n",
+                   progname,
+                   tm.tm_mon + 1, tm.tm_mday, tm.tm_year-100, tm.tm_hour, tm.tm_min, tm.tm_sec,
+                   str(pressure), str(step_count));
+            }
+
+            sdl_render_printf(0, ROW2Y(r++), "%02d/%02d %02d %s %s",
+                     tm.tm_mon+1, tm.tm_mday, tm.tm_hour, str(pressure), str(step_count));
+        }
+        first = false;
+
         // register xxx events
         //sdl_register_event(NULL, EVID_MOTION);
-        idx = data->hdr.next-1;
-        printf("INFO %s: idx %d\n", progname, idx);
+//      idx = data->hdr.next-1;
+//      printf("INFO %s: idx %d\n", progname, idx);
 //      plot(idx,
 //           params.min_pressure,
 //           params.max_pressure,
@@ -117,6 +171,8 @@ int main(int argc, char **argv)
 
     // exit sdl
     sdl_quit(SUBSYS_VIDEO);
+
+    util_unmap_file(data);
 
     // return success
     printf("INFO %s: terminating\n", progname);

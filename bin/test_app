@@ -35,21 +35,25 @@ cd ../..
 SRCS=$(echo $PARENT_DIR/$APP_DIR/*.c)
 
 # debug
-echo $PARENT_DIR
-echo $APP_DIR
-echo $SRCS
-echo $SRCS_COMMON
-echo $CFLAGS
-echo $DATA_DIR
+#echo $PARENT_DIR
+#echo $APP_DIR
+#echo $SRCS
+#echo $SRCS_COMMON
+#echo $CFLAGS
+#echo $DATA_DIR
 
 # perform command
 if [ "$CMD" = build ]; then
+    set -x
     gcc -o /tmp/$TARGET $CFLAGS $SRCS $SRCS_COMMON -lSDL3 -lSDL3_ttf -lm
+    set +x
     if [ $? -ne 0 ]; then
         exit 1
     fi
 elif [ "$CMD" = run_linux ]; then
+    set -x
     gcc -o /tmp/$TARGET $CFLAGS $SRCS $SRCS_COMMON -lSDL3 -lSDL3_ttf -lm
+    set +x
     if [ $? -ne 0 ]; then
         exit 1
     fi
@@ -57,6 +61,8 @@ elif [ "$CMD" = run_linux ]; then
     /tmp/$TARGET $DATA_DIR 0
 elif [ "$CMD" = run_picoc ]; then
     mkdir -p $DATA_DIR
+    set -x
     ../picoc/picoc -n $TARGET $SRCS - $DATA_DIR 0
+    set +x
 fi
 
