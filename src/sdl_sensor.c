@@ -131,6 +131,8 @@ int sdl_sensor_read_raw(int id, double *data, int num_values)
     bool  succ;
     float float_data[16];
 
+// xxx mutex
+
     // Note that the data are first obtained in float_data[], and 
     // then converted to doubles for return in the data array.
     // The reason for this is that picoc handles variables declared 

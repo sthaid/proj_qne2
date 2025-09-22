@@ -217,7 +217,7 @@ static void create_default_files(void)
     }
 
     // xxx temp
-    system("rm -rf apps_data svcs_data");
+    //system("rm -rf apps_data svcs_data");
 
     // extract files.tar
     rc = system("tar -xvf files.tar");

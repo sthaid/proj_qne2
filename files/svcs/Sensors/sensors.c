@@ -17,18 +17,20 @@
 #define SECS_PER_DAY 86400
 #define SECS_PER_HOUR 3600
 
-#define VERSION 3   // xxx use common version number,  Env also needs to validate file version
-
 // args
 static char *progname;
 static char *data_dir;
 static int   id;
+
+// prototypes
+char *sensval2str(double x);
 
 int main(int argc, char **argv)
 {
     sensors_data_t *data = NULL;
     int             rc, idx, hour_last, hour_now;
     double          stepc_now, stepc_change, stepc_last;
+    double          dummy;
 
     // save args
     if (argc != 3) {
@@ -40,8 +42,10 @@ int main(int argc, char **argv)
     sscanf(argv[2], "%d", &id);
 
     // print starting message
-    printf("INFO %s: starting, data_dir = %s id = %d VERSION = %d\n", progname, data_dir, id, VERSION);
-    printf("INFO %s: sizeof sensors_data_t = %zd\n", progname, sizeof(sensors_data_t));
+    printf("INFO %s: starting, data_dir = %s id = %d\n", progname, data_dir, id);
+    printf("INFO %s: sensors.dat:\n", progname);
+    printf("INFO %s:   version supported = %lx\n", progname, SENSORS_DATA_FILE_VERSION);
+    printf("INFO %s:   size              = %zd\n", progname, sizeof(sensors_data_t));
 
     // init the SDL sensor subsystem
     rc = sdl_init(SUBSYS_SENSOR);
@@ -58,10 +62,9 @@ int main(int argc, char **argv)
         return 1;
     }
 
-    // if sensors.dat is not initialized (it was probably just created) then
-    // initialize non zero value fields
-    if (data->hdr.initialized != SENSOR_DATA_INITIALIZED) {
-        printf("INFO %s: initializing sesnsors.dat\n", progname);
+    // if sensors.dat file is wrong version then
+    // initialize the file's mapped data fields
+    if (data->hdr.version != SENSORS_DATA_FILE_VERSION) {
         for (int i = 0; i < MAX_SENSOR_VALUES; i++) {
             for (int j = 0; j < MAX_SENSORS; j++) {
                 data->values[i].sensors[j] = INVALID_SENSOR_VALUE;
@@ -71,10 +74,20 @@ int main(int argc, char **argv)
         data->hdr.start_hour = time(NULL) / SECS_PER_HOUR;
         data->hdr.last_idx   = -1;
         data->hdr.pad        = 0;
-        data->hdr.initialized = SENSOR_DATA_INITIALIZED;
+        data->hdr.version = SENSORS_DATA_FILE_VERSION;
 
         util_sync_file(data, sizeof(sensors_data_t));
+
+        printf("INFO %s: initialized sesnsors.dat, start_hour = %ld\n", progname, data->hdr.start_hour);
+    } else {
+        printf("INFO %s: sensors.dat mapped and version verified\n", progname);
     }
+
+    // xxx comment
+    sdl_sensor_read_step_counter(&dummy);
+    sdl_sensor_read_pressure(&dummy);
+    sdl_sensor_read_temperature(&dummy);
+    sdl_sensor_read_humidity(&dummy);
 
     // init variables used in the loop below
     sdl_sensor_read_step_counter(&stepc_last);
@@ -131,13 +144,13 @@ int main(int argc, char **argv)
             time_t t = (data->hdr.start_hour + idx) * SECS_PER_HOUR;
             struct tm tm;
             gmtime_r(&t, &tm);
-            printf("INFO %s: added values[%d] utc=%02d/%02d/%02d %02d:%02d:%02d) steps=%.0f pressure=%.0f temp=%.0f humidity=%.0f\n",
+            printf("INFO %s: added values[%d] utc=%02d/%02d/%02d %02d:%02d:%02d) steps=%s pressure=%s temp=%s humidity=%s\n",
                    progname, idx,
                    tm.tm_mon + 1, tm.tm_mday, tm.tm_year - 100, tm.tm_hour, tm.tm_min, tm.tm_sec,
-                   x->sensors[STEP_COUNT], 
-                   x->sensors[PRESSURE], 
-                   x->sensors[TEMPERATURE], 
-                   x->sensors[HUMIDITY]);
+                   sensval2str(x->sensors[STEP_COUNT]),
+                   sensval2str(x->sensors[PRESSURE]), 
+                   sensval2str(x->sensors[TEMPERATURE]), 
+                   sensval2str(x->sensors[HUMIDITY]));
 
             // save hour_last for next loop
             hour_last = hour_now;
@@ -154,3 +167,19 @@ int main(int argc, char **argv)
     return 0;
 }
 
+#define MAX_STR_TBL 8
+char *sensval2str(double x)
+{
+    static char str_tbl[MAX_STR_TBL][50];
+    static int  n;
+    char *s;
+
+    if (x == INVALID_SENSOR_VALUE) {
+        return "invld";
+    } else {
+        s = str_tbl[n];
+        n = (n + 1) % MAX_STR_TBL;
+        sprintf(s, "%.0f", x);
+        return s;
+    }
+}

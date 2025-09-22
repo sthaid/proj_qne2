@@ -1,9 +1,6 @@
 #include <stdio.h>
 #include <stdbool.h>
 #include <time.h>
-//#include <unistd.h>
-//#include <string.h>
-//#include <stdlib.h>
 
 #include <sdl.h>
 #include <utils.h>
@@ -21,8 +18,6 @@
 //
 
 #define SECS_PER_HOUR 3600 //xxx
-
-#define VERSION 1
 
 //
 // typedefs
@@ -44,24 +39,9 @@ static char *data_dir;
 // prototypes
 //
 
+char *sensval2str(double x);
+
 // -----------------  MAIN  ------------------------------------------
-
-#define MAX_STR_TBL 8
-char *str(double x)
-{
-    static char str_tbl[MAX_STR_TBL][50];
-    static int  n;
-    char *s;
-
-    if (x == INVALID_SENSOR_VALUE) {
-        return "invld";
-    } else {
-        s = str_tbl[n];
-        n = (n + 1) % MAX_STR_TBL;
-        sprintf(s, "%.0f", x);
-        return s;
-    }
-}
 
 int main(int argc, char **argv)
 {
@@ -71,21 +51,33 @@ int main(int argc, char **argv)
     sensors_data_t *data;
     bool            first = true;
 
-    // get args
+    // save args
     progname = argv[0];
     data_dir = argv[1];
-    printf("INFO %s: starting, data_dir=%s version=%d\n", progname, data_dir, VERSION);
+
+    // print startup messages
+    printf("INFO %s: starting, data_dir = %s\n", progname, data_dir);
+    printf("INFO %s: sensors.dat:\n", progname);
+    printf("INFO %s:   version supported = %lx\n", progname, SENSORS_DATA_FILE_VERSION);
+    printf("INFO %s:   size              = %zd\n", progname, sizeof(sensors_data_t));
 
     // get params
     util_get_int_param(data_dir, "min_pressure", 950);
     util_get_int_param(data_dir, "max_pressure", 1050);
 
-    // map the sensors.dat file
+    // map the sensors.dat file;
+    // if map failed or file version is incorrect then return error
     data = util_map_file("svcs_data/Sensors", "sensors.dat", sizeof(sensors_data_t), false);
     if (data == NULL) {
         printf("ERROR %s: failed to map sensors.dat\n", progname);
         return 1;
     }
+    if (data->hdr.version != SENSORS_DATA_FILE_VERSION) {
+        printf("ERROR %s: sensors.dat version %lx is not supported, expected %lx\n",
+               progname, data->hdr.version, SENSORS_DATA_FILE_VERSION);
+        return 1;
+    }
+    printf("INFO %s: sensors.dat mapped and version verified\n", progname);
 
     // init sdl
     rc = sdl_init(SUBSYS_VIDEO);
@@ -129,11 +121,11 @@ int main(int argc, char **argv)
                 printf("INFO %s: utc=%02d/%02d/%02d %02d:%02d:%02d) pressure=%s  step_count=%s\n",
                    progname,
                    tm.tm_mon + 1, tm.tm_mday, tm.tm_year-100, tm.tm_hour, tm.tm_min, tm.tm_sec,
-                   str(pressure), str(step_count));
+                   sensval2str(pressure), sensval2str(step_count));
             }
 
             sdl_render_printf(0, ROW2Y(r++), "%02d/%02d %02d %s %s",
-                     tm.tm_mon+1, tm.tm_mday, tm.tm_hour, str(pressure), str(step_count));
+                     tm.tm_mon+1, tm.tm_mday, tm.tm_hour, sensval2str(pressure), sensval2str(step_count));
         }
         first = false;
 
@@ -177,4 +169,21 @@ int main(int argc, char **argv)
     // return success
     printf("INFO %s: terminating\n", progname);
     return 0;
+}
+
+#define MAX_STR_TBL 8
+char *sensval2str(double x)
+{
+    static char str_tbl[MAX_STR_TBL][50];
+    static int  n;
+    char *s;
+
+    if (x == INVALID_SENSOR_VALUE) {
+        return "invld";
+    } else {
+        s = str_tbl[n];
+        n = (n + 1) % MAX_STR_TBL;
+        sprintf(s, "%.0f", x);
+        return s;
+    }
 }

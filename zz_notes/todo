@@ -1,3 +1,8 @@
+apps/Env: utc=09/21/25 18:00:00) pressure=0  step_count=34294
+
+
+xxxxxxxxxx
+
 test_app compile fails but still runs linux
 
 file exists because size not dramatically changed
@@ -5,8 +10,9 @@ file exists because size not dramatically changed
 util_map file could take an id arg to veirfy signature of file
 
 
-test_app
-file version checking
+test_app                          ok
+file version checking             ok
+sensors.h
 xxxxxxxxxxx
 
 env sensor sim, test with gaps
