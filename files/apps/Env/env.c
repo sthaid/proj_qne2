@@ -115,7 +115,7 @@ int main(int argc, char **argv)
             t = (start_hour + idx) * SECS_PER_HOUR;
             pressure = data->values[idx].sensors[PRESSURE];
             step_count = data->values[idx].sensors[STEP_COUNT];
-            gmtime_r(&t, &tm);
+            localtime_r(&t, &tm);
 
             if (first) {
                 printf("INFO %s: utc=%02d/%02d/%02d %02d:%02d:%02d) pressure=%s  step_count=%s\n",

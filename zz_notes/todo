@@ -1,4 +1,9 @@
 simulated sensor values
+capture data differently
+use localtime
+
+xxxxxxxx
+
 sensor mutex
 add option to clear apps and files, what about restarting a service
 add plot routine
