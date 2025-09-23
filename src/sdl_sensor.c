@@ -30,6 +30,8 @@ static int               max_sensor_info_tbl;
 
 SDL_Sensor              *sensor[MAX_SENSOR_ID];  // indexed by id
 
+static double first_step_count;
+
 //
 // prototypes
 //
@@ -40,6 +42,7 @@ int sdl_sensor_init(void)
 {
     int            i, max, num_sensors;
     SDL_SensorID  *ids;
+    double         dummy, pressure;
 
     INFO("initializing\n");
 
@@ -83,6 +86,18 @@ int sdl_sensor_init(void)
 
     // free the list of ids
     SDL_free(ids);
+
+    // xxx comment
+    sdl_sensor_read_temperature(&dummy);
+    sdl_sensor_read_humidity(&dummy);
+    sdl_sensor_read_pressure(&dummy);
+    sdl_sensor_read_step_counter(&dummy);
+    usleep(250000);
+    sdl_sensor_read_temperature(&dummy);
+    sdl_sensor_read_humidity(&dummy);
+    sdl_sensor_read_pressure(&pressure);
+    sdl_sensor_read_step_counter(&first_step_count);
+    INFO("first_step_count = %.0f pressure = %.0f\n", first_step_count, pressure);
 
     // return success
     INFO("success\n");
@@ -196,7 +211,6 @@ int sdl_sensor_read_step_counter(double *step_count)
     
     static bool   first_call = true;
     static int    id = -1;
-    static double first_step_count = -1;
 
     // if first call then find the sensor id;
     // if not found then return error
@@ -211,11 +225,6 @@ int sdl_sensor_read_step_counter(double *step_count)
 
     // read step counter sensor
     sdl_sensor_read_raw(id, data, 3);
-
-    // save the first step count value read
-    if (first_step_count == -1) {
-        first_step_count = data[0];
-    }
 
     // return step count sensor value minus first step count value read
     *step_count = data[0] - first_step_count;

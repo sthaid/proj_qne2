@@ -1,34 +1,27 @@
+simulated sensor values
+sensor mutex
+add option to clear apps and files, what about restarting a service
+add plot routine
+rename env to sensors
+
+xxxxxxxxxxx
+xxxxxxxxxxx
+xxxxxxxxxxx
+
 apps/Env: utc=09/21/25 18:00:00) pressure=0  step_count=34294
 
 
 xxxxxxxxxx
 
-test_app compile fails but still runs linux
-
-file exists because size not dramatically changed
-
-util_map file could take an id arg to veirfy signature of file
-
-
-test_app                          ok
-file version checking             ok
-sensors.h
-xxxxxxxxxxx
-
-env sensor sim, test with gaps
-add plot routine
-
-
-
 Apps
 - env
 - hex_calc
+- compass
+- clock
+- level
+- morse_code
 - pong
 - steps
-- compass
-- level
-- clock
-- morse_code
 - flashlight  (white or red)
 - lat/long/elevation
 

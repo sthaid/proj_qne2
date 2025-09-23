@@ -30,7 +30,6 @@ int main(int argc, char **argv)
     sensors_data_t *data = NULL;
     int             rc, idx, hour_last, hour_now;
     double          stepc_now, stepc_change, stepc_last;
-    double          dummy;
 
     // save args
     if (argc != 3) {
@@ -82,12 +81,6 @@ int main(int argc, char **argv)
     } else {
         printf("INFO %s: sensors.dat mapped and version verified\n", progname);
     }
-
-    // xxx comment
-    sdl_sensor_read_step_counter(&dummy);
-    sdl_sensor_read_pressure(&dummy);
-    sdl_sensor_read_temperature(&dummy);
-    sdl_sensor_read_humidity(&dummy);
 
     // init variables used in the loop below
     sdl_sensor_read_step_counter(&stepc_last);
