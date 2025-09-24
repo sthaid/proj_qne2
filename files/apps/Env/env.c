@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdbool.h>
 #include <time.h>
+#include <string.h>  // for memset
 
 #include <sdl.h>
 #include <utils.h>
@@ -12,6 +13,18 @@
 // - buy wifi temperature sensor
 // - check into auto start   SampleForegroundService
 // - store time_t in sensors.dat, in addition to what is there
+
+// xxx temp
+typedef struct {
+    double xval;
+    double yval;
+} plot_point_t;
+void *sdl_plot_create(char *title, 
+                      int xleft, int xright, int ybottom, int ytop,
+                      double xval_min, int xval_max, double yval_min, int yval_max,
+                      double yval_of_x_axis);
+void sdl_plot_points(void *cx_arg, plot_point_t *p_arg, int n_arg);
+void sdl_plot_free(void *cx);
 
 //
 // defines
@@ -49,7 +62,9 @@ int main(int argc, char **argv)
     sdl_event_t     event;
     bool            end_program = false;
     sensors_data_t *data;
-    bool            first = true;
+    double          motion = 0;
+
+    int i,j;
 
     // save args
     progname = argv[0];
@@ -96,38 +111,35 @@ int main(int argc, char **argv)
         sdl_register_control_events(NULL, NULL, "X", 
                                     COLOR_BLACK,
                                     0, 0, EVID_QUIT);
+        sdl_register_event(NULL, EVID_MOTION);
 
-        // print last 10 sensor values
-        int start_hour, last_idx, i, idx;
-        double pressure, step_count;
-        time_t t;
-        struct tm tm;
-        int r = 2;
+        // xxx
+        // - change to span
+        // - dont use full win_width span, use one less
+        void *cx;
+        plot_point_t pts[100];
+        for (i = 0; i < 100; i++) {
+            pts[i].xval = 0.5 + i;
+            pts[i].yval = 950 + i;
+        }
 
-        start_hour = data->hdr.start_hour;
-        last_idx   = data->hdr.last_idx;
-        for (i = 0; i < 10; i++) {
-            idx = last_idx - i;
-            if (idx < 0 || idx >= MAX_SENSOR_VALUES) {
+        cx =  sdl_plot_create("TITLE", 0, sdl_win_width-1, 800, 100,
+                              motion, motion+24, 950, 1050, 1000);
+
+        for (i = 0; i < 100; i++) {
+            if (pts[i].xval > motion) {
                 break;
             }
-
-            t = (start_hour + idx) * SECS_PER_HOUR;
-            pressure = data->values[idx].sensors[PRESSURE];
-            step_count = data->values[idx].sensors[STEP_COUNT];
-            localtime_r(&t, &tm);
-
-            if (first) {
-                printf("INFO %s: utc=%02d/%02d/%02d %02d:%02d:%02d) pressure=%s  step_count=%s\n",
-                   progname,
-                   tm.tm_mon + 1, tm.tm_mday, tm.tm_year-100, tm.tm_hour, tm.tm_min, tm.tm_sec,
-                   sensval2str(pressure), sensval2str(step_count));
-            }
-
-            sdl_render_printf(0, ROW2Y(r++), "%02d/%02d %02d %s %s",
-                     tm.tm_mon+1, tm.tm_mday, tm.tm_hour, sensval2str(pressure), sensval2str(step_count));
         }
-        first = false;
+        for (j = i; j < 100; j++) {
+            if (pts[j].xval > motion+24) {
+                break;
+            }
+        }
+
+        sdl_plot_points(cx, &pts[i], j-i);
+
+        sdl_plot_free(cx);
 
         // register xxx events
         //sdl_register_event(NULL, EVID_MOTION);
@@ -153,6 +165,9 @@ int main(int argc, char **argv)
         switch (event.event_id) {
         case EVID_QUIT:
             end_program = true;
+            break;      
+        case EVID_MOTION:
+            motion -= event.u.motion.xrel * (24. / sdl_win_width);
             break;      
         }
 
@@ -187,3 +202,122 @@ char *sensval2str(double x)
         return s;
     }
 }
+
+// xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+// xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+
+#include <math.h>
+#include <stdlib.h>
+#include <string.h>
+
+typedef struct {
+    char   title[64];
+    int    xleft;
+    int    xright;
+    int    xspan;
+    int    ybottom;
+    int    ytop;
+    int    yspan;
+    double xval_min;
+    double xval_max;
+    double yval_min;
+    double yval_max;
+    double yval_of_x_axis;
+} plot_cx_t;  // private
+
+
+int xval2x(plot_cx_t *cx, double xval)
+{
+    int x;
+
+// xxx yval_span
+    x = nearbyint(cx->xleft + (xval - cx->xval_min) * cx->xspan / (cx->xval_max - cx->xval_min));
+    if (x < cx->xleft) x = cx->xleft;
+    if (x > cx->xright) x = cx->xright;
+
+    return x;
+}
+
+int yval2y(plot_cx_t *cx, double yval)
+{
+    int y;
+
+// xxx yval_span
+    y = nearbyint(cx->ybottom - (yval - cx->yval_min) * cx->yspan / (cx->yval_max - cx->yval_min));
+    if (y > cx->ybottom) y = cx->ybottom;
+    if (y < cx->ytop) y = cx->ytop;
+
+    return y;
+}
+
+void *sdl_plot_create(char *title, 
+                      int xleft, int xright, int ybottom, int ytop,
+                      double xval_min, int xval_max, double yval_min, int yval_max,
+                      double yval_of_x_axis)
+{
+    plot_cx_t *cx;
+    int i;
+
+    // alloc cx and save params in cx
+    cx = calloc(1, sizeof(plot_cx_t));
+    strcpy(cx->title, title);
+    cx->xleft          = xleft;
+    cx->xright         = xright;
+    cx->xspan          = xright - xleft + 1;
+    cx->ybottom        = ybottom;
+    cx->ytop           = ytop;
+    cx->yspan          = ybottom - ytop + 1;
+    cx->xval_min       = xval_min;
+    cx->xval_max       = xval_max;
+    cx->yval_min       = yval_min;
+    cx->yval_max       = yval_max;
+    cx->yval_of_x_axis = yval_of_x_axis;
+
+    // draw y-axis on both left and right
+    for (i = 0; i < 3; i++) {
+        sdl_render_line(xleft+i, ybottom, xleft+i, ytop, COLOR_BLUE);
+        sdl_render_line(xright-i, ybottom, xright-i, ytop, COLOR_BLUE);
+    }
+
+    // draw x-axis
+    int y = yval2y(cx, yval_of_x_axis);
+    for (i = -1; i <= 1; i++) {
+        sdl_render_line(xleft, y+i, xright, y+i, COLOR_BLUE);
+    }
+
+    // label x and y axis
+    // xxx
+
+    // return cx
+    return cx;
+}
+
+void sdl_plot_points(void *cx_arg, plot_point_t *p_arg, int n_arg)
+{
+    plot_cx_t *cx = (plot_cx_t*)cx_arg;
+    sdl_point_t *points;
+    int i, n=0, point_size=5;
+
+    points = malloc(n_arg * sizeof(sdl_point_t));
+
+    for (i = 0; i < n_arg; i++) {
+        points[n].x = xval2x(cx, p_arg[i].xval);
+        points[n].y = yval2y(cx, p_arg[i].yval);
+        n++;
+    }
+    sdl_render_points(points, n, COLOR_WHITE, point_size);
+
+    free(points);
+}
+
+//void sdl_plot_bars(plot_bar_t *b, int n)
+//{
+//}
+
+
+void sdl_plot_free(void *cx)
+{
+    // free cx
+    free(cx);
+}
+
