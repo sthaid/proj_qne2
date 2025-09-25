@@ -127,10 +127,17 @@ int main(int argc, char **argv)
             }
 
             // xxx
-            sv->sensors[STEP_COUNT] = 0;
-            sdl_sensor_read_pressure(&sv->sensors[PRESSURE]);
-            sdl_sensor_read_temperature(&sv->sensors[TEMPERATURE]);
-            sdl_sensor_read_humidity(&sv->sensors[HUMIDITY]);
+            if (TEST) {
+                sv->sensors[STEP_COUNT]  = 0;
+                sv->sensors[PRESSURE]    = 1000;
+                sv->sensors[TEMPERATURE] = 20;
+                sv->sensors[HUMIDITY]    = 50;
+            } else {
+                sv->sensors[STEP_COUNT] = 0;
+                sdl_sensor_read_pressure(&sv->sensors[PRESSURE]);
+                sdl_sensor_read_temperature(&sv->sensors[TEMPERATURE]);
+                sdl_sensor_read_humidity(&sv->sensors[HUMIDITY]);
+            }
 
             // update hdr.last_idx 
             data->hdr.last_idx = idx;
