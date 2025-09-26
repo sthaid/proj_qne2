@@ -1,3 +1,5 @@
+https://github.com/json-c/json-c
+
 https://www.weather.gov/documentation/services-web-api#:~:text=All%20of%20the%20information%20presented,to%20use%20for%20any%20purpose.
 
 https://api.weather.gov/
@@ -9,6 +11,11 @@ https://api.weather.gov/points/41.0,90.1
 example using api.weather.gov to get temeprature at latitude longitude
 curl "https://api.weather.gov/points/38.8894,-77.0352" -H "User-Agent: my-weather-app (myemail@example.com)"
 curl "https://api.weather.gov/points/38.8894,-77.0352" -H "User-Agent: steven-haid-app (stevenhaid@gmail.com)"
+
+curl "https://api.weather.gov/points/38.8894,-77.0352" -H "User-Agent: steven-haid-app (stevenhaid@gmail.com)"
+curl "https://api.weather.gov/points/42.4334,-71.6078" -H "User-Agent: steven-haid-app (stevenhaid@gmail.com)"
+
+42.4334,-71.6078
 
 simulated sensor values
 capture data differently

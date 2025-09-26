@@ -222,9 +222,9 @@ void add_simulated_values(sensors_data_t *data)
         idx = hour_now - data->hdr.start_hour;
         sv = &data->values[idx];
 
-        sv->sensors[PRESSURE]    = 1000 + 50 * sin(i * (2 * M_PI / 168));
-        sv->sensors[TEMPERATURE] = 70 + 30 * sin(i * (2 * M_PI / 168));
-        sv->sensors[HUMIDITY]    = 60 + 20 * sin(i * (2 * M_PI / 168));
+        sv->sensors[PRESSURE]    = 1000 + 50 * sin(i * (2 * M_PI / 240));
+        sv->sensors[TEMPERATURE] = 70 + 30 * sin(i * (2 * M_PI / 240));
+        sv->sensors[HUMIDITY]    = 60 + 20 * sin(i * (2 * M_PI / 240));
         sv->sensors[STEP_COUNT]  = 1000;
 
         data->hdr.last_idx = idx;
