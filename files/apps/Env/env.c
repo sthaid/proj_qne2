@@ -36,7 +36,7 @@ void *sdl_plot_create(char *title,
 void sdl_plot_points(void *cx_arg, plot_point_t *pts, int num_pts);
 void sdl_plot_bars(void *cx_arg, 
                    plot_point_t *pts_avg, plot_point_t *pts_min, plot_point_t *pts_max,
-                   int num_pts);
+                   int num_pts, double bar_wval);
 void sdl_plot_free(void *cx);
 
 //
@@ -270,13 +270,9 @@ void plot_daily(plot_t *p, int psh, int peh, int ybottom, int ytop)
                                psh, psh+NUM_DAYS*24,          // xval_left, xval_right
                                p->yval_bottom, p->yval_top,      // yval_bottom, yval_top
                                p->yval_of_x_axis);               // yval_of_x_axis
-#if 0
-    sdl_plot_points(plot_cx, pts_avg, num_pts);
-    sdl_plot_points(plot_cx, pts_min, num_pts);
-    sdl_plot_points(plot_cx, pts_max, num_pts);
-#else
-    sdl_plot_bars(plot_cx, pts_avg, pts_min, pts_max, num_pts);
-#endif
+
+    sdl_plot_bars(plot_cx, pts_avg, pts_min, pts_max, num_pts, 24);
+
     sdl_plot_free(plot_cx);
 }
 
@@ -285,29 +281,23 @@ void get_plot_pts(int which, int psh, int peh, plot_point_t *pts, int *num_pts)
     int hour, idx, n=0;
     double value;
 
-    //printf("start hour = %ld  last_idx = %ld\n", data->hdr.start_hour, data->hdr.last_idx);
     for (hour = psh; hour <= peh; hour++) {
         idx = hour - data->hdr.start_hour;
-        //printf("hour=%d  idx=%d\n", hour, idx);
         if (idx < 0 || idx > data->hdr.last_idx || idx >= MAX_SENSOR_VALUES) {
-            //printf("ERR idx out of range\n");
             continue;
         }
 
         value = data->values[idx].sensors[which];
         if (value == INVALID_SENSOR_VALUE) {
-            //printf("ERR value invalid\n");
             continue;
         }
 
         pts[n].xval = hour + 0.5;
         pts[n].yval = value;
         n++;
-        // xxx limit value to min/max
-        //printf("added pts is now %d\n", n);
-    }
 
-    //sleep(3);
+        // xxx limit value to min/max
+    }
 
     *num_pts = n;
 }
@@ -544,7 +534,7 @@ void sdl_plot_points(void *cx_arg, plot_point_t *pts, int num_pts)
 
 void sdl_plot_bars(void *cx_arg, 
                    plot_point_t *pts_avg, plot_point_t *pts_min, plot_point_t *pts_max,
-                   int num_pts)
+                   int num_pts, double bar_wval)
 {
     int        i, x, y, w, h;
     double     wval, hval, xval, yval;
@@ -555,7 +545,7 @@ void sdl_plot_bars(void *cx_arg,
     pts_min[0].yval = pts_max[0].yval = pts_avg[0].yval = 1010;
 
     for (i = 0; i < num_pts; i++) {
-        wval = cx->xval_span / 10;  // xxx 10
+        wval = bar_wval;
         hval = pts_max[i].yval - pts_min[i].yval;
         xval = pts_min[i].xval - wval/2;
         yval = pts_max[i].yval;
