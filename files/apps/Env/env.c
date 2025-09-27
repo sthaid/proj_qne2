@@ -15,6 +15,15 @@
 // - check into auto start   SampleForegroundService
 // - store time_t in sensors.dat, in addition to what is there
 
+// xxx todo
+// - multi plots
+// - end selector control
+// - bar graph
+// - hour vs day select
+// - settings
+// - clip graph
+// - start daily plot on day interval,  < > go by days
+
 // xxx temp
 typedef struct {
     double xval;
@@ -25,6 +34,9 @@ void *sdl_plot_create(char *title,
                       double xval_left, int xval_right, double yval_bottom, int yval_top,
                       double yval_of_x_axis);
 void sdl_plot_points(void *cx_arg, plot_point_t *pts, int num_pts);
+void sdl_plot_bars(void *cx_arg, 
+                   plot_point_t *pts_avg, plot_point_t *pts_min, plot_point_t *pts_max,
+                   int num_pts);
 void sdl_plot_free(void *cx);
 
 //
@@ -216,13 +228,6 @@ int main(int argc, char **argv)
             continue;
         }
 
-// xxx todo
-// - multi plots
-// - end selector
-// - bar graph
-// - hour vs sday select
-// - settings
-
         // process events
         switch (event.event_id) {
 // xxx add event for end of data
@@ -265,9 +270,13 @@ void plot_daily(plot_t *p, int psh, int peh, int ybottom, int ytop)
                                psh, psh+NUM_DAYS*24,          // xval_left, xval_right
                                p->yval_bottom, p->yval_top,      // yval_bottom, yval_top
                                p->yval_of_x_axis);               // yval_of_x_axis
+#if 0
     sdl_plot_points(plot_cx, pts_avg, num_pts);
     sdl_plot_points(plot_cx, pts_min, num_pts);
     sdl_plot_points(plot_cx, pts_max, num_pts);
+#else
+    sdl_plot_bars(plot_cx, pts_avg, pts_min, pts_max, num_pts);
+#endif
     sdl_plot_free(plot_cx);
 }
 
@@ -533,10 +542,47 @@ void sdl_plot_points(void *cx_arg, plot_point_t *pts, int num_pts)
     free(points);
 }
 
-//void sdl_plot_bars(plot_bar_t *b, int n)
-//{
-//}
+void sdl_plot_bars(void *cx_arg, 
+                   plot_point_t *pts_avg, plot_point_t *pts_min, plot_point_t *pts_max,
+                   int num_pts)
+{
+    int        i, x, y, w, h;
+    double     wval, hval, xval, yval;
+    plot_cx_t *cx = (plot_cx_t*)cx_arg;
 
+    static bool first = 1;
+
+    pts_min[0].yval = pts_max[0].yval = pts_avg[0].yval = 1010;
+
+    for (i = 0; i < num_pts; i++) {
+        wval = cx->xval_span / 10;  // xxx 10
+        hval = pts_max[i].yval - pts_min[i].yval;
+        xval = pts_min[i].xval - wval/2;
+        yval = pts_max[i].yval;
+
+        x = xval2x(cx, xval);
+        y = yval2y(cx, yval);
+        w = wval * cx->xspan / cx->xval_span;
+        h = hval * cx->yspan / cx->yval_span;
+
+        if (h < 7) {
+            y -= (7-h) / 2;
+            h = 7;
+        }
+
+        if (first) printf("%d: %f %f %f\n", i, 
+                         pts_min[i].yval, pts_avg[i].yval, pts_max[i].yval);
+        if (first) printf("    %d %d %d %d - hval=%f yspan=%d yval_span=%f\n", 
+               x, y, w, h,
+               hval, cx->yspan, cx->yval_span);
+
+        sdl_render_fill_rect(x, y, w, h, COLOR_PURPLE);
+    }
+
+    sdl_plot_points(cx, pts_avg, num_pts);
+
+    first = 0;
+}
 
 void sdl_plot_free(void *cx)
 {
