@@ -33,8 +33,9 @@ void *sdl_plot_create(char *title,
                       int xleft, int xright, int ybottom, int ytop,
                       double xval_left, int xval_right, double yval_bottom, int yval_top,
                       double yval_of_x_axis);
-void sdl_plot_points(void *cx_arg, plot_point_t *pts, int num_pts);
-void sdl_plot_bars(void *cx_arg, 
+void sdl_plot_axis(void *cx);
+void sdl_plot_points(void *cx, plot_point_t *pts, int num_pts);
+void sdl_plot_bars(void *cx, 
                    plot_point_t *pts_avg, plot_point_t *pts_min, plot_point_t *pts_max,
                    int num_pts, double bar_wval);
 void sdl_plot_free(void *cx);
@@ -259,21 +260,23 @@ int main(int argc, char **argv)
 void plot_daily(plot_t *p, int psh, int peh, int ybottom, int ytop)
 {
     plot_point_t    pts_avg[MAX_PTS], pts_min[MAX_PTS], pts_max[MAX_PTS];
-    void           *plot_cx;
+    void           *cx;
     int             num_pts;
 
     get_plot_day_pts(p->which, psh, peh, pts_avg, pts_min, pts_max, &num_pts);
 
-    plot_cx =  sdl_plot_create(p->title,
-                               0, sdl_win_width-1,    // xleft, xright
-                               ybottom, ytop,       // ybottom, ytop
-                               psh, psh+NUM_DAYS*24,          // xval_left, xval_right
-                               p->yval_bottom, p->yval_top,      // yval_bottom, yval_top
-                               p->yval_of_x_axis);               // yval_of_x_axis
+    cx =  sdl_plot_create(p->title,                    // title
+                          0, sdl_win_width-1,          // xleft, xright
+                          ybottom, ytop,               // ybottom, ytop
+                          psh, psh+NUM_DAYS*24,        // xval_left, xval_right
+                          p->yval_bottom, p->yval_top, // yval_bottom, yval_top
+                          p->yval_of_x_axis);          // yval_of_x_axis
 
-    sdl_plot_bars(plot_cx, pts_avg, pts_min, pts_max, num_pts, 24);
+    sdl_plot_bars(cx, pts_avg, pts_min, pts_max, num_pts, 24);
 
-    sdl_plot_free(plot_cx);
+    sdl_plot_axis(cx);
+
+    sdl_plot_free(cx);
 }
 
 void get_plot_pts(int which, int psh, int peh, plot_point_t *pts, int *num_pts)
@@ -308,38 +311,20 @@ void get_plot_day_pts(
             int *num_pts)
 {
     int    day_start_hour, hour, idx, k, n=0;
-    double value, sum, avg, min, max;
-
-    
-    time_t t;
-    struct tm tm;
-    static bool print=true;
+    double value, sum, min, max;
 
     for (day_start_hour = psh; day_start_hour <= peh; day_start_hour += 24) {
-        if (print) {
-            t = day_start_hour * 3600;
-            localtime_r(&t, &tm);
-            printf("%02d/%02d/%02d %02d:%02d:%02d\n",
-                tm.tm_mon+1, tm.tm_mday, tm.tm_year-100,
-                tm.tm_hour, tm.tm_min, tm.tm_sec);
-        }
-
         sum = k = 0;
         min = 1e99;;
         max = -1e99;;
         for (hour = day_start_hour; hour < day_start_hour+24; hour++) {
             idx = hour - data->hdr.start_hour;
             if (idx < 0 || idx > data->hdr.last_idx || idx >= MAX_SENSOR_VALUES) {
-                //if (print) printf("ERR idx out of range\n");
                 continue;
-            }
-            if (print) {
-                printf("  hour=%d idx=%d\n", hour, idx);
             }
 
             value = data->values[idx].sensors[which];
             if (value == INVALID_SENSOR_VALUE) {
-                if (print) printf("ERR value invalid\n");
                 continue;
             }
 
@@ -351,86 +336,27 @@ void get_plot_day_pts(
         }
 
         if (k == 0) {
-            if (print) printf("ERR k=0\n");
             continue;
         }
 
-        avg = sum / k;
-        if (print) {
-            printf("  k=%d  avg=%.1f  min=%.1f  max=%.1f\n", k, avg, min, max);
-        }
-
         pts_avg[n].xval = day_start_hour + 12;
-        pts_avg[n].yval = avg;
-
+        pts_avg[n].yval = sum / k;
         pts_min[n].xval = day_start_hour + 12;
         pts_min[n].yval = min;
-
         pts_max[n].xval = day_start_hour + 12;
         pts_max[n].yval = max;
         n++;
     }
 
     *num_pts = n;
-    if (print) {
-        printf("  return %d pts\n", n);
-    }
-
-    print = false;
 }
             
-
-#if 0
-
-// xxx is this used?
-#define MAX_STR_TBL 8
-char *sensval2str(double x)
-{
-    static char str_tbl[MAX_STR_TBL][50];
-    static int  n;
-    char *s;
-
-    if (x == INVALID_SENSOR_VALUE) {
-        return "invld";
-    } else {
-        s = str_tbl[n];
-        n = (n + 1) % MAX_STR_TBL;
-        sprintf(s, "%.0f", x);
-        return s;
-    }
-}
-
-
-        // xxx
-        // - change to span
-        // - dont use full win_width span, use one less
-        void *cx;
-        plot_point_t pts[100];
-        for (i = 0; i < 100; i++) {
-            pts[i].xval = 0.5 + i;
-            pts[i].yval = 950 + i;
-        }
-
-        cx =  sdl_plot_create("TITLE", 0, sdl_win_width-1, 800, 100,
-                              motion, motion+24, 950, 1050, 1000);
-
-        for (i = 0; i < 100; i++) {
-            if (pts[i].xval > motion) {
-                break;
-            }
-        }
-        for (j = i; j < 100; j++) {
-            if (pts[j].xval > motion+24) {
-                break;
-            }
-        }
-
-        sdl_plot_points(cx, &pts[i], j-i);
-
-        sdl_plot_free(cx);
-#endif
 // xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 // xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+// xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+// xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+
+// xxx mvoe to sdl
 
 #include <math.h>
 #include <stdlib.h>
@@ -452,7 +378,6 @@ typedef struct {
     double yval_span;
     double yval_of_x_axis;
 } plot_cx_t;  // private
-
 
 int xval2x(plot_cx_t *cx, double xval)
 {
@@ -476,7 +401,6 @@ void *sdl_plot_create(char *title,
                       double yval_of_x_axis)
 {
     plot_cx_t *cx;
-    int i;
 
     // alloc cx and save params in cx
     cx = calloc(1, sizeof(plot_cx_t));
@@ -495,23 +419,54 @@ void *sdl_plot_create(char *title,
     cx->yval_span      = yval_top - yval_bottom;
     cx->yval_of_x_axis = yval_of_x_axis;
 
-    // draw y-axis on both left and right
-    for (i = 0; i < 3; i++) {
-        sdl_render_line(cx->xleft+i, cx->ybottom, cx->xleft+i, cx->ytop, COLOR_BLUE);
-        sdl_render_line(cx->xright-i, cx->ybottom, cx->xright-i, cx->ytop, COLOR_BLUE);
-    }
+    // return cx
+    return cx;
+}
 
-    // draw x-axis
-    int y = yval2y(cx, yval_of_x_axis);
+void sdl_plot_axis(void *cx_arg)
+{
+    char str[50];
+    int i, y;
+    // xxx
+    plot_cx_t *cx = (plot_cx_t*)cx_arg;
+    sdl_print_state_t print_state;
+
+    sdl_print_save(&print_state);
+    sdl_print_init(SMALLEST_FONT, COLOR_WHITE, COLOR_BLACK);
+
+    sdl_render_rect(cx->xleft, cx->ytop, cx->xspan, cx->yspan, 3, COLOR_BLUE);
+
+    sprintf(str, "%.0f", cx->yval_max);
+    sdl_render_printf(cx->xleft+3, cx->ytop+3, "%s", str);
+    sdl_render_printf(cx->xright-3-strlen(str)*sdl_char_width, cx->ytop+3, "%s", str);
+
+    sprintf(str, "%.0f", cx->yval_min);
+    sdl_render_printf(cx->xleft+3, cx->ybottom-3-sdl_char_height, "%s", str);
+    sdl_render_printf(cx->xright-3-strlen(str)*sdl_char_width, cx->ybottom-3-sdl_char_height, "%s", str);
+
+    // draw x-axis xxx option to not do this
+    y = yval2y(cx, cx->yval_of_x_axis);
     for (i = -1; i <= 1; i++) {
         sdl_render_line(cx->xleft, y+i, cx->xright, y+i, COLOR_BLUE);
     }
 
-    // label x and y axis
-    // xxx
+    // label x axis
+    time_t t = cx->xval_min * 3600;
+    struct tm tm;
+    localtime_r(&t, &tm);
+    sprintf(str, "%02d/%02d/%02d %02d:%02d:%02d",
+           tm.tm_mon+1, tm.tm_mday, tm.tm_year-100,
+           tm.tm_hour, tm.tm_min, tm.tm_sec);
+    sdl_render_printf(cx->xleft+3, y+3, "%s", str);
 
-    // return cx
-    return cx;
+    t = cx->xval_max * 3600 - 1;
+    localtime_r(&t, &tm);
+    sprintf(str, "%02d/%02d/%02d %02d:%02d:%02d",
+           tm.tm_mon+1, tm.tm_mday, tm.tm_year-100,
+           tm.tm_hour, tm.tm_min, tm.tm_sec);
+    sdl_render_printf(cx->xright-3-strlen(str)*sdl_char_width, y+3, "%s", str);
+
+    sdl_print_restore(&print_state);
 }
 
 void sdl_plot_points(void *cx_arg, plot_point_t *pts, int num_pts)
@@ -542,7 +497,7 @@ void sdl_plot_bars(void *cx_arg,
 
     static bool first = 1;
 
-    pts_min[0].yval = pts_max[0].yval = pts_avg[0].yval = 1010;
+    //xxxpts_min[0].yval = pts_max[0].yval = pts_avg[0].yval = 1010;
 
     for (i = 0; i < num_pts; i++) {
         wval = bar_wval;
