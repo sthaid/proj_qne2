@@ -50,6 +50,18 @@ void sdl_plot_free(void *cx);
 
 #define NUM_DAYS 10
 
+#define EVID_EOD          1
+#define EVID_DISPLAY_MODE 2
+
+#define MAX_DISPLAY_MODE 2
+#define DISPLAY_MODE_HOURLY 0
+#define DISPLAY_MODE_DAILY  1
+
+#define DISPLAY_MODE_STR \
+    (display_mode == DISPLAY_MODE_HOURLY ? "HOURLY" : \
+     display_mode == DISPLAY_MODE_DAILY  ? "DAILY"  : \
+                                           "????")
+
 //
 // typedefs
 //
@@ -76,8 +88,7 @@ typedef struct {
 char           *progname;
 char           *data_dir;
 sensors_data_t *data;
-
-bool hourly = false; //xxx
+int             display_mode = DISPLAY_MODE_DAILY;  // xxx or init HOURLY?
 
 plot_t plots[MAX_PLOTS];
 
@@ -104,6 +115,8 @@ int main(int argc, char **argv)
     time_t          plot_end_time;
     struct tm       plot_end_tm;
     int             psh, peh;
+    sdl_loc_t      *loc;
+    char           *str;
 
     // save args
     progname = argv[0];
@@ -169,8 +182,23 @@ int main(int argc, char **argv)
                                     0, 0, EVID_QUIT);
         sdl_register_event(NULL, EVID_MOTION);
 
+        // xxx
+        sdl_print_init_color(COLOR_LIGHT_BLUE, COLOR_BLACK);
 
-        if (hourly) {
+        loc = sdl_render_printf(sdl_win_width-3*sdl_char_width, sdl_win_height-200, "%s", "EOD");
+        sdl_register_event(loc, EVID_EOD);
+
+        str = DISPLAY_MODE_STR;
+        loc = sdl_render_printf(sdl_win_width/2-strlen(str)*sdl_char_width/2, 
+                                sdl_win_height-200, "%s", str);
+        sdl_register_event(loc, EVID_DISPLAY_MODE);
+
+        sdl_print_init_color(COLOR_WHITE, COLOR_BLACK);
+
+
+
+
+        if (display_mode == DISPLAY_MODE_HOURLY) {
 #if 0
             // print the plot end hour 
             localtime_r(&plot_end_time, &plot_end_tm);
@@ -194,14 +222,16 @@ int main(int argc, char **argv)
             sdl_plot_points(plot_cx, pts_avg, num_pts);
             sdl_plot_free(plot_cx);
 #endif
-        } else {  // daily
+        } else if (display_mode == DISPLAY_MODE_DAILY) {
             // print the plot end day
             localtime_r(&plot_end_time, &plot_end_tm);
+#if 0
             sdl_render_printf_xyctr(
                     sdl_win_width/2, sdl_win_height-200, 
                     "%02d/%02d/%02d %02d:%02d:%02d",
                     plot_end_tm.tm_mon+1, plot_end_tm.tm_mday, plot_end_tm.tm_year-100,
                     plot_end_tm.tm_hour, plot_end_tm.tm_min, plot_end_tm.tm_sec);
+#endif
 
             // xxx these are utc
 // xxxxxxxxxx
@@ -219,6 +249,8 @@ int main(int argc, char **argv)
                 int ytop    = ybottom - 600;
                 plot_daily(&plots[i], psh, peh, ybottom, ytop);
             }
+        } else {
+            printf("ERROR %s: invalid display_mode %d\n", progname, display_mode);
         }
 
         // present the display
@@ -239,12 +271,20 @@ int main(int argc, char **argv)
             end_program = true;
             break;      
         case EVID_MOTION:
-            if (hourly) {
+            if (display_mode == DISPLAY_MODE_HOURLY) {
                 plot_end_time -= event.u.motion.xrel * (3600. * 24 / sdl_win_width);
             } else {
                 plot_end_time -= event.u.motion.xrel * (86400. * NUM_DAYS / sdl_win_width);
             }
             break;      
+        case EVID_EOD:
+            printf("INFO %s: got EVID_EOD\n", progname);
+            plot_end_time = time(NULL);
+            break;
+        case EVID_DISPLAY_MODE:
+            printf("INFO %s: got EVID_DISPLAY_MODE\n", progname);
+            display_mode = (display_mode + 1 == MAX_DISPLAY_MODE ? 0 : display_mode + 1);
+            break;
         }
 
         // if end_program flag is set then break out of runtime loop
@@ -342,7 +382,7 @@ void get_plot_day_pts(
     int    day_start_hour, hour, idx, k, n=0;
     double value, sum, min, max;
 
-    for (day_start_hour = psh; day_start_hour <= peh; day_start_hour += 24) {
+    for (day_start_hour = psh; day_start_hour < peh; day_start_hour += 24) {
         sum = k = 0;
         min = 1e99;;
         max = -1e99;;
