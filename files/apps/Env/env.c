@@ -199,12 +199,14 @@ int main(int argc, char **argv)
             localtime_r(&plot_end_time, &plot_end_tm);
             sdl_render_printf_xyctr(
                     sdl_win_width/2, sdl_win_height-200, 
-                    "%02d/%02d/%02d",
-                    plot_end_tm.tm_mon+1, plot_end_tm.tm_mday, plot_end_tm.tm_year-100);
+                    "%02d/%02d/%02d %02d:%02d:%02d",
+                    plot_end_tm.tm_mon+1, plot_end_tm.tm_mday, plot_end_tm.tm_year-100,
+                    plot_end_tm.tm_hour, plot_end_tm.tm_min, plot_end_tm.tm_sec);
 
             // xxx these are utc
 // xxxxxxxxxx
-            peh = plot_end_time / 3600 - plot_end_tm.tm_hour;
+            // xxx explain what peh is
+            peh = plot_end_time / 3600 - plot_end_tm.tm_hour + 24;
             psh = peh - NUM_DAYS * 24;
 
             // xxx
@@ -286,9 +288,15 @@ void plot_daily(plot_t *p, int psh, int peh, int ybottom, int ytop)
     t = psh * 3600;
     localtime_r(&t, &tm);
     sprintf(xmin_str, "%02d/%02d/%02d", tm.tm_mon+1, tm.tm_mday, tm.tm_year-100);
+    //sprintf(xmin_str, "%02d/%02d/%02d %02d:%02d:%02d", 
+    //         tm.tm_mon+1, tm.tm_mday, tm.tm_year-100,
+    //         tm.tm_hour, tm.tm_min, tm.tm_sec);
     t = peh * 3600 - 1;
     localtime_r(&t, &tm);
     sprintf(xmax_str, "%02d/%02d/%02d", tm.tm_mon+1, tm.tm_mday, tm.tm_year-100);
+    //sprintf(xmax_str, "%02d/%02d/%02d %02d:%02d:%02d", 
+    //         tm.tm_mon+1, tm.tm_mday, tm.tm_year-100,
+    //         tm.tm_hour, tm.tm_min, tm.tm_sec);
 
     sprintf(ymin_str, "%.0f", p->yval_bottom);
     sprintf(ymax_str, "%.0f", p->yval_top);
@@ -369,7 +377,12 @@ void get_plot_day_pts(
         n++;
     }
 
-xxxxxx print num pts
+    static int first;
+    if (first == 0) {
+        first = 1;
+        printf("XXXXXXXXX num pts %d\n", n);
+    }
+
     *num_pts = n;
 }
             
