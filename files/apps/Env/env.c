@@ -21,8 +21,8 @@ typedef struct {
     double yval;
 } plot_point_t;
 void *sdl_plot_create(char *title, 
-                      int xleft, int xspan, int ybottom, int yspan,
-                      double xval_left, int xval_span, double yval_bottom, int yval_span,
+                      int xleft, int xright, int ybottom, int ytop,
+                      double xval_left, int xval_right, double yval_bottom, int yval_top,
                       double yval_of_x_axis);
 void sdl_plot_points(void *cx_arg, plot_point_t *pts, int num_pts);
 void sdl_plot_free(void *cx);
@@ -50,9 +50,9 @@ typedef struct {
     char  *title;
     int    which;
     int    ybottom;
-    int    yspan;
+    int    ytop;
     double yval_bottom;
-    double yval_span;
+    double yval_top;
     double yval_of_x_axis;
 } plot_t;
 
@@ -74,7 +74,7 @@ plot_t plots[MAX_PLOTS];
 
 void get_plot_pts(int which, int psh, int peh, plot_point_t *pts, int *num_pts);
 
-void plot_daily(plot_t *p, int psh, int peh, int ybottom, int yspan);
+void plot_daily(plot_t *p, int psh, int peh, int ybottom, int ytop);
 
 void get_plot_day_pts(
             int which, int psh, int peh,
@@ -110,14 +110,14 @@ int main(int argc, char **argv)
     plots[0].title          = "Pressure";
     plots[0].which          = PRESSURE;
     plots[0].yval_bottom    = util_get_int_param(data_dir, "min_pressure", 950);  //xxx cleanup
-    plots[0].yval_span      = util_get_int_param(data_dir, "span_pressure", 100);
+    plots[0].yval_top       = util_get_int_param(data_dir, "max_pressure", 1050);
     plots[0].yval_of_x_axis = util_get_int_param(data_dir, "typical_pressure", 1000);  // xxx 1013
 
-    plots[1].title          = "Pressure";
-    plots[1].which          = PRESSURE;
-    plots[1].yval_bottom    = util_get_int_param(data_dir, "min_pressure", 950);  //xxx cleanup
-    plots[1].yval_span      = util_get_int_param(data_dir, "span_pressure", 100);
-    plots[1].yval_of_x_axis = util_get_int_param(data_dir, "typical_pressure", 1000);  // xxx 1013
+//  plots[1].title          = "Pressure";
+//  plots[1].which          = PRESSURE;
+//  plots[1].yval_bottom    = util_get_int_param(data_dir, "min_pressure", 950);  //xxx cleanup
+//  plots[1].yval_top       = util_get_int_param(data_dir, "max_pressure", 1050);
+//  plots[1].yval_of_x_axis = util_get_int_param(data_dir, "typical_pressure", 1000);  // xxx 1013
 
     // map the sensors.dat file;
     // if map failed or file version is incorrect then return error
@@ -173,10 +173,10 @@ int main(int argc, char **argv)
             // xxx
             get_plot_pts(PRESSURE, psh, peh, pts_avg, &num_pts);
             plot_cx =  sdl_plot_create("PRESSURE", 
-                                       0, sdl_win_width,    // xleft, xspan
-                                       800, 800,            // ybottom, yspan
-                                       psh, 24,             // xval_left, xval_span
-                                       950, 101,            // yval_bottom, yval_span
+                                       0, sdl_win_width-1,    // xleft, xright
+                                       800, 0,              // ybottom, ytop
+                                       psh, psh+24,         // xval_left, xval_right
+                                       950, 1050            // yval_bottom, yval_top
                                        1000);               // yval_of_x_axis
             sdl_plot_points(plot_cx, pts_avg, num_pts);
             sdl_plot_free(plot_cx);
@@ -200,8 +200,8 @@ int main(int argc, char **argv)
                 }
 
                 int ybottom = 600 * (i + 1);
-                int yspan   = 600;
-                plot_daily(&plots[i], psh, peh, ybottom, yspan);
+                int ytop    = ybottom - 600;
+                plot_daily(&plots[i], psh, peh, ybottom, ytop);
             }
         }
 
@@ -251,16 +251,8 @@ int main(int argc, char **argv)
     return 0;
 }
 
-void plot_daily(plot_t *p, int psh, int peh, int ybottom, int yspan)
+void plot_daily(plot_t *p, int psh, int peh, int ybottom, int ytop)
 {
-    // char  *title;
-    // int    which;
-    // int    ybottom;
-    // int    yspan;
-    // double yval_bottom;
-    // double yval_span;
-    // double yval_of_x_axis;
-
     plot_point_t    pts_avg[MAX_PTS], pts_min[MAX_PTS], pts_max[MAX_PTS];
     void           *plot_cx;
     int             num_pts;
@@ -268,10 +260,10 @@ void plot_daily(plot_t *p, int psh, int peh, int ybottom, int yspan)
     get_plot_day_pts(p->which, psh, peh, pts_avg, pts_min, pts_max, &num_pts);
 
     plot_cx =  sdl_plot_create(p->title,
-                               0, sdl_win_width,    // xleft, xspan
-                               ybottom, yspan,      // ybottom, yspan
-                               psh, NUM_DAYS*24,          // xval_left, xval_span
-                               p->yval_bottom, p->yval_span,      // yval_bottom, yval_span
+                               0, sdl_win_width-1,    // xleft, xright
+                               ybottom, ytop,       // ybottom, ytop
+                               psh, psh+NUM_DAYS*24,          // xval_left, xval_right
+                               p->yval_bottom, p->yval_top,      // yval_bottom, yval_top
                                p->yval_of_x_axis);               // yval_of_x_axis
     sdl_plot_points(plot_cx, pts_avg, num_pts);
     sdl_plot_points(plot_cx, pts_min, num_pts);
@@ -480,8 +472,8 @@ int yval2y(plot_cx_t *cx, double yval)
 }
 
 void *sdl_plot_create(char *title, 
-                      int xleft, int xspan, int ybottom, int yspan,
-                      double xval_left, int xval_span, double yval_bottom, int yval_span,
+                      int xleft, int xright, int ybottom, int ytop,
+                      double xval_left, int xval_right, double yval_bottom, int yval_top,
                       double yval_of_x_axis)
 {
     plot_cx_t *cx;
@@ -491,17 +483,17 @@ void *sdl_plot_create(char *title,
     cx = calloc(1, sizeof(plot_cx_t));
     strcpy(cx->title, title);
     cx->xleft          = xleft;
-    cx->xright         = xleft + xspan - 1;
-    cx->xspan          = xspan;
+    cx->xright         = xright;
+    cx->xspan          = xright - xleft;
     cx->ybottom        = ybottom;
-    cx->ytop           = ybottom - yspan + 1;
-    cx->yspan          = yspan;
+    cx->ytop           = ytop;
+    cx->yspan          = ybottom - ytop;
     cx->xval_min       = xval_left;
-    cx->xval_max       = xval_left + xval_span;
-    cx->xval_span      = xval_span;
+    cx->xval_max       = xval_right;
+    cx->xval_span      = xval_right - xval_left;
     cx->yval_min       = yval_bottom;
-    cx->yval_max       = yval_bottom + yval_span;
-    cx->yval_span      = yval_span;
+    cx->yval_max       = yval_top;
+    cx->yval_span      = yval_top - yval_bottom;
     cx->yval_of_x_axis = yval_of_x_axis;
 
     // draw y-axis on both left and right
