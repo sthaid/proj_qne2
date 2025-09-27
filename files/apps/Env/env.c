@@ -33,7 +33,7 @@ void *sdl_plot_create(char *title,
                       int xleft, int xright, int ybottom, int ytop,
                       double xval_left, int xval_right, double yval_bottom, int yval_top,
                       double yval_of_x_axis);
-void sdl_plot_axis(void *cx);
+void sdl_plot_axis(void *cx_arg, char *xmin_str, char *xmax_str, char *ymin_str, char *ymax_str);
 void sdl_plot_points(void *cx, plot_point_t *pts, int num_pts);
 void sdl_plot_bars(void *cx, 
                    plot_point_t *pts_avg, plot_point_t *pts_min, plot_point_t *pts_max,
@@ -203,8 +203,9 @@ int main(int argc, char **argv)
                     plot_end_tm.tm_mon+1, plot_end_tm.tm_mday, plot_end_tm.tm_year-100);
 
             // xxx these are utc
+// xxxxxxxxxx
             peh = plot_end_time / 3600 - plot_end_tm.tm_hour;
-            psh = peh - ((NUM_DAYS-1) * 24);
+            psh = peh - NUM_DAYS * 24;
 
             // xxx
             for (int i = 0; i < MAX_PLOTS; i++) {
@@ -262,20 +263,40 @@ void plot_daily(plot_t *p, int psh, int peh, int ybottom, int ytop)
     plot_point_t    pts_avg[MAX_PTS], pts_min[MAX_PTS], pts_max[MAX_PTS];
     void           *cx;
     int             num_pts;
+    char            xmin_str[50], xmax_str[50], ymin_str[50], ymax_str[50];
+    time_t          t;
+    struct tm       tm;
 
+    // get point values for the plot start hour to plot end hour (psh - peh) range
     get_plot_day_pts(p->which, psh, peh, pts_avg, pts_min, pts_max, &num_pts);
 
+    // create the plot context
     cx =  sdl_plot_create(p->title,                    // title
                           0, sdl_win_width-1,          // xleft, xright
                           ybottom, ytop,               // ybottom, ytop
-                          psh, psh+NUM_DAYS*24,        // xval_left, xval_right
+                          //xxx psh, psh+NUM_DAYS*24,        // xval_left, xval_right
+                          psh, peh,        // xval_left, xval_right
                           p->yval_bottom, p->yval_top, // yval_bottom, yval_top
                           p->yval_of_x_axis);          // yval_of_x_axis
 
+    // plot the data points, using bar graph
     sdl_plot_bars(cx, pts_avg, pts_min, pts_max, num_pts, 24);
 
-    sdl_plot_axis(cx);
+    // init strings for the plot x/y-axis labels
+    t = psh * 3600;
+    localtime_r(&t, &tm);
+    sprintf(xmin_str, "%02d/%02d/%02d", tm.tm_mon+1, tm.tm_mday, tm.tm_year-100);
+    t = peh * 3600 - 1;
+    localtime_r(&t, &tm);
+    sprintf(xmax_str, "%02d/%02d/%02d", tm.tm_mon+1, tm.tm_mday, tm.tm_year-100);
 
+    sprintf(ymin_str, "%.0f", p->yval_bottom);
+    sprintf(ymax_str, "%.0f", p->yval_top);
+
+    // plot the axes
+    sdl_plot_axis(cx, xmin_str, xmax_str, ymin_str, ymax_str);
+
+    // free the plot
     sdl_plot_free(cx);
 }
 
@@ -348,6 +369,7 @@ void get_plot_day_pts(
         n++;
     }
 
+xxxxxx print num pts
     *num_pts = n;
 }
             
@@ -423,26 +445,18 @@ void *sdl_plot_create(char *title,
     return cx;
 }
 
-void sdl_plot_axis(void *cx_arg)
+void sdl_plot_axis(void *cx_arg, char *xmin_str, char *xmax_str, char *ymin_str, char *ymax_str)
 {
-    char str[50];
-    int i, y;
-    // xxx
-    plot_cx_t *cx = (plot_cx_t*)cx_arg;
+    plot_cx_t        *cx = (plot_cx_t*)cx_arg;
     sdl_print_state_t print_state;
+    int               i, y;
 
+    // print save and init
     sdl_print_save(&print_state);
     sdl_print_init(SMALLEST_FONT, COLOR_WHITE, COLOR_BLACK);
 
+    // draw rectangle around the plot area
     sdl_render_rect(cx->xleft, cx->ytop, cx->xspan, cx->yspan, 3, COLOR_BLUE);
-
-    sprintf(str, "%.0f", cx->yval_max);
-    sdl_render_printf(cx->xleft+3, cx->ytop+3, "%s", str);
-    sdl_render_printf(cx->xright-3-strlen(str)*sdl_char_width, cx->ytop+3, "%s", str);
-
-    sprintf(str, "%.0f", cx->yval_min);
-    sdl_render_printf(cx->xleft+3, cx->ybottom-3-sdl_char_height, "%s", str);
-    sdl_render_printf(cx->xright-3-strlen(str)*sdl_char_width, cx->ybottom-3-sdl_char_height, "%s", str);
 
     // draw x-axis xxx option to not do this
     y = yval2y(cx, cx->yval_of_x_axis);
@@ -450,22 +464,26 @@ void sdl_plot_axis(void *cx_arg)
         sdl_render_line(cx->xleft, y+i, cx->xright, y+i, COLOR_BLUE);
     }
 
-    // label x axis
-    time_t t = cx->xval_min * 3600;
-    struct tm tm;
-    localtime_r(&t, &tm);
-    sprintf(str, "%02d/%02d/%02d %02d:%02d:%02d",
-           tm.tm_mon+1, tm.tm_mday, tm.tm_year-100,
-           tm.tm_hour, tm.tm_min, tm.tm_sec);
-    sdl_render_printf(cx->xleft+3, y+3, "%s", str);
+    // label y-axis
+    if (ymin_str && ymin_str[0]) {
+        sdl_render_printf(cx->xleft+3, cx->ybottom-3-sdl_char_height, "%s", ymin_str);
+        sdl_render_printf(cx->xright-3-strlen(ymin_str)*sdl_char_width, cx->ybottom-3-sdl_char_height, "%s", ymin_str);
+    }
+    if (ymax_str && ymax_str[0]) {
+        sdl_render_printf(cx->xleft+3, cx->ytop+3, "%s", ymax_str);
+        sdl_render_printf(cx->xright-3-strlen(ymax_str)*sdl_char_width, cx->ytop+3, "%s", ymax_str);
+    }
 
-    t = cx->xval_max * 3600 - 1;
-    localtime_r(&t, &tm);
-    sprintf(str, "%02d/%02d/%02d %02d:%02d:%02d",
-           tm.tm_mon+1, tm.tm_mday, tm.tm_year-100,
-           tm.tm_hour, tm.tm_min, tm.tm_sec);
-    sdl_render_printf(cx->xright-3-strlen(str)*sdl_char_width, y+3, "%s", str);
+    // label x-axis
+    y = yval2y(cx, cx->yval_of_x_axis);
+    if (xmin_str && xmin_str[0]) {
+        sdl_render_printf(cx->xleft+3, y+3, "%s", xmin_str);
+    }
+    if (xmax_str && xmax_str[0]) {
+        sdl_render_printf(cx->xright-3-strlen(xmax_str)*sdl_char_width, y+3, "%s", xmax_str);
+    }
 
+    // restore saved print state
     sdl_print_restore(&print_state);
 }
 
