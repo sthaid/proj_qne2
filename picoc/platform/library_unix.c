@@ -734,6 +734,22 @@ struct LibraryFunction SdlFunctions[] = {
     { Sdl_query_texture,                "void sdl_query_texture(sdl_texture_t *texture, int *width, int *height);" },
     { Sdl_read_display_pixels,          "void *sdl_read_display_pixels(int x, int y, int w, int h);" },
 
+    // plotting
+    { Sdl_plot_create,                   "void *sdl_plot_create("
+                                              "char *title, "
+                                              "int xleft, int xright, int ybottom, int ytop, "
+                                              "double xval_left, double xval_right, double yval_bottom, double yval_top, "
+                                              "double yval_of_x_axis);" },
+    { Sdl_plot_axis,                     "void sdl_plot_axis("
+                                              "void *cx, "
+                                              "char *xmin_str, char *xmax_str, "
+                                              "char *ymin_str, char *ymax_str);" },
+    { Sdl_plot_points,                   "void sdl_plot_points(void *cx, sdl_plot_point_t *pts, int num_pts);" },
+    { Sdl_plot_bars,                     "void sdl_plot_bars(void *cx,"
+                                              "sdl_plot_point_t *pts_avg, sdl_plot_point_t *pts_min, "
+                                              "sdl_plot_point_t *pts_max, int num_pts, double bar_wval);" },
+    { Sdl_plot_free,                     "void sdl_plot_free(void *cx);" },
+
     // audio
     { Sdl_audio_play,                   "int sdl_audio_play(char *dir, char *filename);" },
     { Sdl_audio_record,                 "int sdl_audio_record(char *dir, char *filename, int max_duration_secs, int auto_stop_secs, bool append); "},
