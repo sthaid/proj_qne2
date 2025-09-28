@@ -1,8 +1,7 @@
 #include <stdio.h>
 #include <stdbool.h>
 #include <time.h>
-#include <string.h>  // for memset
-#include <unistd.h>   // xxx check these are needed
+#include <string.h>
 #include <math.h>
 
 #include <sdl.h>
@@ -15,7 +14,6 @@
 // - buy wifi temperature sensor
 // - check into auto start   SampleForegroundService
 // - store time_t in sensors.dat, in addition to what is there
-
 // xxx todo
 // - multi plots
 // - end selector control
@@ -24,22 +22,10 @@
 // - settings
 // - clip graph
 // - start daily plot on day interval,  < > go by days
+// - x axis optional
+// - label start/end time on bottom of plot,  or make an underneath line that also includes the title 
+// - at bottom of display, display the current values
 
-// xxx temp, move to sdl
-typedef struct {
-    double xval;
-    double yval;
-} plot_point_t;
-void *sdl_plot_create(char *title, 
-                      int xleft, int xright, int ybottom, int ytop,
-                      double xval_left, int xval_right, double yval_bottom, int yval_top,
-                      double yval_of_x_axis);
-void sdl_plot_axis(void *cx_arg, char *xmin_str, char *xmax_str, char *ymin_str, char *ymax_str);
-void sdl_plot_points(void *cx, plot_point_t *pts, int num_pts);
-void sdl_plot_bars(void *cx, 
-                   plot_point_t *pts_avg, plot_point_t *pts_min, plot_point_t *pts_max,
-                   int num_pts, double bar_wval);
-void sdl_plot_free(void *cx);
 
 //
 // defines
@@ -57,7 +43,6 @@ void sdl_plot_free(void *cx);
 #define MAX_DISPLAY_MODE 2
 #define DISPLAY_MODE_HOURLY 0
 #define DISPLAY_MODE_DAILY  1
-
 
 //
 // typedefs
@@ -88,38 +73,29 @@ plot_t          plots[MAX_PLOTS];
 int             display_mode = DISPLAY_MODE_HOURLY;
 sensors_data_t *data;
 
-#define DISPLAY_MODE_STR "xxxx"
-//#define DISPLAY_MODE_STR (display_mode == DISPLAY_MODE_HOURLY ? "HOURLY" : display_mode == DISPLAY_MODE_DAILY  ? "DAILY"  : "????")
-
 //
 // prototypes
 //
 
+int start_hour_of_tomorrow(void);
+
 void plot_hourly(plot_t *p, int psh, int peh, int ybottom, int ytop);
-void get_hourly_plot_pts(int which, int psh, int peh, plot_point_t *pts, int *num_pts);
+void get_hourly_plot_pts(int which, int psh, int peh, sdl_plot_point_t *pts, int *num_pts);
 
 void plot_daily(plot_t *p, int psh, int peh, int ybottom, int ytop);
 void get_daily_plot_pts(
             int which, int psh, int peh,
-            plot_point_t *pts_avg, plot_point_t * pts_min, plot_point_t * pts_max,
+            sdl_plot_point_t *pts_avg, sdl_plot_point_t * pts_min, sdl_plot_point_t * pts_max,
             int *num_pts);
 
 // -----------------  MAIN  ------------------------------------------
-
-int start_of_tomorrow(void)
-{
-    struct tm tm;
-    time_t t = time(NULL);
-    localtime_r(&t, &tm);
-    return t / 3600 - tm.tm_hour + 24;
-}
 
 int main(int argc, char **argv)
 {
     int             rc, i;
     sdl_event_t     event;
     bool            end_program = false;
-    int             psh, peh;  //xxx
+    int             psh, peh;
     double          peh_float;
     sdl_loc_t      *loc;
     char           *str;
@@ -142,15 +118,15 @@ int main(int argc, char **argv)
     // xxx make routine
     plots[0].title          = "Pressure";
     plots[0].which          = PRESSURE;
-    plots[0].yval_bottom    = util_get_int_param(data_dir, "min_pressure", 950);  //xxx cleanup
+    plots[0].yval_bottom    = util_get_int_param(data_dir, "min_pressure", 950);
     plots[0].yval_top       = util_get_int_param(data_dir, "max_pressure", 1050);
-    plots[0].yval_of_x_axis = util_get_int_param(data_dir, "typical_pressure", 1000);  // xxx 1013
+    plots[0].yval_of_x_axis = util_get_int_param(data_dir, "typical_pressure", 1000);
 
     plots[1].title          = "Pressure";
     plots[1].which          = PRESSURE;
-    plots[1].yval_bottom    = util_get_int_param(data_dir, "min_pressure", 950);  //xxx cleanup
+    plots[1].yval_bottom    = util_get_int_param(data_dir, "min_pressure", 950);
     plots[1].yval_top       = util_get_int_param(data_dir, "max_pressure", 1050);
-    plots[1].yval_of_x_axis = util_get_int_param(data_dir, "typical_pressure", 1000);  // xxx 1013
+    plots[1].yval_of_x_axis = util_get_int_param(data_dir, "typical_pressure", 1000);
 
     // map the sensors.dat file;
     // if map failed or file version is incorrect then return error
@@ -174,8 +150,7 @@ int main(int argc, char **argv)
     }
 
     // xxx
-    //plot_end_time = time(NULL);
-    peh_float = start_of_tomorrow();
+    peh_float = start_hour_of_tomorrow();
 
     // runtime loop
     while (true) {
@@ -196,7 +171,7 @@ int main(int argc, char **argv)
         loc = sdl_render_printf(sdl_win_width-3*sdl_char_width, sdl_win_height-200, "%s", "EOD");
         sdl_register_event(loc, EVID_EOD);
 
-        str = DISPLAY_MODE_STR;
+        str = (display_mode == DISPLAY_MODE_DAILY ? "DAILY" : "HOURLY");
         loc = sdl_render_printf(sdl_win_width/2-strlen(str)*sdl_char_width/2, 
                                 sdl_win_height-200, "%s", str);
         sdl_register_event(loc, EVID_DISPLAY_MODE);
@@ -241,10 +216,9 @@ int main(int argc, char **argv)
         // present the display
         sdl_display_present();
 
-        // wait for an event with 50 ms timeout;
+        // wait for an event with 500 ms timeout;
         // if no event available, then redraw display
-        // xxx could wait longer
-        sdl_get_event(50000, &event);
+        sdl_get_event(500000, &event);
         if (event.event_id == -1) {
             continue;
         }
@@ -254,29 +228,29 @@ int main(int argc, char **argv)
         case EVID_QUIT:
             end_program = true;
             break;      
-        case EVID_MOTION:
+        case EVID_MOTION: {
             if (display_mode == DISPLAY_MODE_HOURLY) {
                 peh_float -= event.u.motion.xrel * (24. / sdl_win_width);
             } else {
                 peh_float -= event.u.motion.xrel * ((24. * NUM_DAYS) / sdl_win_width);
             }
-            int xxx = start_of_tomorrow();
+            int xxx = start_hour_of_tomorrow();
             if (peh_float > xxx) {
                 printf("XXX limitting peh_float\n");
                 peh_float = xxx;
             }
-            break;      
+            break;       }
         case EVID_EOD:
             printf("INFO %s: got EVID_EOD\n", progname);
-            peh_float = start_of_tomorrow();
+            peh_float = start_hour_of_tomorrow();
             break;
-        case EVID_DISPLAY_MODE:
+        case EVID_DISPLAY_MODE: {
             printf("INFO %s: got EVID_DISPLAY_MODE\n", progname);
 
             double ctr_hour = (peh + psh) / 2.;
             display_mode = (display_mode + 1 == MAX_DISPLAY_MODE ? 0 : display_mode + 1);
 
-            xxx = start_of_tomorrow();
+            int xxx = start_hour_of_tomorrow();
             if (peh_float == xxx) {
                 break;
             }
@@ -292,7 +266,7 @@ int main(int argc, char **argv)
                 peh_float = xxx;
             }
 
-            break;
+            break; }
         }
 
         // if end_program flag is set then break out of runtime loop
@@ -308,11 +282,19 @@ int main(int argc, char **argv)
     return 0;
 }
 
+int start_hour_of_tomorrow(void)
+{
+    struct tm tm;
+    time_t t = time(NULL);
+    localtime_r(&t, &tm);
+    return t / 3600 - tm.tm_hour + 24;
+}
+
 // -----------------  PLOT DAILY  -------------------------
 
 void plot_daily(plot_t *p, int psh, int peh, int ybottom, int ytop)
 {
-    plot_point_t    pts_avg[MAX_PTS], pts_min[MAX_PTS], pts_max[MAX_PTS];
+    sdl_plot_point_t    pts_avg[MAX_PTS], pts_min[MAX_PTS], pts_max[MAX_PTS];
     void           *cx;
     int             num_pts;
     char            xmin_str[50], xmax_str[50], ymin_str[50], ymax_str[50];
@@ -326,8 +308,7 @@ void plot_daily(plot_t *p, int psh, int peh, int ybottom, int ytop)
     cx =  sdl_plot_create(p->title,                    // title
                           0, sdl_win_width-1,          // xleft, xright
                           ybottom, ytop,               // ybottom, ytop
-                          //xxx psh, psh+NUM_DAYS*24,        // xval_left, xval_right
-                          psh, peh,        // xval_left, xval_right
+                          psh, peh,                    // xval_left, xval_right
                           p->yval_bottom, p->yval_top, // yval_bottom, yval_top
                           p->yval_of_x_axis);          // yval_of_x_axis
 
@@ -337,10 +318,10 @@ void plot_daily(plot_t *p, int psh, int peh, int ybottom, int ytop)
     // init strings for the plot x/y-axis labels
     t = psh * 3600;
     localtime_r(&t, &tm);
-    sprintf(xmin_str, "%02d/%02d/%02d %02d", tm.tm_mon+1, tm.tm_mday, tm.tm_year-100, tm.tm_hour);
+    sprintf(xmin_str, "%02d/%02d/%02d", tm.tm_mon+1, tm.tm_mday, tm.tm_year-100);
     t = peh * 3600 - 1;
     localtime_r(&t, &tm);
-    sprintf(xmax_str, "%02d/%02d/%02d %02d", tm.tm_mon+1, tm.tm_mday, tm.tm_year-100, tm.tm_hour);
+    sprintf(xmax_str, "%02d/%02d/%02d", tm.tm_mon+1, tm.tm_mday, tm.tm_year-100);
 
     sprintf(ymin_str, "%.0f", p->yval_bottom);
     sprintf(ymax_str, "%.0f", p->yval_top);
@@ -354,7 +335,7 @@ void plot_daily(plot_t *p, int psh, int peh, int ybottom, int ytop)
 
 void get_daily_plot_pts(
             int which, int psh, int peh,
-            plot_point_t *pts_avg, plot_point_t * pts_min, plot_point_t * pts_max,
+            sdl_plot_point_t *pts_avg, sdl_plot_point_t * pts_min, sdl_plot_point_t * pts_max,
             int *num_pts)
 {
     int    day_start_hour, hour, idx, k, n=0;
@@ -395,12 +376,6 @@ void get_daily_plot_pts(
         n++;
     }
 
-    static int first;
-    if (first == 0) {
-        first = 1;
-        printf("XXXXXXXXX DAILY num pts %d\n", n);
-    }
-
     *num_pts = n;
 }
 
@@ -408,7 +383,7 @@ void get_daily_plot_pts(
 
 void plot_hourly(plot_t *p, int psh, int peh, int ybottom, int ytop)
 {
-    plot_point_t    pts[MAX_PTS];
+    sdl_plot_point_t    pts[MAX_PTS];
     void           *cx;
     int             num_pts;
     char            xmin_str[50], xmax_str[50], ymin_str[50], ymax_str[50];
@@ -448,7 +423,7 @@ void plot_hourly(plot_t *p, int psh, int peh, int ybottom, int ytop)
     sdl_plot_free(cx);
 }
 
-void get_hourly_plot_pts(int which, int psh, int peh, plot_point_t *pts, int *num_pts)
+void get_hourly_plot_pts(int which, int psh, int peh, sdl_plot_point_t *pts, int *num_pts)
 {
     int hour, idx, n=0;
     double value;
@@ -471,193 +446,5 @@ void get_hourly_plot_pts(int which, int psh, int peh, plot_point_t *pts, int *nu
         // xxx limit value to min/max
     }
 
-    static int first;
-    if (first == 0) {
-        first = 1;
-        printf("XXXXXXXXX HOURLY num pts %d\n", n);
-    }
-
     *num_pts = n;
 }
-
-            
-// xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-// xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-// xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-// xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-
-// xxx mvoe to sdl
-
-#include <math.h>
-#include <stdlib.h>
-#include <string.h>
-
-typedef struct {
-    char   title[64];
-    int    xleft;
-    int    xright;
-    int    xspan;
-    int    ybottom;
-    int    ytop;
-    int    yspan;
-    double xval_min;
-    double xval_max;
-    double xval_span;
-    double yval_min;
-    double yval_max;
-    double yval_span;
-    double yval_of_x_axis;
-} plot_cx_t;  // private
-
-int xval2x(plot_cx_t *cx, double xval)
-{
-    int x;
-
-    x = cx->xleft + (xval - cx->xval_min) * (cx->xspan / cx->xval_span);  // xxx add cvt constant to cx
-    return x;
-}
-
-int yval2y(plot_cx_t *cx, double yval)
-{
-    int y;
-
-    y = cx->ybottom - (yval - cx->yval_min) * (cx->yspan / cx->yval_span);  // xxx add cvt constant to cx
-    return y;
-}
-
-void *sdl_plot_create(char *title, 
-                      int xleft, int xright, int ybottom, int ytop,
-                      double xval_left, int xval_right, double yval_bottom, int yval_top,
-                      double yval_of_x_axis)
-{
-    plot_cx_t *cx;
-
-    // alloc cx and save params in cx
-    cx = calloc(1, sizeof(plot_cx_t));
-    strcpy(cx->title, title);
-    cx->xleft          = xleft;
-    cx->xright         = xright;
-    cx->xspan          = xright - xleft;
-    cx->ybottom        = ybottom;
-    cx->ytop           = ytop;
-    cx->yspan          = ybottom - ytop;
-    cx->xval_min       = xval_left;
-    cx->xval_max       = xval_right;
-    cx->xval_span      = xval_right - xval_left;
-    cx->yval_min       = yval_bottom;
-    cx->yval_max       = yval_top;
-    cx->yval_span      = yval_top - yval_bottom;
-    cx->yval_of_x_axis = yval_of_x_axis;
-
-    // return cx
-    return cx;
-}
-
-void sdl_plot_axis(void *cx_arg, char *xmin_str, char *xmax_str, char *ymin_str, char *ymax_str)
-{
-    plot_cx_t        *cx = (plot_cx_t*)cx_arg;
-    sdl_print_state_t print_state;
-    int               i, y;
-
-    // print save and init
-    sdl_print_save(&print_state);
-    sdl_print_init(SMALLEST_FONT, COLOR_WHITE, COLOR_BLACK);
-
-    // draw rectangle around the plot area
-    sdl_render_rect(cx->xleft, cx->ytop, cx->xspan, cx->yspan, 3, COLOR_BLUE);
-
-    // draw x-axis xxx option to not do this
-    y = yval2y(cx, cx->yval_of_x_axis);
-    for (i = -1; i <= 1; i++) {
-        sdl_render_line(cx->xleft, y+i, cx->xright, y+i, COLOR_BLUE);
-    }
-
-    // label y-axis
-    if ((ymin_str != NULL) && (ymin_str[0] != '\0')) {
-        sdl_render_printf(cx->xleft+3, cx->ybottom-3-sdl_char_height, "%s", ymin_str);
-        sdl_render_printf(cx->xright-3-strlen(ymin_str)*sdl_char_width, cx->ybottom-3-sdl_char_height, "%s", ymin_str);
-    }
-    if ((ymax_str != NULL) && (ymax_str[0] != '\0')) {
-        sdl_render_printf(cx->xleft+3, cx->ytop+3, "%s", ymax_str);
-        sdl_render_printf(cx->xright-3-strlen(ymax_str)*sdl_char_width, cx->ytop+3, "%s", ymax_str);
-    }
-
-    // label x-axis
-    y = yval2y(cx, cx->yval_of_x_axis);
-    if ((xmin_str != NULL) && (xmin_str[0] != '\0')) {
-        sdl_render_printf(cx->xleft+3, y+3, "%s", xmin_str);
-    }
-    if ((xmax_str != NULL) && (xmax_str[0] != '\0')) {
-        sdl_render_printf(cx->xright-3-strlen(xmax_str)*sdl_char_width, y+3, "%s", xmax_str);
-    }
-
-    // restore saved print state
-    sdl_print_restore(&print_state);
-}
-
-void sdl_plot_points(void *cx_arg, plot_point_t *pts, int num_pts)
-{
-    plot_cx_t   *cx = (plot_cx_t*)cx_arg;
-    sdl_point_t *points;
-    int          i, n=0, point_size=5;
-
-    points = malloc(num_pts * sizeof(sdl_point_t));
-
-    for (i = 0; i < num_pts; i++) {
-        points[n].x = xval2x(cx, pts[i].xval);
-        points[n].y = yval2y(cx, pts[i].yval);
-        n++;
-    }
-    sdl_render_points(points, n, COLOR_WHITE, point_size);
-
-    free(points);
-}
-
-void sdl_plot_bars(void *cx_arg, 
-                   plot_point_t *pts_avg, plot_point_t *pts_min, plot_point_t *pts_max,
-                   int num_pts, double bar_wval)
-{
-    int        i, x, y, w, h;
-    double     wval, hval, xval, yval;
-    plot_cx_t *cx = (plot_cx_t*)cx_arg;
-
-    static bool first = 1;
-
-    //xxxpts_min[0].yval = pts_max[0].yval = pts_avg[0].yval = 1010;
-
-    for (i = 0; i < num_pts; i++) {
-        wval = bar_wval;
-        hval = pts_max[i].yval - pts_min[i].yval;
-        xval = pts_min[i].xval - wval/2;
-        yval = pts_max[i].yval;
-
-        x = xval2x(cx, xval);
-        y = yval2y(cx, yval);
-        w = wval * cx->xspan / cx->xval_span;
-        h = hval * cx->yspan / cx->yval_span;
-
-        if (h < 7) {
-            y -= (7-h) / 2;
-            h = 7;
-        }
-
-        if (first) printf("%d: %f %f %f\n", i, 
-                         pts_min[i].yval, pts_avg[i].yval, pts_max[i].yval);
-        if (first) printf("    %d %d %d %d - hval=%f yspan=%d yval_span=%f\n", 
-               x, y, w, h,
-               hval, cx->yspan, cx->yval_span);
-
-        sdl_render_fill_rect(x, y, w, h, COLOR_PURPLE);
-    }
-
-    sdl_plot_points(cx, pts_avg, num_pts);
-
-    first = 0;
-}
-
-void sdl_plot_free(void *cx)
-{
-    // free cx
-    free(cx);
-}
-

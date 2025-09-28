@@ -1065,3 +1065,175 @@ sdl_pixels_t *sdl_read_display_pixels(int x, int y, int w, int h)
     // success, return allocated sdl_pixels_t   
     return pixels;
 }
+
+// -----------------  PLOTTING  ----------------------------------------- 
+
+typedef struct {
+    char   title[64];
+    int    xleft;
+    int    xright;
+    int    xspan;
+    int    ybottom;
+    int    ytop;
+    int    yspan;
+    double xval_min;
+    double xval_max;
+    double xval_span;
+    double yval_min;
+    double yval_max;
+    double yval_span;
+    double yval_of_x_axis;
+} plot_cx_t;
+
+static int xval2x(plot_cx_t *cx, double xval)
+{
+    int x;
+
+    x = cx->xleft + (xval - cx->xval_min) * (cx->xspan / cx->xval_span);  // xxx add cvt constant to cx
+    return x;
+}
+
+static int yval2y(plot_cx_t *cx, double yval)
+{
+    int y;
+
+    y = cx->ybottom - (yval - cx->yval_min) * (cx->yspan / cx->yval_span);  // xxx add cvt constant to cx
+    return y;
+}
+
+void *sdl_plot_create(char *title, 
+                      int xleft, int xright, int ybottom, int ytop,
+                      double xval_left, int xval_right, double yval_bottom, int yval_top,
+                      double yval_of_x_axis)
+{
+    plot_cx_t *cx;
+
+    // alloc cx and save params in cx
+    cx = calloc(1, sizeof(plot_cx_t));
+    strcpy(cx->title, title);
+    cx->xleft          = xleft;
+    cx->xright         = xright;
+    cx->xspan          = xright - xleft;
+    cx->ybottom        = ybottom;
+    cx->ytop           = ytop;
+    cx->yspan          = ybottom - ytop;
+    cx->xval_min       = xval_left;
+    cx->xval_max       = xval_right;
+    cx->xval_span      = xval_right - xval_left;
+    cx->yval_min       = yval_bottom;
+    cx->yval_max       = yval_top;
+    cx->yval_span      = yval_top - yval_bottom;
+    cx->yval_of_x_axis = yval_of_x_axis;
+
+    // return cx
+    return cx;
+}
+
+void sdl_plot_axis(void *cx_arg, char *xmin_str, char *xmax_str, char *ymin_str, char *ymax_str)
+{
+    plot_cx_t        *cx = (plot_cx_t*)cx_arg;
+    sdl_print_state_t print_state;
+    int               i, y;
+
+    // print save and init
+    sdl_print_save(&print_state);
+    sdl_print_init(SMALLEST_FONT, COLOR_WHITE, COLOR_BLACK);
+
+    // draw rectangle around the plot area
+    sdl_render_rect(cx->xleft, cx->ytop, cx->xspan, cx->yspan, 3, COLOR_BLUE);
+
+    // draw x-axis xxx option to not do this
+    y = yval2y(cx, cx->yval_of_x_axis);
+    for (i = -1; i <= 1; i++) {
+        sdl_render_line(cx->xleft, y+i, cx->xright, y+i, COLOR_BLUE);
+    }
+
+    // label y-axis
+    if ((ymin_str != NULL) && (ymin_str[0] != '\0')) {
+        sdl_render_printf(cx->xleft+3, cx->ybottom-3-sdl_char_height, "%s", ymin_str);
+        sdl_render_printf(cx->xright-3-strlen(ymin_str)*sdl_char_width, cx->ybottom-3-sdl_char_height, "%s", ymin_str);
+    }
+    if ((ymax_str != NULL) && (ymax_str[0] != '\0')) {
+        sdl_render_printf(cx->xleft+3, cx->ytop+3, "%s", ymax_str);
+        sdl_render_printf(cx->xright-3-strlen(ymax_str)*sdl_char_width, cx->ytop+3, "%s", ymax_str);
+    }
+
+    // label x-axis
+    y = yval2y(cx, cx->yval_of_x_axis);
+    if ((xmin_str != NULL) && (xmin_str[0] != '\0')) {
+        sdl_render_printf(cx->xleft+3, y+3, "%s", xmin_str);
+    }
+    if ((xmax_str != NULL) && (xmax_str[0] != '\0')) {
+        sdl_render_printf(cx->xright-3-strlen(xmax_str)*sdl_char_width, y+3, "%s", xmax_str);
+    }
+
+    // restore saved print state
+    sdl_print_restore(&print_state);
+}
+
+void sdl_plot_points(void *cx_arg, sdl_plot_point_t *pts, int num_pts)
+{
+    plot_cx_t   *cx = (plot_cx_t*)cx_arg;
+    sdl_point_t *points;
+    int          i, n=0, point_size=5;
+
+    points = malloc(num_pts * sizeof(sdl_point_t));
+
+    for (i = 0; i < num_pts; i++) {
+        points[n].x = xval2x(cx, pts[i].xval);
+        points[n].y = yval2y(cx, pts[i].yval);
+        n++;
+    }
+    sdl_render_points(points, n, COLOR_WHITE, point_size);
+
+    free(points);
+}
+
+void sdl_plot_bars(void *cx_arg, 
+                   sdl_plot_point_t *pts_avg, sdl_plot_point_t *pts_min, sdl_plot_point_t *pts_max,
+                   int num_pts, double bar_wval)
+{
+    int        i, x, y, w, h;
+    double     wval, hval, xval, yval;
+    plot_cx_t *cx = (plot_cx_t*)cx_arg;
+
+    static bool first = 1;
+
+    //xxxpts_min[0].yval = pts_max[0].yval = pts_avg[0].yval = 1010;
+
+    for (i = 0; i < num_pts; i++) {
+        wval = bar_wval;
+        hval = pts_max[i].yval - pts_min[i].yval;
+        xval = pts_min[i].xval - wval/2;
+        yval = pts_max[i].yval;
+
+        x = xval2x(cx, xval);
+        y = yval2y(cx, yval);
+        w = wval * cx->xspan / cx->xval_span;
+        h = hval * cx->yspan / cx->yval_span;
+
+        if (h < 7) {
+            y -= (7-h) / 2;
+            h = 7;
+        }
+
+        if (first) printf("%d: %f %f %f\n", i, 
+                         pts_min[i].yval, pts_avg[i].yval, pts_max[i].yval);
+        if (first) printf("    %d %d %d %d - hval=%f yspan=%d yval_span=%f\n", 
+               x, y, w, h,
+               hval, cx->yspan, cx->yval_span);
+
+        sdl_render_fill_rect(x, y, w, h, COLOR_PURPLE);
+    }
+
+    sdl_plot_points(cx, pts_avg, num_pts);
+
+    first = 0;
+}
+
+void sdl_plot_free(void *cx)
+{
+    // free cx
+    free(cx);
+}
+

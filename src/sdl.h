@@ -74,6 +74,11 @@ typedef struct {
     int fg_color;
 } sdl_print_state_t;
 
+typedef struct {
+    double xval;
+    double yval;
+} sdl_plot_point_t;
+
 //
 // global variables
 //
@@ -126,6 +131,18 @@ void sdl_render_texture(int x, int y, int w, int h, double angle, sdl_texture_t 
 void sdl_destroy_texture(sdl_texture_t *texture);
 void sdl_query_texture(sdl_texture_t *texture, int *w, int *h);
 sdl_pixels_t *sdl_read_display_pixels(int x, int y, int w, int h);
+
+// plotting
+void *sdl_plot_create(char *title,
+                      int xleft, int xright, int ybottom, int ytop,
+                      double xval_left, int xval_right, double yval_bottom, int yval_top,
+                      double yval_of_x_axis);
+void sdl_plot_axis(void *cx_arg, char *xmin_str, char *xmax_str, char *ymin_str, char *ymax_str);
+void sdl_plot_points(void *cx, sdl_plot_point_t *pts, int num_pts);
+void sdl_plot_bars(void *cx,
+                   sdl_plot_point_t *pts_avg, sdl_plot_point_t *pts_min, sdl_plot_point_t *pts_max,
+                   int num_pts, double bar_wval);
+void sdl_plot_free(void *cx);
 
 // --------------------
 // audio
