@@ -135,7 +135,7 @@ sdl_pixels_t *sdl_read_display_pixels(int x, int y, int w, int h);
 // plotting
 void *sdl_plot_create(char *title,
                       int xleft, int xright, int ybottom, int ytop,
-                      double xval_left, int xval_right, double yval_bottom, int yval_top,
+                      double xval_left, double xval_right, double yval_bottom, double yval_top,
                       double yval_of_x_axis);
 void sdl_plot_axis(void *cx_arg, char *xmin_str, char *xmax_str, char *ymin_str, char *ymax_str);
 void sdl_plot_points(void *cx, sdl_plot_point_t *pts, int num_pts);

@@ -424,6 +424,77 @@ void Sdl_read_display_pixels (struct ParseState *Parser, struct Value *ReturnVal
 }
 
 //
+// plot
+//
+
+void Sdl_plot_create (struct ParseState *Parser, struct Value *ReturnValue,
+	struct Value **Param, int NumArgs)
+{
+    char *title           = Param[0]->Val->Pointer;
+    int xleft             = Param[1]->Val->Integer;
+    int xright            = Param[2]->Val->Integer;
+    int ybottom           = Param[3]->Val->Integer;
+    int ytop              = Param[4]->Val->Integer;
+    double xval_left      = Param[5]->Val->FP;
+    double xval_right     = Param[6]->Val->FP;
+    double yval_bottom    = Param[7]->Val->FP;
+    double yval_top       = Param[8]->Val->FP;
+    double yval_of_x_axis = Param[9]->Val->FP;
+
+    void *plot_cx;
+
+    plot_cx = sdl_plot_create(title, 
+                              xleft, xright, ybottom, ytop, 
+                              xval_left, xval_right, yval_bottom, yval_top, 
+                              yval_of_x_axis);
+
+    ReturnValue->Val->Pointer = plot_cx;
+}
+
+void Sdl_plot_axis (struct ParseState *Parser, struct Value *ReturnValue,
+	struct Value **Param, int NumArgs)
+{
+    void *plot_cx  = Param[0]->Val->Pointer;
+    char *xmin_str = Param[1]->Val->Pointer;
+    char *xmax_str = Param[2]->Val->Pointer;
+    char *ymin_str = Param[3]->Val->Pointer;
+    char *ymax_str = Param[4]->Val->Pointer;
+
+    sdl_plot_axis(plot_cx, xmin_str, xmax_str, ymin_str, ymax_str);
+}
+
+void Sdl_plot_points (struct ParseState *Parser, struct Value *ReturnValue,
+	struct Value **Param, int NumArgs)
+{
+    void *plot_cx         = Param[0]->Val->Pointer;
+    sdl_plot_point_t *pts = Param[1]->Val->Pointer;
+    int num_pts           = Param[2]->Val->Integer;
+
+    sdl_plot_points(plot_cx, pts, num_pts);
+}
+
+void Sdl_plot_bars (struct ParseState *Parser, struct Value *ReturnValue,
+	struct Value **Param, int NumArgs)
+{
+    void *plot_cx             = Param[0]->Val->Pointer;
+    sdl_plot_point_t *pts_avg = Param[1]->Val->Pointer;
+    sdl_plot_point_t *pts_min = Param[2]->Val->Pointer;;
+    sdl_plot_point_t *pts_max = Param[3]->Val->Pointer;
+    int num_pts               = Param[4]->Val->Integer;
+    double bar_wval           = Param[5]->Val->FP;
+
+    sdl_plot_bars(plot_cx, pts_avg, pts_min, pts_max, num_pts, bar_wval);
+}
+
+void Sdl_plot_free (struct ParseState *Parser, struct Value *ReturnValue,
+	struct Value **Param, int NumArgs)
+{
+    void *plot_cx = Param[0]->Val->Pointer;
+
+    sdl_plot_free(plot_cx);
+}
+
+//
 // audio
 //
 
@@ -736,6 +807,10 @@ typedef struct { \n\
     int bg_color; \n\
     int fg_color; \n\
 } sdl_print_state_t; \n\
+typedef struct { \n\
+    double xval; \n\
+    double yval; \n\
+} sdl_plot_point_t; \n\
 \n\
 #define SUBSYS_VIDEO  1 \n\
 #define SUBSYS_AUDIO  2 \n\

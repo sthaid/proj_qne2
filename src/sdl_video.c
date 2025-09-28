@@ -1103,7 +1103,7 @@ static int yval2y(plot_cx_t *cx, double yval)
 
 void *sdl_plot_create(char *title, 
                       int xleft, int xright, int ybottom, int ytop,
-                      double xval_left, int xval_right, double yval_bottom, int yval_top,
+                      double xval_left, double xval_right, double yval_bottom, double yval_top,
                       double yval_of_x_axis)
 {
     plot_cx_t *cx;
