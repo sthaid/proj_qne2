@@ -208,8 +208,7 @@ int main(int argc, char **argv)
         if (display_mode == DISPLAY_MODE_DAILY) {
             time_t t;
             struct tm tm;
-            //localtime_r(&plot_end_time, &plot_end_tm);
-            //peh = peh_float / 3600 - plot_end_tm.tm_hour + 24;
+
             peh = nearbyint(peh_float);
 
             t = peh * 3600;
@@ -220,8 +219,6 @@ int main(int argc, char **argv)
 
             psh = peh - NUM_DAYS*24;
         } else {
-            //peh = plot_end_time / 3600 + 1;
-            //psh = peh - 24;
             peh = nearbyint(peh_float);
             psh = peh - 24;
         }
@@ -255,7 +252,6 @@ int main(int argc, char **argv)
 
         // process events
         switch (event.event_id) {
-// xxx add event for end of data
         case EVID_QUIT:
             end_program = true;
             break;      
@@ -270,20 +266,9 @@ int main(int argc, char **argv)
                 printf("XXX limitting peh_float\n");
                 peh_float = xxx;
             }
-#if 0
-            if (display_mode == DISPLAY_MODE_HOURLY) {
-                plot_end_time -= event.u.motion.xrel * (3600. * 24 / sdl_win_width);
-            } else {
-                plot_end_time -= event.u.motion.xrel * (86400. * NUM_DAYS / sdl_win_width);
-            }
-            //if (plot_end_time > time(NULL)) {
-                //plot_end_time = time(NULL);
-            //}
-#endif
             break;      
         case EVID_EOD:
             printf("INFO %s: got EVID_EOD\n", progname);
-            //plot_end_time = time(NULL);
             peh_float = start_of_tomorrow();
             break;
         case EVID_DISPLAY_MODE:
@@ -353,16 +338,10 @@ void plot_daily(plot_t *p, int psh, int peh, int ybottom, int ytop)
     // init strings for the plot x/y-axis labels
     t = psh * 3600;
     localtime_r(&t, &tm);
-    sprintf(xmin_str, "%02d/%02d/%02d", tm.tm_mon+1, tm.tm_mday, tm.tm_year-100);
-    //sprintf(xmin_str, "%02d/%02d/%02d %02d:%02d:%02d", 
-    //         tm.tm_mon+1, tm.tm_mday, tm.tm_year-100,
-    //         tm.tm_hour, tm.tm_min, tm.tm_sec);
+    sprintf(xmin_str, "%02d/%02d/%02d %02d", tm.tm_mon+1, tm.tm_mday, tm.tm_year-100, tm.tm_hour);
     t = peh * 3600 - 1;
     localtime_r(&t, &tm);
-    sprintf(xmax_str, "%02d/%02d/%02d", tm.tm_mon+1, tm.tm_mday, tm.tm_year-100);
-    //sprintf(xmax_str, "%02d/%02d/%02d %02d:%02d:%02d", 
-    //         tm.tm_mon+1, tm.tm_mday, tm.tm_year-100,
-    //         tm.tm_hour, tm.tm_min, tm.tm_sec);
+    sprintf(xmax_str, "%02d/%02d/%02d %02d", tm.tm_mon+1, tm.tm_mday, tm.tm_year-100, tm.tm_hour);
 
     sprintf(ymin_str, "%.0f", p->yval_bottom);
     sprintf(ymax_str, "%.0f", p->yval_top);
@@ -455,16 +434,10 @@ void plot_hourly(plot_t *p, int psh, int peh, int ybottom, int ytop)
     // init strings for the plot x/y-axis labels
     t = psh * 3600;
     localtime_r(&t, &tm);
-    //sprintf(xmin_str, "%02d/%02d/%02d", tm.tm_mon+1, tm.tm_mday, tm.tm_year-100);
-    sprintf(xmin_str, "%02d/%02d/%02d %02d:%02d:%02d", 
-             tm.tm_mon+1, tm.tm_mday, tm.tm_year-100,
-             tm.tm_hour, tm.tm_min, tm.tm_sec);
+    sprintf(xmin_str, "%02d/%02d/%02d %02d", tm.tm_mon+1, tm.tm_mday, tm.tm_year-100, tm.tm_hour);
     t = peh * 3600 - 1;
     localtime_r(&t, &tm);
-    //sprintf(xmax_str, "%02d/%02d/%02d", tm.tm_mon+1, tm.tm_mday, tm.tm_year-100);
-    sprintf(xmax_str, "%02d/%02d/%02d %02d:%02d:%02d", 
-             tm.tm_mon+1, tm.tm_mday, tm.tm_year-100,
-             tm.tm_hour, tm.tm_min, tm.tm_sec);
+    sprintf(xmax_str, "%02d/%02d/%02d %02d", tm.tm_mon+1, tm.tm_mday, tm.tm_year-100, tm.tm_hour);
 
     sprintf(ymin_str, "%.0f", p->yval_bottom);
     sprintf(ymax_str, "%.0f", p->yval_top);
