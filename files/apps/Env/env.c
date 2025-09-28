@@ -24,7 +24,7 @@
 // - clip graph
 // - start daily plot on day interval,  < > go by days
 
-// xxx temp
+// xxx temp, move to sdl
 typedef struct {
     double xval;
     double yval;
@@ -87,20 +87,19 @@ typedef struct {
 
 char           *progname;
 char           *data_dir;
+plot_t          plots[MAX_PLOTS];
+int             display_mode = DISPLAY_MODE_HOURLY;
 sensors_data_t *data;
-int             display_mode = DISPLAY_MODE_DAILY;  // xxx or init HOURLY?
-
-plot_t plots[MAX_PLOTS];
 
 //
 // prototypes
 //
 
-void get_plot_pts(int which, int psh, int peh, plot_point_t *pts, int *num_pts);
+void plot_hourly(plot_t *p, int psh, int peh, int ybottom, int ytop);
+void get_hourly_plot_pts(int which, int psh, int peh, plot_point_t *pts, int *num_pts);
 
 void plot_daily(plot_t *p, int psh, int peh, int ybottom, int ytop);
-
-void get_plot_day_pts(
+void get_daily_plot_pts(
             int which, int psh, int peh,
             plot_point_t *pts_avg, plot_point_t * pts_min, plot_point_t * pts_max,
             int *num_pts);
@@ -139,11 +138,11 @@ int main(int argc, char **argv)
     plots[0].yval_top       = util_get_int_param(data_dir, "max_pressure", 1050);
     plots[0].yval_of_x_axis = util_get_int_param(data_dir, "typical_pressure", 1000);  // xxx 1013
 
-//  plots[1].title          = "Pressure";
-//  plots[1].which          = PRESSURE;
-//  plots[1].yval_bottom    = util_get_int_param(data_dir, "min_pressure", 950);  //xxx cleanup
-//  plots[1].yval_top       = util_get_int_param(data_dir, "max_pressure", 1050);
-//  plots[1].yval_of_x_axis = util_get_int_param(data_dir, "typical_pressure", 1000);  // xxx 1013
+    plots[1].title          = "Pressure";
+    plots[1].which          = PRESSURE;
+    plots[1].yval_bottom    = util_get_int_param(data_dir, "min_pressure", 950);  //xxx cleanup
+    plots[1].yval_top       = util_get_int_param(data_dir, "max_pressure", 1050);
+    plots[1].yval_of_x_axis = util_get_int_param(data_dir, "typical_pressure", 1000);  // xxx 1013
 
     // map the sensors.dat file;
     // if map failed or file version is incorrect then return error
@@ -222,6 +221,23 @@ int main(int argc, char **argv)
             sdl_plot_points(plot_cx, pts_avg, num_pts);
             sdl_plot_free(plot_cx);
 #endif
+            // print the plot end day
+            localtime_r(&plot_end_time, &plot_end_tm);
+
+            // xxx explain what peh is
+            peh = plot_end_time / 3600 - plot_end_tm.tm_hour + 24;
+            psh = peh - 24;
+
+            // xxx
+            for (int i = 0; i < MAX_PLOTS; i++) {
+                if (plots[i].title == NULL) {
+                    continue;
+                }
+
+                int ybottom = 600 * (i + 1);
+                int ytop    = ybottom - 600;
+                plot_hourly(&plots[i], psh, peh, ybottom, ytop);
+            }
         } else if (display_mode == DISPLAY_MODE_DAILY) {
             // print the plot end day
             localtime_r(&plot_end_time, &plot_end_tm);
@@ -300,6 +316,8 @@ int main(int argc, char **argv)
     return 0;
 }
 
+// -----------------  PLOT DAILY  -------------------------
+
 void plot_daily(plot_t *p, int psh, int peh, int ybottom, int ytop)
 {
     plot_point_t    pts_avg[MAX_PTS], pts_min[MAX_PTS], pts_max[MAX_PTS];
@@ -310,7 +328,7 @@ void plot_daily(plot_t *p, int psh, int peh, int ybottom, int ytop)
     struct tm       tm;
 
     // get point values for the plot start hour to plot end hour (psh - peh) range
-    get_plot_day_pts(p->which, psh, peh, pts_avg, pts_min, pts_max, &num_pts);
+    get_daily_plot_pts(p->which, psh, peh, pts_avg, pts_min, pts_max, &num_pts);
 
     // create the plot context
     cx =  sdl_plot_create(p->title,                    // title
@@ -348,33 +366,7 @@ void plot_daily(plot_t *p, int psh, int peh, int ybottom, int ytop)
     sdl_plot_free(cx);
 }
 
-void get_plot_pts(int which, int psh, int peh, plot_point_t *pts, int *num_pts)
-{
-    int hour, idx, n=0;
-    double value;
-
-    for (hour = psh; hour <= peh; hour++) {
-        idx = hour - data->hdr.start_hour;
-        if (idx < 0 || idx > data->hdr.last_idx || idx >= MAX_SENSOR_VALUES) {
-            continue;
-        }
-
-        value = data->values[idx].sensors[which];
-        if (value == INVALID_SENSOR_VALUE) {
-            continue;
-        }
-
-        pts[n].xval = hour + 0.5;
-        pts[n].yval = value;
-        n++;
-
-        // xxx limit value to min/max
-    }
-
-    *num_pts = n;
-}
-
-void get_plot_day_pts(
+void get_daily_plot_pts(
             int which, int psh, int peh,
             plot_point_t *pts_avg, plot_point_t * pts_min, plot_point_t * pts_max,
             int *num_pts)
@@ -420,11 +412,94 @@ void get_plot_day_pts(
     static int first;
     if (first == 0) {
         first = 1;
-        printf("XXXXXXXXX num pts %d\n", n);
+        printf("XXXXXXXXX DAILY num pts %d\n", n);
     }
 
     *num_pts = n;
 }
+
+// -----------------  PLOT HOURLY  --------------------------
+
+void plot_hourly(plot_t *p, int psh, int peh, int ybottom, int ytop)
+{
+    plot_point_t    pts[MAX_PTS];
+    void           *cx;
+    int             num_pts;
+    char            xmin_str[50], xmax_str[50], ymin_str[50], ymax_str[50];
+    time_t          t;
+    struct tm       tm;
+
+    // get point values for the plot start hour to plot end hour (psh - peh) range
+    get_hourly_plot_pts(p->which, psh, peh, pts, &num_pts);
+
+    // create the plot context
+    cx =  sdl_plot_create(p->title,                    // title
+                          0, sdl_win_width-1,          // xleft, xright
+                          ybottom, ytop,               // ybottom, ytop
+                          //xxx psh, psh+NUM_DAYS*24,        // xval_left, xval_right
+                          psh, peh,        // xval_left, xval_right
+                          p->yval_bottom, p->yval_top, // yval_bottom, yval_top
+                          p->yval_of_x_axis);          // yval_of_x_axis
+
+    // plot the data points, using bar graph
+    sdl_plot_bars(cx, pts, pts, pts, num_pts, 1);
+
+    // init strings for the plot x/y-axis labels
+    t = psh * 3600;
+    localtime_r(&t, &tm);
+    //sprintf(xmin_str, "%02d/%02d/%02d", tm.tm_mon+1, tm.tm_mday, tm.tm_year-100);
+    sprintf(xmin_str, "%02d/%02d/%02d %02d:%02d:%02d", 
+             tm.tm_mon+1, tm.tm_mday, tm.tm_year-100,
+             tm.tm_hour, tm.tm_min, tm.tm_sec);
+    t = peh * 3600 - 1;
+    localtime_r(&t, &tm);
+    //sprintf(xmax_str, "%02d/%02d/%02d", tm.tm_mon+1, tm.tm_mday, tm.tm_year-100);
+    sprintf(xmax_str, "%02d/%02d/%02d %02d:%02d:%02d", 
+             tm.tm_mon+1, tm.tm_mday, tm.tm_year-100,
+             tm.tm_hour, tm.tm_min, tm.tm_sec);
+
+    sprintf(ymin_str, "%.0f", p->yval_bottom);
+    sprintf(ymax_str, "%.0f", p->yval_top);
+
+    // plot the axes
+    sdl_plot_axis(cx, xmin_str, xmax_str, ymin_str, ymax_str);
+
+    // free the plot
+    sdl_plot_free(cx);
+}
+
+void get_hourly_plot_pts(int which, int psh, int peh, plot_point_t *pts, int *num_pts)
+{
+    int hour, idx, n=0;
+    double value;
+
+    for (hour = psh; hour < peh; hour++) {
+        idx = hour - data->hdr.start_hour;
+        if (idx < 0 || idx > data->hdr.last_idx || idx >= MAX_SENSOR_VALUES) {
+            continue;
+        }
+
+        value = data->values[idx].sensors[which];
+        if (value == INVALID_SENSOR_VALUE) {
+            continue;
+        }
+
+        pts[n].xval = hour + 0.5;
+        pts[n].yval = value;
+        n++;
+
+        // xxx limit value to min/max
+    }
+
+    static int first;
+    if (first == 0) {
+        first = 1;
+        printf("XXXXXXXXX HOURLY num pts %d\n", n);
+    }
+
+    *num_pts = n;
+}
+
             
 // xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 // xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
