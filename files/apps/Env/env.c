@@ -58,10 +58,6 @@ void sdl_plot_free(void *cx);
 #define DISPLAY_MODE_HOURLY 0
 #define DISPLAY_MODE_DAILY  1
 
-#define DISPLAY_MODE_STR \
-    (display_mode == DISPLAY_MODE_HOURLY ? "HOURLY" : \
-     display_mode == DISPLAY_MODE_DAILY  ? "DAILY"  : \
-                                           "????")
 
 //
 // typedefs
@@ -91,6 +87,9 @@ char           *data_dir;
 plot_t          plots[MAX_PLOTS];
 int             display_mode = DISPLAY_MODE_HOURLY;
 sensors_data_t *data;
+
+#define DISPLAY_MODE_STR "xxxx"
+//#define DISPLAY_MODE_STR (display_mode == DISPLAY_MODE_HOURLY ? "HOURLY" : display_mode == DISPLAY_MODE_DAILY  ? "DAILY"  : "????")
 
 //
 // prototypes
@@ -574,21 +573,21 @@ void sdl_plot_axis(void *cx_arg, char *xmin_str, char *xmax_str, char *ymin_str,
     }
 
     // label y-axis
-    if (ymin_str && ymin_str[0]) {
+    if ((ymin_str != NULL) && (ymin_str[0] != '\0')) {
         sdl_render_printf(cx->xleft+3, cx->ybottom-3-sdl_char_height, "%s", ymin_str);
         sdl_render_printf(cx->xright-3-strlen(ymin_str)*sdl_char_width, cx->ybottom-3-sdl_char_height, "%s", ymin_str);
     }
-    if (ymax_str && ymax_str[0]) {
+    if ((ymax_str != NULL) && (ymax_str[0] != '\0')) {
         sdl_render_printf(cx->xleft+3, cx->ytop+3, "%s", ymax_str);
         sdl_render_printf(cx->xright-3-strlen(ymax_str)*sdl_char_width, cx->ytop+3, "%s", ymax_str);
     }
 
     // label x-axis
     y = yval2y(cx, cx->yval_of_x_axis);
-    if (xmin_str && xmin_str[0]) {
+    if ((xmin_str != NULL) && (xmin_str[0] != '\0')) {
         sdl_render_printf(cx->xleft+3, y+3, "%s", xmin_str);
     }
-    if (xmax_str && xmax_str[0]) {
+    if ((xmax_str != NULL) && (xmax_str[0] != '\0')) {
         sdl_render_printf(cx->xright-3-strlen(xmax_str)*sdl_char_width, y+3, "%s", xmax_str);
     }
 
