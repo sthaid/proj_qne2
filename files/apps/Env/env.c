@@ -108,7 +108,7 @@ void get_daily_plot_pts(
 
 int main(int argc, char **argv)
 {
-    int             rc;
+    int             rc, i;
     sdl_event_t     event;
     bool            end_program = false;
     time_t          plot_end_time;
@@ -132,6 +132,7 @@ int main(int argc, char **argv)
     util_get_int_param(data_dir, "max_pressure", 1050);
 
     // define plots
+    // xxx make routine
     plots[0].title          = "Pressure";
     plots[0].which          = PRESSURE;
     plots[0].yval_bottom    = util_get_int_param(data_dir, "min_pressure", 950);  //xxx cleanup
@@ -194,79 +195,30 @@ int main(int argc, char **argv)
 
         sdl_print_init_color(COLOR_WHITE, COLOR_BLACK);
 
-
-
-
-        if (display_mode == DISPLAY_MODE_HOURLY) {
-#if 0
-            // print the plot end hour 
+        // xxx comment
+        if (display_mode == DISPLAY_MODE_DAILY) {
             localtime_r(&plot_end_time, &plot_end_tm);
-            sdl_render_printf_xyctr(
-                    sdl_win_width/2, sdl_win_height-200, 
-                    "%02d/%02d/%02d %02d",
-                    plot_end_tm.tm_mon+1, plot_end_tm.tm_mday, plot_end_tm.tm_year-100, plot_end_tm.tm_hour);
-
-            // xxx these are utc
-            peh = plot_end_time / 3600;  // plot end hour
-            psh = peh - 23;              // plot start hour  xxx make hourly for the current day
-
-            // xxx
-            get_plot_pts(PRESSURE, psh, peh, pts_avg, &num_pts);
-            plot_cx =  sdl_plot_create("PRESSURE", 
-                                       0, sdl_win_width-1,    // xleft, xright
-                                       800, 0,              // ybottom, ytop
-                                       psh, psh+24,         // xval_left, xval_right
-                                       950, 1050            // yval_bottom, yval_top
-                                       1000);               // yval_of_x_axis
-            sdl_plot_points(plot_cx, pts_avg, num_pts);
-            sdl_plot_free(plot_cx);
-#endif
-            // print the plot end day
-            localtime_r(&plot_end_time, &plot_end_tm);
-
-            // xxx explain what peh is
             peh = plot_end_time / 3600 - plot_end_tm.tm_hour + 24;
+            psh = peh - NUM_DAYS*24;
+        } else {
+            peh = plot_end_time / 3600 + 1;
             psh = peh - 24;
+        }
 
-            // xxx
-            for (int i = 0; i < MAX_PLOTS; i++) {
-                if (plots[i].title == NULL) {
-                    continue;
-                }
-
-                int ybottom = 600 * (i + 1);
-                int ytop    = ybottom - 600;
-                plot_hourly(&plots[i], psh, peh, ybottom, ytop);
+        // xxx
+        for (i = 0; i < MAX_PLOTS; i++) {
+            if (plots[i].title == NULL) {
+                continue;
             }
-        } else if (display_mode == DISPLAY_MODE_DAILY) {
-            // print the plot end day
-            localtime_r(&plot_end_time, &plot_end_tm);
-#if 0
-            sdl_render_printf_xyctr(
-                    sdl_win_width/2, sdl_win_height-200, 
-                    "%02d/%02d/%02d %02d:%02d:%02d",
-                    plot_end_tm.tm_mon+1, plot_end_tm.tm_mday, plot_end_tm.tm_year-100,
-                    plot_end_tm.tm_hour, plot_end_tm.tm_min, plot_end_tm.tm_sec);
-#endif
 
-            // xxx these are utc
-// xxxxxxxxxx
-            // xxx explain what peh is
-            peh = plot_end_time / 3600 - plot_end_tm.tm_hour + 24;
-            psh = peh - NUM_DAYS * 24;
-
-            // xxx
-            for (int i = 0; i < MAX_PLOTS; i++) {
-                if (plots[i].title == NULL) {
-                    continue;
-                }
-
-                int ybottom = 600 * (i + 1);
-                int ytop    = ybottom - 600;
+            // xxx fix
+            int ybottom = 600 * (i + 1);
+            int ytop    = ybottom - 600;
+            if (display_mode == DISPLAY_MODE_HOURLY) {
+                plot_hourly(&plots[i], psh, peh, ybottom, ytop);
+            } else {
                 plot_daily(&plots[i], psh, peh, ybottom, ytop);
             }
-        } else {
-            printf("ERROR %s: invalid display_mode %d\n", progname, display_mode);
         }
 
         // present the display
@@ -292,6 +244,9 @@ int main(int argc, char **argv)
             } else {
                 plot_end_time -= event.u.motion.xrel * (86400. * NUM_DAYS / sdl_win_width);
             }
+            //if (plot_end_time > time(NULL)) {
+                //plot_end_time = time(NULL);
+            //}
             break;      
         case EVID_EOD:
             printf("INFO %s: got EVID_EOD\n", progname);
