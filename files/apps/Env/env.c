@@ -3,6 +3,7 @@
 #include <time.h>
 #include <string.h>  // for memset
 #include <unistd.h>   // xxx check these are needed
+#include <math.h>
 
 #include <sdl.h>
 #include <utils.h>
@@ -48,7 +49,7 @@ void sdl_plot_free(void *cx);
 
 #define MAX_PLOTS 3
 
-#define NUM_DAYS 10
+#define NUM_DAYS 7
 
 #define EVID_EOD          1
 #define EVID_DISPLAY_MODE 2
@@ -106,14 +107,21 @@ void get_daily_plot_pts(
 
 // -----------------  MAIN  ------------------------------------------
 
+int start_of_tomorrow(void)
+{
+    struct tm tm;
+    time_t t = time(NULL);
+    localtime_r(&t, &tm);
+    return t / 3600 - tm.tm_hour + 24;
+}
+
 int main(int argc, char **argv)
 {
     int             rc, i;
     sdl_event_t     event;
     bool            end_program = false;
-    time_t          plot_end_time;
-    struct tm       plot_end_tm;
-    int             psh, peh;
+    int             psh, peh;  //xxx
+    double          peh_float;
     sdl_loc_t      *loc;
     char           *str;
 
@@ -167,7 +175,8 @@ int main(int argc, char **argv)
     }
 
     // xxx
-    plot_end_time = time(NULL);
+    //plot_end_time = time(NULL);
+    peh_float = start_of_tomorrow();
 
     // runtime loop
     while (true) {
@@ -197,11 +206,23 @@ int main(int argc, char **argv)
 
         // xxx comment
         if (display_mode == DISPLAY_MODE_DAILY) {
-            localtime_r(&plot_end_time, &plot_end_tm);
-            peh = plot_end_time / 3600 - plot_end_tm.tm_hour + 24;
+            time_t t;
+            struct tm tm;
+            //localtime_r(&plot_end_time, &plot_end_tm);
+            //peh = peh_float / 3600 - plot_end_tm.tm_hour + 24;
+            peh = nearbyint(peh_float);
+
+            t = peh * 3600;
+            localtime_r(&t, &tm);
+            if (tm.tm_hour != 0) {
+                peh = peh - tm.tm_hour + 24;
+            }
+
             psh = peh - NUM_DAYS*24;
         } else {
-            peh = plot_end_time / 3600 + 1;
+            //peh = plot_end_time / 3600 + 1;
+            //psh = peh - 24;
+            peh = nearbyint(peh_float);
             psh = peh - 24;
         }
 
@@ -240,6 +261,17 @@ int main(int argc, char **argv)
             break;      
         case EVID_MOTION:
             if (display_mode == DISPLAY_MODE_HOURLY) {
+                peh_float -= event.u.motion.xrel * (24. / sdl_win_width);
+            } else {
+                peh_float -= event.u.motion.xrel * ((24. * NUM_DAYS) / sdl_win_width);
+            }
+            int xxx = start_of_tomorrow();
+            if (peh_float > xxx) {
+                printf("XXX limitting peh_float\n");
+                peh_float = xxx;
+            }
+#if 0
+            if (display_mode == DISPLAY_MODE_HOURLY) {
                 plot_end_time -= event.u.motion.xrel * (3600. * 24 / sdl_win_width);
             } else {
                 plot_end_time -= event.u.motion.xrel * (86400. * NUM_DAYS / sdl_win_width);
@@ -247,14 +279,35 @@ int main(int argc, char **argv)
             //if (plot_end_time > time(NULL)) {
                 //plot_end_time = time(NULL);
             //}
+#endif
             break;      
         case EVID_EOD:
             printf("INFO %s: got EVID_EOD\n", progname);
-            plot_end_time = time(NULL);
+            //plot_end_time = time(NULL);
+            peh_float = start_of_tomorrow();
             break;
         case EVID_DISPLAY_MODE:
             printf("INFO %s: got EVID_DISPLAY_MODE\n", progname);
+
+            double ctr_hour = (peh + psh) / 2.;
             display_mode = (display_mode + 1 == MAX_DISPLAY_MODE ? 0 : display_mode + 1);
+
+            xxx = start_of_tomorrow();
+            if (peh_float == xxx) {
+                break;
+            }
+
+            if (display_mode == DISPLAY_MODE_HOURLY) {
+                peh_float = ctr_hour + 12;
+            } else {
+                peh_float = ctr_hour + (NUM_DAYS / 2.) * 24;
+            }
+
+            if (peh_float > xxx) {
+                printf("XXX limitting peh_float\n");
+                peh_float = xxx;
+            }
+
             break;
         }
 
