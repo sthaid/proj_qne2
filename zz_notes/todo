@@ -1,3 +1,33 @@
+--------
+json-c
+--------
+
+sudo apt-get install libjson-c-dev
+
+
+--------
+cJSON
+--------
+
+sudo apt  install libcjson-dev
+
+[HOME2 | json]$ find /usr/include -name cJSON.h
+/usr/include/cjson/cJSON.h
+
+gcc -o t2 t2.c -I /usr/include/cjson -lcjson
+
+https://github.com/DaveGamble/cJSON
+
+gcc -o test test.c -I. test.c cJSON.c
+
+"how to decode a cjson file using cJSON"
+
+
+
+
+
+xxxxxxxxxxxxxxxxxxx
+
 https://github.com/json-c/json-c
 
 https://www.weather.gov/documentation/services-web-api#:~:text=All%20of%20the%20information%20presented,to%20use%20for%20any%20purpose.
