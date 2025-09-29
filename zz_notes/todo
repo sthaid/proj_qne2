@@ -1,11 +1,4 @@
 --------
-json-c
---------
-
-sudo apt-get install libjson-c-dev
-
-
---------
 cJSON
 --------
 
@@ -21,6 +14,12 @@ https://github.com/DaveGamble/cJSON
 gcc -o test test.c -I. test.c cJSON.c
 
 "how to decode a cjson file using cJSON"
+
+---------
+clone and checkin github cJSON      done
+add util routines to access         done
+add code to Sensors.c               done / in progress
+learn how to use weather.gov
 
 
 

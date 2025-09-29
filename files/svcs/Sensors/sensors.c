@@ -30,6 +30,38 @@ static int   id;
 char *sensval2str(double x);
 void add_simulated_values(sensors_data_t *data);
 
+// xxxxxxxxxxxxxxxxxxxxxxxxxxxx
+void twg(void)
+{
+    int filelen;
+    char *buff;
+    void *json;
+
+    buff = util_read_file("svcs/Sensors", "xxyy.json", &filelen);
+    // xxx error paths need to free buff
+    if (buff == NULL) {
+        printf("ERROR: failed to read json file\n");
+        return;
+    }
+    printf("filelen = %d\n", filelen);
+
+    json = util_json_parse(buff);
+    if (json == NULL) {
+        printf("ERROR: util_json_parse failed\n");
+        return;
+    }
+
+    double number = util_json_get_number(json, "properties", "periods", "0", "temperature", NULL);
+    if (number == NOT_A_NUMBER) {
+        printf("ERROR: util_json_get_number failed\n");
+        return;
+    }
+    printf("temperature = %f\n", number);
+
+    // get more stuff
+    util_json_free(json);
+}
+
 int main(int argc, char **argv)
 {
     sensors_data_t        *data = NULL;
@@ -52,6 +84,9 @@ int main(int argc, char **argv)
     printf("INFO %s: sensors.dat:\n", progname);
     printf("INFO %s:   version supported = %lx\n", progname, SENSORS_DATA_FILE_VERSION);
     printf("INFO %s:   size              = %zd\n", progname, sizeof(sensors_data_t));
+
+    // xxx test weather.gov
+    twg();
 
     // init the SDL sensor subsystem
     rc = sdl_init(SUBSYS_SENSOR);

@@ -30,4 +30,12 @@ void util_print_params(char *dir);
 
 char *util_get_ipaddr(void);
 
+// -----------------  JSON  ----------------------------------
+
+#define NOT_A_NUMBER 12345678
+
+void *util_json_parse(char *str);
+void util_json_free(void *json);
+double util_json_get_number(void *json, ...);
+
 #endif

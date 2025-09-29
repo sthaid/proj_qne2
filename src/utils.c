@@ -3,6 +3,8 @@
 #include <utils.h>
 #include <logging.h>
 
+#include "../cJSON/cJSON.h"
+
 // ----------------- TIME --------------------
 
 long util_microsec_timer(void)
@@ -619,40 +621,48 @@ next:
     }
 
     return ipaddr;
-
-#if 0
-    // The following approach doesn't work on Android, Google AI says:
-    //
-    // "The ip program, along with other network utilities like ifconfig, 
-    //  route, and netstat, cannot be run directly by non-privileged user 
-    //  applications on Android due to security restrictions implemented by 
-    //  the operating system.:
-
-    static char ipaddr[20];
-    FILE       *fp;
-    char        s[100], s1[100];
-    int         a, b, c, d;
-
-    strcpy(ipaddr, "xxx.xxx.xxx.xxx");
-
-    fp = popen("ip -4 addr show | grep \" inet \"", "r");
-    if (fp != NULL) {
-        while (fgets(s, sizeof(s), fp) != NULL) {
-            if (sscanf(s, "%s %d.%d.%d.%d", s1, &a, &b, &c, &d) == 5 &&
-                strcmp(s1, "inet") == 0 &&
-                a != 127)
-            {
-                sprintf(ipaddr, "%d.%d.%d.%d", a, b, c, d);
-                break;
-            }
-        }
-
-        fclose(fp);
-    } else {
-        ERROR("popen failed, %s\n", strerror(errno));
-    }
-
-    return ipaddr;
-#endif
 }
 
+// ----------------- JSON --------------------
+
+void *util_json_parse(char *str)
+{
+    return cJSON_Parse(str);
+}
+
+void util_json_free(void *root_arg)
+{
+    cJSON_Delete((cJSON*)root_arg);
+}
+
+double util_json_get_number(void *root_arg, ...)
+{
+    cJSON  *root = (cJSON*)root_arg;
+    cJSON  *item;
+    va_list ap;
+    char   *arg;
+    int     cnt, array_idx;
+
+    va_start(ap, root_arg);
+
+    item = root;
+    while ((arg = va_arg(ap, char*)) != NULL) {
+        cnt = sscanf(arg, "%d", &array_idx);
+        if (cnt == 0) {
+            item = cJSON_GetObjectItem(item, arg);
+        } else {
+            item = cJSON_GetArrayItem(item, array_idx);
+        }
+        if (item == NULL) {
+            break;
+        }
+    }
+
+    va_end(ap);
+
+    if (item == NULL || !cJSON_IsNumber(item)) {
+        return NOT_A_NUMBER;
+    }
+
+    return item->valuedouble;
+}
