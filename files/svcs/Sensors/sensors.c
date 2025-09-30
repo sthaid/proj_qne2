@@ -31,11 +31,36 @@ char *sensval2str(double x);
 void add_simulated_values(sensors_data_t *data);
 
 // xxxxxxxxxxxxxxxxxxxxxxxxxxxx
+
+void print_json_value(char *s, json_value_t *v)
+{
+    printf("%s:  ", s);
+    switch (v->type) {
+    case JSON_TYPE_FLAG:
+        printf("FLAG  %s", v->u.flag ? "true" : "false");
+        break;
+    case JSON_TYPE_NUMBER:
+        printf("NUMBER  %f", v->u.number);
+        break;
+    case JSON_TYPE_STRING:
+        printf("STRING  %s", v->u.string);
+        break;
+    case JSON_TYPE_ARRAY:
+        printf("ARRAY  %p", v->u.array);
+        break;
+    case JSON_TYPE_OBJECT:
+        printf("OBJECT  %p", v->u.object);
+        break;
+    }
+    printf("\n");
+}
+
 void twg(void)
 {
     int filelen;
     char *buff;
-    void *json;
+    void *json_root;
+    json_value_t *value;
 
     buff = util_read_file("svcs/Sensors", "xxyy.json", &filelen);
     // xxx error paths need to free buff
@@ -45,21 +70,41 @@ void twg(void)
     }
     printf("filelen = %d\n", filelen);
 
-    json = util_json_parse(buff);
-    if (json == NULL) {
-        printf("ERROR: util_json_parse failed\n");
-        return;
+    while (1) {
+        json_root = util_json_parse(buff);
+        if (json_root == NULL) {
+            printf("ERROR: util_json_parse failed\n");
+            return;
+        }
+
+        value = util_json_get_value(json_root, "properties", "periods", "0", "temperature", NULL);
+        print_json_value("temperature", value);
+
+        value = util_json_get_value(json_root, "properties", "periods", "0", "temperatureUnit", NULL);
+        print_json_value("temperatureUnit", value);
+
+        value = util_json_get_value(json_root, "properties", "periods", "0", "isDaytime", NULL);
+        print_json_value("isDaytime", value);
+
+        value = util_json_get_value(json_root, "properties", "periods", NULL);
+        print_json_value("periods", value);
+
+        void *array = value->u.array;
+        value = util_json_get_value(array, "0", "temperature", NULL);
+        print_json_value("temperature", value);
+
+        value = util_json_get_value(json_root, "properties", NULL);
+        print_json_value("properties", value);
+
+        void *obj = value->u.object;
+        value = util_json_get_value(obj, "periods", "0", "isDaytime", NULL);
+        print_json_value("isDaytime", value);
+
+        util_json_free(json_root);
+        break;
     }
 
-    double number = util_json_get_number(json, "properties", "periods", "0", "temperature", NULL);
-    if (number == NOT_A_NUMBER) {
-        printf("ERROR: util_json_get_number failed\n");
-        return;
-    }
-    printf("temperature = %f\n", number);
-
-    // get more stuff
-    util_json_free(json);
+exit(1);
 }
 
 int main(int argc, char **argv)

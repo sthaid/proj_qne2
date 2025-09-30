@@ -6,17 +6,19 @@ CC=gcc
 
 CFLAGS=  -Wall -Wno-unused-result -Werror -O2 -g -std=gnu11 
 CFLAGS+= -DVER=\"a97d94fa\" -DTAG=\"v3.2.2\" -DUNIX_HOST
-CFLAGS+= -I../src $(shell pkg-config sdl3--cflags)
+CFLAGS+= -I../src -I../cJSON $(shell pkg-config sdl3--cflags)
 LIBS=    -lm -lreadline -lSDL3 -lSDL3_ttf
 
 TARGET	= picoc
 SRCS	= picoc.c table.c lex.c parse.c expression.c heap.c type.c \
-	variable.c clibrary.c platform.c include.c debug.c \
-	platform/platform_unix.c platform/library_unix.c \
-	cstdlib/stdio.c cstdlib/math.c cstdlib/string.c cstdlib/stdlib.c \
-	cstdlib/time.c cstdlib/errno.c cstdlib/ctype.c cstdlib/stdbool.c \
-	cstdlib/unistd.c \
-        sdl_misc.c sdl_video.c sdl_audio.c sdl_sensor.c sdl_event.c logging.c utils.c
+	  variable.c clibrary.c platform.c include.c debug.c \
+	  platform/platform_unix.c platform/library_unix.c \
+	  cstdlib/stdio.c cstdlib/math.c cstdlib/string.c cstdlib/stdlib.c \
+	  cstdlib/time.c cstdlib/errno.c cstdlib/ctype.c cstdlib/stdbool.c \
+	  cstdlib/unistd.c \
+          sdl_misc.c sdl_video.c sdl_audio.c sdl_sensor.c sdl_event.c logging.c utils.c \
+          cJSON.c
+
 OBJS	:= $(SRCS:%.c=%.o)
 
 all: $(TARGET)

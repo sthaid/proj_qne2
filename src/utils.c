@@ -630,22 +630,24 @@ void *util_json_parse(char *str)
     return cJSON_Parse(str);
 }
 
-void util_json_free(void *root_arg)
+void util_json_free(void *json_root)
 {
-    cJSON_Delete((cJSON*)root_arg);
+    cJSON_Delete((cJSON*)json_root);
 }
 
-double util_json_get_number(void *root_arg, ...)
+json_value_t *util_json_get_value(void *json_item, ...)
 {
-    cJSON  *root = (cJSON*)root_arg;
-    cJSON  *item;
+    cJSON  *item = (cJSON*)json_item;
     va_list ap;
     char   *arg;
     int     cnt, array_idx;
 
-    va_start(ap, root_arg);
+    static json_value_t value;
 
-    item = root;
+    memset(&value, 0, sizeof(value));
+
+    va_start(ap, json_item);
+
     while ((arg = va_arg(ap, char*)) != NULL) {
         cnt = sscanf(arg, "%d", &array_idx);
         if (cnt == 0) {
@@ -660,9 +662,37 @@ double util_json_get_number(void *root_arg, ...)
 
     va_end(ap);
 
-    if (item == NULL || !cJSON_IsNumber(item)) {
-        return NOT_A_NUMBER;
+    if (item == NULL) {
+        value.type = JSON_TYPE_UNDEFINED;
+        return &value;
     }
 
-    return item->valuedouble;
+    switch (item->type) {
+    case cJSON_False:
+    case cJSON_True:
+        value.type = JSON_TYPE_FLAG;
+        value.u.flag = (item->type == cJSON_True);
+        break;
+    case cJSON_Number:
+        value.type = JSON_TYPE_NUMBER;
+        value.u.number = item->valuedouble;
+        break;
+    case cJSON_String:
+        value.type = JSON_TYPE_STRING;
+        value.u.string = item->valuestring;
+        break;
+    case cJSON_Array:
+        value.type = JSON_TYPE_ARRAY;
+        value.u.array = item;
+        break;
+    case cJSON_Object:
+        value.type = JSON_TYPE_OBJECT;
+        value.u.array = item;
+        break;
+    default:
+        value.type = JSON_TYPE_UNDEFINED;
+        break;
+    }
+
+    return &value;
 }

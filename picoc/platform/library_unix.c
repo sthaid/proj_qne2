@@ -1078,6 +1078,53 @@ void Util_get_ipaddr(struct ParseState *Parser, struct Value *ReturnValue,
 }
 
 //
+// utils json decoder
+//
+
+void Util_json_parse(struct ParseState *Parser, struct Value *ReturnValue,
+        struct Value **Param, int NumArgs)
+{
+    char *str = (char*)Param[0]->Val->Pointer;
+    void *json_root;
+
+    json_root = util_json_parse(str);
+
+    ReturnValue->Val->Pointer = json_root;
+}
+
+void Util_json_free(struct ParseState *Parser, struct Value *ReturnValue,
+        struct Value **Param, int NumArgs)
+{
+    void *json_root = Param[0]->Val->Pointer;
+
+    util_json_free(json_root);
+}
+
+void Util_json_get_value(struct ParseState *Parser, struct Value *ReturnValue,
+        struct Value **Param, int NumArgs)
+{
+    void         *json_item = Param[0]->Val->Pointer;
+    struct        Value *ThisArg = Param[0];
+    int           i;
+    char         *va[10];
+    json_value_t *value;
+
+    memset(va, 0, sizeof(va)); // xxx check for too many args  and/or add a few more
+
+    for (i = 0; i < NumArgs-1; i++) {
+        ThisArg = (struct Value*)((char*)ThisArg +
+                            MEM_ALIGN(sizeof(struct Value)+TypeStackSizeValue(ThisArg)));
+        va[i] = (char*)ThisArg->Val->Pointer;
+    }
+
+    value = util_json_get_value(
+                json_item,
+                va[0], va[1], va[2], va[3], va[4], va[5], va[6], va[7], va[8], va[9]);
+
+    ReturnValue->Val->Pointer = value;
+}
+
+//
 // UTILS REGISTRATION
 //
 
@@ -1105,10 +1152,32 @@ struct LibraryFunction UtilsFunctions[] = {
     { Util_print_params,     "void util_print_params(char *dir);" },
     // network
     { Util_get_ipaddr,       "char *util_get_ipaddr(void);" },
+    // json
+    { Util_json_parse,       "void *util_json_parse(char *str);" },
+    { Util_json_free,        "void util_json_free(void *json_root);" },
+    { Util_json_get_value,   "json_value_t *util_json_get_value(void *json_item, ...);" },
 
     { NULL, NULL } };
 
-const char UtilsDefs[] = "";
+const char UtilsDefs[] = "\
+#define JSON_TYPE_UNDEFINED 0 \n\
+#define JSON_TYPE_FLAG      1 \n\
+#define JSON_TYPE_NUMBER    2 \n\
+#define JSON_TYPE_STRING    3 \n\
+#define JSON_TYPE_ARRAY     4 \n\
+#define JSON_TYPE_OBJECT    5 \n\
+\n\
+typedef struct { \n\
+    int type; \n\
+    union { \n\
+        bool   flag; \n\
+        double number; \n\
+        char  *string; \n\
+        void  *array; \n\
+        void  *object; \n\
+    } u; \n\
+} json_value_t; \n\
+";
 
 // -----------------  PLATFORM INIT PROC  -------------------------------
 

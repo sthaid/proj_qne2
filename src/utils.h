@@ -32,10 +32,26 @@ char *util_get_ipaddr(void);
 
 // -----------------  JSON  ----------------------------------
 
-#define NOT_A_NUMBER 12345678
+#define JSON_TYPE_UNDEFINED 0
+#define JSON_TYPE_FLAG      1
+#define JSON_TYPE_NUMBER    2
+#define JSON_TYPE_STRING    3
+#define JSON_TYPE_ARRAY     4
+#define JSON_TYPE_OBJECT    5
+
+typedef struct {
+    int type;
+    union {
+        bool   flag;
+        double number;
+        char  *string;
+        void  *array;
+        void  *object;
+    } u;
+} json_value_t;
 
 void *util_json_parse(char *str);
-void util_json_free(void *json);
-double util_json_get_number(void *json, ...);
+void util_json_free(void *json_root);
+json_value_t *util_json_get_value(void *json_item, ...);
 
 #endif
