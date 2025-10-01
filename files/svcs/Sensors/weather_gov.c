@@ -36,6 +36,7 @@ int get_weather(double *temperature, double *humidity)
     *temperature = INVALID_NUMBER;
     *humidity    = INVALID_NUMBER;
 
+    // xxx just call the get routine
     if (hourly_forecast_url == NULL) {
         get_hourly_forecast_url(42.4334, -71.6078);  // xxx lat/long
         if (hourly_forecast_url == NULL) {
