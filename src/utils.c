@@ -123,6 +123,14 @@ void *util_read_file(char *dir, char *fn, int *len_ret)
     return buf;
 }
 
+void util_delete_file(char *dir, char *fn)
+{
+    char path[200];
+
+    sprintf(path, "%s/%s", dir, fn);
+    unlink(path);
+}
+
 // -----------------  FILE MAP -------------------------------
 
 #define PAGE_SIZE        0x1000    // xxx 0x4000  // 16k  need to support 16k too
@@ -627,11 +635,19 @@ next:
 
 void *util_json_parse(char *str)
 {
+    if (str == NULL) {
+        return NULL;
+    }
+
     return cJSON_Parse(str);
 }
 
 void util_json_free(void *json_root)
 {
+    if (json_root == NULL) {
+        return;
+    }
+
     cJSON_Delete((cJSON*)json_root);
 }
 
@@ -645,6 +661,11 @@ json_value_t *util_json_get_value(void *json_item, ...)
     static json_value_t value;
 
     memset(&value, 0, sizeof(value));
+
+    if (json_item == NULL) {
+        value.type = JSON_TYPE_UNDEFINED;
+        return &value;
+    }
 
     va_start(ap, json_item);
 
