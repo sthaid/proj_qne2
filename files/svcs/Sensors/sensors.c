@@ -12,229 +12,28 @@
 
 #include "svcs/Sensors/sensors.h"
 
+#include "svcs/Sensors/common.h"
+
 // xxx todo 
 // - check for file full (next == max)
 // - add unit test code to simulate sensor data
+// - use common define for INVALID_SENSOR
 
 // defines
 #define SECS_PER_DAY 86400
 #define SECS_PER_HOUR 3600
 #define INTVL_SECS 10
 
-#define TEST 1
+#define TEST 1  // xxx delete
 
-// args
-static char *progname;
-static char *data_dir;
-static int   id;
-
-// prototypes
+// prototypes  xxx temp
 char *sensval2str(double x);
 void add_simulated_values(sensors_data_t *data);
 
-// xxxxxxxxxxxxxxxxxxxxxxxxxxxx
+// xxxx
+extern int get_weather(double *temperature, double *humidity);
 
-void print_json_value(char *s, json_value_t *v)
-{
-    printf("%s:  ", s);
-    switch (v->type) {
-    case JSON_TYPE_FLAG:
-        printf("FLAG  %s", v->u.flag ? "true" : "false");
-        break;
-    case JSON_TYPE_NUMBER:
-        printf("NUMBER  %f", v->u.number);
-        break;
-    case JSON_TYPE_STRING:
-        printf("STRING  %s", v->u.string);
-        break;
-    case JSON_TYPE_ARRAY:
-        printf("ARRAY  %p", v->u.array);
-        break;
-    case JSON_TYPE_OBJECT:
-        printf("OBJECT  %p", v->u.object);
-        break;
-    }
-    printf("\n");
-}
-
-void twg(void)
-{
-    int filelen;
-    char *buff;
-    void *json_root;
-    json_value_t *value;
-
-    buff = util_read_file("svcs/Sensors", "xxyy.json", &filelen);
-    // xxx error paths need to free buff
-    if (buff == NULL) {
-        printf("ERROR: failed to read json file\n");
-        return;
-    }
-    printf("filelen = %d\n", filelen);
-
-    while (1) {
-        json_root = util_json_parse(buff);
-        if (json_root == NULL) {
-            printf("ERROR: util_json_parse failed\n");
-            return;
-        }
-
-        value = util_json_get_value(json_root, "properties", "periods", "0", "temperature", NULL);
-        print_json_value("temperature", value);
-
-        value = util_json_get_value(json_root, "properties", "periods", "0", "temperatureUnit", NULL);
-        print_json_value("temperatureUnit", value);
-
-        value = util_json_get_value(json_root, "properties", "periods", "0", "isDaytime", NULL);
-        print_json_value("isDaytime", value);
-
-        value = util_json_get_value(json_root, "properties", "periods", NULL);
-        print_json_value("periods", value);
-
-        void *array = value->u.array;
-        value = util_json_get_value(array, "0", "temperature", NULL);
-        print_json_value("temperature", value);
-
-        value = util_json_get_value(json_root, "properties", NULL);
-        print_json_value("properties", value);
-
-        void *obj = value->u.object;
-        value = util_json_get_value(obj, "periods", "0", "isDaytime", NULL);
-        print_json_value("isDaytime", value);
-
-        util_json_free(json_root);
-        break;
-    }
-}
-
-// xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-
-#define INVALID_NUMBER 999999999
-
-char *hourly_forecast_url;
-
-int run_curl(char *url, char *filename)
-{
-    char cmd[500];
-    int  ret;
-
-    printf("INFO %s: url = %s\n", progname, url);
-    util_delete_file(data_dir, filename);
-
-    sprintf(cmd, "curl %s > %s/%s", url, data_dir, "curl.out");
-    printf("%s\n", cmd);
-
-    ret = system(cmd);
-    if (ret != 0) {
-        return -1;
-    }
-
-    return 0;
-}
-
-void *get_json_root(char *filename)
-{
-    char *str;
-    void *root;
-    int   len;
-
-    str = util_read_file(data_dir, filename, &len);
-    if (str == NULL) {
-        printf("ERROR %s; failed to read %s/%s, %s\n", 
-               progname, data_dir, filename, strerror(errno));
-        return NULL;
-    }
-
-    root = util_json_parse(str);
-    if (root == NULL) {
-        printf("ERROR %s; failed to parse json\n", progname);
-        free(str);
-        return NULL;
-    }
-
-    free(str);
-
-    return root;
-}
-
-int get_hourly_forecast_url(double latitude, double longitude)
-{
-    char          cmd[200];
-    char         *extra_header;
-    void         *root = NULL;
-    json_value_t *value;
-    int           ret = -1;
-
-    // xxx retries
-    // xxx check rc
-
-    extra_header = "User-Agent: ezapp-app (stevenhaid@gmail.com)";
-    sprintf(cmd, "\"https://api.weather.gov/points/%0.4f,%0.4f\" -H \"%s\"",
-            latitude, longitude, extra_header);
-    run_curl(cmd, "curl.out");
-
-    ret = run_curl(cmd, "curl.out");
-    if (ret != 0) {
-        goto done; 
-    }
-
-    root = get_json_root("curl.out");
-    if (root == NULL) {
-        ret = -1;
-        goto done;
-    }
-
-    value = util_json_get_value(root, "properties", "forecastHourly", NULL);
-    if (value->type != JSON_TYPE_STRING) {
-        printf("ERROR %s: json value is not string, %d\n", progname, value->type);
-        ret = -1;
-        goto done;
-    }
-
-    hourly_forecast_url = strdup(value->u.string);
-    printf("INFO %s hourly_forecast_url = '%s'\n", progname, hourly_forecast_url);
-    ret = 0;
-
-done:
-    util_json_free(root);
-    return ret;
-}
-
-int get_current_weather(double *temperature, double *humidity)
-{
-    void *root;
-    json_value_t *value;
-    // xxx if lat/long changed
-
-    *temperature = INVALID_NUMBER;
-    *humidity = INVALID_NUMBER;
-
-    if (hourly_forecast_url == NULL) {
-        get_hourly_forecast_url(42.4334, -71.6078);
-        if (hourly_forecast_url == NULL) {
-            // xxx if err
-        }
-    }
-
-    run_curl(hourly_forecast_url, "curl.out");
-    // xxx check ret
-
-    root = get_json_root("curl.out");
-
-    value = util_json_get_value(root, "properties", "periods", "0", "temperature", NULL);
-    if (value->type == JSON_TYPE_NUMBER) {
-        *temperature = value->u.number;
-    }
-
-    value = util_json_get_value(root, "properties", "periods", "0", "relativeHumidity", "value", NULL);
-    if (value->type == JSON_TYPE_NUMBER) {
-        *humidity = value->u.number;
-    }
-
-    util_json_free(root);
-
-    return 0;
-}
+// ----------------------------------------------------------------------------------
 
 int main(int argc, char **argv)
 {
@@ -243,6 +42,7 @@ int main(int argc, char **argv)
     time_t                 t_now;
     double                 stepc_now, stepc_change, stepc_last;
     struct sensor_value_s *sv;
+    int id;
 
     // save args
     if (argc != 3) {
@@ -259,11 +59,10 @@ int main(int argc, char **argv)
     printf("INFO %s:   version supported = %lx\n", progname, SENSORS_DATA_FILE_VERSION);
     printf("INFO %s:   size              = %zd\n", progname, sizeof(sensors_data_t));
 
-    // xxx test weather.gov
-    //twg();
-    //get_hourly_forecast_url(42.4334, -71.6078);
+    // xxx TEST
+    // xxx add these values to the program
     double temperature, humidity;
-    get_current_weather(&temperature, &humidity);
+    get_weather(&temperature, &humidity);
     printf("INFO %s temperature=%.0f humidity=%.0f\n", progname, temperature, humidity);
     return 0;
 
@@ -276,11 +75,11 @@ int main(int argc, char **argv)
 
     // xxx
     if (TEST) {
-        unlink("svcs_data/Sensors/sensors.dat");
+        util_delete_file(data_dir, "sensors.dat");
     }
 
     // map the sensors.dat file, the file will be created if it doesnt exist 
-    // or if the file exists but is the wrong size
+    // or if the file exists and is the wrong size
     data = util_map_file(data_dir, "sensors.dat", sizeof(sensors_data_t), true);
     if (data == NULL) {
         printf("ERROR %s: failed to map or create sensors.dat\n", progname);
@@ -402,6 +201,9 @@ int main(int argc, char **argv)
     return 0;
 }
 
+// ----------------------------------------------------------------------
+
+// xxx delete this
 #define MAX_STR_TBL 8
 char *sensval2str(double x)
 {
@@ -419,6 +221,7 @@ char *sensval2str(double x)
     }
 }
 
+// xxx delete this
 void add_simulated_values(sensors_data_t *data)
 {
     int num_sim_hours = 1000;  // about 6 weeks

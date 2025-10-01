@@ -974,6 +974,15 @@ void Util_read_file (struct ParseState *Parser, struct Value *ReturnValue,
     ReturnValue->Val->Pointer = file_contents;
 }
 
+void Util_delete_file (struct ParseState *Parser, struct Value *ReturnValue,
+	struct Value **Param, int NumArgs)
+{
+    char *dir  = Param[0]->Val->Pointer;
+    char *fn   = Param[1]->Val->Pointer;
+
+    util_delete_file(dir, fn);
+}
+
 //
 // utils file map routines
 //
@@ -1140,6 +1149,7 @@ struct LibraryFunction UtilsFunctions[] = {
     // file read/write
     { Util_write_file,       "int util_write_file(char *dir, char *fn, void *data, int len);" },
     { Util_read_file,        "void *util_read_file(char *dir, char *fn, int *len);" },
+    { Util_delete_file,      "void *util_delete_file(char *dir, char *fn);" },
     // file map
     { Util_map_file,         "void *util_map_file(char *dir, char *file, int len, bool create_if_needed);" },
     { Util_unmap_file,       "void util_unmap_file(void *addr);" },
