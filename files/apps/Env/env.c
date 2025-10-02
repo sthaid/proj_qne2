@@ -9,23 +9,22 @@
 
 #include "svcs/Sensors/sensors.h"
 
-// xxx
-// - use ints for sensors, and leave spares
-// - buy wifi temperature sensor
-// - check into auto start   SampleForegroundService
-// - store time_t in sensors.dat, in addition to what is there
 // xxx todo
+// - full review, and comments
 // - multi plots
+// - plot points, not bars for hourly plot
 // - end selector control
 // - bar graph
 // - hour vs day select
 // - settings
 // - clip graph
-// - start daily plot on day interval,  < > go by days
-// - x axis optional
-// - label start/end time on bottom of plot,  or make an underneath line that also includes the title 
-// - at bottom of display, display the current values
-
+// - at bottom of display, or on other display,  display the current values
+// - set EOD color to Green if at EOD
+// - review how switching between daily and hourly graphs work
+// - add 31 day graph interval too
+// - make routine to init the plots, and use this also to update which plots are shown;
+//   OR perhaps this program just shows fixed set of plots
+// - only plot if data is valid;  or display NO DATA within the plot if there are no points
 
 //
 // defines
@@ -110,23 +109,18 @@ int main(int argc, char **argv)
     printf("INFO %s:   version supported = %lx\n", progname, SENSORS_DATA_FILE_VERSION);
     printf("INFO %s:   size              = %zd\n", progname, sizeof(sensors_data_t));
 
-    // get params
-    util_get_int_param(data_dir, "min_pressure", 950);
-    util_get_int_param(data_dir, "max_pressure", 1050);
-
     // define plots
-    // xxx make routine
     plots[0].title          = "Pressure";
-    plots[0].which          = PRESSURE;
-    plots[0].yval_bottom    = util_get_int_param(data_dir, "min_pressure", 950);
-    plots[0].yval_top       = util_get_int_param(data_dir, "max_pressure", 1050);
-    plots[0].yval_of_x_axis = util_get_int_param(data_dir, "typical_pressure", 1000);
+    plots[0].which          = ASENSOR_PRESSURE;
+    plots[0].yval_bottom    = 950;
+    plots[0].yval_top       = 1050;
+    plots[0].yval_of_x_axis = 1000;
 
-    plots[1].title          = "Pressure";
-    plots[1].which          = PRESSURE;
-    plots[1].yval_bottom    = util_get_int_param(data_dir, "min_pressure", 950);
-    plots[1].yval_top       = util_get_int_param(data_dir, "max_pressure", 1050);
-    plots[1].yval_of_x_axis = util_get_int_param(data_dir, "typical_pressure", 1000);
+    plots[1].title          = "Temperature";
+    plots[1].which          = WEATHER_GOV_TEMPERATURE;
+    plots[1].yval_bottom    = 0;
+    plots[1].yval_top       = 100;
+    plots[1].yval_of_x_axis = INVALID_NUMBER;
 
     // map the sensors.dat file;
     // if map failed or file version is incorrect then return error
@@ -294,12 +288,12 @@ int start_hour_of_tomorrow(void)
 
 void plot_daily(plot_t *p, int psh, int peh, int ybottom, int ytop)
 {
-    sdl_plot_point_t    pts_avg[MAX_PTS], pts_min[MAX_PTS], pts_max[MAX_PTS];
-    void           *cx;
-    int             num_pts;
-    char            xmin_str[50], xmax_str[50], ymin_str[50], ymax_str[50];
-    time_t          t;
-    struct tm       tm;
+    sdl_plot_point_t pts_avg[MAX_PTS], pts_min[MAX_PTS], pts_max[MAX_PTS];
+    void            *cx;
+    int              num_pts;
+    char             xmin_str[50], xmax_str[50], ymin_str[50], ymax_str[50];
+    time_t           t;
+    struct tm        tm;
 
     // get point values for the plot start hour to plot end hour (psh - peh) range
     get_daily_plot_pts(p->which, psh, peh, pts_avg, pts_min, pts_max, &num_pts);
@@ -352,7 +346,7 @@ void get_daily_plot_pts(
             }
 
             value = data->values[idx].sensors[which];
-            if (value == INVALID_SENSOR_VALUE) {
+            if (value == INVALID_NUMBER) {
                 continue;
             }
 
@@ -435,7 +429,7 @@ void get_hourly_plot_pts(int which, int psh, int peh, sdl_plot_point_t *pts, int
         }
 
         value = data->values[idx].sensors[which];
-        if (value == INVALID_SENSOR_VALUE) {
+        if (value == INVALID_NUMBER) {
             continue;
         }
 

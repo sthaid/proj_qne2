@@ -1142,10 +1142,19 @@ void sdl_plot_axis(void *cx_arg, char *xmin_str, char *xmax_str, char *ymin_str,
     // draw rectangle around the plot area
     sdl_render_rect(cx->xleft, cx->ytop, cx->xspan, cx->yspan, 3, COLOR_BLUE);
 
-    // draw x-axis xxx option to not do this
-    y = yval2y(cx, cx->yval_of_x_axis);
-    for (i = -1; i <= 1; i++) {
-        sdl_render_line(cx->xleft, y+i, cx->xright, y+i, COLOR_BLUE);
+    // draw and label x-axis xxx option to not do this
+    if (cx->yval_of_x_axis != INVALID_NUMBER) {
+        y = yval2y(cx, cx->yval_of_x_axis);
+        for (i = -1; i <= 1; i++) {
+            sdl_render_line(cx->xleft, y+i, cx->xright, y+i, COLOR_BLUE);
+        }
+        y = yval2y(cx, cx->yval_of_x_axis);
+        if ((xmin_str != NULL) && (xmin_str[0] != '\0')) {
+            sdl_render_printf(cx->xleft+3, y+3, "%s", xmin_str);
+        }
+        if ((xmax_str != NULL) && (xmax_str[0] != '\0')) {
+            sdl_render_printf(cx->xright-3-strlen(xmax_str)*sdl_char_width, y+3, "%s", xmax_str);
+        }
     }
 
     // label y-axis
@@ -1156,15 +1165,6 @@ void sdl_plot_axis(void *cx_arg, char *xmin_str, char *xmax_str, char *ymin_str,
     if ((ymax_str != NULL) && (ymax_str[0] != '\0')) {
         sdl_render_printf(cx->xleft+3, cx->ytop+3, "%s", ymax_str);
         sdl_render_printf(cx->xright-3-strlen(ymax_str)*sdl_char_width, cx->ytop+3, "%s", ymax_str);
-    }
-
-    // label x-axis
-    y = yval2y(cx, cx->yval_of_x_axis);
-    if ((xmin_str != NULL) && (xmin_str[0] != '\0')) {
-        sdl_render_printf(cx->xleft+3, y+3, "%s", xmin_str);
-    }
-    if ((xmax_str != NULL) && (xmax_str[0] != '\0')) {
-        sdl_render_printf(cx->xright-3-strlen(xmax_str)*sdl_char_width, y+3, "%s", xmax_str);
     }
 
     // restore saved print state
