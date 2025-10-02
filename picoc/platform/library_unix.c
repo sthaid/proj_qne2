@@ -910,7 +910,7 @@ typedef struct { \n\
 #define ASENSOR_TYPE_GYROSCOPE_LIMITED_AXES_UNCALIBRATED 41 \n\
 #define ASENSOR_TYPE_HEADING 42 \n\
 \n\
-#define INVALID_SENSOR_VALUE 999999999 \n\
+#define INVALID_NUMBER 999999999 \n\
 ";
 
 // -----------------  UTILS PLATFORM ROUTINES  --------------------------

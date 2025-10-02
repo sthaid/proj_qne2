@@ -219,7 +219,7 @@ int sdl_sensor_read_step_counter(double *step_count)
         id = sdl_sensor_find(ASENSOR_TYPE_STEP_COUNTER);
     }
     if (id == -1) {
-        *step_count = INVALID_SENSOR_VALUE;
+        *step_count = INVALID_NUMBER;
         return -1;
     }
 
@@ -246,8 +246,8 @@ int sdl_sensor_read_tilt(double *roll, double *pitch)
         id = sdl_sensor_find(ASENSOR_TYPE_ACCELEROMETER);
     }
     if (id == -1) {
-        *roll = INVALID_SENSOR_VALUE;
-        *pitch = INVALID_SENSOR_VALUE;
+        *roll = INVALID_NUMBER;
+        *pitch = INVALID_NUMBER;
         return -1;
     }
 
@@ -282,7 +282,7 @@ int sdl_sensor_read_mag_heading(double *mag_heading)
         id = sdl_sensor_find(ASENSOR_TYPE_MAGNETIC_FIELD);
     }
     if (id == -1) {
-        *mag_heading = INVALID_SENSOR_VALUE;
+        *mag_heading = INVALID_NUMBER;
         return -1;
     }
 
@@ -326,7 +326,7 @@ int sdl_sensor_read_pressure(double *millibars)
         id = sdl_sensor_find(ASENSOR_TYPE_PRESSURE);
     }
     if (id == -1) {
-        *millibars = INVALID_SENSOR_VALUE;
+        *millibars = INVALID_NUMBER;
         return -1;
     }
 
@@ -353,7 +353,7 @@ int sdl_sensor_read_temperature(double *degrees_c)
         id = sdl_sensor_find(ASENSOR_TYPE_AMBIENT_TEMPERATURE);
     }
     if (id == -1) {
-        *degrees_c = INVALID_SENSOR_VALUE;
+        *degrees_c = INVALID_NUMBER;
         return -1;
     }
 
@@ -380,7 +380,7 @@ int sdl_sensor_read_humidity(double *percent)
         id = sdl_sensor_find(ASENSOR_TYPE_RELATIVE_HUMIDITY);
     }
     if (id == -1) {
-        *percent = INVALID_SENSOR_VALUE;
+        *percent = INVALID_NUMBER;
         return -1;
     }
 

@@ -1,3 +1,15 @@
+add weather sensors
+select number of weather points
+finishup plotting i nEnv
+
+clean this file
+read latitude and longitude
+boot start the service
+add primes to Test
+simple app - flashlight
+
+xxxxxxxxxxxxx
+
 --------
 cJSON
 --------
@@ -16,14 +28,11 @@ gcc -o test test.c -I. test.c cJSON.c
 "how to decode a cjson file using cJSON"
 
 ---------
+
 clone and checkin github cJSON      done
 add util routines to access         done
 add code to Sensors.c               done / in progress
-learn how to use weather.gov
-
-
-
-
+learn how to use weather.gov        done
 
 xxxxxxxxxxxxxxxxxxx
 
@@ -267,7 +276,7 @@ NEW FEATURES
 - keyboard events, for testing on linux
 
 BUGS
-- unit_test page3 multi line test, scrolling issue
+- unit_test page3 multi line test, scrolling issue  FIXED I THINK
 - swipe up causes crash in menu - RETEST
 - add pthread_create_detached
 

@@ -221,7 +221,7 @@ void sdl_audio_create_test_file(char *dir, char *filename, int duration_secs, in
 #define ASENSOR_TYPE_GYROSCOPE_LIMITED_AXES_UNCALIBRATED 41
 #define ASENSOR_TYPE_HEADING 42
 
-#define INVALID_SENSOR_VALUE 999999999
+#define INVALID_NUMBER 999999999
 
 typedef struct {
     int   id;

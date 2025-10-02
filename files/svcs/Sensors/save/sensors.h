@@ -1,17 +1,15 @@
 #ifndef __SENSORS_H__
 #define __SENSORS_H__
 
-#define SENSORS_DATA_FILE_VERSION 0x55aa55aa55aa0005
+#define SENSORS_DATA_FILE_VERSION 0x55aa55aa55aa0004
 
-#define MAX_SENSOR_VALUES (3 * 365 * 24)
-#define MAX_SENSORS 15
+#define MAX_SENSOR_VALUES (5 * 365 * 24)
+#define MAX_SENSORS 8
 
-#define ASENSOR_STEP_COUNT       0
-#define ASENSOR_PRESSURE         1
-#define ASENSOR_TEMPERATURE      2
-#define ASENSOR_HUMIDITY         3
-#define WEATHER_GOV_TEMPERATURE  4
-#define WEATHER_GOV_RELHUMIDITY  5
+#define STEP_COUNT   0
+#define PRESSURE     1
+#define TEMPERATURE  2
+#define HUMIDITY     3
 
 typedef struct {
     struct {

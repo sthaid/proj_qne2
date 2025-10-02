@@ -1,48 +1,35 @@
 #include <stdio.h>
 #include <stdbool.h>
-#include <unistd.h>
 #include <stdlib.h>
+#include <unistd.h>
 #include <time.h>
-#include <math.h>
 #include <string.h>
 #include <errno.h>
 
 #include <sdl.h>
 #include <utils.h>
 
-#include "svcs/Sensors/sensors.h"
-
-#include "svcs/Sensors/common.h"
-
-// xxx todo 
-// - check for file full (next == max)
-// - add unit test code to simulate sensor data
-// - use common define for INVALID_SENSOR
+#include <svcs/Sensors/common.h>
+#include <svcs/Sensors/sensors.h>
 
 // defines
-#define SECS_PER_DAY 86400
 #define SECS_PER_HOUR 3600
-#define INTVL_SECS 10
+#define INTVL_SECS    10
 
-#define TEST 1  // xxx delete
+// prototypes
+static char *sensval2str(double x);
 
-// prototypes  xxx temp
-char *sensval2str(double x);
-void add_simulated_values(sensors_data_t *data);
-
-// xxxx
-extern int get_weather(double *temperature, double *humidity);
-
-// ----------------------------------------------------------------------------------
+// -----------------  MAIN  -------------------------------------
 
 int main(int argc, char **argv)
 {
     sensors_data_t        *data = NULL;
     int                    rc, idx, hour_last, hour_now;
     time_t                 t_now;
-    double                 stepc_now, stepc_change, stepc_last;
+    double                 stepc_now, stepc_last;
     struct sensor_value_s *sv;
-    int id;
+    double                 weather_gov_temperature, weather_gov_relhumidity;
+    int                    id;
 
     // save args
     if (argc != 3) {
@@ -59,23 +46,11 @@ int main(int argc, char **argv)
     printf("INFO %s:   version supported = %lx\n", progname, SENSORS_DATA_FILE_VERSION);
     printf("INFO %s:   size              = %zd\n", progname, sizeof(sensors_data_t));
 
-    // xxx TEST
-    // xxx add these values to the program
-    double temperature, humidity;
-    get_weather(&temperature, &humidity);
-    printf("INFO %s temperature=%.0f humidity=%.0f\n", progname, temperature, humidity);
-    return 0;
-
     // init the SDL sensor subsystem
     rc = sdl_init(SUBSYS_SENSOR);
     if (rc != 0) {
         printf("ERROR %s: failed to init SUBSYS_SENSOR\n", progname);
         return 1;
-    }
-
-    // xxx
-    if (TEST) {
-        util_delete_file(data_dir, "sensors.dat");
     }
 
     // map the sensors.dat file, the file will be created if it doesnt exist 
@@ -91,18 +66,14 @@ int main(int argc, char **argv)
     if (data->hdr.version != SENSORS_DATA_FILE_VERSION) {
         for (int i = 0; i < MAX_SENSOR_VALUES; i++) {
             for (int j = 0; j < MAX_SENSORS; j++) {
-                data->values[i].sensors[j] = INVALID_SENSOR_VALUE;
+                data->values[i].sensors[j] = INVALID_NUMBER;
             }
         }
 
         data->hdr.start_hour = time(NULL) / SECS_PER_HOUR;
         data->hdr.last_idx   = -1;
         data->hdr.pad        = 0;
-        data->hdr.version = SENSORS_DATA_FILE_VERSION;
-
-        if (TEST) {
-            add_simulated_values(data); // xxx comment out
-        }
+        data->hdr.version    = SENSORS_DATA_FILE_VERSION;
 
         util_sync_file(data, sizeof(sensors_data_t));
 
@@ -111,11 +82,11 @@ int main(int argc, char **argv)
         printf("INFO %s: sensors.dat mapped and version verified\n", progname);
     }
 
-    // init variables used in the loop below
-    sdl_sensor_read_step_counter(&stepc_last);
+    // init variables used in the runtime loop below
+    stepc_last = INVALID_NUMBER;
     hour_last = 0;
 
-    // loop
+    // runtime loop
     while (true) {
         // if request to stop received then break out of loop
         if (stop_requested[id]) {
@@ -123,7 +94,10 @@ int main(int argc, char **argv)
             break;
         }  
 
-        // get hour now xxx comments througouth
+        // init the following:
+        // - hour_now: which is the number of hours since the Unix Epoch
+        // - idx: index of sensor data in the sensors.dat file
+        // - sv: pointer to sensor values for this idx
         t_now = time(NULL);
         hour_now = t_now / SECS_PER_HOUR;
         idx = hour_now - data->hdr.start_hour;
@@ -131,63 +105,66 @@ int main(int argc, char **argv)
 
         // if hour has changed then add new sensor data to sensors.dat
         if (hour_now != hour_last) {
-            // xxx comment
-            //printf("INFO %s: hour has changed from %d -> %d\n", progname, hour_last, hour_now);
+            // if idx is out of range then print an error and continue;
+            // xxx todo, shift the data by one year to recover for idx too big
             if (idx < 0 || idx >= MAX_SENSOR_VALUES) {
                 printf("ERROR %s: idx %d out of range 0 .. %d\n", progname, idx, MAX_SENSOR_VALUES);
                 sleep(INTVL_SECS);
                 continue;
             }
 
-            // xxx
-            if (TEST) {
-                sv->sensors[STEP_COUNT]  = 0;
-                sv->sensors[PRESSURE]    = 1000;
-                sv->sensors[TEMPERATURE] = 20;
-                sv->sensors[HUMIDITY]    = 50;
-            } else {
-                sv->sensors[STEP_COUNT] = 0;
-                sdl_sensor_read_pressure(&sv->sensors[PRESSURE]);
-                sdl_sensor_read_temperature(&sv->sensors[TEMPERATURE]);
-                sdl_sensor_read_humidity(&sv->sensors[HUMIDITY]);
-            }
+            // init the stepcount to 0, this will be added to periodically 
+            // during the hour by code that follows
+            sv->sensors[ASENSOR_STEP_COUNT] = 0;
 
-            // update hdr.last_idx 
+            // read android sensor values; these are read just this one time
+            // at the begining of the hour
+            sdl_sensor_read_pressure(&sv->sensors[ASENSOR_PRESSURE]);
+            sdl_sensor_read_temperature(&sv->sensors[ASENSOR_TEMPERATURE]);
+            sdl_sensor_read_humidity(&sv->sensors[ASENSOR_HUMIDITY]);
+
+            // get values from weather.gov
+            get_weather(&weather_gov_temperature, &weather_gov_relhumidity);
+            sv->sensors[WEATHER_GOV_TEMPERATURE] = weather_gov_temperature;
+            sv->sensors[WEATHER_GOV_RELHUMIDITY] = weather_gov_relhumidity;
+
+            // set sensors.dat hdr last_idx, to the new idx
             data->hdr.last_idx = idx;
             util_sync_file(&data->hdr.last_idx, sizeof(data->hdr.last_idx));
 
-            // debug print new sensor values
+            // debug print new sensor values just added at the new idx
             struct tm tm;
             localtime_r(&t_now, &tm);
-            printf("INFO %s: added values[%d] utc=%02d/%02d/%02d %02d:%02d:%02d) steps=%s press=%s temp=%s humid=%s\n",
+            printf("INFO %s: adding values[%d] utc=%02d/%02d/%02d %02d:%02d:%02d\n",
                    progname, idx,
-                   tm.tm_mon + 1, tm.tm_mday, tm.tm_year - 100, tm.tm_hour, tm.tm_min, tm.tm_sec,
-                   sensval2str(sv->sensors[STEP_COUNT]),
-                   sensval2str(sv->sensors[PRESSURE]), 
-                   sensval2str(sv->sensors[TEMPERATURE]), 
-                   sensval2str(sv->sensors[HUMIDITY]));
+                   tm.tm_mon + 1, tm.tm_mday, tm.tm_year - 100, tm.tm_hour, tm.tm_min, tm.tm_sec);
+            printf("INFO %s:   ASENSOR press=%s temp=%s humid=%s\n",
+                   progname,
+                   sensval2str(sv->sensors[ASENSOR_PRESSURE]), 
+                   sensval2str(sv->sensors[ASENSOR_TEMPERATURE]), 
+                   sensval2str(sv->sensors[ASENSOR_HUMIDITY]));
+            printf("INFO %s:   WEATHER_GOV temp=%s humid=%s\n", 
+                   progname,
+                   sensval2str(sv->sensors[WEATHER_GOV_TEMPERATURE]),
+                   sensval2str(sv->sensors[WEATHER_GOV_RELHUMIDITY]));
 
             // save hour_last for next iteration
             hour_last = hour_now;
         }
 
-        // the step counter sensor value requires special attention
-        // because the sensor value continuously increases; but what
-        // is desired is the number of steps in the past interval
+        // the step counter sensor value needs special attention
+        // because the sensor value continuously increases; 
+        // this code accumulates the number of steps taken during this hour
         sdl_sensor_read_step_counter(&stepc_now);
-        if (stepc_now == INVALID_SENSOR_VALUE || stepc_last == INVALID_SENSOR_VALUE) {
-            stepc_change = INVALID_SENSOR_VALUE;
-        } else {
-            stepc_change = stepc_now - stepc_last;
+        if (stepc_now != INVALID_NUMBER && stepc_last != INVALID_NUMBER) {
+            sv->sensors[ASENSOR_STEP_COUNT] += (stepc_now - stepc_last);
+            if (stepc_now > stepc_last) {
+                printf("INFO %s: step_count=%.0f\n", progname, sv->sensors[ASENSOR_STEP_COUNT]);
+            }
         }
         stepc_last = stepc_now;
-        if (TEST) {
-            stepc_change = 10;  //xxx
-        }
-        sv->sensors[STEP_COUNT] += stepc_change;
-        printf("INFO %s: stepc_change=%.0f step_count=%.0f\n", progname, stepc_change, sv->sensors[STEP_COUNT]);
 
-        // xxx
+        // sync the sensor values from memory to the sensors.dat file
         util_sync_file(sv, sizeof(struct sensor_value_s));
 
         // sleep
@@ -201,17 +178,17 @@ int main(int argc, char **argv)
     return 0;
 }
 
-// ----------------------------------------------------------------------
+// -----------------  UTILS  --------------------------------------------
 
-// xxx delete this
-#define MAX_STR_TBL 8
-char *sensval2str(double x)
+#define MAX_STR_TBL 15
+
+static char *sensval2str(double x)
 {
-    static char str_tbl[MAX_STR_TBL][50];
+    static char str_tbl[MAX_STR_TBL][30];
     static int  n;
     char *s;
 
-    if (x == INVALID_SENSOR_VALUE) {
+    if (x == INVALID_NUMBER) {
         return "invld";
     } else {
         s = str_tbl[n];
@@ -221,31 +198,3 @@ char *sensval2str(double x)
     }
 }
 
-// xxx delete this
-void add_simulated_values(sensors_data_t *data)
-{
-    int num_sim_hours = 1000;  // about 6 weeks
-    int idx, i, hour_now;
-    struct sensor_value_s *sv;
-
-    printf("INFO %s: add_simulated_values starting\n", progname);
-
-    // back off data start hour by 6 weeks
-    data->hdr.start_hour -= num_sim_hours;
-
-    // loop, filling in simulated sensor values 
-    for (i = 0; i < num_sim_hours; i++) {
-        hour_now = data->hdr.start_hour + i;
-        idx = hour_now - data->hdr.start_hour;
-        sv = &data->values[idx];
-
-        sv->sensors[PRESSURE]    = 1000 + 50 * sin(i * (2 * M_PI / 240));
-        sv->sensors[TEMPERATURE] = 70 + 30 * sin(i * (2 * M_PI / 240));
-        sv->sensors[HUMIDITY]    = 60 + 20 * sin(i * (2 * M_PI / 240));
-        sv->sensors[STEP_COUNT]  = 1000;
-
-        data->hdr.last_idx = idx;
-    }
-
-    printf("INFO %s: add_simulated_values return, last_idx = %ld\n", progname, data->hdr.last_idx);
-}

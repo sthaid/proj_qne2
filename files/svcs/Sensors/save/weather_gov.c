@@ -5,9 +5,7 @@
 #include <string.h>
 #include <errno.h>
 
-#include <sdl.h>
 #include <utils.h>
-
 #include <svcs/Sensors/common.h>
 
 // xxx todo
@@ -16,6 +14,9 @@
 // references:
 // - https://www.weather.gov/documentation
 // - https://www.weather.gov/documentation/services-web-api
+
+// defines
+#define INVALID_NUMBER 99999999  // xxx move to common place
 
 // prototypes
 static int run_curl(char *url, char *filename);
