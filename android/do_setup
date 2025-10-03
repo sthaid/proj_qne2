@@ -96,6 +96,7 @@ cd $BUILD_DIR/app/jni/src
 rm stub.c
 ln -s ../../../../../../../src/ .
 ln -s ../../../../../../../picoc/ .
+ln -s ../../../../../../../cJSON/ .
 echo
 
 # create assets dir, and create symbolic links to assets

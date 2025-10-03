@@ -9,6 +9,7 @@ LOCAL_SRC_FILES :=  \
   src/main.c src/utils.c src/logging.c \
   src/sdl_misc.c src/sdl_video.c src/sdl_audio.c src/sdl_sensor.c src/sdl_event.c \
   src/test.cpp \
+  cJSON/cJSON.c \
   picoc/picoc_ezapp.c \
   picoc/clibrary.c \
   picoc/debug.c \

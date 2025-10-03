@@ -240,7 +240,7 @@ void *util_map_file(char *dir, char *file, int len, bool create_if_needed)
 
     // map the file
     INFO("mapping %s len=%d\n", path, len);
-    fd = open(path, O_RDWR, 0666);
+    fd = open(path, O_RDWR);
     if (fd < 0) {
         ERROR("failed to open %s, %s\n", path, strerror(errno));
         goto done;  

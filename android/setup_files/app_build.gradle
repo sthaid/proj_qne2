@@ -59,4 +59,5 @@ android {
 
 dependencies {
     implementation fileTree(include: ['*.jar'], dir: 'libs')
+    implementation 'com.google.android.gms:play-services-location:21.0.1' // Or the latest version
 }

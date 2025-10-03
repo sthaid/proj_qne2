@@ -9,6 +9,7 @@ SRCS :=  \
   ../src/test.cpp \
   ../src/utils.c \
   ../src/logging.c \
+  ../cJSON/cJSON.c \
   ../picoc/picoc_ezapp.c \
   ../picoc/clibrary.c \
   ../picoc/debug.c \
