@@ -22,6 +22,8 @@ import com.google.android.gms.location.LocationRequest;
 import com.google.android.gms.location.LocationCallback;
 import com.google.android.gms.location.LocationResult;
 
+import android.location.Location;
+
 import android.content.pm.PackageManager;  // xxx needed?
 
 //import android.os.Handler; 
@@ -85,12 +87,13 @@ public class MyService extends Service {
                     Log.v(TAG, "XXX in MyService onLocationResult IS NULL");
                     return;
                 }
-//              for (Location location : locationResult.getLocations()) {
-//                  // Handle the location here
-//                  double latitude = location.getLatitude();
-//                  double longitude = location.getLongitude();
-//                  // Update UI or perform actions with latitude and longitude
-//              }
+                for (Location location : locationResult.getLocations()) {
+                    // Handle the location here
+                    double latitude = location.getLatitude();
+                    double longitude = location.getLongitude();
+                    Log.v(TAG, "XXX lat/long " + latitude + longitude);
+                    // Update UI or perform actions with latitude and longitude
+                }
             }
         };
 
