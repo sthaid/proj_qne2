@@ -91,7 +91,8 @@ public class MyService extends Service {
                     // Handle the location here
                     double latitude = location.getLatitude();
                     double longitude = location.getLongitude();
-                    Log.v(TAG, "XXX lat/long " + latitude + longitude);
+                    double altitude = location.getAltitude();
+                    Log.v(TAG, "XXX lat/long " + " " + latitude + " " + longitude + " " + altitude);
                     // Update UI or perform actions with latitude and longitude
                 }
             }
