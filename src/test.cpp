@@ -8,12 +8,45 @@
 extern "C" {
 void showHome(void);
 void showHome2(void);
+void get_altitude(void);
 }
 
 #ifdef ANDROID
 
 #include <SDL3/SDL.h>
 #include <jni.h>
+
+void get_altitude(void)
+{
+    // retrieve the JNI environment.
+    JNIEnv* env = (JNIEnv*)SDL_GetAndroidJNIEnv();
+    SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "env = %p\n", env);
+
+    // retrieve the Java instance of the SDLActivity
+    jobject activity = (jobject)SDL_GetAndroidActivity();
+
+    // find the Java class of the activity. It should be SDLActivity or a subclass of it.
+    jclass clazz(env->GetObjectClass(activity));
+    SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "clazz = %p\n", clazz);
+
+    // find the identifier of the method to call
+    jmethodID method_id = env->GetMethodID(clazz, "get_altitude", "()D");
+    SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "method_id = %p\n", method_id);
+    if (method_id == 0) {
+        SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "ERROR method_id");
+        goto cleanup;
+    }
+
+    // effectively call the Java method
+    double result;
+    result = env->CallDoubleMethod(activity, method_id);
+    SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "XXX result = %f", result);
+    
+cleanup:
+    // clean up the local references.
+    env->DeleteLocalRef(activity);
+    env->DeleteLocalRef(clazz);
+}
 
 // Calls the void showHome() method of the Java instance of the activity.
 void showHome(void)

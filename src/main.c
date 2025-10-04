@@ -79,6 +79,7 @@ extern int picoc_ezapp(char *args);
 #ifdef ANDROID
 extern void showHome(void); //xxx names, etc
 extern void showHome2(void);
+extern void get_altitude(void);
 #endif
 
 // -----------------  MAIN  ------------------------------------------
@@ -184,6 +185,10 @@ static int init(void)
     // elevate service to foreground;
     // this is needed for tasks that need to run continuously
     showHome(); // xxx name
+
+    INFO("XXXXXXXXXXXXXXXXXXXXXX get alt\n");
+    get_altitude();
+    INFO("XXXXXXXXXXXXXXXXXXXXXX get alt done\n");
 #endif
 
     // start services that are configured for autostart

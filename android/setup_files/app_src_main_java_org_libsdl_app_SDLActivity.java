@@ -2188,6 +2188,13 @@ public class SDLActivity extends Activity implements View.OnSystemUiVisibilityCh
         succ = stopService(new Intent(this, MyService.class));
         Log.v(TAG, "XXX back from stopService " + succ);
     }
+
+    public double get_altitude() {
+        Log.v(TAG, "XXX call get_altitude");
+        //return altitude;
+        Log.v(TAG, "XXX back from get_altitude ");
+        return 12345678;
+    }
 }
 
 /**

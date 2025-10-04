@@ -36,6 +36,9 @@ public class MyService extends Service {
     private static final String TAG = "SDL";
     private FusedLocationProviderClient fusedLocationClient;
     private LocationCallback locationCallback;
+    public double latitude;
+    public double longitude;
+    public double altitude;
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
@@ -75,6 +78,7 @@ public class MyService extends Service {
         this.startForeground(100, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION);
 
         // -----------------------------------------
+
         Log.v(TAG, "XXX in MyService calling getFusedLocationProviderClient");
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(this);
         Log.v(TAG, "XXX in MyService back from getFusedLocationProviderClient");
@@ -89,9 +93,9 @@ public class MyService extends Service {
                 }
                 for (Location location : locationResult.getLocations()) {
                     // Handle the location here
-                    double latitude = location.getLatitude();
-                    double longitude = location.getLongitude();
-                    double altitude = location.getAltitude();
+                    latitude = location.getLatitude();
+                    longitude = location.getLongitude();
+                    altitude = location.getAltitude();
                     Log.v(TAG, "XXX lat/long " + " " + latitude + " " + longitude + " " + altitude);
                     // Update UI or perform actions with latitude and longitude
                 }
@@ -115,6 +119,9 @@ public class MyService extends Service {
         //}
     }
 
+    //public double get_altitude() {
+        //return altitude;
+    //}
 
     @Override
     public IBinder onBind(Intent intent) {
