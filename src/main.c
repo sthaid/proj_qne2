@@ -211,7 +211,7 @@ static void create_default_files(void)
     int rc;
 
     // remove existing directories and files
-    INFO("before remove existing dirs and files\n");
+    INFO("before remove existing dirs and files\n");  // xxx sometimes hangs here
     rc = system("rm -rf apps svcs copyright FreeMonoBold.ttf");
     if (rc != 0) {
         ERROR("rm failed\n");

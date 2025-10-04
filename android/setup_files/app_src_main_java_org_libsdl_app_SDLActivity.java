@@ -51,6 +51,7 @@ import android.widget.Toast;
 import android.content.ServiceConnection;
 import android.os.Binder;
 import android.os.IBinder;
+import android.os.SystemClock;
 import android.content.ComponentName;
 import org.libsdl.app.MyService;
 
@@ -521,8 +522,6 @@ public class SDLActivity extends Activity implements View.OnSystemUiVisibilityCh
         Log.v(TAG, "XXX call bindService");
         bindService(new Intent(this, MyService.class), serviceConnection, Context.BIND_AUTO_CREATE);
         Log.v(TAG, "XXX back from bindService");
-
-        // xxx wait for bound
     }
 
     protected void pauseNativeThread() {
@@ -2196,13 +2195,6 @@ public class SDLActivity extends Activity implements View.OnSystemUiVisibilityCh
             myService = binder.getService();
             isBound = true;
             Log.v(TAG, "XXX isBound = true");
-
-            // Now you can call methods on myService and get return values
-            //String data = myService.getDataFromService();
-            //Log.d("MyActivity", "Received data: " + data);
-            //Log.v(TAG, "XXX-YYY call get_altitude");
-            //double altitude = myService.get_altitude();
-            //Log.v(TAG, "XXX-YYY back from get_altitude " + altitude);
         }
 
         @Override
@@ -2215,9 +2207,23 @@ public class SDLActivity extends Activity implements View.OnSystemUiVisibilityCh
     // xxx
     public double get_altitude() {
         double altitude;
+
         Log.v(TAG, "XXX call get_altitude");
+
+        // xxx wait for bound
+        int millisecs = 0;
+        while (!isBound) {
+            SystemClock.sleep(100);
+            millisecs = millisecs + 100;
+            if (millisecs > 2000) {
+                break;
+            }
+        }
+        Log.v(TAG, "XXXXXXXXXXXXXXXXXXXXXXXXXXXXX millisecs " + millisecs);
+
         altitude = myService.get_altitude();
-        Log.v(TAG, "XXX back from get_altitude ");
+
+        Log.v(TAG, "XXX back from get_altitude " + altitude);
         return altitude;
     }
 }

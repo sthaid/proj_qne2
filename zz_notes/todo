@@ -1,3 +1,7 @@
+dl_get_permission: android.permission.POST_NOTIFICATION not granted
+
+
+
 code to read latitude longitude on android
 
 if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
