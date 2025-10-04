@@ -29,6 +29,9 @@ import android.content.pm.PackageManager;  // xxx needed?
 //import android.os.Handler; 
 import android.os.Looper;
 
+import android.os.Binder;
+import android.os.IBinder;
+
 import org.sthaid.ezApp.R;
 
 public class MyService extends Service {
@@ -38,7 +41,14 @@ public class MyService extends Service {
     private LocationCallback locationCallback;
     public double latitude;
     public double longitude;
-    public double altitude;
+    public double altitude = 999999999;
+    private final IBinder mBinder = new InnerBinder();
+
+    public class InnerBinder extends Binder {
+        MyService getService() {
+            return MyService.this;
+        }
+    }
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
@@ -119,14 +129,15 @@ public class MyService extends Service {
         //}
     }
 
-    //public double get_altitude() {
-        //return altitude;
-    //}
+    public double get_altitude() {
+        Log.v(TAG, "XXX get_altitude return " + altitude);
+        return altitude;
+    }
 
     @Override
     public IBinder onBind(Intent intent) {
-        Log.v(TAG, "XXX in MyService IBinder");
-        return null; // Not a bound service
+        Log.v(TAG, "XXX in MyService IBinder-xxx");
+        return mBinder;
     }
 
     @Override

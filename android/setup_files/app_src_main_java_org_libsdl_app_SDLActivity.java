@@ -48,6 +48,9 @@ import android.widget.RelativeLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import android.content.ServiceConnection;
+import android.os.Binder;
+import android.os.IBinder;
 import android.content.ComponentName;
 import org.libsdl.app.MyService;
 
@@ -2171,6 +2174,31 @@ public class SDLActivity extends Activity implements View.OnSystemUiVisibilityCh
         return result;
     }
 
+    //boolean isBound = false;
+    MyService myService;
+
+    private ServiceConnection serviceConnection = new ServiceConnection() {
+        @Override
+        public void onServiceConnected(ComponentName name, IBinder service) {
+            MyService.InnerBinder binder = (MyService.InnerBinder) service;
+            myService = binder.getService();
+            //isBound = true;
+
+            // Now you can call methods on myService and get return values
+            //String data = myService.getDataFromService();
+            //Log.d("MyActivity", "Received data: " + data);
+
+            Log.v(TAG, "XXX-YYY call get_altitude");
+            double altitude = myService.get_altitude();
+            Log.v(TAG, "XXX-YYY back from get_altitude " + altitude);
+        }
+
+        @Override
+        public void onServiceDisconnected(ComponentName name) {
+            //isBound = false;
+        }
+    };
+
     public void showHome() {
         Log.v("SDL", "XXXXXXX showHome");
 
@@ -2178,6 +2206,11 @@ public class SDLActivity extends Activity implements View.OnSystemUiVisibilityCh
         Log.v(TAG, "XXX call startForegroundService");
         component_name = startForegroundService(new Intent(this, MyService.class));
         Log.v(TAG, "XXX back from startForegroundService " + component_name);
+
+        Log.v(TAG, "XXX call bindService");
+        Intent intent = new Intent(this, MyService.class);
+        bindService(intent, serviceConnection, Context.BIND_AUTO_CREATE);
+        Log.v(TAG, "XXX back from bindService");
     }
 
     public void showHome2() {
@@ -2190,10 +2223,11 @@ public class SDLActivity extends Activity implements View.OnSystemUiVisibilityCh
     }
 
     public double get_altitude() {
+        double altitude;
         Log.v(TAG, "XXX call get_altitude");
-        //return altitude;
+        altitude = myService.get_altitude();
         Log.v(TAG, "XXX back from get_altitude ");
-        return 12345678;
+        return altitude;
     }
 }
 

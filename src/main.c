@@ -186,6 +186,7 @@ static int init(void)
     // this is needed for tasks that need to run continuously
     showHome(); // xxx name
 
+    sleep(5); //xxx temp
     INFO("XXXXXXXXXXXXXXXXXXXXXX get alt\n");
     get_altitude();
     INFO("XXXXXXXXXXXXXXXXXXXXXX get alt done\n");
