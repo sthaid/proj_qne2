@@ -13,6 +13,7 @@
 #include <svcs/Sensors/sensors.h>
 
 // defines
+#define VERSION       1.0
 #define SECS_PER_HOUR 3600
 #define INTVL_SECS    10
 
@@ -41,7 +42,8 @@ int main(int argc, char **argv)
     sscanf(argv[2], "%d", &id);
 
     // print starting message
-    printf("INFO %s: starting, data_dir = %s id = %d\n", progname, data_dir, id);
+    printf("INFO %s: starting: version=%d data_dir=%s id=%d\n",
+           progname, VERSION, data_dir, id); // xxx use same fmt in all apps
     printf("INFO %s: sensors.dat:\n", progname);
     printf("INFO %s:   version supported = %lx\n", progname, SENSORS_DATA_FILE_VERSION);
     printf("INFO %s:   size              = %zd\n", progname, sizeof(sensors_data_t));

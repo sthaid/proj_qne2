@@ -77,8 +77,6 @@ static void kill_child_processes(pid_t pid);
 extern int picoc_ezapp(char *args);
 
 #ifdef ANDROID
-extern void showHome(void); //xxx names, etc
-extern void showHome2(void);
 extern void get_altitude(void);
 #endif
 
@@ -136,7 +134,9 @@ static int init(void)
 
 #ifdef ANDROID
     // copy asset files to the working directory
+    INFO("before sdl_copy_asset_file\n");
     sdl_copy_asset_file("files.tar", ".");
+    INFO("after sdl_copy_asset_file\n");
 
     // xxx
     create_default_files();
@@ -182,11 +182,6 @@ static int init(void)
         ERROR("failed to get permission ACTIVITY_RECOGNITION\n");
     }
 
-    // elevate service to foreground;
-    // this is needed for tasks that need to run continuously
-    showHome(); // xxx name
-
-    sleep(5); //xxx temp
     INFO("XXXXXXXXXXXXXXXXXXXXXX get alt\n");
     get_altitude();
     INFO("XXXXXXXXXXXXXXXXXXXXXX get alt done\n");
@@ -216,6 +211,7 @@ static void create_default_files(void)
     int rc;
 
     // remove existing directories and files
+    INFO("before remove existing dirs and files\n");
     rc = system("rm -rf apps svcs copyright FreeMonoBold.ttf");
     if (rc != 0) {
         ERROR("rm failed\n");
@@ -226,6 +222,7 @@ static void create_default_files(void)
     //system("rm -rf apps_data svcs_data");
 
     // extract files.tar
+    INFO("before tar -xvf\n");
     rc = system("tar -xvf files.tar");
     if (rc != 0) {
         ERROR("tar extract failed\n");
@@ -233,7 +230,9 @@ static void create_default_files(void)
     }
 
     // create top level data directories for the apps and svcs
+    INFO("before mkdir apps_data svcs_data\n");
     system("mkdir -p apps_data svcs_data");
+    INFO("after mkdir apps_data svcs_data\n");
 }
 #endif
 
@@ -988,7 +987,7 @@ static void stop_all_services(void)
             break;
         }
 
-        if (duration_ms > 5000) {
+        if (duration_ms > 30000) {
             ERROR("the following services have failed to stop ...\n");
             for (id = 0; id < MAX_SERVICES; id++) {
                 service_t *x = &services_tbl[id];

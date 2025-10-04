@@ -240,6 +240,10 @@ public class SDLActivity extends Activity implements View.OnSystemUiVisibilityCh
     private static SDLFileDialogState mFileDialogState = null;
     protected static boolean mDispatchingKeyEvent = false;
 
+    // xxx
+    boolean isBound = false;   // xxx use 'm'
+    MyService myService;
+
     protected static SDLGenericMotionListener_API14 getMotionListener() {
         if (mMotionListener == null) {
             if (Build.VERSION.SDK_INT >= 26 /* Android 8.0 (O) */) {
@@ -508,17 +512,17 @@ public class SDLActivity extends Activity implements View.OnSystemUiVisibilityCh
             }
         }
 
-/*
         // xxx
-        {
         ComponentName component_name;
         Log.v(TAG, "XXX call startForegroundService");
-        //Intent serviceIntent = new Intent(this, MyService.class);
-        //component_name = startService(serviceIntent); // Or startForegroundService(serviceIntent);
-        component_name = startService(new Intent(this, MyService.class));
-        Log.v(TAG, "XXX back from call startService " + component_name);
-        }
-*/
+        component_name = startForegroundService(new Intent(this, MyService.class));
+        Log.v(TAG, "XXX back from startForegroundService " + component_name);
+
+        Log.v(TAG, "XXX call bindService");
+        bindService(new Intent(this, MyService.class), serviceConnection, Context.BIND_AUTO_CREATE);
+        Log.v(TAG, "XXX back from bindService");
+
+        // xxx wait for bound
     }
 
     protected void pauseNativeThread() {
@@ -697,6 +701,16 @@ public class SDLActivity extends Activity implements View.OnSystemUiVisibilityCh
     @Override
     protected void onDestroy() {
         Log.v(TAG, "onDestroy()");
+
+        // xxx
+        if (isBound) {
+            unbindService(serviceConnection);
+        }
+
+        boolean succ;
+        Log.v(TAG, "XXX call stopService");
+        succ = stopService(new Intent(this, MyService.class));
+        Log.v(TAG, "XXX back from stopService " + succ);
 
         if (mHIDDeviceManager != null) {
             HIDDeviceManager.release(mHIDDeviceManager);
@@ -2174,54 +2188,31 @@ public class SDLActivity extends Activity implements View.OnSystemUiVisibilityCh
         return result;
     }
 
-    //boolean isBound = false;
-    MyService myService;
-
+    // xxx
     private ServiceConnection serviceConnection = new ServiceConnection() {
         @Override
         public void onServiceConnected(ComponentName name, IBinder service) {
             MyService.InnerBinder binder = (MyService.InnerBinder) service;
             myService = binder.getService();
-            //isBound = true;
+            isBound = true;
+            Log.v(TAG, "XXX isBound = true");
 
             // Now you can call methods on myService and get return values
             //String data = myService.getDataFromService();
             //Log.d("MyActivity", "Received data: " + data);
-
-            Log.v(TAG, "XXX-YYY call get_altitude");
-            double altitude = myService.get_altitude();
-            Log.v(TAG, "XXX-YYY back from get_altitude " + altitude);
+            //Log.v(TAG, "XXX-YYY call get_altitude");
+            //double altitude = myService.get_altitude();
+            //Log.v(TAG, "XXX-YYY back from get_altitude " + altitude);
         }
 
         @Override
         public void onServiceDisconnected(ComponentName name) {
-            //isBound = false;
+            isBound = false;
+            Log.v(TAG, "XXX isBound = false");
         }
     };
 
-    public void showHome() {
-        Log.v("SDL", "XXXXXXX showHome");
-
-        ComponentName component_name;
-        Log.v(TAG, "XXX call startForegroundService");
-        component_name = startForegroundService(new Intent(this, MyService.class));
-        Log.v(TAG, "XXX back from startForegroundService " + component_name);
-
-        Log.v(TAG, "XXX call bindService");
-        Intent intent = new Intent(this, MyService.class);
-        bindService(intent, serviceConnection, Context.BIND_AUTO_CREATE);
-        Log.v(TAG, "XXX back from bindService");
-    }
-
-    public void showHome2() {
-        Log.v("SDL", "XXXXXXX showHome2");
-
-        boolean succ;
-        Log.v(TAG, "XXX call stopService");
-        succ = stopService(new Intent(this, MyService.class));
-        Log.v(TAG, "XXX back from stopService " + succ);
-    }
-
+    // xxx
     public double get_altitude() {
         double altitude;
         Log.v(TAG, "XXX call get_altitude");
