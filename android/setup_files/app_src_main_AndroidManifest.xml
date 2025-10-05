@@ -118,11 +118,11 @@
 
         <!--Service -->
         <service
-            android:name="org.libsdl.app.MyService"
+            android:name="org.libsdl.app.LocationService"
             android:enabled="true"
             android:exported="false" 
             android:foregroundServiceType="location" />
-        <!-- <service android:name=".MyService" /> -->
+        <!-- <service android:name=".LocationService" /> -->
 
     </application>
 

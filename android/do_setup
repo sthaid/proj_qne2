@@ -79,15 +79,18 @@ echo
 echo "Updating files in $BUILD_DIR"
 mkdir $TOP/setup_files/orig
 cd $BUILD_DIR
-update_build_file app_build.gradle                                    app/build.gradle
-update_build_file app_jni_Application.mk                              app/jni/Application.mk
-update_build_file app_jni_src_Android.mk                              app/jni/src/Android.mk
-update_build_file app_src_main_AndroidManifest.xml                    app/src/main/AndroidManifest.xml
-update_build_file app_src_main_java_org_libsdl_app_MyService.java     app/src/main/java/org/libsdl/app/MyService.java
-update_build_file app_src_main_java_org_libsdl_app_SDLActivity.java   app/src/main/java/org/libsdl/app/SDLActivity.java
+update_build_file gradle.properties                gradle.properties
+update_build_file app_build.gradle                 app/build.gradle
+update_build_file app_jni_Application.mk           app/jni/Application.mk
+update_build_file app_jni_src_Android.mk           app/jni/src/Android.mk
+update_build_file app_src_main_AndroidManifest.xml app/src/main/AndroidManifest.xml
+update_build_file app_src_main_java_org_libsdl_app_LocationService.java \
+                                                   app/src/main/java/org/libsdl/app/LocationService.java
+update_build_file app_src_main_java_org_libsdl_app_SDLActivity.java \
+                                                   app/src/main/java/org/libsdl/app/SDLActivity.java
 echo "- updating app_src_main_res to app/src/main/res"
-mv app/src/main/res                                                   $TOP/setup_files/orig/app_src_main_res
-ln -s $TOP/setup_files/app_src_main_res                               app/src/main/res
+mv app/src/main/res $TOP/setup_files/orig/app_src_main_res
+ln -s $TOP/setup_files/app_src_main_res app/src/main/res
 echo
 
 # add symbolic links to the source code

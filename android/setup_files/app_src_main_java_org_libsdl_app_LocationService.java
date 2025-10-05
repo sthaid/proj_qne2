@@ -34,7 +34,7 @@ import android.os.IBinder;
 
 import org.sthaid.ezApp.R;
 
-public class MyService extends Service {
+public class LocationService extends Service {
 
     private static final String TAG = "SDL";
     private FusedLocationProviderClient fusedLocationClient;
@@ -45,8 +45,8 @@ public class MyService extends Service {
     private final IBinder mBinder = new InnerBinder();
 
     public class InnerBinder extends Binder {
-        MyService getService() {
-            return MyService.this;
+        LocationService getService() {
+            return LocationService.this;
         }
     }
 
@@ -56,7 +56,7 @@ public class MyService extends Service {
         String CHANNEL_NAME = "My Channel";
         String CHANNEL_DESCRIPTION = "Description for My Channel";
 
-        Log.v(TAG, "XXX in MyService onStartCommand");
+        Log.v(TAG, "XXX in LocationService onStartCommand");
 
         NotificationManager notificationManager = (NotificationManager) this.getSystemService(this.NOTIFICATION_SERVICE);
 
@@ -89,16 +89,16 @@ public class MyService extends Service {
 
         // -----------------------------------------
 
-        Log.v(TAG, "XXX in MyService calling getFusedLocationProviderClient");
+        Log.v(TAG, "XXX in LocationService calling getFusedLocationProviderClient");
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(this);
-        Log.v(TAG, "XXX in MyService back from getFusedLocationProviderClient");
+        Log.v(TAG, "XXX in LocationService back from getFusedLocationProviderClient");
 
         locationCallback = new LocationCallback() {
             @Override
             public void onLocationResult(LocationResult locationResult) {
-                Log.v(TAG, "XXX in MyService onLocationResult");
+                Log.v(TAG, "XXX in LocationService onLocationResult");
                 if (locationResult == null) {
-                    Log.v(TAG, "XXX in MyService onLocationResult IS NULL");
+                    Log.v(TAG, "XXX in LocationService onLocationResult IS NULL");
                     return;
                 }
                 for (Location location : locationResult.getLocations()) {
@@ -114,7 +114,7 @@ public class MyService extends Service {
 
         startLocationUpdates();
 
-        Log.v(TAG, "XXX in MyService onStartCommand  DONE");
+        Log.v(TAG, "XXX in LocationService onStartCommand  DONE");
         return START_STICKY; // Service will be restarted if killed by the system
     }
 
@@ -136,12 +136,12 @@ public class MyService extends Service {
 
     @Override
     public IBinder onBind(Intent intent) {
-        Log.v(TAG, "XXX in MyService IBinder-xxx");
+        Log.v(TAG, "XXX in LocationService IBinder-xxx");
         return mBinder;
     }
 
     @Override
     public void onDestroy() {
-        Log.v(TAG, "XXX in MyService OnDestroy");
+        Log.v(TAG, "XXX in LocationService OnDestroy");
     }
 }

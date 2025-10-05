@@ -53,7 +53,7 @@ import android.os.Binder;
 import android.os.IBinder;
 import android.os.SystemClock;
 import android.content.ComponentName;
-import org.libsdl.app.MyService;
+import org.libsdl.app.LocationService;
 
 import java.io.FileNotFoundException;
 import java.util.ArrayList;
@@ -243,7 +243,7 @@ public class SDLActivity extends Activity implements View.OnSystemUiVisibilityCh
 
     // xxx
     boolean isBound = false;   // xxx use 'm'
-    MyService myService;
+    LocationService locationService;
 
     protected static SDLGenericMotionListener_API14 getMotionListener() {
         if (mMotionListener == null) {
@@ -516,11 +516,11 @@ public class SDLActivity extends Activity implements View.OnSystemUiVisibilityCh
         // xxx
         ComponentName component_name;
         Log.v(TAG, "XXX call startForegroundService");
-        component_name = startForegroundService(new Intent(this, MyService.class));
+        component_name = startForegroundService(new Intent(this, LocationService.class));
         Log.v(TAG, "XXX back from startForegroundService " + component_name);
 
         Log.v(TAG, "XXX call bindService");
-        bindService(new Intent(this, MyService.class), serviceConnection, Context.BIND_AUTO_CREATE);
+        bindService(new Intent(this, LocationService.class), serviceConnection, Context.BIND_AUTO_CREATE);
         Log.v(TAG, "XXX back from bindService");
     }
 
@@ -708,7 +708,7 @@ public class SDLActivity extends Activity implements View.OnSystemUiVisibilityCh
 
         boolean succ;
         Log.v(TAG, "XXX call stopService");
-        succ = stopService(new Intent(this, MyService.class));
+        succ = stopService(new Intent(this, LocationService.class));
         Log.v(TAG, "XXX back from stopService " + succ);
 
         if (mHIDDeviceManager != null) {
@@ -2191,8 +2191,8 @@ public class SDLActivity extends Activity implements View.OnSystemUiVisibilityCh
     private ServiceConnection serviceConnection = new ServiceConnection() {
         @Override
         public void onServiceConnected(ComponentName name, IBinder service) {
-            MyService.InnerBinder binder = (MyService.InnerBinder) service;
-            myService = binder.getService();
+            LocationService.InnerBinder binder = (LocationService.InnerBinder) service;
+            locationService = binder.getService();
             isBound = true;
             Log.v(TAG, "XXX isBound = true");
         }
@@ -2221,7 +2221,7 @@ public class SDLActivity extends Activity implements View.OnSystemUiVisibilityCh
         }
         Log.v(TAG, "XXXXXXXXXXXXXXXXXXXXXXXXXXXXX millisecs " + millisecs);
 
-        altitude = myService.get_altitude();
+        altitude = locationService.get_altitude();
 
         Log.v(TAG, "XXX back from get_altitude " + altitude);
         return altitude;

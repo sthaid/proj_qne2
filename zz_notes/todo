@@ -1,3 +1,27 @@
+combine myservice in sdlact file
+
+test full build
+
+use sdx or sdlx
+
+10 minute cycle
+
+rename test.cpp to util_loc.cpp
+- get lat,long,alt
+- cache the method id 
+
+add page to Test app for location
+
+is any improvement to weather.gov needed
+
+fix ezsh for vi and cmd recall
+
+move Services to Settings
+
+xxxxxxxxxxxxxxxx
+xxxxxxxxxxxxxxxx
+xxxxxxxxxxxxxxxx
+
 dl_get_permission: android.permission.POST_NOTIFICATION not granted
 
 
