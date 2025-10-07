@@ -1,6 +1,6 @@
 #include <std_hdrs.h>
     
-#include <sdl.h>
+#include <sdlx.h>
 #include <logging.h>
 #include <utils.h>
 
@@ -17,7 +17,7 @@
 //
 
 typedef struct {
-    sdl_loc_t loc;
+    sdlx_loc_t loc;
     int       event_id;
 } event_t;
 
@@ -25,7 +25,7 @@ typedef struct {
 // variables
 //
 
-// defined in sdl_video.c
+// defined in sdlx_video.c
 extern SDL_Window * window;
 extern double       scale;
 
@@ -41,13 +41,13 @@ static bool         evid_keybd_registered;
 // prototypes
 //
 
-static void process_sdl_event(SDL_Event *ev, sdl_event_t *event);
+static void process_sdlx_event(SDL_Event *ev, sdlx_event_t *event);
 
 // xxx cleanup and sections needed
 
 // -----------------  EVENTS  -----------------------------
 
-void sdl_reset_events(void)
+void sdlx_reset_events(void)
 {
     max_event = 0;
     evid_swipe_right_registered = false;
@@ -56,9 +56,9 @@ void sdl_reset_events(void)
     evid_keybd_registered = false;
 }
 
-void sdl_register_event(sdl_loc_t *loc, int event_id)
+void sdlx_register_event(sdlx_loc_t *loc, int event_id)
 {
-    sdl_loc_t loc2;
+    sdlx_loc_t loc2;
 
     if (event_id == EVID_SWIPE_RIGHT) {
         evid_swipe_right_registered = true;
@@ -100,14 +100,14 @@ void sdl_register_event(sdl_loc_t *loc, int event_id)
     max_event++;
 }
 
-void sdl_register_control_events(char *evstr1, char *evstr2, char *evstr3, int bg_color,
+void sdlx_register_control_events(char *evstr1, char *evstr2, char *evstr3, int bg_color,
                                  int evid1, int evid2, int evid3)
 {
-    sdl_loc_t *loc;
+    sdlx_loc_t *loc;
     int i, x, y;
     char *evstr[3];
     int  evid[3];
-    sdl_print_state_t print_state;
+    sdlx_print_state_t print_state;
 
     evstr[0] = evstr1;
     evstr[1] = evstr2;
@@ -117,31 +117,31 @@ void sdl_register_control_events(char *evstr1, char *evstr2, char *evstr3, int b
     evid[1] = evid2;
     evid[2] = evid3;
 
-    sdl_print_save(&print_state);
+    sdlx_print_save(&print_state);
 
-    sdl_print_init(LARGE_FONT, COLOR_WHITE, bg_color);
+    sdlx_print_init(LARGE_FONT, COLOR_WHITE, bg_color);
 
     for (i = 0; i < 3; i++) {
         if (evstr[i] == NULL) {
             continue;
         }
 
-        x = (sdl_win_width/3/2) + i * (sdl_win_width/3);
-        y = sdl_win_height - sdl_char_height/2;
-        loc = sdl_render_text_xyctr(x, y, evstr[i]);
-        sdl_register_event(loc, evid[i]);
+        x = (sdlx_win_width/3/2) + i * (sdlx_win_width/3);
+        y = sdlx_win_height - sdlx_char_height/2;
+        loc = sdlx_render_text_xyctr(x, y, evstr[i]);
+        sdlx_register_event(loc, evid[i]);
     }
 
-    sdl_print_restore(&print_state);
+    sdlx_print_restore(&print_state);
 }
 
-static int sdl_event_quit_rcvd;  //xxx cleanup
+static int sdlx_event_quit_rcvd;  //xxx cleanup
 
 // arg timeout_us:
 //   -1:     wait forever
 //    0:     don't wait
 //    usecs: timeout
-void sdl_get_event(long timeout_us, sdl_event_t *event)
+void sdlx_get_event(long timeout_us, sdlx_event_t *event)
 {
     SDL_Event ev;
     long waited = 0;
@@ -152,9 +152,9 @@ void sdl_get_event(long timeout_us, sdl_event_t *event)
     event->event_id = -1;
 
     // xxx comment
-    if (sdl_event_quit_rcvd > 0) {
-        INFO("XXXXX quit pending, %d\n", sdl_event_quit_rcvd);
-        sdl_event_quit_rcvd--;
+    if (sdlx_event_quit_rcvd > 0) {
+        INFO("XXXXX quit pending, %d\n", sdlx_event_quit_rcvd);
+        sdlx_event_quit_rcvd--;
         event->event_id = EVID_QUIT;
         return;
     }
@@ -181,17 +181,17 @@ try_again:
         }
     }
 
-    // process the sdl_event; this may or may not return an event
-    process_sdl_event(&ev, event);
+    // process the sdlx_event; this may or may not return an event
+    process_sdlx_event(&ev, event);
     if (event->event_id == -1) {
         goto try_again;
     }
 
-    // an event was returned from process_sdl_event
+    // an event was returned from process_sdlx_event
     return;
 }
 
-static void process_sdl_event(SDL_Event *ev, sdl_event_t *event)
+static void process_sdlx_event(SDL_Event *ev, sdlx_event_t *event)
 {
     #define AT_LOC(X,Y,loc) (((X) >= (loc).x)            && \
                              ((X) <  (loc).x + (loc).w)  && \
@@ -309,7 +309,7 @@ static void process_sdl_event(SDL_Event *ev, sdl_event_t *event)
         // not used
         break; }
     case SDL_EVENT_QUIT: {
-        sdl_event_quit_rcvd = 10;
+        sdlx_event_quit_rcvd = 10;
         event->event_id = EVID_QUIT;
         break; }
 
@@ -335,13 +335,13 @@ static void process_sdl_event(SDL_Event *ev, sdl_event_t *event)
     }
 }
 
-char *sdl_get_input_str(char *prompt, bool numeric_keybd, int bg_color)
+char *sdlx_get_input_str(char *prompt, bool numeric_keybd, int bg_color)
 {
     static char       input[100]; // xxx bounds check
     int               max_input;
-    sdl_loc_t        *loc;
-    sdl_event_t       event;
-    sdl_print_state_t print_state;
+    sdlx_loc_t        *loc;
+    sdlx_event_t       event;
+    sdlx_print_state_t print_state;
 
     // xxx comments
 
@@ -356,21 +356,21 @@ char *sdl_get_input_str(char *prompt, bool numeric_keybd, int bg_color)
             numeric_keybd ?  SDL_TEXTINPUT_TYPE_NUMBER : SDL_TEXTINPUT_TYPE_TEXT);
     SDL_StartTextInputWithProperties(window, props);
 
-    sdl_print_save(&print_state);
-    sdl_print_init(DEFAULT_FONT, COLOR_WHITE, bg_color);
+    sdlx_print_save(&print_state);
+    sdlx_print_init(DEFAULT_FONT, COLOR_WHITE, bg_color);
 
     //  xxx comment
     while (true) {
         // xxx comment
-        sdl_display_init(bg_color);
-        sdl_register_event(NULL, EVID_KEYBD);
-        sdl_render_printf(0, 200, "%s", prompt);
-        loc = sdl_render_printf(0, 350, "%s", input);
-        sdl_render_printf(loc->x+loc->w, loc->y, "%s", "_");
-        sdl_display_present();
+        sdlx_display_init(bg_color);
+        sdlx_register_event(NULL, EVID_KEYBD);
+        sdlx_render_printf(0, 200, "%s", prompt);
+        loc = sdlx_render_printf(0, 350, "%s", input);
+        sdlx_render_printf(loc->x+loc->w, loc->y, "%s", "_");
+        sdlx_display_present();
 
         // wait for event
-        sdl_get_event(-1, &event);
+        sdlx_get_event(-1, &event);
 
         // process event
         if (event.event_id == EVID_KEYBD) {
@@ -399,7 +399,7 @@ char *sdl_get_input_str(char *prompt, bool numeric_keybd, int bg_color)
     // cleanup
     SDL_StopTextInput(window);
     SDL_DestroyProperties(props);
-    sdl_print_restore(&print_state);
+    sdlx_print_restore(&print_state);
 
     // return input string
     return input;

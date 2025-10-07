@@ -1,5 +1,5 @@
 #include "../interpreter.h"
-#include <sdl.h>
+#include <sdlx.h>
 #include <utils.h>
 
 struct StdVararg
@@ -23,7 +23,7 @@ void Sdl_init (struct ParseState *Parser, struct Value *ReturnValue,
     int subsys = Param[0]->Val->Integer;
     int ret;
 
-    ret = sdl_init(subsys);
+    ret = sdlx_init(subsys);
 
     ReturnValue->Val->Integer = ret;
 }
@@ -33,7 +33,7 @@ void Sdl_quit(struct ParseState *Parser, struct Value *ReturnValue,
 {
     int subsys = Param[0]->Val->Integer;
 
-    sdl_quit(subsys);
+    sdlx_quit(subsys);
 }
 
 //
@@ -45,13 +45,13 @@ void Sdl_display_init (struct ParseState *Parser, struct Value *ReturnValue,
 {
     int color = Param[0]->Val->Integer;
 
-    sdl_display_init(color);
+    sdlx_display_init(color);
 }
 
 void Sdl_display_present (struct ParseState *Parser, struct Value *ReturnValue,
 	struct Value **Param, int NumArgs)
 {
-    sdl_display_present();
+    sdlx_display_present();
 }
 
 //
@@ -61,10 +61,10 @@ void Sdl_display_present (struct ParseState *Parser, struct Value *ReturnValue,
 void Sdl_register_event (struct ParseState *Parser, struct Value *ReturnValue,
 	struct Value **Param, int NumArgs)
 {
-    sdl_loc_t *loc      = (sdl_loc_t*)Param[0]->Val->Pointer;
+    sdlx_loc_t *loc      = (sdlx_loc_t*)Param[0]->Val->Pointer;
     int        event_id = Param[1]->Val->Integer;
 
-    sdl_register_event(loc, event_id);
+    sdlx_register_event(loc, event_id);
 }
 
 void Sdl_register_control_events (struct ParseState *Parser, struct Value *ReturnValue,
@@ -78,16 +78,16 @@ void Sdl_register_control_events (struct ParseState *Parser, struct Value *Retur
     int   evid2    = Param[5]->Val->Integer;
     int   evid3    = Param[6]->Val->Integer;
 
-    sdl_register_control_events(evstr1, evstr2, evstr3, bg_color, evid1, evid2, evid3);
+    sdlx_register_control_events(evstr1, evstr2, evstr3, bg_color, evid1, evid2, evid3);
 }
 
 void Sdl_get_event (struct ParseState *Parser, struct Value *ReturnValue,
 	struct Value **Param, int NumArgs)
 {
     long         timeout_us = Param[0]->Val->LongInteger;
-    sdl_event_t *event      = Param[1]->Val->Pointer;
+    sdlx_event_t *event      = Param[1]->Val->Pointer;
 
-    sdl_get_event(timeout_us, event);
+    sdlx_get_event(timeout_us, event);
 }
 
 //
@@ -103,7 +103,7 @@ void Sdl_create_color (struct ParseState *Parser, struct Value *ReturnValue,
     int a = Param[3]->Val->Integer;
     int color;
 
-    color = sdl_create_color(r, g, b, a);
+    color = sdlx_create_color(r, g, b, a);
     
     ReturnValue->Val->Integer = color;
 }
@@ -115,7 +115,7 @@ void Sdl_scale_color (struct ParseState *Parser, struct Value *ReturnValue,
     double inten = Param[1]->Val->FP;
     int scaled_color;
 
-    scaled_color = sdl_scale_color(color, inten);
+    scaled_color = sdlx_scale_color(color, inten);
 
     ReturnValue->Val->Integer = scaled_color;
 }
@@ -126,7 +126,7 @@ void Sdl_wavelength_to_color (struct ParseState *Parser, struct Value *ReturnVal
     int wavelength = Param[0]->Val->Integer;
     int color;
 
-    color = sdl_wavelength_to_color(wavelength);
+    color = sdlx_wavelength_to_color(wavelength);
 
     ReturnValue->Val->Integer = color;
 }
@@ -142,7 +142,7 @@ void Sdl_print_init (struct ParseState *Parser, struct Value *ReturnValue,
     int    fg_color = Param[1]->Val->Integer;
     int    bg_color = Param[2]->Val->Integer;
 
-    sdl_print_init(numchars, fg_color, bg_color);
+    sdlx_print_init(numchars, fg_color, bg_color);
 }
 
 void Sdl_print_init_color (struct ParseState *Parser, struct Value *ReturnValue,
@@ -151,23 +151,23 @@ void Sdl_print_init_color (struct ParseState *Parser, struct Value *ReturnValue,
     int fg_color = Param[0]->Val->Integer;
     int bg_color = Param[1]->Val->Integer;
 
-    sdl_print_init_color(fg_color, bg_color);
+    sdlx_print_init_color(fg_color, bg_color);
 }
 
 void Sdl_print_save (struct ParseState *Parser, struct Value *ReturnValue,
 	struct Value **Param, int NumArgs)
 {
-    sdl_print_state_t *print_state = (sdl_print_state_t*)Param[0]->Val->Pointer;
+    sdlx_print_state_t *print_state = (sdlx_print_state_t*)Param[0]->Val->Pointer;
 
-    sdl_print_save(print_state);
+    sdlx_print_save(print_state);
 }
 
 void Sdl_print_restore (struct ParseState *Parser, struct Value *ReturnValue,
 	struct Value **Param, int NumArgs)
 {
-    sdl_print_state_t *print_state = (sdl_print_state_t*)Param[0]->Val->Pointer;
+    sdlx_print_state_t *print_state = (sdlx_print_state_t*)Param[0]->Val->Pointer;
 
-    sdl_print_restore(print_state);
+    sdlx_print_restore(print_state);
 }
 
 void Sdl_render_text (struct ParseState *Parser, struct Value *ReturnValue,
@@ -176,9 +176,9 @@ void Sdl_render_text (struct ParseState *Parser, struct Value *ReturnValue,
     int         x   = Param[0]->Val->Integer;
     int         y   = Param[1]->Val->Integer;
     char       *str = Param[2]->Val->Pointer;
-    sdl_loc_t  *loc;
+    sdlx_loc_t  *loc;
 
-    loc = sdl_render_text(x, y, str);
+    loc = sdlx_render_text(x, y, str);
 
     ReturnValue->Val->Pointer = loc;
 }
@@ -192,13 +192,13 @@ void Sdl_render_printf (struct ParseState *Parser, struct Value *ReturnValue,
 
     struct StdVararg PrintfArgs;
     char             str[200] = "";
-    sdl_loc_t       *loc;
+    sdlx_loc_t       *loc;
 
     PrintfArgs.Param = Param + 2;
     PrintfArgs.NumArgs = NumArgs - 3;
     StdioBasePrintf(Parser, NULL, str, sizeof(str), fmt, &PrintfArgs);
 
-    loc = sdl_render_text(x, y, str);
+    loc = sdlx_render_text(x, y, str);
 
     ReturnValue->Val->Pointer = loc;
 }
@@ -209,9 +209,9 @@ void Sdl_render_text_xyctr (struct ParseState *Parser, struct Value *ReturnValue
     int         x   = Param[0]->Val->Integer;
     int         y   = Param[1]->Val->Integer;
     char       *str = Param[2]->Val->Pointer;
-    sdl_loc_t  *loc;
+    sdlx_loc_t  *loc;
 
-    loc = sdl_render_text_xyctr(x, y, str);
+    loc = sdlx_render_text_xyctr(x, y, str);
 
     ReturnValue->Val->Pointer = loc;
 }
@@ -225,13 +225,13 @@ void Sdl_render_printf_xyctr (struct ParseState *Parser, struct Value *ReturnVal
 
     struct StdVararg PrintfArgs;
     char             str[200] = "";
-    sdl_loc_t       *loc;
+    sdlx_loc_t       *loc;
 
     PrintfArgs.Param = Param + 2;
     PrintfArgs.NumArgs = NumArgs - 3;
     StdioBasePrintf(Parser, NULL, str, sizeof(str), fmt, &PrintfArgs);
 
-    loc = sdl_render_text_xyctr(x, y, str);
+    loc = sdlx_render_text_xyctr(x, y, str);
 
     ReturnValue->Val->Pointer = loc;
 }
@@ -244,7 +244,7 @@ void Sdl_render_multiline_text (struct ParseState *Parser, struct Value *ReturnV
     int   y_display_end   = Param[2]->Val->Integer;
     char *str             = Param[3]->Val->Pointer;
 
-    sdl_render_multiline_text(y_top, y_display_begin, y_display_end, str);
+    sdlx_render_multiline_text(y_top, y_display_begin, y_display_end, str);
 }
 
 void Sdl_render_multiline_text_2 (struct ParseState *Parser, struct Value *ReturnValue,
@@ -256,7 +256,7 @@ void Sdl_render_multiline_text_2 (struct ParseState *Parser, struct Value *Retur
     char **lines           = Param[3]->Val->Pointer;
     int    n               = Param[4]->Val->Integer;
 
-    sdl_render_multiline_text_2(y_top, y_display_begin, y_display_end, lines, n);
+    sdlx_render_multiline_text_2(y_top, y_display_begin, y_display_end, lines, n);
 }
 
 //
@@ -273,7 +273,7 @@ void Sdl_render_rect (struct ParseState *Parser, struct Value *ReturnValue,
     int   line_width = Param[4]->Val->Integer;
     int   color      = Param[5]->Val->Integer;
 
-    sdl_render_rect(x, y, w, h, line_width, color);
+    sdlx_render_rect(x, y, w, h, line_width, color);
 }
 
 void Sdl_render_fill_rect (struct ParseState *Parser, struct Value *ReturnValue,
@@ -285,7 +285,7 @@ void Sdl_render_fill_rect (struct ParseState *Parser, struct Value *ReturnValue,
     int   h          = Param[3]->Val->Integer;
     int   color      = Param[4]->Val->Integer;
 
-    sdl_render_fill_rect(x, y, w, h, color);
+    sdlx_render_fill_rect(x, y, w, h, color);
 }
 
 void Sdl_render_line (struct ParseState *Parser, struct Value *ReturnValue,
@@ -297,17 +297,17 @@ void Sdl_render_line (struct ParseState *Parser, struct Value *ReturnValue,
     int y2    = Param[3]->Val->Integer;
     int color = Param[4]->Val->Integer;
 
-    sdl_render_line(x1, y1, x2, y2, color);
+    sdlx_render_line(x1, y1, x2, y2, color);
 }
 
 void Sdl_render_lines (struct ParseState *Parser, struct Value *ReturnValue,
 	struct Value **Param, int NumArgs)
 {
-    sdl_point_t *points = (sdl_point_t*)Param[0]->Val->Pointer;
+    sdlx_point_t *points = (sdlx_point_t*)Param[0]->Val->Pointer;
     int count           = Param[1]->Val->Integer;
     int color           = Param[2]->Val->Integer;
 
-    sdl_render_lines(points, count, color);
+    sdlx_render_lines(points, count, color);
 }
 
 void Sdl_render_circle (struct ParseState *Parser, struct Value *ReturnValue,
@@ -319,7 +319,7 @@ void Sdl_render_circle (struct ParseState *Parser, struct Value *ReturnValue,
     int  line_width = Param[3]->Val->Integer;
     int  color      = Param[4]->Val->Integer;
 
-    sdl_render_circle(x_ctr, y_ctr, radius, line_width, color);
+    sdlx_render_circle(x_ctr, y_ctr, radius, line_width, color);
 }
 
 void Sdl_render_point (struct ParseState *Parser, struct Value *ReturnValue,
@@ -330,18 +330,18 @@ void Sdl_render_point (struct ParseState *Parser, struct Value *ReturnValue,
     int color      = Param[2]->Val->Integer;
     int point_size = Param[3]->Val->Integer;
 
-    sdl_render_point(x, y, color, point_size);
+    sdlx_render_point(x, y, color, point_size);
 }
 
 void Sdl_render_points (struct ParseState *Parser, struct Value *ReturnValue,
 	struct Value **Param, int NumArgs)
 {
-    sdl_point_t *points = (sdl_point_t*)Param[0]->Val->Pointer;
+    sdlx_point_t *points = (sdlx_point_t*)Param[0]->Val->Pointer;
     int count           = Param[1]->Val->Integer;
     int color           = Param[2]->Val->Integer;
     int point_size      = Param[3]->Val->Integer;
 
-    sdl_render_points(points, count, color, point_size);
+    sdlx_render_points(points, count, color, point_size);
 }
 
 //
@@ -351,10 +351,10 @@ void Sdl_render_points (struct ParseState *Parser, struct Value *ReturnValue,
 void Sdl_create_texture_from_pixels (struct ParseState *Parser, struct Value *ReturnValue,
         struct Value **Param, int NumArgs)
 {
-    sdl_pixels_t *pixels = Param[0]->Val->Pointer;
-    sdl_texture_t *texture;
+    sdlx_pixels_t *pixels = Param[0]->Val->Pointer;
+    sdlx_texture_t *texture;
 
-    texture = sdl_create_texture_from_pixels(pixels);
+    texture = sdlx_create_texture_from_pixels(pixels);
     ReturnValue->Val->Pointer = (char*)texture; 
 }
 
@@ -363,9 +363,9 @@ void Sdl_create_filled_circle_texture (struct ParseState *Parser, struct Value *
 {
     int radius = Param[0]->Val->Integer;
     int color  = Param[1]->Val->Integer;
-    sdl_texture_t *texture;
+    sdlx_texture_t *texture;
 
-    texture = sdl_create_filled_circle_texture(radius, color);
+    texture = sdlx_create_filled_circle_texture(radius, color);
     ReturnValue->Val->Pointer = (char*)texture; 
 }
 
@@ -373,9 +373,9 @@ void Sdl_create_text_texture (struct ParseState *Parser, struct Value *ReturnVal
 	struct Value **Param, int NumArgs)
 {
     char *str = (char*)Param[0]->Val->Pointer;
-    sdl_texture_t *texture;
+    sdlx_texture_t *texture;
 
-    texture = sdl_create_text_texture(str);
+    texture = sdlx_create_text_texture(str);
     ReturnValue->Val->Pointer = (char*)texture; 
 }
 
@@ -387,27 +387,27 @@ void Sdl_render_texture (struct ParseState *Parser, struct Value *ReturnValue,
     int            w       = Param[2]->Val->Integer;
     int            h       = Param[3]->Val->Integer;
     double         angle   = Param[4]->Val->FP;
-    sdl_texture_t *texture = (sdl_texture_t*)Param[5]->Val->Pointer;
+    sdlx_texture_t *texture = (sdlx_texture_t*)Param[5]->Val->Pointer;
 
-    sdl_render_texture(x, y, w, h, angle, texture);
+    sdlx_render_texture(x, y, w, h, angle, texture);
 }
 
 void Sdl_destroy_texture (struct ParseState *Parser, struct Value *ReturnValue,
 	struct Value **Param, int NumArgs)
 {
-    sdl_texture_t *texture = (sdl_texture_t*)Param[0]->Val->Pointer;
+    sdlx_texture_t *texture = (sdlx_texture_t*)Param[0]->Val->Pointer;
 
-    sdl_destroy_texture(texture);
+    sdlx_destroy_texture(texture);
 }
 
 void Sdl_query_texture (struct ParseState *Parser, struct Value *ReturnValue,
 	struct Value **Param, int NumArgs)
 {
-    sdl_texture_t *texture = (sdl_texture_t*)Param[0]->Val->Pointer;
+    sdlx_texture_t *texture = (sdlx_texture_t*)Param[0]->Val->Pointer;
     int           *width   = (int*)Param[1]->Val->Pointer;
     int           *height  = (int*)Param[2]->Val->Pointer;
 
-    sdl_query_texture(texture, width, height);
+    sdlx_query_texture(texture, width, height);
 }
 
 void Sdl_read_display_pixels (struct ParseState *Parser, struct Value *ReturnValue,
@@ -417,9 +417,9 @@ void Sdl_read_display_pixels (struct ParseState *Parser, struct Value *ReturnVal
     int y = Param[1]->Val->Integer;
     int w = Param[2]->Val->Integer;
     int h = Param[3]->Val->Integer;
-    sdl_pixels_t *pixels;
+    sdlx_pixels_t *pixels;
 
-    pixels = sdl_read_display_pixels(x, y, w, h);
+    pixels = sdlx_read_display_pixels(x, y, w, h);
     ReturnValue->Val->Pointer = (char*)pixels; 
 }
 
@@ -443,7 +443,7 @@ void Sdl_plot_create (struct ParseState *Parser, struct Value *ReturnValue,
 
     void *plot_cx;
 
-    plot_cx = sdl_plot_create(title, 
+    plot_cx = sdlx_plot_create(title, 
                               xleft, xright, ybottom, ytop, 
                               xval_left, xval_right, yval_bottom, yval_top, 
                               yval_of_x_axis);
@@ -460,30 +460,30 @@ void Sdl_plot_axis (struct ParseState *Parser, struct Value *ReturnValue,
     char *ymin_str = Param[3]->Val->Pointer;
     char *ymax_str = Param[4]->Val->Pointer;
 
-    sdl_plot_axis(plot_cx, xmin_str, xmax_str, ymin_str, ymax_str);
+    sdlx_plot_axis(plot_cx, xmin_str, xmax_str, ymin_str, ymax_str);
 }
 
 void Sdl_plot_points (struct ParseState *Parser, struct Value *ReturnValue,
 	struct Value **Param, int NumArgs)
 {
     void *plot_cx         = Param[0]->Val->Pointer;
-    sdl_plot_point_t *pts = Param[1]->Val->Pointer;
+    sdlx_plot_point_t *pts = Param[1]->Val->Pointer;
     int num_pts           = Param[2]->Val->Integer;
 
-    sdl_plot_points(plot_cx, pts, num_pts);
+    sdlx_plot_points(plot_cx, pts, num_pts);
 }
 
 void Sdl_plot_bars (struct ParseState *Parser, struct Value *ReturnValue,
 	struct Value **Param, int NumArgs)
 {
     void *plot_cx             = Param[0]->Val->Pointer;
-    sdl_plot_point_t *pts_avg = Param[1]->Val->Pointer;
-    sdl_plot_point_t *pts_min = Param[2]->Val->Pointer;;
-    sdl_plot_point_t *pts_max = Param[3]->Val->Pointer;
+    sdlx_plot_point_t *pts_avg = Param[1]->Val->Pointer;
+    sdlx_plot_point_t *pts_min = Param[2]->Val->Pointer;;
+    sdlx_plot_point_t *pts_max = Param[3]->Val->Pointer;
     int num_pts               = Param[4]->Val->Integer;
     double bar_wval           = Param[5]->Val->FP;
 
-    sdl_plot_bars(plot_cx, pts_avg, pts_min, pts_max, num_pts, bar_wval);
+    sdlx_plot_bars(plot_cx, pts_avg, pts_min, pts_max, num_pts, bar_wval);
 }
 
 void Sdl_plot_free (struct ParseState *Parser, struct Value *ReturnValue,
@@ -491,7 +491,7 @@ void Sdl_plot_free (struct ParseState *Parser, struct Value *ReturnValue,
 {
     void *plot_cx = Param[0]->Val->Pointer;
 
-    sdl_plot_free(plot_cx);
+    sdlx_plot_free(plot_cx);
 }
 
 //
@@ -505,7 +505,7 @@ void Sdl_audio_play (struct ParseState *Parser, struct Value *ReturnValue,
     char *filename = Param[1]->Val->Pointer;
     int rc;
 
-    rc = sdl_audio_play(dir, filename);
+    rc = sdlx_audio_play(dir, filename);
     ReturnValue->Val->Integer = rc; 
 }
 
@@ -519,7 +519,7 @@ void Sdl_audio_record (struct ParseState *Parser, struct Value *ReturnValue,
     bool  append             = Param[4]->Val->Integer;
     int   rc;
 
-    rc = sdl_audio_record(dir, filename, max_duration_secs, auto_stop_secs, append);
+    rc = sdlx_audio_record(dir, filename, max_duration_secs, auto_stop_secs, append);
     ReturnValue->Val->Integer = rc; 
 }
 
@@ -527,10 +527,10 @@ void Sdl_audio_play_tones (struct ParseState *Parser, struct Value *ReturnValue,
 	struct Value **Param, int NumArgs)
 {
     int         time_units_ms = Param[0]->Val->Integer;
-    sdl_tone_t *tones         = Param[1]->Val->Pointer;
+    sdlx_tone_t *tones         = Param[1]->Val->Pointer;
     int         rc;
 
-    rc = sdl_audio_play_tones(time_units_ms, tones);
+    rc = sdlx_audio_play_tones(time_units_ms, tones);
     ReturnValue->Val->Integer = rc; 
 }
 
@@ -539,21 +539,21 @@ void Sdl_audio_ctl (struct ParseState *Parser, struct Value *ReturnValue,
 {
     int req = Param[0]->Val->Integer;
 
-    sdl_audio_ctl(req);
+    sdlx_audio_ctl(req);
 }
 
 void Sdl_audio_state (struct ParseState *Parser, struct Value *ReturnValue,
 	struct Value **Param, int NumArgs)
 {
-    sdl_audio_state_t *state = Param[0]->Val->Pointer;
+    sdlx_audio_state_t *state = Param[0]->Val->Pointer;
 
-    sdl_audio_state(state);
+    sdlx_audio_state(state);
 }
 
 void Sdl_audio_print_device_info (struct ParseState *Parser, struct Value *ReturnValue,
 	struct Value **Param, int NumArgs)
 {
-    sdl_audio_print_devices_info();
+    sdlx_audio_print_devices_info();
 }
 
 void Sdl_audio_create_test_file (struct ParseState *Parser, struct Value *ReturnValue,
@@ -564,7 +564,7 @@ void Sdl_audio_create_test_file (struct ParseState *Parser, struct Value *Return
     int   duration_secs = Param[2]->Val->Integer;
     int   freq          = Param[3]->Val->Integer;
 
-    sdl_audio_create_test_file(dir, filename, duration_secs, freq);
+    sdlx_audio_create_test_file(dir, filename, duration_secs, freq);
 }
 
 //
@@ -575,9 +575,9 @@ void Sdl_sensor_get_info_tbl (struct ParseState *Parser, struct Value *ReturnVal
 	struct Value **Param, int NumArgs)
 {
     int *num_sensors = Param[0]->Val->Pointer;
-    sdl_sensor_info_t *sit;
+    sdlx_sensor_info_t *sit;
 
-    sit = sdl_sensor_get_info_tbl(num_sensors);
+    sit = sdlx_sensor_get_info_tbl(num_sensors);
     ReturnValue->Val->Pointer = sit;
 }
 
@@ -587,7 +587,7 @@ void Sdl_sensor_find (struct ParseState *Parser, struct Value *ReturnValue,
     int type = Param[0]->Val->Integer;
     int id;
 
-    id = sdl_sensor_find(type);
+    id = sdlx_sensor_find(type);
     ReturnValue->Val->Integer = id;
 }
 
@@ -599,7 +599,7 @@ void Sdl_sensor_read_raw (struct ParseState *Parser, struct Value *ReturnValue,
     int     num_values = Param[2]->Val->Integer;
     int     rc;
 
-    rc = sdl_sensor_read_raw(id, data, num_values);
+    rc = sdlx_sensor_read_raw(id, data, num_values);
     ReturnValue->Val->Integer = rc;
 }
 
@@ -609,7 +609,7 @@ void Sdl_sensor_read_step_counter (struct ParseState *Parser, struct Value *Retu
     double *step_count = Param[0]->Val->Pointer;
     int     rc;
 
-    rc = sdl_sensor_read_step_counter(step_count);
+    rc = sdlx_sensor_read_step_counter(step_count);
     ReturnValue->Val->Integer = rc;
 }
 
@@ -619,7 +619,7 @@ void Sdl_sensor_read_mag_heading (struct ParseState *Parser, struct Value *Retur
     double *mag_heading = Param[0]->Val->Pointer;
     int     rc;
 
-    rc = sdl_sensor_read_mag_heading(mag_heading);
+    rc = sdlx_sensor_read_mag_heading(mag_heading);
     ReturnValue->Val->Integer = rc;
 }
 
@@ -630,7 +630,7 @@ void Sdl_sensor_read_tilt (struct ParseState *Parser, struct Value *ReturnValue,
     double *pitch = Param[1]->Val->Pointer;
     int     rc;
 
-    rc = sdl_sensor_read_tilt(roll, pitch);
+    rc = sdlx_sensor_read_tilt(roll, pitch);
     ReturnValue->Val->Integer = rc;
 }
 
@@ -640,7 +640,7 @@ void Sdl_sensor_read_pressure (struct ParseState *Parser, struct Value *ReturnVa
     double *millibars = Param[0]->Val->Pointer;
     int     rc;
 
-    rc = sdl_sensor_read_pressure(millibars);
+    rc = sdlx_sensor_read_pressure(millibars);
     ReturnValue->Val->Integer = rc;
 }
 
@@ -650,7 +650,7 @@ void Sdl_sensor_read_temperature (struct ParseState *Parser, struct Value *Retur
     double *degrees_c = Param[0]->Val->Pointer;
     int     rc;
 
-    rc = sdl_sensor_read_temperature(degrees_c);
+    rc = sdlx_sensor_read_temperature(degrees_c);
     ReturnValue->Val->Integer = rc;
 }
 
@@ -660,7 +660,7 @@ void Sdl_sensor_read_humidity (struct ParseState *Parser, struct Value *ReturnVa
     double *percent = Param[0]->Val->Pointer;
     int     rc;
 
-    rc = sdl_sensor_read_humidity(percent);
+    rc = sdlx_sensor_read_humidity(percent);
     ReturnValue->Val->Integer = rc;
 }
 
@@ -676,114 +676,114 @@ void SdlSetupFunction(Picoc *pc)
                                       (union AnyValue *)&name, writeable); \
         } while (0)
         
-    PLATFORM_VAR(sdl_win_width, &pc->IntType, false);
-    PLATFORM_VAR(sdl_win_height, &pc->IntType, false);
-    PLATFORM_VAR(sdl_char_width, &pc->IntType, false);
-    PLATFORM_VAR(sdl_char_height, &pc->IntType, false);
+    PLATFORM_VAR(sdlx_win_width, &pc->IntType, false);
+    PLATFORM_VAR(sdlx_win_height, &pc->IntType, false);
+    PLATFORM_VAR(sdlx_char_width, &pc->IntType, false);
+    PLATFORM_VAR(sdlx_char_height, &pc->IntType, false);
 
     PLATFORM_VAR(stop_requested, pc->CharArrayType, false);
 }
 
 struct LibraryFunction SdlFunctions[] = {
     // sdl initialization and termination, must be done once
-    { Sdl_init,            "int sdl_init(int subsys);" },
-    { Sdl_quit,            "void sdl_quit(int subsys);" },
+    { Sdl_init,            "int sdlx_init(int subsys);" },
+    { Sdl_quit,            "void sdlx_quit(int subsys);" },
 
     // display init and present, must be done for every display update
-    { Sdl_display_init,    "void sdl_display_init(int color);" },
-    { Sdl_display_present, "void sdl_display_present(void);" },
+    { Sdl_display_init,    "void sdlx_display_init(int color);" },
+    { Sdl_display_present, "void sdlx_display_present(void);" },
 
     // event registration and query
-    { Sdl_register_event,  "void sdl_register_event(sdl_loc_t *loc, int event_id);" },
+    { Sdl_register_event,  "void sdlx_register_event(sdlx_loc_t *loc, int event_id);" },
     { Sdl_register_control_events, 
-                           "void sdl_register_control_events(char *evstr1, char *evstr2, char *evstr3, int bg_color, int evid1, int evid2, int evid3); " },
-    { Sdl_get_event,       "void sdl_get_event(long timeout_us, sdl_event_t *event);" },
+                           "void sdlx_register_control_events(char *evstr1, char *evstr2, char *evstr3, int bg_color, int evid1, int evid2, int evid3); " },
+    { Sdl_get_event,       "void sdlx_get_event(long timeout_us, sdlx_event_t *event);" },
 
     // create colors
-    { Sdl_create_color,    "int sdl_create_color(int r, int g, int b, int a);" },
-    { Sdl_scale_color,     "int sdl_scale_color(int color, double inten);" },
-    { Sdl_wavelength_to_color, "int sdl_wavelength_to_color(int wavelength);" },
+    { Sdl_create_color,    "int sdlx_create_color(int r, int g, int b, int a);" },
+    { Sdl_scale_color,     "int sdlx_scale_color(int color, double inten);" },
+    { Sdl_wavelength_to_color, "int sdlx_wavelength_to_color(int wavelength);" },
 
     // render text
-    { Sdl_print_init,              "void sdl_print_init(double numchars, int fg_color, int bg_color);" },
-    { Sdl_print_init_color,        "void sdl_print_init_color(int fg_color, int bg_color);" },
-    { Sdl_print_save,              "void sdl_print_save(sdl_print_state_t *save);" },
-    { Sdl_print_restore,           "void sdl_print_restore(sdl_print_state_t *restore);" },
-    { Sdl_render_text,             "sdl_loc_t *sdl_render_text(int x, int y, char *str);" },
-    { Sdl_render_printf,           "sdl_loc_t *sdl_render_printf(int x, int y, char *fmt, ...);" },
-    { Sdl_render_text_xyctr,       "sdl_loc_t *sdl_render_text_xyctr(int x, int y, char *str);" },
-    { Sdl_render_printf_xyctr,     "sdl_loc_t *sdl_render_printf_xyctr(int x, int y, char *fmt, ...);" },
-    { Sdl_render_multiline_text,   "void sdl_render_multiline_text(int y_top, int y_display_begin, int y_display_end, char * str);" },
-    { Sdl_render_multiline_text_2, "void sdl_render_multiline_text_2(int y_top, int y_display_begin, int y_display_end, char **lines, int n);" },
+    { Sdl_print_init,              "void sdlx_print_init(double numchars, int fg_color, int bg_color);" },
+    { Sdl_print_init_color,        "void sdlx_print_init_color(int fg_color, int bg_color);" },
+    { Sdl_print_save,              "void sdlx_print_save(sdlx_print_state_t *save);" },
+    { Sdl_print_restore,           "void sdlx_print_restore(sdlx_print_state_t *restore);" },
+    { Sdl_render_text,             "sdlx_loc_t *sdlx_render_text(int x, int y, char *str);" },
+    { Sdl_render_printf,           "sdlx_loc_t *sdlx_render_printf(int x, int y, char *fmt, ...);" },
+    { Sdl_render_text_xyctr,       "sdlx_loc_t *sdlx_render_text_xyctr(int x, int y, char *str);" },
+    { Sdl_render_printf_xyctr,     "sdlx_loc_t *sdlx_render_printf_xyctr(int x, int y, char *fmt, ...);" },
+    { Sdl_render_multiline_text,   "void sdlx_render_multiline_text(int y_top, int y_display_begin, int y_display_end, char * str);" },
+    { Sdl_render_multiline_text_2, "void sdlx_render_multiline_text_2(int y_top, int y_display_begin, int y_display_end, char **lines, int n);" },
 
     // render rectangle, lines, circles, points
-    { Sdl_render_rect,     "void sdl_render_rect(int x, int y, int w, int h, int line_width, int color);" },
-    { Sdl_render_fill_rect,"void sdl_render_fill_rect(int x, int y, int w, int h, int color);" },
-    { Sdl_render_line,     "void sdl_render_line(int x1, int y1, int x2, int y2, int color);" },
-    { Sdl_render_lines,    "void sdl_render_lines(sdl_point_t *points, int count, int color);" },
-    { Sdl_render_circle,   "void sdl_render_circle(int x_ctr, int y_ctr, int radius, int line_width, int color);" },
-    { Sdl_render_point,    "void sdl_render_point(int x, int y, int color, int point_size);" },
-    { Sdl_render_points,   "void sdl_render_points(sdl_point_t *points, int count, int color, int point_size);" },
+    { Sdl_render_rect,     "void sdlx_render_rect(int x, int y, int w, int h, int line_width, int color);" },
+    { Sdl_render_fill_rect,"void sdlx_render_fill_rect(int x, int y, int w, int h, int color);" },
+    { Sdl_render_line,     "void sdlx_render_line(int x1, int y1, int x2, int y2, int color);" },
+    { Sdl_render_lines,    "void sdlx_render_lines(sdlx_point_t *points, int count, int color);" },
+    { Sdl_render_circle,   "void sdlx_render_circle(int x_ctr, int y_ctr, int radius, int line_width, int color);" },
+    { Sdl_render_point,    "void sdlx_render_point(int x, int y, int color, int point_size);" },
+    { Sdl_render_points,   "void sdlx_render_points(sdlx_point_t *points, int count, int color, int point_size);" },
 
     // render using textures
-    { Sdl_create_texture_from_pixels,   "sdl_texture_t *sdl_create_texture_from_pixels(sdl_pixels_t *pixels);" },
-    { Sdl_create_filled_circle_texture, "sdl_texture_t *sdl_create_filled_circle_texture(int radius, int color);" },
-    { Sdl_create_text_texture,          "sdl_texture_t *sdl_create_text_texture(char *str);" },
-    { Sdl_render_texture,               "void sdl_render_texture(int x, int y, int w, int h, double angle, sdl_texture_t *texture);" },
-    { Sdl_destroy_texture,              "void sdl_destroy_texture(sdl_texture_t *texture);" },
-    { Sdl_query_texture,                "void sdl_query_texture(sdl_texture_t *texture, int *width, int *height);" },
-    { Sdl_read_display_pixels,          "void *sdl_read_display_pixels(int x, int y, int w, int h);" },
+    { Sdl_create_texture_from_pixels,   "sdlx_texture_t *sdlx_create_texture_from_pixels(sdlx_pixels_t *pixels);" },
+    { Sdl_create_filled_circle_texture, "sdlx_texture_t *sdlx_create_filled_circle_texture(int radius, int color);" },
+    { Sdl_create_text_texture,          "sdlx_texture_t *sdlx_create_text_texture(char *str);" },
+    { Sdl_render_texture,               "void sdlx_render_texture(int x, int y, int w, int h, double angle, sdlx_texture_t *texture);" },
+    { Sdl_destroy_texture,              "void sdlx_destroy_texture(sdlx_texture_t *texture);" },
+    { Sdl_query_texture,                "void sdlx_query_texture(sdlx_texture_t *texture, int *width, int *height);" },
+    { Sdl_read_display_pixels,          "void *sdlx_read_display_pixels(int x, int y, int w, int h);" },
 
     // plotting
-    { Sdl_plot_create,                   "void *sdl_plot_create("
+    { Sdl_plot_create,                   "void *sdlx_plot_create("
                                               "char *title, "
                                               "int xleft, int xright, int ybottom, int ytop, "
                                               "double xval_left, double xval_right, double yval_bottom, double yval_top, "
                                               "double yval_of_x_axis);" },
-    { Sdl_plot_axis,                     "void sdl_plot_axis("
+    { Sdl_plot_axis,                     "void sdlx_plot_axis("
                                               "void *cx, "
                                               "char *xmin_str, char *xmax_str, "
                                               "char *ymin_str, char *ymax_str);" },
-    { Sdl_plot_points,                   "void sdl_plot_points(void *cx, sdl_plot_point_t *pts, int num_pts);" },
-    { Sdl_plot_bars,                     "void sdl_plot_bars(void *cx,"
-                                              "sdl_plot_point_t *pts_avg, sdl_plot_point_t *pts_min, "
-                                              "sdl_plot_point_t *pts_max, int num_pts, double bar_wval);" },
-    { Sdl_plot_free,                     "void sdl_plot_free(void *cx);" },
+    { Sdl_plot_points,                   "void sdlx_plot_points(void *cx, sdlx_plot_point_t *pts, int num_pts);" },
+    { Sdl_plot_bars,                     "void sdlx_plot_bars(void *cx,"
+                                              "sdlx_plot_point_t *pts_avg, sdlx_plot_point_t *pts_min, "
+                                              "sdlx_plot_point_t *pts_max, int num_pts, double bar_wval);" },
+    { Sdl_plot_free,                     "void sdlx_plot_free(void *cx);" },
 
     // audio
-    { Sdl_audio_play,                   "int sdl_audio_play(char *dir, char *filename);" },
-    { Sdl_audio_record,                 "int sdl_audio_record(char *dir, char *filename, int max_duration_secs, int auto_stop_secs, bool append); "},
-    { Sdl_audio_play_tones,             "int sdl_audio_play_tones(int time_units_ms, sdl_tone_t *tones);" },
-    { Sdl_audio_ctl,                    "void sdl_audio_ctl(int req);" },
-    { Sdl_audio_state,                  "void sdl_audio_state(sdl_audio_state_t * state);" },
-    { Sdl_audio_print_device_info,      "void sdl_audio_print_devices_info(void);" },
-    { Sdl_audio_create_test_file,       "void sdl_audio_create_test_file(char *dir, char *filename, int duration_secs, int freq);" },
+    { Sdl_audio_play,                   "int sdlx_audio_play(char *dir, char *filename);" },
+    { Sdl_audio_record,                 "int sdlx_audio_record(char *dir, char *filename, int max_duration_secs, int auto_stop_secs, bool append); "},
+    { Sdl_audio_play_tones,             "int sdlx_audio_play_tones(int time_units_ms, sdlx_tone_t *tones);" },
+    { Sdl_audio_ctl,                    "void sdlx_audio_ctl(int req);" },
+    { Sdl_audio_state,                  "void sdlx_audio_state(sdlx_audio_state_t * state);" },
+    { Sdl_audio_print_device_info,      "void sdlx_audio_print_devices_info(void);" },
+    { Sdl_audio_create_test_file,       "void sdlx_audio_create_test_file(char *dir, char *filename, int duration_secs, int freq);" },
 
     // sensors
-    { Sdl_sensor_get_info_tbl,          "sdl_sensor_info_t *sdl_sensor_get_info_tbl(int *num_sensors);" },
-    { Sdl_sensor_find,                  "int sdl_sensor_find(int type);" },
-    { Sdl_sensor_read_raw,              "int sdl_sensor_read_raw(int id, double *data, int num_values);" },
-    { Sdl_sensor_read_step_counter,     "int sdl_sensor_read_step_counter(double *step_count);" },
-    { Sdl_sensor_read_mag_heading,      "int sdl_sensor_read_mag_heading(double *mag_heading);" },
-    { Sdl_sensor_read_tilt,             "int sdl_sensor_read_tilt(double *roll, double *pitch);" },
-    { Sdl_sensor_read_pressure,         "int sdl_sensor_read_pressure(double *millibars);" },
-    { Sdl_sensor_read_temperature,      "int sdl_sensor_read_temperature(double *degrees_c);" },
-    { Sdl_sensor_read_humidity,         "int sdl_sensor_read_humidity(double *percent);" },
+    { Sdl_sensor_get_info_tbl,          "sdlx_sensor_info_t *sdlx_sensor_get_info_tbl(int *num_sensors);" },
+    { Sdl_sensor_find,                  "int sdlx_sensor_find(int type);" },
+    { Sdl_sensor_read_raw,              "int sdlx_sensor_read_raw(int id, double *data, int num_values);" },
+    { Sdl_sensor_read_step_counter,     "int sdlx_sensor_read_step_counter(double *step_count);" },
+    { Sdl_sensor_read_mag_heading,      "int sdlx_sensor_read_mag_heading(double *mag_heading);" },
+    { Sdl_sensor_read_tilt,             "int sdlx_sensor_read_tilt(double *roll, double *pitch);" },
+    { Sdl_sensor_read_pressure,         "int sdlx_sensor_read_pressure(double *millibars);" },
+    { Sdl_sensor_read_temperature,      "int sdlx_sensor_read_temperature(double *degrees_c);" },
+    { Sdl_sensor_read_humidity,         "int sdlx_sensor_read_humidity(double *percent);" },
 
     { NULL, NULL } };
 
 const char SdlDefs[] = "\
-typedef struct sdl_texture sdl_texture_t; \n\
+typedef struct sdlx_texture sdlx_texture_t; \n\
 typedef struct { \n\
     int x; \n\
     int y; \n\
     int w; \n\
     int h; \n\
-} sdl_loc_t; \n\
+} sdlx_loc_t; \n\
 typedef struct { \n\
     int x; \n\
     int y; \n\
-} sdl_point_t; \n\
+} sdlx_point_t; \n\
 typedef struct { \n\
     int event_id; \n\
     union { \n\
@@ -791,18 +791,18 @@ typedef struct { \n\
             double x; double y; double xrel; double yrel; \n\
         } motion; \n\
     } u; \n\
-} sdl_event_t; \n\
+} sdlx_event_t; \n\
 typedef struct { \n\
     int magic; \n\
     int struct_len; \n\
     int w; \n\
     int h; \n\
     int pixels[0]; \n\
-} sdl_pixels_t; \n\
+} sdlx_pixels_t; \n\
 typedef struct { \n\
     short freq; \n\
     short intvl; \n\
-} sdl_tone_t; \n\
+} sdlx_tone_t; \n\
 typedef struct { \n\
     int  state; \n\
     bool paused; \n\
@@ -810,23 +810,23 @@ typedef struct { \n\
     int  total_secs; \n\
     int  volume; \n\
     char filename[100]; \n\
-} sdl_audio_state_t; \n\
+} sdlx_audio_state_t; \n\
 typedef struct { \n\
     int   id; \n\
     int   type; \n\
     char *name; \n\
-} sdl_sensor_info_t; \n\
+} sdlx_sensor_info_t; \n\
 typedef struct { \n\
     int ptsize; \n\
     int char_width; \n\
     int char_height; \n\
     int bg_color; \n\
     int fg_color; \n\
-} sdl_print_state_t; \n\
+} sdlx_print_state_t; \n\
 typedef struct { \n\
     double xval; \n\
     double yval; \n\
-} sdl_plot_point_t; \n\
+} sdlx_plot_point_t; \n\
 \n\
 #define SUBSYS_VIDEO  1 \n\
 #define SUBSYS_AUDIO  2 \n\
@@ -855,8 +855,8 @@ typedef struct { \n\
 #define DEFAULT_FONT  20 \n\
 #define LARGE_FONT    10 \n\
  \n\
-#define ROW2Y(r) ((r) * sdl_char_height) \n\
-#define COL2X(c) ((c) * sdl_char_width) \n\
+#define ROW2Y(r) ((r) * sdlx_char_height) \n\
+#define COL2X(c) ((c) * sdlx_char_width) \n\
 \n\
 #define PIXELS_MAGIC 0x11223344 \n\
 \n\
@@ -1195,7 +1195,7 @@ void PlatformLibraryInit(Picoc *pc)
 {
     IncludeRegister(
         pc, 
-        "sdl.h", 
+        "sdlx.h", 
         SdlSetupFunction,
         SdlFunctions, 
         SdlDefs);

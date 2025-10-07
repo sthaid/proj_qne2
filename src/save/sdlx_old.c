@@ -36,7 +36,7 @@
 //
 
 typedef struct {
-    sdl_loc_t loc;
+    sdlx_loc_t loc;
     int       event_id;
 } event_t;
 
@@ -44,24 +44,23 @@ typedef struct {
 // global variables
 //
 
-int sdl_win_width;
-int sdl_win_height;
-int sdl_char_width;
-int sdl_char_height;
+int sdlx_win_width;
+int sdlx_win_height;
+int sdlx_char_width;
+int sdlx_char_height;
 char stop_requested[100];  // xxx name
 
 //
 // variables
 //
 
-// used by other sdl*.c files
-SDL_Window            * window;
-double                  scale;
-
+static SDL_Window     * window;
 static SDL_Renderer   * renderer;
+static double           scale;
 
 static TTF_Font        *font[MAX_FONT_PTSIZE];
 
+static event_t          event_tbl[100];
 static int              max_event;
 static bool             evid_swipe_right_registered;
 static bool             evid_swipe_left_registered;
@@ -72,6 +71,7 @@ static bool             evid_keybd_registered;
 // prototypes
 //
 
+static void process_sdlx_event(SDL_Event *ev, sdlx_event_t *event);
 static void set_render_draw_color(int color);
 
 //
@@ -80,7 +80,7 @@ static void set_render_draw_color(int color);
 
 //xxx static assert
 // xxx [-Werror=strict-aliasing]
-static inline SDL_Color sdl_color(int color)
+static inline SDL_Color sdlx_color(int color)
 {
     SDL_Color val;
     memcpy(&val, &color, sizeof(color));
@@ -142,86 +142,119 @@ bool event_watcher(void* userdata, SDL_Event* event)
         }
 #endif
 
-int sdl_video_init(void)
+static int sdlx_init_count; //xxx cleanup, move this and comments 
+
+int sdlx_init(int subsys)
 {
-    int    real_win_width, real_win_height;
-    int    num, i;
+    int real_win_width, real_win_height;
+    int num, i;
     double aspect_ratio;
 
-    INFO("initializing\n");
-
-    // initialize SDL video
-    if (!SDL_Init(SDL_INIT_VIDEO)) {
-        ERROR("SDL_Init VIDEO failed, %s\n", SDL_GetError());
-        return -1;
+    if (sdlx_init_count++ > 0) {
+        INFO("already initialized\n");
+        return 0;
     }
 
-    // display available and current video drivers
-    num = SDL_GetNumVideoDrivers();
-    INFO("Available Video Drivers: ");
-    for (i = 0; i < num; i++) {
-        INFO("   %s\n",  SDL_GetVideoDriver(i));
-    }
+    // subsys video init
+    if (subsys & SUBSYS_VIDEO) {
+        // display available and current video drivers
+        num = SDL_GetNumVideoDrivers();
+        INFO("Available Video Drivers: ");
+        for (i = 0; i < num; i++) {
+            INFO("   %s\n",  SDL_GetVideoDriver(i));
+        }
 
-    // create SDL Window and Renderer
+        // initialize SDL video
+        if (!SDL_Init(SDL_INIT_VIDEO)) {
+            ERROR("SDL_Init VIDEO failed, %s\n", SDL_GetError());
+            return -1;
+        }
+
+        // create SDL Window and Renderer xxx simplify
 #ifdef ANDROID
-    if (!SDL_CreateWindowAndRenderer("ezApp", 0, 0, SDL_WINDOW_FULLSCREEN, &window, &renderer)) {
-        ERROR("SDL_CreateWindowAndRenderer failed\n");
-        return -1;
-    }
+        if (!SDL_CreateWindowAndRenderer("ezApp", 0, 0, SDL_WINDOW_FULLSCREEN, &window, &renderer)) {
+            ERROR("SDL_CreateWindowAndRenderer failed\n");
+            return -1;
+        }
 #else
-    // xxx test with larger win width
-    if (!SDL_CreateWindowAndRenderer("ezApp", 450, 975, 0, &window, &renderer)) {
-        ERROR("SDL_CreateWindowAndRenderer failed\n");
-        return -1;
-    }
+        // xxx test with larger win width
+        if (!SDL_CreateWindowAndRenderer("ezApp", 450, 975, 0, &window, &renderer)) {
+            ERROR("SDL_CreateWindowAndRenderer failed\n");
+            return -1;
+        }
 #endif
 
-    // add the event watcher  xxx tbd
-    SDL_AddEventWatch(event_watcher, NULL);
+        // add the event watcher  xxx tbd
+        SDL_AddEventWatch(event_watcher, NULL);
 
-    // get real windows size and aspect ratio
-    SDL_GetWindowSize(window, &real_win_width, &real_win_height);
-    aspect_ratio = (double)real_win_height / real_win_width;
-    INFO("real win_width x height = %d %d  aspect = %f\n", real_win_width, real_win_height, aspect_ratio);
+        // get real windows size and aspect ratio
+        SDL_GetWindowSize(window, &real_win_width, &real_win_height);
+        aspect_ratio = (double)real_win_height / real_win_width;
+        INFO("real win_width x height = %d %d  aspect = %f\n", real_win_width, real_win_height, aspect_ratio);
 
-    // xxx comment
-    sdl_win_width  = 1000;
-    sdl_win_height = rint(1000 * aspect_ratio);
-    scale = (double)real_win_width / sdl_win_width;
-    INFO("logical sdl_win_width x height = %d %d  scale = %f\n", sdl_win_width, sdl_win_height, scale);
+        // xxx comment
+        sdlx_win_width  = 1000;
+        sdlx_win_height = rint(1000 * aspect_ratio);
+        scale = (double)real_win_width / sdlx_win_width;
+        INFO("logical sdlx_win_width x height = %d %d  scale = %f\n", sdlx_win_width, sdlx_win_height, scale);
 
-    // initialize True Type Font
-    if (!TTF_Init()) {
-        ERROR("TTF_Init failed\n");
-        return -1;
+        // initialize True Type Font
+        if (!TTF_Init()) {
+            ERROR("TTF_Init failed\n");
+            return -1;
+        }
+
+        // init default fontsize, where DEFAULT_FONT is num chars across display;
+        // and validate expected character size and columns
+        sdlx_print_init(DEFAULT_FONT, COLOR_WHITE, COLOR_BLACK);
+        INFO("sdlx_print_init(%d) sdlx_char_width=%d sdlx_char_height=%d\n", 
+             DEFAULT_FONT, sdlx_char_width, sdlx_char_height);
+        if (sdlx_char_width != 50 || sdlx_char_height != 83) {
+            ERROR("chw,chh, expected = 50,83  actual = %d,%d\n", sdlx_char_width, sdlx_char_height);
+        }
+
+        // this is needed so that the first actual display present works
+        sdlx_display_init(COLOR_BLACK);
+        sdlx_display_present();
     }
 
-    // init default fontsize, where DEFAULT_FONT is num chars across display;
-    // and validate expected character size and columns
-    sdl_print_init(DEFAULT_FONT, COLOR_WHITE, COLOR_BLACK);
-    INFO("sdl_print_init(%d) sdl_char_width=%d sdl_char_height=%d\n", 
-         DEFAULT_FONT, sdl_char_width, sdl_char_height);
-    if (sdl_char_width != 50 || sdl_char_height != 83) {
-        ERROR("chw,chh, expected = 50,83  actual = %d,%d\n", sdl_char_width, sdl_char_height);
+    // subsys audio init
+    if (subsys & SUBSYS_AUDIO) {
+        // initialize SDL audio
+        if (!SDL_Init(SDL_INIT_AUDIO)) {
+            ERROR("SDL_Init AUDIO failed, %s\n", SDL_GetError());
+            return -1;
+        }
     }
 
-    // this is needed so that the first actual display present works
-    sdl_display_init(COLOR_BLACK);
-    sdl_display_present();
+    // subsys sensor init
+    if (subsys & SUBSYS_SENSOR) {
+        // initialize SDL sensor
+        if (!SDL_Init(SDL_INIT_SENSOR)) {
+            ERROR("SDL_Init SENSOR failed, %s\n", SDL_GetError());
+            return -1;
+        }
+
+        // init sensor code
+        sdlx_sensor_init_private();
+    }
 
     // return success
     INFO("success\n");
     return 0;
 }
 
-void sdl_video_quit(void)
+void sdlx_exit(void)
 {
     int i;
 
-    INFO("quitting\n");
+    if (--sdlx_init_count > 0) {
+        INFO("not exitting\n");
+        return;
+    }
 
-    // close fonts
+    INFO("sdl exitting\n");
+
     for (i = MIN_FONT_PTSIZE; i < MAX_FONT_PTSIZE; i++) {
         if (font[i] != NULL) {
             TTF_CloseFont(font[i]);
@@ -229,32 +262,17 @@ void sdl_video_quit(void)
     }
     TTF_Quit();
 
-    // destroy the renderer and window
-    SDL_DestroyRenderer(renderer);
-    SDL_DestroyWindow(window);
+    SDL_DestroyRenderer(renderer);  //xxx needed?
+    SDL_DestroyWindow(window);  //xxx needed?
+    SDL_Quit();
 
-    // quit SDL video
-    SDL_QuitSubSystem(SDL_INIT_VIDEO);
-}
-
-#if 0
-SDL_Window *sdl_get_window(void)
-{
-    return window;
-}
-#endif
-
-void sdl_minimize_window(void)
-{   
-    SDL_MinimizeWindow(window);
+    INFO("done\n");
 }
 
 // ----------------- DISPLAY INIT / PRESENT ---------------
 
-void sdl_display_init(int color)
+void sdlx_display_init(int color)
 {
-    sdl_reset_events();
-    // xxx need a routine in sdl_event
     max_event = 0;
     evid_swipe_right_registered = false;
     evid_swipe_left_registered = false;
@@ -265,19 +283,370 @@ void sdl_display_init(int color)
     SDL_RenderClear(renderer);
 }
 
-void sdl_display_present(void)
+void sdlx_display_present(void)
 {
     SDL_RenderPresent(renderer);
 }
 
+// -----------------  EVENTS  -----------------------------
+
+void sdlx_register_event(sdlx_loc_t *loc, int event_id)
+{
+    sdlx_loc_t loc2;
+
+    if (event_id == EVID_SWIPE_RIGHT) {
+        evid_swipe_right_registered = true;
+        return;
+    }
+    if (event_id == EVID_SWIPE_LEFT) {
+        evid_swipe_left_registered = true;
+        return;
+    }
+    if (event_id == EVID_MOTION) {
+        evid_motion_registered = true;
+        return;
+    }
+    if (event_id == EVID_KEYBD) {
+        evid_keybd_registered = true;
+        return;
+    }
+
+    if (loc == NULL || loc->w == 0 || loc->h == 0) {
+        ERROR("invalid loc, event_id=%d\n", event_id);
+        return;
+    }
+
+    // enforce minimum w,h
+    loc2 = *loc;
+    if (loc2.w < 150) {
+        int delta = 150 - loc2.w;
+        loc2.w += delta;
+        loc2.x -= delta/2;
+    }
+    if (loc2.h < 150) {
+        int delta = 150 - loc2.h;
+        loc2.h += delta;
+        loc2.y -= delta/2;
+    }
+
+    event_tbl[max_event].loc = loc2;
+    event_tbl[max_event].event_id  = event_id; 
+    max_event++;
+}
+
+void sdlx_register_control_events(char *evstr1, char *evstr2, char *evstr3, int bg_color,
+                                 int evid1, int evid2, int evid3)
+{
+    sdlx_loc_t *loc;
+    int i, x, y;
+    char *evstr[3];
+    int  evid[3];
+    sdlx_print_state_t print_state;
+
+    evstr[0] = evstr1;
+    evstr[1] = evstr2;
+    evstr[2] = evstr3;
+
+    evid[0] = evid1;
+    evid[1] = evid2;
+    evid[2] = evid3;
+
+    sdlx_print_save(&print_state);
+
+    sdlx_print_init(LARGE_FONT, COLOR_WHITE, bg_color);
+
+    for (i = 0; i < 3; i++) {
+        if (evstr[i] == NULL) {
+            continue;
+        }
+
+        x = (sdlx_win_width/3/2) + i * (sdlx_win_width/3);
+        y = sdlx_win_height - sdlx_char_height/2;
+        loc = sdlx_render_text_xyctr(x, y, evstr[i]);
+        sdlx_register_event(loc, evid[i]);
+    }
+
+    sdlx_print_restore(&print_state);
+}
+
+static int sdlx_event_quit_rcvd;  //xxx cleanup
+
+// arg timeout_us:
+//   -1:     wait forever
+//    0:     don't wait
+//    usecs: timeout
+void sdlx_get_event(long timeout_us, sdlx_event_t *event)
+{
+    SDL_Event ev;
+    long waited = 0;
+    bool got_event;
+
+    // xxx move
+    memset(event, 0, sizeof(*event));
+    event->event_id = -1;
+
+    // xxx comment
+    if (sdlx_event_quit_rcvd > 0) {
+        INFO("XXXXX quit pending, %d\n", sdlx_event_quit_rcvd);
+        sdlx_event_quit_rcvd--;
+        event->event_id = EVID_QUIT;
+        return;
+    }
+
+try_again:
+    //SDL_UpdateSensors(); // xxx is this needed?
+
+    // get event
+    got_event = SDL_PollEvent(&ev);
+
+    // no event available, either return error or try again to get event
+    if (!got_event) {
+        if (timeout_us == 0) {
+            // dont wait
+            return;
+        } else if (timeout_us < 0 || waited < timeout_us) {
+            // either wait forever or time waited is less than timeout_us
+            usleep(ONE_MS);
+            waited += ONE_MS;
+            goto try_again;
+        } else {
+            // time waited exceeds timeout_us
+            return;
+        }
+    }
+
+    // process the sdlx_event; this may or may not return an event
+    process_sdlx_event(&ev, event);
+    if (event->event_id == -1) {
+        goto try_again;
+    }
+
+    // an event was returned from process_sdlx_event
+    return;
+}
+
+static void process_sdlx_event(SDL_Event *ev, sdlx_event_t *event)
+{
+    #define AT_LOC(X,Y,loc) (((X) >= (loc).x)            && \
+                             ((X) <  (loc).x + (loc).w)  && \
+                             ((Y) >= (loc).y)            && \
+                             ((Y) <  (loc).y + (loc).h))
+
+    int i;
+
+    switch (ev->type) {
+    case SDL_EVENT_MOUSE_BUTTON_DOWN:
+    case SDL_EVENT_MOUSE_BUTTON_UP: {
+        static int last_pressed_x = -1;
+        static int last_pressed_y = -1;
+        int x, y;
+#if 0
+       INFO("MOUSE_BUTTON button=%s state=%s x=%d y=%d\n",
+               (ev->button.button == SDL_BUTTON_LEFT   ? "LEFT" :
+                ev->button.button == SDL_BUTTON_MIDDLE ? "MIDDLE" :
+                ev->button.button == SDL_BUTTON_RIGHT  ? "RIGHT" : "???"),
+               (ev->button.down ? "DOWN" : "UP"),
+               ev->button.x,
+               ev->button.y);
+#endif
+        x = ev->button.x / scale;
+        y = ev->button.y / scale;
+
+        if (ev->button.down) {
+            last_pressed_x = x;
+            last_pressed_y = y;
+        } else {
+            int delta_x = x - last_pressed_x;
+            int delta_y = y - last_pressed_y;
+
+            INFO("button released xy = %d %d, delta xy = %d %d\n", x, y, delta_x, delta_y);
+
+            if (delta_x > 300 && evid_swipe_right_registered) {
+                INFO("got EVID_SWIPE_RIGHT %d %d\n", delta_x, delta_y);
+                event->event_id = EVID_SWIPE_RIGHT;
+                break;
+            } else if (delta_x < -300 && evid_swipe_left_registered) {
+                INFO("got EVID_SWIPE_LEFT %d %d\n", delta_x, delta_y);
+                event->event_id = EVID_SWIPE_LEFT;
+                break;
+            }
+
+            for (i = 0; i < max_event; i++) {
+                if (AT_LOC(x, y, event_tbl[i].loc)) {
+                    break;
+                }
+            }
+            if (i < max_event &&
+                AT_LOC(last_pressed_x, last_pressed_y, event_tbl[i].loc))
+            {
+                event->event_id = event_tbl[i].event_id;
+            }
+        }
+        break; }
+    case SDL_EVENT_MOUSE_MOTION: {
+        if ((ev->motion.state & SDL_BUTTON_LMASK) && evid_motion_registered) {
+            INFO("MOUSE_MOTION x=%f y=%f xrel=%f yrel=%f\n",
+                ev->motion.x,
+                ev->motion.y,
+                ev->motion.xrel,
+                ev->motion.yrel);
+
+            event->event_id = EVID_MOTION;
+            event->u.motion.x = ev->motion.x / scale;
+            event->u.motion.y = ev->motion.y / scale;
+            event->u.motion.xrel = ev->motion.xrel / scale;
+            event->u.motion.yrel = ev->motion.yrel / scale;
+        }
+        break; }
+    case SDL_EVENT_SENSOR_UPDATE: {
+        SDL_SensorEvent *x = &ev->sensor;
+        // xxx why is step counter not working
+        // xxx cleanup
+        if (x->which == 14 || x->which == 15) { // xxx clean up these prints
+            // xxx long stepc = *(long*)x->data;
+            unsigned long stepc;
+            memcpy(&stepc, x->data, sizeof(stepc));
+            INFO("SENSOR: which=%d data=%f %f %f %f %f %f stepc=%ld timestamp=%ld\n",
+                 x->which,
+                 x->data[0], x->data[1], x->data[2], x->data[3], x->data[4], x->data[5],
+                 stepc, x->sensor_timestamp);
+        }
+        break; }
+#if 0
+    case SDL_EVENT_TEXT_INPUT: {
+        SDL_TextInputEvent *x = &ev->text;
+        INFO("SDL_EVENT_TEXT_INPUT: '%s'\n", x->text);
+        break; }
+    case SDL_EVENT_TEXT_EDITING: {
+        SDL_TextEditingEvent *x = &ev->edit;
+        INFO("SDL_EVENT_TEXT_EDITING: '%s' %d %d\n", x->text, x->start, x->length);
+        break; }
+#endif
+    case SDL_EVENT_KEY_DOWN:
+    case SDL_EVENT_KEY_UP: {
+        SDL_KeyboardEvent *x = &ev->key;
+        bool shift = (x->mod & SDL_KMOD_SHIFT) != 0;
+        SDL_Keycode keycode;
+
+        if (!evid_keybd_registered || x->down) {
+            break;
+        }
+
+        keycode = SDL_GetKeyFromScancode(x->scancode, x->mod, false);
+        INFO("GOT keycode 0x%x  shift=%d\n", keycode, shift);
+        event->event_id = EVID_KEYBD;
+        event->u.keybd.ch = keycode;
+        break; }
+    case SDL_EVENT_FINGER_DOWN:
+    case SDL_EVENT_FINGER_UP:
+    case SDL_EVENT_FINGER_MOTION: {
+        // not used
+        break; }
+    case SDL_EVENT_QUIT: {
+        sdlx_event_quit_rcvd = 10;
+        event->event_id = EVID_QUIT;
+        break; }
+
+    // xxx  these dont seem to be invoked
+    case SDL_EVENT_WILL_ENTER_BACKGROUND:
+        // Pause your game loop and background tasks
+        INFO("App is about to be backgrounded\n");
+        break;
+    case SDL_EVENT_DID_ENTER_BACKGROUND:
+        INFO("App is now in the background\n");
+        break;
+    case SDL_EVENT_WILL_ENTER_FOREGROUND:
+        INFO("App is about to be foregrounded\n");
+        break;
+    case SDL_EVENT_DID_ENTER_FOREGROUND:
+        // Resume your game loop and tasks
+        INFO("App is now in the foreground\n");
+        break;
+
+    default: {
+        //INFO("event_type %d - not supported\n", ev->type);
+        break; }
+    }
+}
+
+char *sdlx_get_input_str(char *prompt, bool numeric_keybd, int bg_color)
+{
+    static char       input[100]; // xxx bounds check
+    int               max_input;
+    sdlx_loc_t        *loc;
+    sdlx_event_t       event;
+    sdlx_print_state_t print_state;
+
+    // xxx comments
+
+    // init
+    memset(input, 0, sizeof(input));
+    max_input = 0;
+
+    SDL_PropertiesID props = SDL_CreateProperties();
+    SDL_SetNumberProperty(
+            props, 
+            SDL_PROP_TEXTINPUT_TYPE_NUMBER, 
+            numeric_keybd ?  SDL_TEXTINPUT_TYPE_NUMBER : SDL_TEXTINPUT_TYPE_TEXT);
+    SDL_StartTextInputWithProperties(window, props);
+
+    sdlx_print_save(&print_state);
+    sdlx_print_init(DEFAULT_FONT, COLOR_WHITE, bg_color);
+
+    //  xxx comment
+    while (true) {
+        // xxx comment
+        sdlx_display_init(bg_color);
+        sdlx_register_event(NULL, EVID_KEYBD);
+        sdlx_render_printf(0, 200, "%s", prompt);
+        loc = sdlx_render_printf(0, 350, "%s", input);
+        sdlx_render_printf(loc->x+loc->w, loc->y, "%s", "_");
+        sdlx_display_present();
+
+        // wait for event
+        sdlx_get_event(-1, &event);
+
+        // process event
+        if (event.event_id == EVID_KEYBD) {
+            int ch = event.u.keybd.ch;
+
+            if (ch >= 0x20 && ch < 0x7f) {
+                if (max_input < sizeof(input)) {
+                    input[max_input++] = ch;
+                }
+                continue; 
+            } else if (ch == '\b') {
+                if (max_input > 0) {
+                    input[--max_input] = '\0';
+                }
+            } if (ch == '\r') {
+                break;
+            }
+        }
+
+        if (event.event_id == EVID_QUIT) {
+            input[0] = '\0';
+            break;
+        }
+    }
+
+    // cleanup
+    SDL_StopTextInput(window);
+    SDL_DestroyProperties(props);
+    sdlx_print_restore(&print_state);
+
+    // return input string
+    return input;
+}
+
 // -----------------  COLORS  -----------------------------
 
-int sdl_create_color(int r, int g, int b, int a)
+int sdlx_create_color(int r, int g, int b, int a)
 {
     return (r << 0) | (g << 8) | (b << 16) | (a << 24);
 }
 
-int sdl_scale_color(int color, double inten)
+int sdlx_scale_color(int color, double inten)
 {
     int r = (color >> 0) & 0xff;
     int g = (color >> 8) & 0xff;
@@ -295,7 +664,7 @@ int sdl_scale_color(int color, double inten)
 }
 
 // ported from http://www.noah.org/wiki/Wavelength_to_RGB_in_Python
-int sdl_wavelength_to_color(int wavelength_arg)
+int sdlx_wavelength_to_color(int wavelength_arg)
 {
     double wavelength = wavelength_arg;
     double attenuation;
@@ -338,7 +707,7 @@ int sdl_wavelength_to_color(int wavelength_arg)
     if (G < 0) G = 0; else if (G > 1) G = 1;
     if (B < 0) B = 0; else if (B > 1) B = 1;
 
-    return sdl_create_color(R*255, G*255, B*255, 255);
+    return sdlx_create_color(R*255, G*255, B*255, 255);
 }
 
 static void set_render_draw_color(int color)
@@ -353,34 +722,34 @@ static void set_render_draw_color(int color)
 
 // -----------------  RENDER TEXT  ------------------------
 
-static sdl_print_state_t print_state;
+static sdlx_print_state_t print_state;
 
-void sdl_print_save(sdl_print_state_t *save)
+void sdlx_print_save(sdlx_print_state_t *save)
 {
     *save = print_state;
 }
 
-void sdl_print_restore(sdl_print_state_t *restore)
+void sdlx_print_restore(sdlx_print_state_t *restore)
 {
     print_state = *restore;
-    sdl_char_width = print_state.char_width;
-    sdl_char_height = print_state.char_height;
+    sdlx_char_width = print_state.char_width;
+    sdlx_char_height = print_state.char_height;
 }
 
-void sdl_print_init_color(int fg_color, int bg_color)
+void sdlx_print_init_color(int fg_color, int bg_color)
 {
     print_state.fg_color = fg_color;
     print_state.bg_color = bg_color;
 }
 
-void sdl_print_init(double numchars, int fg_color, int bg_color)
+void sdlx_print_init(double numchars, int fg_color, int bg_color)
 {
     int ptsize;
     double chw_fp, chh_fp;
 
     // determine real font ptsize to use;
     // note: rint() not used here so ptsize will round down
-    chw_fp = (sdl_win_width / numchars) * scale;
+    chw_fp = (sdlx_win_width / numchars) * scale;
     chh_fp = chw_fp / 0.6;
     ptsize = chh_fp;
 
@@ -399,23 +768,23 @@ void sdl_print_init(double numchars, int fg_color, int bg_color)
     }
 
     // save new point size and character width/height xxx comment
-    sdl_char_width  = rint(sdl_win_width / numchars);  // xxx nearbyint
-    sdl_char_height = rint(sdl_char_width / 0.6);
+    sdlx_char_width  = rint(sdlx_win_width / numchars);  // xxx nearbyint
+    sdlx_char_height = rint(sdlx_char_width / 0.6);
 
     // save new font color xxx comment
     print_state.ptsize = ptsize;
-    print_state.char_width = sdl_char_width;
-    print_state.char_height = sdl_char_height;
+    print_state.char_width = sdlx_char_width;
+    print_state.char_height = sdlx_char_height;
     print_state.fg_color = fg_color;
     print_state.bg_color = bg_color;
 }
 
-static sdl_loc_t *render_text(bool xy_is_ctr, int x, int y, char * str)
+static sdlx_loc_t *render_text(bool xy_is_ctr, int x, int y, char * str)
 {
     SDL_Surface *surface;
     SDL_Texture *texture;
     SDL_FRect     pos;
-    static sdl_loc_t loc;
+    static sdlx_loc_t loc;
 
     //printf("xy_is_ctr = %d x=%d y=%d str='%s'\n", xy_is_ctr, x, y, str);
 
@@ -434,8 +803,8 @@ static sdl_loc_t *render_text(bool xy_is_ctr, int x, int y, char * str)
 
     // render the string to a surface
     surface = TTF_RenderText_Shaded(font[print_state.ptsize], str, 0, 
-                                         sdl_color(print_state.fg_color), 
-                                         sdl_color(print_state.bg_color));
+                                         sdlx_color(print_state.fg_color), 
+                                         sdlx_color(print_state.bg_color));
     if (surface == NULL) {
         ERROR("TTF_RenderText_Shaded returned NULL\n");
         loc.x = x; loc.y = y; loc.w = 0; loc.h = 0;
@@ -474,7 +843,7 @@ static sdl_loc_t *render_text(bool xy_is_ctr, int x, int y, char * str)
 }
 
 // xxx explain str
-void sdl_render_multiline_text(int y_top, int y_display_begin, int y_display_end, char * str)
+void sdlx_render_multiline_text(int y_top, int y_display_begin, int y_display_end, char * str)
 {
     char line[1000], *p;
     int len;
@@ -490,7 +859,7 @@ void sdl_render_multiline_text(int y_top, int y_display_begin, int y_display_end
 
         // if y pos of line is below the bottom of the
         // display region then break
-        if (y > y_display_end - sdl_char_height) {
+        if (y > y_display_end - sdlx_char_height) {
             break;
         }
 
@@ -501,13 +870,13 @@ void sdl_render_multiline_text(int y_top, int y_display_begin, int y_display_end
         }
 
         // advance y and str to the next line
-        y += sdl_char_height;
+        y += sdlx_char_height;
         str += len;
         if (str[0] == '\n') str++;
     }
 }
 
-void sdl_render_multiline_text_2(int y_top, int y_display_begin, int y_display_end, char **lines, int n)
+void sdlx_render_multiline_text_2(int y_top, int y_display_begin, int y_display_end, char **lines, int n)
 {
     int i;
     int y = y_top;
@@ -515,7 +884,7 @@ void sdl_render_multiline_text_2(int y_top, int y_display_begin, int y_display_e
     for (i = 0; i < n; i++) {
         // if y pos of line is below the bottom of the
         // display region then break
-        if (y > y_display_end - sdl_char_height) {
+        if (y > y_display_end - sdlx_char_height) {
             break;
         }
 
@@ -526,21 +895,21 @@ void sdl_render_multiline_text_2(int y_top, int y_display_begin, int y_display_e
         }
 
         // advance y for the next line
-        y += sdl_char_height;
+        y += sdlx_char_height;
     }
 }
 
-sdl_loc_t *sdl_render_text(int x, int y, char * str)
+sdlx_loc_t *sdlx_render_text(int x, int y, char * str)
 {
     return render_text(false, x, y, str);
 }
 
-sdl_loc_t *sdl_render_text_xyctr(int x, int y, char * str)
+sdlx_loc_t *sdlx_render_text_xyctr(int x, int y, char * str)
 {
     return render_text(true, x, y, str);
 }
 
-sdl_loc_t *sdl_render_printf(int x, int y, char * fmt, ...)
+sdlx_loc_t *sdlx_render_printf(int x, int y, char * fmt, ...)
 {
     char str[1000];
     va_list ap;
@@ -549,10 +918,10 @@ sdl_loc_t *sdl_render_printf(int x, int y, char * fmt, ...)
     vsnprintf(str, sizeof(str), fmt, ap);
     va_end(ap);
 
-    return sdl_render_text(x, y, str);
+    return sdlx_render_text(x, y, str);
 }
 
-sdl_loc_t *sdl_render_printf_xyctr(int x, int y, char * fmt, ...)
+sdlx_loc_t *sdlx_render_printf_xyctr(int x, int y, char * fmt, ...)
 {
     char str[1000];
     va_list ap;
@@ -561,12 +930,12 @@ sdl_loc_t *sdl_render_printf_xyctr(int x, int y, char * fmt, ...)
     vsnprintf(str, sizeof(str), fmt, ap);
     va_end(ap);
 
-    return sdl_render_text_xyctr(x, y, str);
+    return sdlx_render_text_xyctr(x, y, str);
 }
 
 // -----------------  RENDER RECTANGLES, LINES, CIRCLES, POINTS  --------------------
 
-void sdl_render_rect(int x, int y, int w, int h, int line_width, int color)
+void sdlx_render_rect(int x, int y, int w, int h, int line_width, int color)
 {
     SDL_FRect rect;
     int i;
@@ -590,7 +959,7 @@ void sdl_render_rect(int x, int y, int w, int h, int line_width, int color)
     }
 }
 
-void sdl_render_fill_rect(int x, int y, int w, int h, int color)
+void sdlx_render_fill_rect(int x, int y, int w, int h, int color)
 {
     SDL_FRect rect;
 
@@ -603,13 +972,13 @@ void sdl_render_fill_rect(int x, int y, int w, int h, int color)
     SDL_RenderFillRect(renderer, &rect);
 }
 
-void sdl_render_line(int x1, int y1, int x2, int y2, int color)
+void sdlx_render_line(int x1, int y1, int x2, int y2, int color)
 {
-    sdl_point_t points[2] = { {x1,y1}, {x2,y2} };
-    sdl_render_lines(points, 2, color);
+    sdlx_point_t points[2] = { {x1,y1}, {x2,y2} };
+    sdlx_render_lines(points, 2, color);
 }
 
-void sdl_render_lines(sdl_point_t *points, int count, int color)
+void sdlx_render_lines(sdlx_point_t *points, int count, int color)
 {
     SDL_FPoint scaled_points[100];  // xxx malloc this
 
@@ -628,7 +997,7 @@ void sdl_render_lines(sdl_point_t *points, int count, int color)
 }
 
 // xxx change args to x_ctr_arg ..
-void sdl_render_circle(int x_ctr_arg, int y_ctr_arg, int radius, int line_width, int color)
+void sdlx_render_circle(int x_ctr_arg, int y_ctr_arg, int radius, int line_width, int color)
 {
     int count = 0, i, angle, x, y;
     int x_center, y_center;
@@ -676,14 +1045,14 @@ void sdl_render_circle(int x_ctr_arg, int y_ctr_arg, int radius, int line_width,
     }
 }
 
-void sdl_render_point(int x, int y, int color, int point_size)
+void sdlx_render_point(int x, int y, int color, int point_size)
 {
-    sdl_point_t point = {x,y};
+    sdlx_point_t point = {x,y};
 
-    sdl_render_points(&point, 1, color, point_size);
+    sdlx_render_points(&point, 1, color, point_size);
 }
 
-void sdl_render_points(sdl_point_t *points, int count, int color, int point_size)
+void sdlx_render_points(sdlx_point_t *points, int count, int color, int point_size)
 {
     #define MAX_SDL_POINTS 1000
 
@@ -817,8 +1186,8 @@ void sdl_render_points(sdl_point_t *points, int count, int color, int point_size
                 };
 
     int i, j, x, y;
-    SDL_FPoint sdl_points[MAX_SDL_POINTS];
-    int sdl_points_count = 0;
+    SDL_FPoint sdlx_points[MAX_SDL_POINTS];
+    int sdlx_points_count = 0;
     struct point_extend_s * pe = &point_extend[point_size];
     struct point_extend_offset_s * peo = pe->offset;
 
@@ -838,31 +1207,31 @@ void sdl_render_points(sdl_point_t *points, int count, int color, int point_size
         for (j = 0; j < pe->max; j++) {
             x = rint((points[i].x + peo[j].x) * scale);
             y = rint((points[i].y + peo[j].y) * scale);
-            sdl_points[sdl_points_count].x = x;
-            sdl_points[sdl_points_count].y = y;
-            sdl_points_count++;
+            sdlx_points[sdlx_points_count].x = x;
+            sdlx_points[sdlx_points_count].y = y;
+            sdlx_points_count++;
 
-            if (sdl_points_count == MAX_SDL_POINTS) {
-                SDL_RenderPoints(renderer, sdl_points, sdl_points_count);
-                sdl_points_count = 0;
+            if (sdlx_points_count == MAX_SDL_POINTS) {
+                SDL_RenderPoints(renderer, sdlx_points, sdlx_points_count);
+                sdlx_points_count = 0;
             }
         }
     }
 
-    if (sdl_points_count > 0) {
-        SDL_RenderPoints(renderer, sdl_points, sdl_points_count);
-        sdl_points_count = 0;
+    if (sdlx_points_count > 0) {
+        SDL_RenderPoints(renderer, sdlx_points, sdlx_points_count);
+        sdlx_points_count = 0;
     }
 }
 
 // -----------------  RENDER USING TEXTURES  ---------------------------- 
 
-sdl_texture_t *sdl_create_texture_from_pixels(sdl_pixels_t *pixels)
+sdlx_texture_t *sdlx_create_texture_from_pixels(sdlx_pixels_t *pixels)
 {
-    sdl_texture_t *texture;
+    sdlx_texture_t *texture;
 
     // create the texture
-    texture = (sdl_texture_t*)
+    texture = (sdlx_texture_t*)
               SDL_CreateTexture(renderer,
                                 SDL_PIXELFORMAT_ABGR8888,
                                 SDL_TEXTUREACCESS_STREAMING,
@@ -879,7 +1248,7 @@ sdl_texture_t *sdl_create_texture_from_pixels(sdl_pixels_t *pixels)
     return texture;
 }
 
-sdl_texture_t *sdl_create_filled_circle_texture(int radius, int color)
+sdlx_texture_t *sdlx_create_filled_circle_texture(int radius, int color)
 {
     radius *= scale;
 
@@ -888,7 +1257,7 @@ sdl_texture_t *sdl_create_filled_circle_texture(int radius, int color)
     int y = 0;
     int radiusError = 1-x;
     int pixels[width][width];
-    sdl_texture_t * texture;
+    sdlx_texture_t * texture;
 
     #define DRAWLINE(Y, XS, XE, V) \
         do { \
@@ -915,7 +1284,7 @@ sdl_texture_t *sdl_create_filled_circle_texture(int radius, int color)
     }
 
     // create the texture and copy the pixels to the texture
-    texture = (sdl_texture_t*)
+    texture = (sdlx_texture_t*)
               SDL_CreateTexture(renderer,
                                 SDL_PIXELFORMAT_ABGR8888,
                                 SDL_TEXTUREACCESS_STREAMING,
@@ -931,7 +1300,7 @@ sdl_texture_t *sdl_create_filled_circle_texture(int radius, int color)
     return texture;
 }
 
-sdl_texture_t *sdl_create_text_texture(char * str)
+sdlx_texture_t *sdlx_create_text_texture(char * str)
 {
     SDL_Surface * surface;
     SDL_Texture * texture;
@@ -950,8 +1319,8 @@ sdl_texture_t *sdl_create_text_texture(char * str)
     // create a texture from the surface
     // free the surface
     surface = TTF_RenderText_Shaded(font[print_state.ptsize], str, 0, 
-                                    sdl_color(print_state.fg_color), 
-                                    sdl_color(print_state.bg_color));
+                                    sdlx_color(print_state.fg_color), 
+                                    sdlx_color(print_state.bg_color));
     if (surface == NULL) {
         ERROR("failed to allocate surface\n");
         return NULL;
@@ -965,10 +1334,10 @@ sdl_texture_t *sdl_create_text_texture(char * str)
     SDL_DestroySurface(surface);
 
     // return the texture which contains the text
-    return (sdl_texture_t*)texture;
+    return (sdlx_texture_t*)texture;
 }
 
-void sdl_render_texture(int x, int y, int w, int h, double angle, sdl_texture_t *texture)
+void sdlx_render_texture(int x, int y, int w, int h, double angle, sdlx_texture_t *texture)
 {
     SDL_FRect dest;
     float w_float, h_float;
@@ -993,7 +1362,7 @@ void sdl_render_texture(int x, int y, int w, int h, double angle, sdl_texture_t 
     SDL_RenderTextureRotated(renderer, (SDL_Texture*)texture, NULL, &dest, angle, NULL, false);
 }
 
-void sdl_destroy_texture(sdl_texture_t *texture)
+void sdlx_destroy_texture(sdlx_texture_t *texture)
 {
     if (texture == NULL) {
         return;
@@ -1002,7 +1371,7 @@ void sdl_destroy_texture(sdl_texture_t *texture)
     SDL_DestroyTexture((SDL_Texture *)texture);
 }
 
-void sdl_query_texture(sdl_texture_t *texture, int * width, int * height)
+void sdlx_query_texture(sdlx_texture_t *texture, int * width, int * height)
 {
     float w_float, h_float;
 
@@ -1018,9 +1387,9 @@ void sdl_query_texture(sdl_texture_t *texture, int * width, int * height)
 }
 
 // caller must free pixels
-sdl_pixels_t *sdl_read_display_pixels(int x, int y, int w, int h)
+sdlx_pixels_t *sdlx_read_display_pixels(int x, int y, int w, int h)
 {
-    sdl_pixels_t *pixels;
+    sdlx_pixels_t *pixels;
     SDL_Rect      loc;
     int           malloc_len;
     SDL_Surface  *surface;
@@ -1038,7 +1407,7 @@ sdl_pixels_t *sdl_read_display_pixels(int x, int y, int w, int h)
     }
 
     // allocate memory for the pixels
-    malloc_len = sizeof(sdl_pixels_t) + loc.w * loc.h * BYTES_PER_PIXEL;
+    malloc_len = sizeof(sdlx_pixels_t) + loc.w * loc.h * BYTES_PER_PIXEL;
     pixels = malloc(malloc_len);
     if (pixels == NULL) {
         ERROR("allocate pixels failed\n");
@@ -1062,178 +1431,160 @@ sdl_pixels_t *sdl_read_display_pixels(int x, int y, int w, int h)
     // destroy surface
     SDL_DestroySurface(surface);
 
-    // success, return allocated sdl_pixels_t   
+    // success, return allocated sdlx_pixels_t   
     return pixels;
 }
+// -----------------  ROUTINES NOT MADE AVAILABLE IN PICOC  ---------------------- 
 
-// -----------------  PLOTTING  ----------------------------------------- 
+// - - - - - - - - - sdlx_minimize_window - - - - - - - - - - - 
 
-typedef struct {
-    char   title[64];
-    int    xleft;
-    int    xright;
-    int    xspan;
-    int    ybottom;
-    int    ytop;
-    int    yspan;
-    double xval_min;
-    double xval_max;
-    double xval_span;
-    double yval_min;
-    double yval_max;
-    double yval_span;
-    double yval_of_x_axis;
-} plot_cx_t;
-
-static int xval2x(plot_cx_t *cx, double xval)
+void sdlx_minimize_window(void)
 {
-    int x;
-
-    x = cx->xleft + (xval - cx->xval_min) * (cx->xspan / cx->xval_span);  // xxx add cvt constant to cx
-    return x;
+    SDL_MinimizeWindow(window);
 }
 
-static int yval2y(plot_cx_t *cx, double yval)
+// - - - - - - - - - sdlx_get_storage_path  - - - - - - - - - - 
+
+char *sdlx_get_storage_path(void)
 {
-    int y;
+#ifdef ANDROID
+    return (char*)SDL_GetAndroidInternalStoragePath();
+#else  // not Android
+    static char storage_path_buff[200];
 
-    y = cx->ybottom - (yval - cx->yval_min) * (cx->yspan / cx->yval_span);  // xxx add cvt constant to cx
-    return y;
-}
-
-void *sdl_plot_create(char *title, 
-                      int xleft, int xright, int ybottom, int ytop,
-                      double xval_left, double xval_right, double yval_bottom, double yval_top,
-                      double yval_of_x_axis)
-{
-    plot_cx_t *cx;
-
-    // alloc cx and save params in cx
-    cx = calloc(1, sizeof(plot_cx_t));
-    strcpy(cx->title, title);
-    cx->xleft          = xleft;
-    cx->xright         = xright;
-    cx->xspan          = xright - xleft;
-    cx->ybottom        = ybottom;
-    cx->ytop           = ytop;
-    cx->yspan          = ybottom - ytop;
-    cx->xval_min       = xval_left;
-    cx->xval_max       = xval_right;
-    cx->xval_span      = xval_right - xval_left;
-    cx->yval_min       = yval_bottom;
-    cx->yval_max       = yval_top;
-    cx->yval_span      = yval_top - yval_bottom;
-    cx->yval_of_x_axis = yval_of_x_axis;
-
-    // return cx
-    return cx;
-}
-
-void sdl_plot_axis(void *cx_arg, char *xmin_str, char *xmax_str, char *ymin_str, char *ymax_str)
-{
-    plot_cx_t        *cx = (plot_cx_t*)cx_arg;
-    sdl_print_state_t print_state;
-    int               i, y;
-
-    // print save and init
-    sdl_print_save(&print_state);
-    sdl_print_init(SMALLEST_FONT, COLOR_WHITE, COLOR_BLACK);
-
-    // draw rectangle around the plot area
-    sdl_render_rect(cx->xleft, cx->ytop, cx->xspan, cx->yspan, 3, COLOR_BLUE);
-
-    // draw and label x-axis xxx option to not do this
-    if (cx->yval_of_x_axis != INVALID_NUMBER) {
-        y = yval2y(cx, cx->yval_of_x_axis);
-        for (i = -1; i <= 1; i++) {
-            sdl_render_line(cx->xleft, y+i, cx->xright, y+i, COLOR_BLUE);
-        }
-        y = yval2y(cx, cx->yval_of_x_axis);
-        if ((xmin_str != NULL) && (xmin_str[0] != '\0')) {
-            sdl_render_printf(cx->xleft+3, y+3, "%s", xmin_str);
-        }
-        if ((xmax_str != NULL) && (xmax_str[0] != '\0')) {
-            sdl_render_printf(cx->xright-3-strlen(xmax_str)*sdl_char_width, y+3, "%s", xmax_str);
-        }
+    if (storage_path_buff[0] == '\0') {
+        getcwd(storage_path_buff, sizeof(storage_path_buff));
+        strcat(storage_path_buff, "/files");
     }
 
-    // label y-axis
-    if ((ymin_str != NULL) && (ymin_str[0] != '\0')) {
-        sdl_render_printf(cx->xleft+3, cx->ybottom-3-sdl_char_height, "%s", ymin_str);
-        sdl_render_printf(cx->xright-3-strlen(ymin_str)*sdl_char_width, cx->ybottom-3-sdl_char_height, "%s", ymin_str);
-    }
-    if ((ymax_str != NULL) && (ymax_str[0] != '\0')) {
-        sdl_render_printf(cx->xleft+3, cx->ytop+3, "%s", ymax_str);
-        sdl_render_printf(cx->xright-3-strlen(ymax_str)*sdl_char_width, cx->ytop+3, "%s", ymax_str);
-    }
-
-    // restore saved print state
-    sdl_print_restore(&print_state);
+    return storage_path_buff;
+#endif
 }
 
-void sdl_plot_points(void *cx_arg, sdl_plot_point_t *pts, int num_pts)
+// - - - - - - - - - sdlx_copy_asset_file - - - - - - - - - - - 
+
+void sdlx_copy_asset_file(char *asset_filename, char *dest_dir)
 {
-    plot_cx_t   *cx = (plot_cx_t*)cx_arg;
-    sdl_point_t *points;
-    int          i, n=0, point_size=5;
+    int rc;
+    char dest_path[200];
 
-    points = malloc(num_pts * sizeof(sdl_point_t));
+    sprintf(dest_path, "%s/%s", dest_dir, asset_filename);
 
-    for (i = 0; i < num_pts; i++) {
-        points[n].x = xval2x(cx, pts[i].xval);
-        points[n].y = yval2y(cx, pts[i].yval);
-        n++;
-    }
-    sdl_render_points(points, n, COLOR_WHITE, point_size);
+#ifdef ANDROID
+    void  *ptr;
+    size_t len;
 
-    free(points);
-}
+    // remove dest file, because it may already exist
+    unlink(dest_path);
 
-void sdl_plot_bars(void *cx_arg, 
-                   sdl_plot_point_t *pts_avg, sdl_plot_point_t *pts_min, sdl_plot_point_t *pts_max,
-                   int num_pts, double bar_wval)
-{
-    int        i, x, y, w, h;
-    double     wval, hval, xval, yval;
-    plot_cx_t *cx = (plot_cx_t*)cx_arg;
-
-    static bool first = 1;
-
-    //xxxpts_min[0].yval = pts_max[0].yval = pts_avg[0].yval = 1010;
-
-    for (i = 0; i < num_pts; i++) {
-        wval = bar_wval;
-        hval = pts_max[i].yval - pts_min[i].yval;
-        xval = pts_min[i].xval - wval/2;
-        yval = pts_max[i].yval;
-
-        x = xval2x(cx, xval);
-        y = yval2y(cx, yval);
-        w = wval * cx->xspan / cx->xval_span;
-        h = hval * cx->yspan / cx->yval_span;
-
-        if (h < 7) {
-            y -= (7-h) / 2;
-            h = 7;
-        }
-
-        if (first) printf("%d: %f %f %f\n", i, 
-                         pts_min[i].yval, pts_avg[i].yval, pts_max[i].yval);
-        if (first) printf("    %d %d %d %d - hval=%f yspan=%d yval_span=%f\n", 
-               x, y, w, h,
-               hval, cx->yspan, cx->yval_span);
-
-        sdl_render_fill_rect(x, y, w, h, COLOR_PURPLE);
+    // read the asset using SDL_LoadFile;
+    //
+    // Note SDL_LoadFile calls SDL_IOFromFile, which attempts to read
+    // the file as follows:
+    // - if filename begins with '/' then use fopen
+    //   else if filename begins with "content://" then use Android_JNI_OpenFileDescriptor
+    //   else fopen of file in SDL_GetAndroidInternalStoragePath
+    //   endif
+    // - if above failed then try to read the file from assets, using Android_JNI_FileOpen
+    ptr = SDL_LoadFile(asset_filename, &len);
+    if (ptr == NULL ) {
+        ERROR("failed to read apps.tar");
+        return;
     }
 
-    sdl_plot_points(cx, pts_avg, num_pts);
+    // write the asset file to dest_dir
+    rc = util_write_file(dest_dir, asset_filename, ptr, len);
+    SDL_free(ptr);
+    if (rc != 0) {
+        ERROR("failed to create %s/%s\n", dest_dir, asset_filename);
+        return;
+    }
+#else  // not Android
+    char cmd[250];
+    //char *storage_path;  xxx
 
-    first = 0;
+    //storage_path = sdlx_get_storage_path();
+    //sprintf(cmd, "cp %s/../assets/%s %s", storage_path, asset_filename, dest_path);
+    sprintf(cmd, "cp ../assets/%s %s", asset_filename, dest_path);
+    rc = system(cmd);
+    if (rc != 0) {
+        ERROR("cmd '%s' failed\n", cmd);
+    }
+#endif
 }
 
-void sdl_plot_free(void *cx)
+// - - - - - - - - - sdlx_get_permission  - - - - - - - - - - - 
+
+#ifdef ANDROID
+#define PERM_NO_RESULT    0
+#define PERM_GRANTED      1
+#define PERM_NOT_GRANTED  2
+static void get_permission_cb(void *userdata, const char *permission, bool granted)
 {
-    // free cx
-    free(cx);
+    int *perm_result = (int*)userdata;
+
+    INFO("permission=%s  granted=%d\n", permission, granted);
+    *perm_result = (granted ? PERM_GRANTED : PERM_NOT_GRANTED);
+}
+#endif
+
+int sdlx_get_permission(char *name)
+{
+#ifndef ANDROID
+    // when not running on Android return success
+    return 0;
+#else
+    bool succ;
+    int perm_result;
+
+    INFO("get_permission %s\n", name);
+
+    // request permission
+    perm_result = PERM_NO_RESULT;
+    succ = SDL_RequestAndroidPermission(name, get_permission_cb, &perm_result);
+    if (!succ) {
+        ERROR("SDL_RequestAndroidPermission failed, %s\n", SDL_GetError());
+        return -1;
+    }
+
+    // wait for permission request to be either granted or not-granted
+    while (perm_result == PERM_NO_RESULT) {
+        usleep(TEN_MS);
+    }
+
+    // if not granted then return error
+    if (perm_result != PERM_GRANTED) {
+        ERROR("%s not granted\n", name);
+        return -1;
+    }
+
+    // return success
+    return 0;
+#endif
+}
+
+// - - - - - - - - - sdlx_create_detached_thread_private  - - - - - - - 
+
+// from SDL doc ...
+//
+// If you want to use threads in your SDL app, it's strongly recommended that you
+// do so by creating them using SDL functions. This way, the required attach/detach
+// handling is managed by SDL automagically. If you have threads created by other
+// means and they make calls to SDL functions, make sure that you call
+// Android_JNI_SetupThread() before doing anything else otherwise SDL will attach
+// your thread automatically anyway (when you make an SDL call), but it'll never
+// detach it.
+
+int sdlx_create_detached_thread_private(int (*thread_fn)(void*), char *thread_name, void *cx)
+{
+    SDL_Thread *x;
+
+    x = SDL_CreateThread(thread_fn, thread_name, cx);
+    if (x == NULL) {
+        return -1;
+    }
+
+    SDL_DetachThread(x);
+    return 0;
 }
 

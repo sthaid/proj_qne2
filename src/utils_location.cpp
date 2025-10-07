@@ -1,7 +1,7 @@
 #include <utils.h>
 #include <logging.h>
 
-#define INVALID_NUMBER 999999999  // get this from sdl.h
+#define INVALID_NUMBER 999999999  // get this from sdlx.h
 
 #ifdef ANDROID
 

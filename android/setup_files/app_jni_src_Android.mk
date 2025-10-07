@@ -7,7 +7,7 @@ LOCAL_MODULE := main
 # Add your application source files here...
 LOCAL_SRC_FILES :=  \
   src/main.c src/utils.c src/logging.c \
-  src/sdl_misc.c src/sdl_video.c src/sdl_audio.c src/sdl_sensor.c src/sdl_event.c \
+  src/sdlx_misc.c src/sdlx_video.c src/sdlx_audio.c src/sdlx_sensor.c src/sdlx_event.c \
   src/utils_location.cpp \
   cJSON/cJSON.c \
   picoc/picoc_ezapp.c \

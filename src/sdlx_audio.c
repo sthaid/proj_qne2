@@ -1,6 +1,6 @@
 #include <std_hdrs.h>
 
-#include <sdl.h>
+#include <sdlx.h>
 #include <utils.h>
 #include <logging.h>
 
@@ -34,7 +34,7 @@
 static SDL_AudioStream  *playback_stream;
 static SDL_AudioStream  *record_stream;
 static int               ctl_req;
-static sdl_audio_state_t state;
+static sdlx_audio_state_t state;
 
 //
 // prototypes
@@ -50,7 +50,7 @@ static int tones_thread(void *cx);
 
 // -----------------INIT / EXIT  -------------------------------
 
-int sdl_audio_init(void)
+int sdlx_audio_init(void)
 {
     INFO("initializing\n");
 
@@ -65,7 +65,7 @@ int sdl_audio_init(void)
     return 0;
 }
 
-void sdl_audio_quit(void)
+void sdlx_audio_quit(void)
 {
     INFO("quitting\n");
 
@@ -81,7 +81,7 @@ static int audio_open(bool record)
 
     // if either playback or record is active then
     // it will be stopped
-    sdl_audio_ctl(AUDIO_REQ_STOP);
+    sdlx_audio_ctl(AUDIO_REQ_STOP);
 
     // open playback audio stream
     if (!record) {
@@ -116,7 +116,7 @@ static int audio_open(bool record)
 
 // -----------------  DEBUG & SUPPORT ROUTINES  -----------
 
-void sdl_audio_print_devices_info(void)
+void sdlx_audio_print_devices_info(void)
 {
     SDL_AudioDeviceID *devid;
     int i, count;
@@ -137,7 +137,7 @@ void sdl_audio_print_devices_info(void)
     }
 }
 
-void sdl_audio_create_test_file(char *dir, char *filename, int duration_secs, int freq)
+void sdlx_audio_create_test_file(char *dir, char *filename, int duration_secs, int freq)
 {
     int    frames = duration_secs * FRAMES_PER_SEC;
     int    n = FRAMES_PER_SEC / freq;
@@ -186,7 +186,7 @@ static int calc_volume(void *buff, int bytes)
 
 // -----------------  CONTROL AND GET STATE  --------------
 
-void sdl_audio_ctl(int req)
+void sdlx_audio_ctl(int req)
 {
     if (state.state == AUDIO_STATE_IDLE) {
         ctl_req = 0;
@@ -200,7 +200,7 @@ void sdl_audio_ctl(int req)
     }
 }
 
-void sdl_audio_state(sdl_audio_state_t *x)
+void sdlx_audio_state(sdlx_audio_state_t *x)
 {
     *x = state;
 }
@@ -212,7 +212,7 @@ typedef struct {
     int   buff_len;
 } play_file_cx_t;
 
-int sdl_audio_play(char *dir, char *filename)
+int sdlx_audio_play(char *dir, char *filename)
 {
     int rc, fd=-1;
     void *buff=MAP_FAILED;
@@ -258,7 +258,7 @@ int sdl_audio_play(char *dir, char *filename)
     cx = malloc(sizeof(play_file_cx_t));
     cx->buff = buff;
     cx->buff_len = statbuf.st_size;
-    sdl_create_detached_thread(play_file_thread, cx);
+    sdlx_create_detached_thread(play_file_thread, cx);
 
     // success
     return 0;
@@ -379,7 +379,7 @@ typedef struct {
     int  existing_bytes;
 } record_cx_t;
 
-int sdl_audio_record(char *dir, char *filename, int max_duration_secs, int auto_stop_secs, bool append)
+int sdlx_audio_record(char *dir, char *filename, int max_duration_secs, int auto_stop_secs, bool append)
 {
     int rc, fd=-1;
     record_cx_t *cx=NULL;
@@ -431,7 +431,7 @@ int sdl_audio_record(char *dir, char *filename, int max_duration_secs, int auto_
     cx->total_secs      = state.total_secs; 
     cx->auto_stop_secs  = auto_stop_secs;
     cx->existing_bytes  = existing_bytes;
-    sdl_create_detached_thread(record_thread, cx);
+    sdlx_create_detached_thread(record_thread, cx);
 
     // success
     return 0;
@@ -564,7 +564,7 @@ typedef struct {
 typedef struct {
     int time_units_ms;
     int num_tones;
-    sdl_tone_t tones[0];
+    sdlx_tone_t tones[0];
 } play_tones_cx_t;
 
 #define MIN_TONE_FREQ 100
@@ -572,7 +572,7 @@ typedef struct {
 
 static sine_wave_t *sine_waves[MAX_TONE_FREQ+1];
 
-int sdl_audio_play_tones(int time_units_ms, sdl_tone_t *tones)
+int sdlx_audio_play_tones(int time_units_ms, sdlx_tone_t *tones)
 {
     int num_tones, duration_ms, i, rc;
     play_tones_cx_t *cx;
@@ -588,7 +588,7 @@ int sdl_audio_play_tones(int time_units_ms, sdl_tone_t *tones)
     num_tones = 0;
     duration_ms = 0;
     for (i = 0; tones[i].intvl > 0; i++) {
-        sdl_tone_t *t = &tones[i];
+        sdlx_tone_t *t = &tones[i];
         duration_ms += (t->intvl * time_units_ms);
         num_tones++;
     }
@@ -601,11 +601,11 @@ int sdl_audio_play_tones(int time_units_ms, sdl_tone_t *tones)
     strcpy(state.filename, "");
 
     // create thread to play the tones
-    cx = malloc(sizeof(play_tones_cx_t) + num_tones * sizeof(sdl_tone_t));
+    cx = malloc(sizeof(play_tones_cx_t) + num_tones * sizeof(sdlx_tone_t));
     cx->time_units_ms  = time_units_ms;
     cx->num_tones = num_tones;
-    memcpy(cx->tones, tones, num_tones * sizeof(sdl_tone_t));
-    sdl_create_detached_thread(tones_thread, cx);
+    memcpy(cx->tones, tones, num_tones * sizeof(sdlx_tone_t));
+    sdlx_create_detached_thread(tones_thread, cx);
 
     // success
     return 0;
@@ -632,7 +632,7 @@ static int tones_thread(void *cx_arg)
 
     // pre calculate the sine waves for the frequency(s) requested
     for (int i = 0; i < cx->num_tones; i++) {
-        sdl_tone_t *t = &cx->tones[i];
+        sdlx_tone_t *t = &cx->tones[i];
         int n, j;
         sine_wave_t *sw;
 
@@ -660,7 +660,7 @@ static int tones_thread(void *cx_arg)
 
     // loop over the tones
     for (int i = 0; i < cx->num_tones; i++) {
-        sdl_tone_t *t = &cx->tones[i];
+        sdlx_tone_t *t = &cx->tones[i];
         int tone_intvl_ms = t->intvl * cx->time_units_ms;
         int len;
 

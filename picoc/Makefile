@@ -16,7 +16,7 @@ SRCS	= picoc.c table.c lex.c parse.c expression.c heap.c type.c \
 	  cstdlib/stdio.c cstdlib/math.c cstdlib/string.c cstdlib/stdlib.c \
 	  cstdlib/time.c cstdlib/errno.c cstdlib/ctype.c cstdlib/stdbool.c \
 	  cstdlib/unistd.c \
-          sdl_misc.c sdl_video.c sdl_audio.c sdl_sensor.c sdl_event.c logging.c utils.c \
+          sdlx_misc.c sdlx_video.c sdlx_audio.c sdlx_sensor.c sdlx_event.c logging.c utils.c \
           cJSON.c
 
 OBJS	:= $(SRCS:%.c=%.o)

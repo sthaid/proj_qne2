@@ -1,6 +1,6 @@
 #include <std_hdrs.h>
 
-#include <sdl.h>
+#include <sdlx.h>
 #include <utils.h>
 #include <logging.h>
 
@@ -25,7 +25,7 @@
 // variables
 //
 
-static sdl_sensor_info_t sensor_info_tbl[MAX_SENSOR_INFO];
+static sdlx_sensor_info_t sensor_info_tbl[MAX_SENSOR_INFO];
 static int               max_sensor_info_tbl;
 
 SDL_Sensor              *sensor[MAX_SENSOR_ID];  // indexed by id
@@ -38,7 +38,7 @@ static double first_step_count;
 
 // -----------------  INIT -------------------------------
 
-int sdl_sensor_init(void)
+int sdlx_sensor_init(void)
 {
     int            i, max, num_sensors;
     SDL_SensorID  *ids;
@@ -88,15 +88,15 @@ int sdl_sensor_init(void)
     SDL_free(ids);
 
     // xxx comment
-    sdl_sensor_read_temperature(&dummy);
-    sdl_sensor_read_humidity(&dummy);
-    sdl_sensor_read_pressure(&dummy);
-    sdl_sensor_read_step_counter(&dummy);
+    sdlx_sensor_read_temperature(&dummy);
+    sdlx_sensor_read_humidity(&dummy);
+    sdlx_sensor_read_pressure(&dummy);
+    sdlx_sensor_read_step_counter(&dummy);
     usleep(250000);
-    sdl_sensor_read_temperature(&dummy);
-    sdl_sensor_read_humidity(&dummy);
-    sdl_sensor_read_pressure(&pressure);
-    sdl_sensor_read_step_counter(&first_step_count);
+    sdlx_sensor_read_temperature(&dummy);
+    sdlx_sensor_read_humidity(&dummy);
+    sdlx_sensor_read_pressure(&pressure);
+    sdlx_sensor_read_step_counter(&first_step_count);
     INFO("first_step_count = %.0f pressure = %.0f\n", first_step_count, pressure);
 
     // return success
@@ -104,7 +104,7 @@ int sdl_sensor_init(void)
     return 0;
 }
 
-void sdl_sensor_quit(void)
+void sdlx_sensor_quit(void)
 {
     INFO("quitting\n");
 
@@ -114,14 +114,14 @@ void sdl_sensor_quit(void)
 
 // -----------  APIS AVAILABLE IN PICOC  --------------
 
-sdl_sensor_info_t *sdl_sensor_get_info_tbl(int *max)
+sdlx_sensor_info_t *sdlx_sensor_get_info_tbl(int *max)
 {
     *max = max_sensor_info_tbl;
     return sensor_info_tbl;
 }
 
 // returns sensor id, or -1 if no sensor found for 'type'
-int sdl_sensor_find(int type)
+int sdlx_sensor_find(int type)
 {
     int i;
 
@@ -140,7 +140,7 @@ int sdl_sensor_find(int type)
     return sensor_info_tbl[i].id;
 }
 
-int sdl_sensor_read_raw(int id, double *data, int num_values)
+int sdlx_sensor_read_raw(int id, double *data, int num_values)
 {
     int   i;
     bool  succ;
@@ -205,7 +205,7 @@ int sdl_sensor_read_raw(int id, double *data, int num_values)
 #define RAD_TO_DEG (180 / M_PI)
 #define DEG_TO_RAD (M_PI / 180)
 
-int sdl_sensor_read_step_counter(double *step_count)
+int sdlx_sensor_read_step_counter(double *step_count)
 {
     double data[3];
     
@@ -216,7 +216,7 @@ int sdl_sensor_read_step_counter(double *step_count)
     // if not found then return error
     if (first_call) {
         first_call = false;
-        id = sdl_sensor_find(ASENSOR_TYPE_STEP_COUNTER);
+        id = sdlx_sensor_find(ASENSOR_TYPE_STEP_COUNTER);
     }
     if (id == -1) {
         *step_count = INVALID_NUMBER;
@@ -224,14 +224,14 @@ int sdl_sensor_read_step_counter(double *step_count)
     }
 
     // read step counter sensor
-    sdl_sensor_read_raw(id, data, 3);
+    sdlx_sensor_read_raw(id, data, 3);
 
     // return step count sensor value minus first step count value read
     *step_count = data[0] - first_step_count;
     return 0;
 }
 
-int sdl_sensor_read_tilt(double *roll, double *pitch)
+int sdlx_sensor_read_tilt(double *roll, double *pitch)
 {
     double data[3];
     double ax, ay, az;
@@ -243,7 +243,7 @@ int sdl_sensor_read_tilt(double *roll, double *pitch)
     // if not found then return error
     if (first_call) {
         first_call = false;
-        id = sdl_sensor_find(ASENSOR_TYPE_ACCELEROMETER);
+        id = sdlx_sensor_find(ASENSOR_TYPE_ACCELEROMETER);
     }
     if (id == -1) {
         *roll = INVALID_NUMBER;
@@ -252,7 +252,7 @@ int sdl_sensor_read_tilt(double *roll, double *pitch)
     }
 
     // read raw sensor data
-    sdl_sensor_read_raw(id, data, 3);
+    sdlx_sensor_read_raw(id, data, 3);
 
     // return roll and pitch; 
     // - positive pitch means top of phone points upward
@@ -265,7 +265,7 @@ int sdl_sensor_read_tilt(double *roll, double *pitch)
     return 0;
 }
 
-int sdl_sensor_read_mag_heading(double *mag_heading)
+int sdlx_sensor_read_mag_heading(double *mag_heading)
 {
     double data[3];
     double mx, my, mz;
@@ -279,7 +279,7 @@ int sdl_sensor_read_mag_heading(double *mag_heading)
     // if not found then return error
     if (first_call) {
         first_call = false;
-        id = sdl_sensor_find(ASENSOR_TYPE_MAGNETIC_FIELD);
+        id = sdlx_sensor_find(ASENSOR_TYPE_MAGNETIC_FIELD);
     }
     if (id == -1) {
         *mag_heading = INVALID_NUMBER;
@@ -287,13 +287,13 @@ int sdl_sensor_read_mag_heading(double *mag_heading)
     }
 
     // read raw sensor data
-    sdl_sensor_read_raw(id, data, 3);
+    sdlx_sensor_read_raw(id, data, 3);
     my = data[0];
     mx = data[1];
     mz = -data[2];
 
     // get roll and pitch
-    sdl_sensor_read_tilt(&roll, &pitch);
+    sdlx_sensor_read_tilt(&roll, &pitch);
     roll  *= -DEG_TO_RAD;
     pitch *= -DEG_TO_RAD;
 
@@ -312,7 +312,7 @@ int sdl_sensor_read_mag_heading(double *mag_heading)
     return 0;
 }
 
-int sdl_sensor_read_pressure(double *millibars)
+int sdlx_sensor_read_pressure(double *millibars)
 {
     double data[3];
 
@@ -323,7 +323,7 @@ int sdl_sensor_read_pressure(double *millibars)
     // if not found then return error
     if (first_call) {
         first_call = false;
-        id = sdl_sensor_find(ASENSOR_TYPE_PRESSURE);
+        id = sdlx_sensor_find(ASENSOR_TYPE_PRESSURE);
     }
     if (id == -1) {
         *millibars = INVALID_NUMBER;
@@ -331,7 +331,7 @@ int sdl_sensor_read_pressure(double *millibars)
     }
 
     // read raw sensor data
-    sdl_sensor_read_raw(id, data, 3);
+    sdlx_sensor_read_raw(id, data, 3);
 
     // return pressure
     *millibars = data[0];
@@ -339,7 +339,7 @@ int sdl_sensor_read_pressure(double *millibars)
 }
 
 // xxx not tested
-int sdl_sensor_read_temperature(double *degrees_c)
+int sdlx_sensor_read_temperature(double *degrees_c)
 {
     double data[3];
 
@@ -350,7 +350,7 @@ int sdl_sensor_read_temperature(double *degrees_c)
     // if not found then return error
     if (first_call) {
         first_call = false;
-        id = sdl_sensor_find(ASENSOR_TYPE_AMBIENT_TEMPERATURE);
+        id = sdlx_sensor_find(ASENSOR_TYPE_AMBIENT_TEMPERATURE);
     }
     if (id == -1) {
         *degrees_c = INVALID_NUMBER;
@@ -358,7 +358,7 @@ int sdl_sensor_read_temperature(double *degrees_c)
     }
 
     // read raw sensor data
-    sdl_sensor_read_raw(id, data, 3);
+    sdlx_sensor_read_raw(id, data, 3);
 
     // return temperature
     *degrees_c = data[0];
@@ -366,7 +366,7 @@ int sdl_sensor_read_temperature(double *degrees_c)
 }
 
 // xxx not tested
-int sdl_sensor_read_humidity(double *percent)
+int sdlx_sensor_read_humidity(double *percent)
 {
     double data[3];
 
@@ -377,7 +377,7 @@ int sdl_sensor_read_humidity(double *percent)
     // if not found then return error
     if (first_call) {
         first_call = false;
-        id = sdl_sensor_find(ASENSOR_TYPE_RELATIVE_HUMIDITY);
+        id = sdlx_sensor_find(ASENSOR_TYPE_RELATIVE_HUMIDITY);
     }
     if (id == -1) {
         *percent = INVALID_NUMBER;
@@ -385,7 +385,7 @@ int sdl_sensor_read_humidity(double *percent)
     }
 
     // read raw sensor data
-    sdl_sensor_read_raw(id, data, 3);
+    sdlx_sensor_read_raw(id, data, 3);
 
     // return humidity
     *percent = data[0];

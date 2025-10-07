@@ -1,6 +1,6 @@
 #include <std_hdrs.h>
 
-#include <sdl.h>
+#include <sdlx.h>
 #include <logging.h>
 #include <utils.h>
 
@@ -22,13 +22,13 @@ static int sensor_init_count;
 
 // -----------------  INIT / EXIT ------------------------
 
-int sdl_init(int subsys)
+int sdlx_init(int subsys)
 {
     int rc;
 
     if (subsys & SUBSYS_VIDEO) {
         if (video_init_count == 0) {
-            rc = sdl_video_init();
+            rc = sdlx_video_init();
             if (rc != 0) {
                 ERROR("failed to init video\n");
                 SDL_Quit();
@@ -40,7 +40,7 @@ int sdl_init(int subsys)
 
     if (subsys & SUBSYS_AUDIO) {
         if (audio_init_count == 0) {
-            rc = sdl_audio_init();
+            rc = sdlx_audio_init();
             if (rc != 0) {
                 ERROR("failed to init audio\n");
                 SDL_Quit();
@@ -52,7 +52,7 @@ int sdl_init(int subsys)
 
     if (subsys & SUBSYS_SENSOR) {
         if (sensor_init_count == 0) {
-            rc = sdl_sensor_init();
+            rc = sdlx_sensor_init();
             if (rc != 0) {
                 ERROR("failed to init sensor\n");
                 SDL_Quit();
@@ -65,23 +65,23 @@ int sdl_init(int subsys)
     return 0;
 }
 
-void sdl_quit(int subsys)
+void sdlx_quit(int subsys)
 {
     if (subsys & SUBSYS_VIDEO) {
         if (--video_init_count == 0) {
-            sdl_video_quit();
+            sdlx_video_quit();
         }
     }
 
     if (subsys & SUBSYS_AUDIO) {
         if (--audio_init_count == 0) {
-            sdl_audio_quit();
+            sdlx_audio_quit();
         }
     }
 
     if (subsys & SUBSYS_SENSOR) {
         if (--sensor_init_count == 0) {
-            sdl_sensor_quit();
+            sdlx_sensor_quit();
         }
     }
 
@@ -95,9 +95,9 @@ void sdl_quit(int subsys)
 
 // -----------------  MISC ROUTINES NOT MADE AVAILABLE IN PICOC  ---------------------- 
 
-// - - - - - - - - - sdl_get_storage_path  - - - - - - - - - - 
+// - - - - - - - - - sdlx_get_storage_path  - - - - - - - - - - 
 
-char *sdl_get_storage_path(void)
+char *sdlx_get_storage_path(void)
 {
 #ifdef ANDROID
     return (char*)SDL_GetAndroidInternalStoragePath();
@@ -113,9 +113,9 @@ char *sdl_get_storage_path(void)
 #endif
 }
 
-// - - - - - - - - - sdl_copy_asset_file - - - - - - - - - - - 
+// - - - - - - - - - sdlx_copy_asset_file - - - - - - - - - - - 
 
-void sdl_copy_asset_file(char *asset_filename, char *dest_dir)
+void sdlx_copy_asset_file(char *asset_filename, char *dest_dir)
 {
     int rc;
     char dest_path[200];
@@ -155,7 +155,7 @@ void sdl_copy_asset_file(char *asset_filename, char *dest_dir)
     char cmd[250];
     //char *storage_path;  xxx
 
-    //storage_path = sdl_get_storage_path();
+    //storage_path = sdlx_get_storage_path();
     //sprintf(cmd, "cp %s/../assets/%s %s", storage_path, asset_filename, dest_path);
     sprintf(cmd, "cp ../assets/%s %s", asset_filename, dest_path);
     rc = system(cmd);
@@ -165,7 +165,7 @@ void sdl_copy_asset_file(char *asset_filename, char *dest_dir)
 #endif
 }
 
-// - - - - - - - - - sdl_get_permission  - - - - - - - - - - - 
+// - - - - - - - - - sdlx_get_permission  - - - - - - - - - - - 
 
 #ifdef ANDROID
 #define PERM_NO_RESULT    0
@@ -180,7 +180,7 @@ static void get_permission_cb(void *userdata, const char *permission, bool grant
 }
 #endif
 
-int sdl_get_permission(char *name)
+int sdlx_get_permission(char *name)
 {
 #ifndef ANDROID
     // when not running on Android return success
@@ -215,7 +215,7 @@ int sdl_get_permission(char *name)
 #endif
 }
 
-// - - - - - - - - - sdl_create_detached_thread_private  - - - - - - - 
+// - - - - - - - - - sdlx_create_detached_thread_private  - - - - - - - 
 
 // from SDL doc ...
 //
@@ -227,7 +227,7 @@ int sdl_get_permission(char *name)
 // your thread automatically anyway (when you make an SDL call), but it'll never
 // detach it.
 
-int sdl_create_detached_thread_private(int (*thread_fn)(void*), char *thread_name, void *cx)
+int sdlx_create_detached_thread_private(int (*thread_fn)(void*), char *thread_name, void *cx)
 {
     SDL_Thread *x;
 

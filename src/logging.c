@@ -1,6 +1,6 @@
 #include <std_hdrs.h>
 #include <logging.h>
-#include <sdl.h>
+#include <sdlx.h>
 
 // xxx comments needed, this file
 
@@ -49,7 +49,7 @@ int log_init(void)
 
     mkfifo(ANDROID_LOG_FIFO, 0666);
 
-    sdl_create_detached_thread(android_logging_thread, NULL);
+    sdlx_create_detached_thread(android_logging_thread, NULL);
 
     fp = freopen(ANDROID_LOG_FIFO, "w", stdout);
     if (fp == NULL) {

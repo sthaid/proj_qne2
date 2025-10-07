@@ -1,5 +1,5 @@
-#ifndef __SDL_H__
-#define __SDL_H__
+#ifndef __SDLX_H__
+#define __SDLX_H__
 
 // --------------------
 // init / quit
@@ -9,8 +9,8 @@
 #define SUBSYS_AUDIO  2
 #define SUBSYS_SENSOR 4
 
-int sdl_init(int subsys);
-void sdl_quit(int subsys);
+int sdlx_init(int subsys);
+void sdlx_quit(int subsys);
 
 // --------------------
 // video    
@@ -35,8 +35,8 @@ void sdl_quit(int subsys);
 #define COLOR_GRAY       ( 128  |  128<<8 |  128<<16 |  255<<24 )
 #define COLOR_DARK_GRAY  (  64  |   64<<8 |   64<<16 |  255<<24 )
 
-#define ROW2Y(r) ((r) * sdl_char_height)
-#define COL2X(c) ((c) * sdl_char_width)
+#define ROW2Y(r) ((r) * sdlx_char_height)
+#define COL2X(c) ((c) * sdlx_char_width)
 
 #define SMALLEST_FONT 40
 #define SMALL_FONT    30
@@ -49,13 +49,13 @@ void sdl_quit(int subsys);
 
 typedef struct {
     int x, y, w, h;
-} sdl_loc_t;
+} sdlx_loc_t;
 
 typedef struct {
     int x, y;
-} sdl_point_t;
+} sdlx_point_t;
 
-typedef struct sdl_texture sdl_texture_t;
+typedef struct sdlx_texture sdlx_texture_t;
 
 #define PIXELS_MAGIC 0x11223344
 typedef struct {
@@ -64,7 +64,7 @@ typedef struct {
     int w;
     int h;
     int pixels[0];
-} sdl_pixels_t;
+} sdlx_pixels_t;
 
 typedef struct {
     int ptsize;
@@ -72,21 +72,21 @@ typedef struct {
     int char_height;
     int bg_color;
     int fg_color;
-} sdl_print_state_t;
+} sdlx_print_state_t;
 
 typedef struct {
     double xval;
     double yval;
-} sdl_plot_point_t;
+} sdlx_plot_point_t;
 
 //
 // global variables
 //
 
-extern int sdl_win_width;
-extern int sdl_win_height;
-extern int sdl_char_width;
-extern int sdl_char_height;
+extern int sdlx_win_width;
+extern int sdlx_win_height;
+extern int sdlx_char_width;
+extern int sdlx_char_height;
 extern char stop_requested[]; // xxx where should this be defined?
 
 //
@@ -94,55 +94,55 @@ extern char stop_requested[]; // xxx where should this be defined?
 //
 
 // display init and present, must be done for every display update
-void sdl_display_init(int color);
-void sdl_display_present(void);
+void sdlx_display_init(int color);
+void sdlx_display_present(void);
 
 // create colors
-int sdl_create_color(int r, int g, int b, int a);
-int sdl_scale_color(int color, double inten);
-int sdl_wavelength_to_color(int wavelength);
+int sdlx_create_color(int r, int g, int b, int a);
+int sdlx_scale_color(int color, double inten);
+int sdlx_wavelength_to_color(int wavelength);
 
 // render text
-void sdl_print_init(double numchars, int fg_color, int bg_color);
-void sdl_print_init_color(int fg_color, int bg_color);
-void sdl_print_save(sdl_print_state_t *save);
-void sdl_print_restore(sdl_print_state_t *restore);
-sdl_loc_t *sdl_render_text(int x, int y, char *str);
-sdl_loc_t *sdl_render_printf(int x, int y, char *fmt, ...) __attribute__ ((format (printf, 3, 4)));
-sdl_loc_t *sdl_render_text_xyctr(int x, int y, char *str);
-sdl_loc_t *sdl_render_printf_xyctr(int x, int y, char *fmt, ...) __attribute__ ((format (printf, 3, 4)));
-void sdl_render_multiline_text(int y_top, int y_display_begin, int y_display_end, char * str);
-void sdl_render_multiline_text_2(int y_top, int y_display_begin, int y_display_end, char **lines, int n);
+void sdlx_print_init(double numchars, int fg_color, int bg_color);
+void sdlx_print_init_color(int fg_color, int bg_color);
+void sdlx_print_save(sdlx_print_state_t *save);
+void sdlx_print_restore(sdlx_print_state_t *restore);
+sdlx_loc_t *sdlx_render_text(int x, int y, char *str);
+sdlx_loc_t *sdlx_render_printf(int x, int y, char *fmt, ...) __attribute__ ((format (printf, 3, 4)));
+sdlx_loc_t *sdlx_render_text_xyctr(int x, int y, char *str);
+sdlx_loc_t *sdlx_render_printf_xyctr(int x, int y, char *fmt, ...) __attribute__ ((format (printf, 3, 4)));
+void sdlx_render_multiline_text(int y_top, int y_display_begin, int y_display_end, char * str);
+void sdlx_render_multiline_text_2(int y_top, int y_display_begin, int y_display_end, char **lines, int n);
 
 // render rectangle, lines, circles, points
-void sdl_render_rect(int x, int y, int w, int h, int line_width, int color);
-void sdl_render_fill_rect(int x, int y, int w, int h, int color);
-void sdl_render_line(int x1, int y1, int x2, int y2, int color);
-void sdl_render_lines(sdl_point_t *points, int count, int color);
-void sdl_render_circle(int x_ctr, int y_ctr, int radius, int line_width, int color);
-void sdl_render_point(int x, int y, int color, int point_size);
-void sdl_render_points(sdl_point_t *points, int count, int color, int point_size);
+void sdlx_render_rect(int x, int y, int w, int h, int line_width, int color);
+void sdlx_render_fill_rect(int x, int y, int w, int h, int color);
+void sdlx_render_line(int x1, int y1, int x2, int y2, int color);
+void sdlx_render_lines(sdlx_point_t *points, int count, int color);
+void sdlx_render_circle(int x_ctr, int y_ctr, int radius, int line_width, int color);
+void sdlx_render_point(int x, int y, int color, int point_size);
+void sdlx_render_points(sdlx_point_t *points, int count, int color, int point_size);
 
 // render using textures
-sdl_texture_t *sdl_create_texture_from_pixels(sdl_pixels_t *pixels);
-sdl_texture_t *sdl_create_filled_circle_texture(int radius, int color);
-sdl_texture_t *sdl_create_text_texture(char *str);
-void sdl_render_texture(int x, int y, int w, int h, double angle, sdl_texture_t *texture);
-void sdl_destroy_texture(sdl_texture_t *texture);
-void sdl_query_texture(sdl_texture_t *texture, int *w, int *h);
-sdl_pixels_t *sdl_read_display_pixels(int x, int y, int w, int h);
+sdlx_texture_t *sdlx_create_texture_from_pixels(sdlx_pixels_t *pixels);
+sdlx_texture_t *sdlx_create_filled_circle_texture(int radius, int color);
+sdlx_texture_t *sdlx_create_text_texture(char *str);
+void sdlx_render_texture(int x, int y, int w, int h, double angle, sdlx_texture_t *texture);
+void sdlx_destroy_texture(sdlx_texture_t *texture);
+void sdlx_query_texture(sdlx_texture_t *texture, int *w, int *h);
+sdlx_pixels_t *sdlx_read_display_pixels(int x, int y, int w, int h);
 
 // plotting
-void *sdl_plot_create(char *title,
+void *sdlx_plot_create(char *title,
                       int xleft, int xright, int ybottom, int ytop,
                       double xval_left, double xval_right, double yval_bottom, double yval_top,
                       double yval_of_x_axis);
-void sdl_plot_axis(void *cx_arg, char *xmin_str, char *xmax_str, char *ymin_str, char *ymax_str);
-void sdl_plot_points(void *cx, sdl_plot_point_t *pts, int num_pts);
-void sdl_plot_bars(void *cx,
-                   sdl_plot_point_t *pts_avg, sdl_plot_point_t *pts_min, sdl_plot_point_t *pts_max,
+void sdlx_plot_axis(void *cx_arg, char *xmin_str, char *xmax_str, char *ymin_str, char *ymax_str);
+void sdlx_plot_points(void *cx, sdlx_plot_point_t *pts, int num_pts);
+void sdlx_plot_bars(void *cx,
+                   sdlx_plot_point_t *pts_avg, sdlx_plot_point_t *pts_min, sdlx_plot_point_t *pts_max,
                    int num_pts, double bar_wval);
-void sdl_plot_free(void *cx);
+void sdlx_plot_free(void *cx);
 
 // --------------------
 // audio
@@ -161,7 +161,7 @@ void sdl_plot_free(void *cx);
 typedef struct {
     short freq;
     short intvl;
-} sdl_tone_t;
+} sdlx_tone_t;
 
 typedef struct {
     int  state;
@@ -170,17 +170,17 @@ typedef struct {
     int  total_secs;
     int  volume;
     char filename[100];
-} sdl_audio_state_t;
+} sdlx_audio_state_t;
 
-int sdl_audio_play(char *dir, char *filename);
-int sdl_audio_record(char *dir, char *filename, int max_duration_secs, int auto_stop_secs, bool append);
-int sdl_audio_play_tones(int time_units_ms, sdl_tone_t *tones);
+int sdlx_audio_play(char *dir, char *filename);
+int sdlx_audio_record(char *dir, char *filename, int max_duration_secs, int auto_stop_secs, bool append);
+int sdlx_audio_play_tones(int time_units_ms, sdlx_tone_t *tones);
 
-void sdl_audio_ctl(int req);
-void sdl_audio_state(sdl_audio_state_t * state);
+void sdlx_audio_ctl(int req);
+void sdlx_audio_state(sdlx_audio_state_t * state);
 
-void sdl_audio_print_devices_info(void);
-void sdl_audio_create_test_file(char *dir, char *filename, int duration_secs, int freq);
+void sdlx_audio_print_devices_info(void);
+void sdlx_audio_create_test_file(char *dir, char *filename, int duration_secs, int freq);
 
 // --------------------
 // sensors
@@ -227,18 +227,18 @@ typedef struct {
     int   id;
     int   type;  // ASENSOR_TYPE
     char *name;
-} sdl_sensor_info_t;
+} sdlx_sensor_info_t;
 
-sdl_sensor_info_t *sdl_sensor_get_info_tbl(int *max);
-int sdl_sensor_find(int type);  // returns sensor id, or -1 if not found
-int sdl_sensor_read_raw(int id, double *data, int num_values);
+sdlx_sensor_info_t *sdlx_sensor_get_info_tbl(int *max);
+int sdlx_sensor_find(int type);  // returns sensor id, or -1 if not found
+int sdlx_sensor_read_raw(int id, double *data, int num_values);
 
-int sdl_sensor_read_step_counter(double *step_count);
-int sdl_sensor_read_mag_heading(double *mag_heading);
-int sdl_sensor_read_tilt(double *roll, double *pitch);
-int sdl_sensor_read_pressure(double *millibars);
-int sdl_sensor_read_temperature(double *degrees_c);
-int sdl_sensor_read_humidity(double *percent);
+int sdlx_sensor_read_step_counter(double *step_count);
+int sdlx_sensor_read_mag_heading(double *mag_heading);
+int sdlx_sensor_read_tilt(double *roll, double *pitch);
+int sdlx_sensor_read_pressure(double *millibars);
+int sdlx_sensor_read_temperature(double *degrees_c);
+int sdlx_sensor_read_humidity(double *percent);
 
 // --------------------
 // events   
@@ -260,45 +260,45 @@ typedef struct {
             int ch;
         } keybd;
     } u;
-} sdl_event_t;
+} sdlx_event_t;
 
 // event registration and query
-void sdl_register_event(sdl_loc_t *loc, int event_id);
-void sdl_register_control_events(char *evstr1, char *evstr2, char *evstr3, int bg_color,
+void sdlx_register_event(sdlx_loc_t *loc, int event_id);
+void sdlx_register_control_events(char *evstr1, char *evstr2, char *evstr3, int bg_color,
                                  int evid1, int evid2, int evid3);
-void sdl_get_event(long timeout_us, sdl_event_t *event);
+void sdlx_get_event(long timeout_us, sdlx_event_t *event);
 
 // get string, from virtual keyboard when on Android
-char *sdl_get_input_str(char *prompt, bool numeric_keybd, int bg_color);
+char *sdlx_get_input_str(char *prompt, bool numeric_keybd, int bg_color);
 
 // --------------------
 // not made available in picoc
 // --------------------
 
-// sdl_video.c
-int sdl_video_init(void);
-void sdl_video_quit(void);
-void sdl_minimize_window(void);
+// sdlx_video.c
+int sdlx_video_init(void);
+void sdlx_video_quit(void);
+void sdlx_minimize_window(void);
 
-// sdl_audio.c
-int sdl_audio_init(void);
-void sdl_audio_quit(void);
+// sdlx_audio.c
+int sdlx_audio_init(void);
+void sdlx_audio_quit(void);
 
-// sdl_sensor.c
-int sdl_sensor_init(void);
-void sdl_sensor_quit(void);
+// sdlx_sensor.c
+int sdlx_sensor_init(void);
+void sdlx_sensor_quit(void);
 
-// sdl_event.c
-void sdl_reset_events(void);
+// sdlx_event.c
+void sdlx_reset_events(void);
 
-// sdl_misc.c
-char *sdl_get_storage_path(void);
-void sdl_copy_asset_file(char *asset_filename, char *dest_dir);
-int sdl_get_permission(char *name);
-int sdl_create_detached_thread_private(int (*thread_fn)(void*), char *thread_name, void *cx);
-#define sdl_create_detached_thread(thread_fn, cx) \
+// sdlx_misc.c
+char *sdlx_get_storage_path(void);
+void sdlx_copy_asset_file(char *asset_filename, char *dest_dir);
+int sdlx_get_permission(char *name);
+int sdlx_create_detached_thread_private(int (*thread_fn)(void*), char *thread_name, void *cx);
+#define sdlx_create_detached_thread(thread_fn, cx) \
     do { \
-        sdl_create_detached_thread_private(thread_fn, #thread_fn, cx); \
+        sdlx_create_detached_thread_private(thread_fn, #thread_fn, cx); \
     } while (0)
 
 #endif

@@ -1,6 +1,6 @@
 #include <std_hdrs.h>
 
-#include <sdl.h>
+#include <sdlx.h>
 #include <utils.h>
 #include <logging.h>
 
@@ -107,7 +107,7 @@ static int init(void)
 
     // get storage_path, and
     // set current working directory to storage_path
-    storage_path = sdl_get_storage_path();
+    storage_path = sdlx_get_storage_path();
     chdir(storage_path);
 
     // init logging
@@ -130,9 +130,9 @@ static int init(void)
 
 #ifdef ANDROID
     // copy asset files to the working directory
-    INFO("before sdl_copy_asset_file\n");
-    sdl_copy_asset_file("files.tar", ".");
-    INFO("after sdl_copy_asset_file\n");
+    INFO("before sdlx_copy_asset_file\n");
+    sdlx_copy_asset_file("files.tar", ".");
+    INFO("after sdlx_copy_asset_file\n");
 
     // xxx
     create_default_files();
@@ -155,26 +155,26 @@ static int init(void)
     sigaction(SIGUSR2, &action, NULL);
 
     // create server threads
-    sdl_create_detached_thread(server_thread, NULL);
-    sdl_create_detached_thread(waiter_thread, NULL);
+    sdlx_create_detached_thread(server_thread, NULL);
+    sdlx_create_detached_thread(waiter_thread, NULL);
 
     // init sdl xxx move
-    sdl_init(SUBSYS_VIDEO | SUBSYS_AUDIO | SUBSYS_SENSOR);
-    INFO("sdl_win_width,height = %d %d  sdl_char_width,height=%d %d\n",
-         sdl_win_width, sdl_win_height, sdl_char_width, sdl_char_height);
+    sdlx_init(SUBSYS_VIDEO | SUBSYS_AUDIO | SUBSYS_SENSOR);
+    INFO("sdlx_win_width,height = %d %d  sdlx_char_width,height=%d %d\n",
+         sdlx_win_width, sdlx_win_height, sdlx_char_width, sdlx_char_height);
 
 #ifdef ANDROID
     // get permissions when running on Android
-    if (sdl_get_permission("android.permission.POST_NOTIFICATION") != 0) {
+    if (sdlx_get_permission("android.permission.POST_NOTIFICATION") != 0) {
         ERROR("failed to get permission POST_NOTIFICATION\n");
     }
-    if (sdl_get_permission("android.permission.ACCESS_COARSE_LOCATION") != 0) {
+    if (sdlx_get_permission("android.permission.ACCESS_COARSE_LOCATION") != 0) {
         ERROR("failed to get permission ACCESS_COARSE_LOCATION\n");
     }
-    if (sdl_get_permission("android.permission.ACCESS_FINE_LOCATION") != 0) {
+    if (sdlx_get_permission("android.permission.ACCESS_FINE_LOCATION") != 0) {
         ERROR("failed to get permission ACCESS_FINE_LOCATION\n");
     }
-    if (sdl_get_permission("android.permission.ACTIVITY_RECOGNITION") != 0) {
+    if (sdlx_get_permission("android.permission.ACTIVITY_RECOGNITION") != 0) {
         ERROR("failed to get permission ACTIVITY_RECOGNITION\n");
     }
 
@@ -200,7 +200,7 @@ static void cleanup(void)
 
     kill_child_processes(getpid());
 
-    sdl_quit(SUBSYS_VIDEO | SUBSYS_AUDIO | SUBSYS_SENSOR);
+    sdlx_quit(SUBSYS_VIDEO | SUBSYS_AUDIO | SUBSYS_SENSOR);
 }
 
 #ifdef ANDROID
@@ -255,29 +255,29 @@ static void services(void);
 
 static void processing(void)
 {
-    sdl_event_t event;
+    sdlx_event_t event;
 
     while (true) {
         // clear the display, and set the font to default
-        sdl_display_init(BG_COLOR);
-        sdl_print_init(DEFAULT_FONT, COLOR_WHITE, BG_COLOR);
+        sdlx_display_init(BG_COLOR);
+        sdlx_print_init(DEFAULT_FONT, COLOR_WHITE, BG_COLOR);
 
         // display menu, and register for events
         display_menu();
 
         // register for screen bottom control events
         if (LAST_PAGE > 0) {
-            sdl_register_control_events("<", ">", "X", BG_COLOR,
+            sdlx_register_control_events("<", ">", "X", BG_COLOR,
                                         EVID_PAGE_DECREMENT, EVID_PAGE_INCREMENT, EVID_MINIMIZE);
         } else {
-            sdl_register_control_events(NULL, NULL, "X", BG_COLOR, 0, 0, EVID_MINIMIZE);
+            sdlx_register_control_events(NULL, NULL, "X", BG_COLOR, 0, 0, EVID_MINIMIZE);
         }
 
         // update the display
-        sdl_display_present();
+        sdlx_display_present();
 
         // wait for an event, 1 sec timeout
-        sdl_get_event(1*SEC, &event);
+        sdlx_get_event(1*SEC, &event);
         if (event.event_id == -1) {
             continue;
         }
@@ -287,7 +287,7 @@ static void processing(void)
         if (event.event_id == EVID_QUIT) {
             break;
         } else if (event.event_id == EVID_MINIMIZE) {
-            sdl_minimize_window();
+            sdlx_minimize_window();
         } else if (event.event_id == EVID_PAGE_DECREMENT) {
             if (--page < 0) {
                 page = LAST_PAGE;
@@ -383,15 +383,15 @@ static int run(char *name, int svc_id)
 
 static void display_menu(void)
 {
-    static sdl_texture_t *circle;
+    static sdlx_texture_t *circle;
     int first, last;
-    sdl_print_state_t print_state;
+    sdlx_print_state_t print_state;
 
     #define RADIUS 100
 
     // allocate circle texture, which is used when displaying menu items
     if (circle == NULL) {
-        circle = sdl_create_filled_circle_texture(RADIUS, COLOR_BLUE);
+        circle = sdlx_create_filled_circle_texture(RADIUS, COLOR_BLUE);
     }
 
     // get the list of apps: 
@@ -405,10 +405,10 @@ static void display_menu(void)
     last  = first + 17;
 
     if (LAST_PAGE > 0) {
-        sdl_print_save(&print_state);
-        sdl_print_init(SMALL_FONT, COLOR_WHITE, BG_COLOR);
-        sdl_render_printf_xyctr(sdl_win_width/2, sdl_char_height/2, "Page %d", page);
-        sdl_print_restore(&print_state);
+        sdlx_print_save(&print_state);
+        sdlx_print_init(SMALL_FONT, COLOR_WHITE, BG_COLOR);
+        sdlx_render_printf_xyctr(sdlx_win_width/2, sdlx_char_height/2, "Page %d", page);
+        sdlx_print_restore(&print_state);
     }
 
     for (int i = first; i <= last; i++) {
@@ -416,7 +416,7 @@ static void display_menu(void)
         char      s1[10], s2[10];
         int       len, l1, l2, lmax, x, y;
         double    chw, chh, numchars;
-        sdl_loc_t loc;
+        sdlx_loc_t loc;
 
         if (name == NULL) {
             continue;
@@ -444,28 +444,28 @@ static void display_menu(void)
         if (s2[0] == '\0') {
             double k = (len == 1 ? 1 : 1.5);
             chw = (k * RADIUS) / lmax;
-            numchars = sdl_win_width / chw;
+            numchars = sdlx_win_width / chw;
         } else {
             double k = ((len == 5 || len == 6) ? 1.35 : 1.5);
             chw = (k * RADIUS) / lmax;
-            numchars = sdl_win_width / chw;
+            numchars = sdlx_win_width / chw;
         }
         chh = chw / 0.6;
 
         // determine dispaly location of the center of the menu item
-        x = (sdl_win_width/3/2) + (i%3) * (sdl_win_width/3);
-        y = ((sdl_win_height-150)/6/2) + ((i-first)/3) * ((sdl_win_height-150)/6);
+        x = (sdlx_win_width/3/2) + (i%3) * (sdlx_win_width/3);
+        y = ((sdlx_win_height-150)/6/2) + ((i-first)/3) * ((sdlx_win_height-150)/6);
 
         // display the menu item
         // - first render the circle
         // - then render the app name text within the circle
-        sdl_render_texture(x-RADIUS, y-RADIUS, -1, -1,  0, circle);
-        sdl_print_init(numchars, COLOR_WHITE, COLOR_BLUE);
+        sdlx_render_texture(x-RADIUS, y-RADIUS, -1, -1,  0, circle);
+        sdlx_print_init(numchars, COLOR_WHITE, COLOR_BLUE);
         if (s2[0] == '\0') {
-            sdl_render_text_xyctr(x, y, s1);
+            sdlx_render_text_xyctr(x, y, s1);
         } else {
-            sdl_render_text_xyctr(x, nearbyint(y-0.5*chh), s1);
-            sdl_render_text_xyctr(x, nearbyint(y+0.5*chh), s2);
+            sdlx_render_text_xyctr(x, nearbyint(y-0.5*chh), s1);
+            sdlx_render_text_xyctr(x, nearbyint(y+0.5*chh), s2);
         }
 
         // register event
@@ -473,7 +473,7 @@ static void display_menu(void)
         loc.y = y - RADIUS;
         loc.w = 2 * RADIUS;
         loc.h = 2 * RADIUS;
-        sdl_register_event(&loc, i);
+        sdlx_register_event(&loc, i);
     }
 }
 
@@ -666,11 +666,11 @@ static void init_services(void)
 
 static void services(void)
 {
-    sdl_event_t event;
+    sdlx_event_t event;
     int         id;
     bool        done = false;
     bool        changed;
-    sdl_loc_t  *loc;
+    sdlx_loc_t  *loc;
     double      row;
 
     // xxx use MAX_SERVICES in these defines
@@ -683,9 +683,9 @@ static void services(void)
     // handle the setting display
     while (true) {
         // init display and display title line
-        sdl_display_init(BG_COLOR);
-        sdl_print_init(DEFAULT_FONT, COLOR_WHITE, BG_COLOR);
-        sdl_render_text_xyctr(sdl_win_width/2, sdl_char_height/2, "Services");
+        sdlx_display_init(BG_COLOR);
+        sdlx_print_init(DEFAULT_FONT, COLOR_WHITE, BG_COLOR);
+        sdlx_render_text_xyctr(sdlx_win_width/2, sdlx_char_height/2, "Services");
 
         // xxx comment
         get_list_of_svcs(&changed);
@@ -703,31 +703,31 @@ static void services(void)
                 continue;
             }
         
-            sdl_print_init_color(SERVICE_STATE_TO_COLOR(x->state), BG_COLOR);
-            sdl_render_printf(0, ROW2Y(row), "%-s", x->name);
+            sdlx_print_init_color(SERVICE_STATE_TO_COLOR(x->state), BG_COLOR);
+            sdlx_render_printf(0, ROW2Y(row), "%-s", x->name);
 
-            sdl_print_init_color(COLOR_LIGHT_BLUE, BG_COLOR);
+            sdlx_print_init_color(COLOR_LIGHT_BLUE, BG_COLOR);
             if (x->state == SERVICE_STATE_STOPPED || x->state == SERVICE_STATE_STOPPED_BY_ERROR) {
-                loc = sdl_render_printf(COL2X(10), ROW2Y(row), "start");
-                sdl_register_event(loc, EVID_SVC_START+id);
+                loc = sdlx_render_printf(COL2X(10), ROW2Y(row), "start");
+                sdlx_register_event(loc, EVID_SVC_START+id);
             } else if (x->state == SERVICE_STATE_RUNNING) {
-                loc = sdl_render_printf(COL2X(10), ROW2Y(row), "stop");
-                sdl_register_event(loc, EVID_SVC_STOP+id);
+                loc = sdlx_render_printf(COL2X(10), ROW2Y(row), "stop");
+                sdlx_register_event(loc, EVID_SVC_STOP+id);
             }
 
             row += 1.5;
         }
 
         // display the control event 'X' to exit this
-        sdl_register_control_events(NULL, NULL, "X", BG_COLOR, 0, 0, EVID_QUIT);
+        sdlx_register_control_events(NULL, NULL, "X", BG_COLOR, 0, 0, EVID_QUIT);
 
         // present the display
-        sdl_display_present();
+        sdlx_display_present();
 
         // wait for an event, with 100 ms timeout;
         // if no event received then re-display
         UNLOCK;
-        sdl_get_event(100*MS, &event);
+        sdlx_get_event(100*MS, &event);
         LOCK;
         if (event.event_id == -1) {
             continue;
@@ -865,7 +865,7 @@ static int service_thread(void *cx);
 
 static void run_svc(int id)
 {
-    sdl_create_detached_thread(service_thread, (void*)(long)id);
+    sdlx_create_detached_thread(service_thread, (void*)(long)id);
 }
 
 static int service_thread(void *cx)
@@ -1061,8 +1061,8 @@ static void copyright(void);
 
 static void settings(void)
 {
-    sdl_event_t event;
-    sdl_loc_t  *loc;
+    sdlx_event_t event;
+    sdlx_loc_t  *loc;
     bool        done = false;
     char       *msg = NULL;
     long        msg_time = 0;
@@ -1080,56 +1080,56 @@ static void settings(void)
     // handle the setting display
     while (true) {
         // init display and display title line
-        sdl_display_init(BG_COLOR);
-        sdl_print_init(DEFAULT_FONT, COLOR_WHITE, BG_COLOR);
-        sdl_render_text_xyctr(sdl_win_width/2, sdl_char_height/2, "Settings");
+        sdlx_display_init(BG_COLOR);
+        sdlx_print_init(DEFAULT_FONT, COLOR_WHITE, BG_COLOR);
+        sdlx_render_text_xyctr(sdlx_win_width/2, sdlx_char_height/2, "Settings");
 
         // display version
-        sdl_render_printf(0, ROW2Y(2), "Version = %s", VERSION);
-        sdl_render_printf(0, ROW2Y(3), "%s", BUILD_DATE);
+        sdlx_render_printf(0, ROW2Y(2), "Version = %s", VERSION);
+        sdlx_render_printf(0, ROW2Y(3), "%s", BUILD_DATE);
 
         // init print color to COLOR_LIGHT_BLUE for the following,
         // because these all are selectable
-        sdl_print_init_color(COLOR_LIGHT_BLUE, BG_COLOR);
+        sdlx_print_init_color(COLOR_LIGHT_BLUE, BG_COLOR);
 
         // display Copyright
-        loc = sdl_render_printf(0, ROW2Y(5), "Copyright");
-        sdl_register_event(loc, EVID_COPYRIGHT);
+        loc = sdlx_render_printf(0, ROW2Y(5), "Copyright");
+        sdlx_register_event(loc, EVID_COPYRIGHT);
 
         // display Devel_Mode
-        loc = sdl_render_printf(0, ROW2Y(7), "Devel_Mode = %s", params.devel_mode ? "ON" : "OFF");
-        sdl_register_event(loc, EVID_DEVEL_MODE);
+        loc = sdlx_render_printf(0, ROW2Y(7), "Devel_Mode = %s", params.devel_mode ? "ON" : "OFF");
+        sdlx_register_event(loc, EVID_DEVEL_MODE);
 
         // display Devel_Port
-        loc = sdl_render_printf(0, ROW2Y(9), "Devel_Port = %d", params.devel_port);
-        sdl_register_event(loc, EVID_DEVEL_PORT);
+        loc = sdlx_render_printf(0, ROW2Y(9), "Devel_Port = %d", params.devel_port);
+        sdlx_register_event(loc, EVID_DEVEL_PORT);
 
 #ifdef ANDROID
         // display Reset_Apps
-        loc = sdl_render_printf(0, ROW2Y(11), "Reset_Apps/Svcs");
-        sdl_register_event(loc, EVID_RESET_APPS_AND_SVCS);
+        loc = sdlx_render_printf(0, ROW2Y(11), "Reset_Apps/Svcs");
+        sdlx_register_event(loc, EVID_RESET_APPS_AND_SVCS);
 #endif
 
         // change print color back to white
-        sdl_print_init_color(COLOR_WHITE, BG_COLOR);
+        sdlx_print_init_color(COLOR_WHITE, BG_COLOR);
 
         // if a message is requested for display then do so;
         // otherwise, when in developer mode, display ipaddr:port
         if (msg && (util_microsec_timer() - msg_time) < 3000000) {
-            sdl_render_printf(0, sdl_win_height-400, "%s", msg);
+            sdlx_render_printf(0, sdlx_win_height-400, "%s", msg);
         } else if (params.devel_mode) {
-            sdl_render_printf(0, sdl_win_height-400, "%s:%d", ipaddr, params.devel_port);
+            sdlx_render_printf(0, sdlx_win_height-400, "%s:%d", ipaddr, params.devel_port);
         }
 
         // display the control event 'X' to exit this screen
-        sdl_register_control_events(NULL, NULL, "X", BG_COLOR, 0, 0, EVID_QUIT);
+        sdlx_register_control_events(NULL, NULL, "X", BG_COLOR, 0, 0, EVID_QUIT);
 
         // present the display
-        sdl_display_present();
+        sdlx_display_present();
 
         // wait for an event, with 100 ms timeout;
         // if no event received then re-display
-        sdl_get_event(100*MS, &event);
+        sdlx_get_event(100*MS, &event);
         if (event.event_id == -1) {
             continue;
         }
@@ -1148,7 +1148,7 @@ static void settings(void)
         case EVID_DEVEL_PORT: {
             char *str; 
             int cnt, port;
-            str = sdl_get_input_str("Port?", true, BG_COLOR);
+            str = sdlx_get_input_str("Port?", true, BG_COLOR);
             cnt = sscanf(str, "%d", &port);
             if (cnt == 1 && (port >= 1024 && port <= 49151)) {
                 params.devel_port = port;
@@ -1162,7 +1162,7 @@ static void settings(void)
 #ifdef ANDROID
         case EVID_RESET_APPS_AND_SVCS: {
             char *str; 
-            str = sdl_get_input_str("Reset y/n?", false, BG_COLOR);
+            str = sdlx_get_input_str("Reset y/n?", false, BG_COLOR);
             if (strcasecmp(str, "y") == 0) {
                 create_default_files();
                 msg = "Apps/Svcs are reset.";
@@ -1189,7 +1189,7 @@ static void copyright(void)
     char       *str;
     int         y_display_begin, y_display_end, y_top;
     int         len;
-    sdl_event_t event;
+    sdlx_event_t event;
     bool        done = false;
 
     // read the copyright file
@@ -1201,20 +1201,20 @@ static void copyright(void)
 
     // init vars
     y_display_begin = 100;
-    y_display_end = sdl_win_height - 200;
+    y_display_end = sdlx_win_height - 200;
     y_top = y_display_begin;
 
     // display copyright, support motion (for scrolling)
     while (true) {
         // display copyright and register for motion (scrolling) & exit events
-        sdl_display_init(BG_COLOR);
-        sdl_print_init(SMALLEST_FONT, COLOR_WHITE, BG_COLOR);
-        sdl_register_event(NULL, EVID_MOTION);
-        sdl_render_multiline_text(y_top, y_display_begin, y_display_end, str);
-        sdl_register_control_events(NULL, NULL, "X", BG_COLOR, 0, 0, EVID_QUIT);
-        sdl_display_present();
+        sdlx_display_init(BG_COLOR);
+        sdlx_print_init(SMALLEST_FONT, COLOR_WHITE, BG_COLOR);
+        sdlx_register_event(NULL, EVID_MOTION);
+        sdlx_render_multiline_text(y_top, y_display_begin, y_display_end, str);
+        sdlx_register_control_events(NULL, NULL, "X", BG_COLOR, 0, 0, EVID_QUIT);
+        sdlx_display_present();
 
-        sdl_get_event(-1, &event);
+        sdlx_get_event(-1, &event);
         switch (event.event_id) {
         case EVID_MOTION:
             y_top += event.u.motion.yrel;
@@ -1318,7 +1318,7 @@ again:
         }
 
         // create thread to process the client request
-        sdl_create_detached_thread(process_req_thread, (void*)(long)sockfd);
+        sdlx_create_detached_thread(process_req_thread, (void*)(long)sockfd);
     }
 
     // close listen socket
