@@ -1,6 +1,10 @@
 #ifndef __SDLX_H__
 #define __SDLX_H__
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 // --------------------
 // init / quit
 // --------------------
@@ -300,5 +304,9 @@ int sdlx_create_detached_thread_private(int (*thread_fn)(void*), char *thread_na
     do { \
         sdlx_create_detached_thread_private(thread_fn, #thread_fn, cx); \
     } while (0)
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif
