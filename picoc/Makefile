@@ -8,6 +8,7 @@ CFLAGS=  -Wall -Wno-unused-result -Werror -O2 -g
 CFLAGS+= -DVER=\"a97d94fa\" -DTAG=\"v3.2.2\" -DUNIX_HOST
 CFLAGS+= -I../src -I../cJSON $(shell pkg-config sdl3--cflags)
 LIBS=    -lm -lreadline -lSDL3 -lSDL3_ttf
+CXXFLAGS = $(CFLAGS)
 
 TARGET	= picoc
 SRCS	= picoc.c table.c lex.c parse.c expression.c heap.c type.c \
@@ -20,6 +21,7 @@ SRCS	= picoc.c table.c lex.c parse.c expression.c heap.c type.c \
           cJSON.c
 
 OBJS	:= $(SRCS:%.c=%.o)
+OBJS	:= $(OBJS:%.cpp=%.o)
 
 all: $(TARGET)
 
@@ -32,7 +34,7 @@ test:	all
 	@(cd tests; make -s jpoirier)
 
 clean:
-	rm -f $(TARGET) $(OBJS) *~
+	rm -f $(TARGET) $(OBJS)
 
 count:
 	@echo "Core:"
