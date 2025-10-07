@@ -10,9 +10,15 @@ add page to Test app for location
 
 update *.h for cpp
 
+upde copyright for json
+
 ---TODO --------
 
-upde copyright for json
+add setup option to remove data files
+
+remove curl.out when done with it
+
+why is OST_NOTIFICATION not granted
 
 sensors and location
 - freq of location service
@@ -25,18 +31,16 @@ fix ezsh for vi and cmd recall
 
 add test page for weather.gov to Test
 
-
-fresh start new repo
-
 have program start automatically,  
 - 4 pillars of android?
 
-add setup option to remove data files
+fresh start with new repo
 
-ifdef cplusplus
+---- PICOC ISSUES ------
 
 start picoc issue list
 - const not allowd
+
 xxxxxxxxxxxxxxxx
 xxxxxxxxxxxxxxxx
 xxxxxxxxxxxxxxxx
