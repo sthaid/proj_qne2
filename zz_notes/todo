@@ -10,6 +10,8 @@ move Services to Settings
 
 add page to Test app for location
 
+update *.h for cpp
+
 sensors and location
 - freq of location service
 - 10 minute cycle in sensor service
@@ -34,6 +36,8 @@ add setup option to remove data files
 
 ifdef cplusplus
 
+start picoc issue list
+- const not allowd
 xxxxxxxxxxxxxxxx
 xxxxxxxxxxxxxxxx
 xxxxxxxxxxxxxxxx

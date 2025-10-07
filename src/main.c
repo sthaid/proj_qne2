@@ -1262,7 +1262,7 @@ static int server_thread(void *cx)
 
     sleep(5); //xxx
     double lat, lng, alt;
-    get_location(&lat, &lng, &alt);  // return 9999 if not bound
+    util_get_location(&lat, &lng, &alt);  // return 9999 if not bound
     INFO("XXXXXXXXXXXXXXX %f %f %f\n", lat, lng, alt);
 
 again:

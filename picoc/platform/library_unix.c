@@ -1133,6 +1133,16 @@ void Util_json_get_value(struct ParseState *Parser, struct Value *ReturnValue,
     ReturnValue->Val->Pointer = value;
 }
 
+void Util_get_location(struct ParseState *Parser, struct Value *ReturnValue,
+        struct Value **Param, int NumArgs)
+{
+    double *lat = (double*)Param[0]->Val->Pointer;
+    double *lng = (double*)Param[1]->Val->Pointer;
+    double *alt = (double*)Param[2]->Val->Pointer;
+
+    util_get_location(lat, lng, alt);
+}
+
 //
 // UTILS REGISTRATION
 //
@@ -1166,6 +1176,8 @@ struct LibraryFunction UtilsFunctions[] = {
     { Util_json_parse,       "void *util_json_parse(char *str);" },
     { Util_json_free,        "void util_json_free(void *json_root);" },
     { Util_json_get_value,   "json_value_t *util_json_get_value(void *json_item, ...);" },
+    // location
+    { Util_get_location,     "void util_get_location(double *latitude, double *longitude, double *altitude);" },
 
     { NULL, NULL } };
 

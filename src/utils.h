@@ -61,7 +61,7 @@ json_value_t *util_json_get_value(void *json_item, ...);
 
 // -----------------  JSON  ----------------------------------
 
-void get_location(double *latitude, double *longitude, double *altitude);
+void util_get_location(double *latitude, double *longitude, double *altitude);
 
 #ifdef __cplusplus
 }

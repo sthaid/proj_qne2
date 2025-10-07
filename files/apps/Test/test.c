@@ -58,6 +58,8 @@ static void page_8_exit(void);
 static void page_9_init(void);
 static void page_9_draw(void);
 
+static void page_10_draw(void);
+
 // -----------------  MAIN  ------------------------------------------
 
 int main(int argc, char **argv)
@@ -115,10 +117,11 @@ char *page_title[] = {   // Page
         "Audio",         //   7
         "Sensor Info",   //   8
         "Sensor Values", //   9
+        "Location",      //  10
             };
 static int pagenum = 0;
 
-#define MAX_PAGE 10
+#define LAST_PAGE 10
 
 #define EVID_PREV_PAGE 1
 #define EVID_NEXT_PAGE 2
@@ -168,6 +171,7 @@ static void page_hndlr()
         case 7: page_7_draw(); break;
         case 8: page_8_draw(); break;
         case 9: page_9_draw(); break;
+        case 10: page_10_draw(); break;
         default:
             printf("ERROR %s: invalid pagenum %d\n", progname, pagenum);
             end_program = true;
@@ -192,12 +196,12 @@ static void page_hndlr()
         case EVID_SWIPE_RIGHT: case EVID_PREV_PAGE:
             new_pagenum = pagenum - 1;
             if (new_pagenum < 0) {
-                new_pagenum = MAX_PAGE-1;
+                new_pagenum = LAST_PAGE;
             }
             break;      
         case EVID_SWIPE_LEFT: case EVID_NEXT_PAGE:
             new_pagenum = pagenum + 1;
-            if (new_pagenum >= MAX_PAGE) {
+            if (new_pagenum > LAST_PAGE) {
                 new_pagenum = 0;
             }
             break;      
@@ -932,4 +936,31 @@ static void page_9_draw(void)
     if (rc == 0) {
         sdlx_render_printf(0, ROW2Y(row++), "humid = %.0f", percent);
     }
+}
+
+// -----------------  PAGE 10: LOCATION  ----------------------
+
+static char *num2str(double num, char *fmt, char *s);
+
+static void page_10_draw(void)
+{
+    double lat, lng, alt;
+    int    row=2;
+    char   s[50];
+
+    util_get_location(&lat, &lng, &alt);
+
+    sdlx_render_printf(0, ROW2Y(row++), "Lat  = %s", num2str(lat,"%9.4f",s));
+    sdlx_render_printf(0, ROW2Y(row++), "Long = %s", num2str(lng,"%9.4f",s));
+    sdlx_render_printf(0, ROW2Y(row++), "Alt  = %s", num2str(alt,"%9.4f",s));
+}
+
+static char *num2str(double num, char *fmt, char *s)
+{
+    if (num == INVALID_NUMBER) {
+        sprintf(s, "invld");
+    } else {
+        sprintf(s, fmt, num);
+    }
+    return s;
 }

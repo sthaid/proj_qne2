@@ -23,6 +23,7 @@ SRCS_COMMON="\
        ../src/sdlx_sensor.c \
        ../src/sdlx_event.c \
        ../src/utils.c \
+       ../src/utils_location.cpp \
        ../src/logging.c \
        ../cJSON/cJSON.c"
 

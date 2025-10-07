@@ -184,6 +184,7 @@ int main(int argc, char **argv)
 
 #define MAX_STR_TBL 15
 
+// xxx dont like using str_tbl
 static char *sensval2str(double x)
 {
     static char str_tbl[MAX_STR_TBL][30];
