@@ -1,14 +1,9 @@
-combine myservice in sdlact file
-
-test full build
+sensors and location
+- freq of location service
+- 10 minute cycle in sensor service
+- add lat long alt to sensors
 
 use sdx or sdlx
-
-10 minute cycle
-
-rename test.cpp to util_loc.cpp
-- get lat,long,alt
-- cache the method id 
 
 add page to Test app for location
 
@@ -18,13 +13,24 @@ fix ezsh for vi and cmd recall
 
 move Services to Settings
 
+make ip address static
+
+add test page for weather.gov to Test
+
+upde copyright for json
+
+fresh start new repo
+
+have program start automatically,  
+- 4 pillars of android?
+
+add setup option to remove data files
+
 xxxxxxxxxxxxxxxx
 xxxxxxxxxxxxxxxx
 xxxxxxxxxxxxxxxx
 
 dl_get_permission: android.permission.POST_NOTIFICATION not granted
-
-
 
 code to read latitude longitude on android
 
@@ -93,20 +99,9 @@ public class MainActivity extends AppCompatActivity {
 gradle.properties
 android.useAndroidX=true
 
-make ip address static
-
 why did curl fail
 - try testing it in a loop, and do retry if it fails
 - dont use -s
-
-why does onLocationResult keep getting called,  need to stop the service
-
-need to get the latitude and longitude and print it
-
-get altitude
-
-
-"using android java how to call a method in a service and get a returned value"
 
 xxxxxxxxxxxxxxxxxxxx
 xxxxxxxxxxxxxxxxxxxx
@@ -121,7 +116,6 @@ clean this file
 read latitude and longitude
 add primes to Test
 simple app - flashlight
-upde copyright for json
 
 boot start the service
    - check into auto start   SampleForegroundService

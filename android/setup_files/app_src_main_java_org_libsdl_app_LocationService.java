@@ -129,11 +129,6 @@ public class LocationService extends Service {
         //}
     }
 
-    public double get_altitude() {
-        Log.v(TAG, "XXX get_altitude return " + altitude);
-        return altitude;
-    }
-
     @Override
     public IBinder onBind(Intent intent) {
         Log.v(TAG, "XXX in LocationService IBinder-xxx");
@@ -143,5 +138,20 @@ public class LocationService extends Service {
     @Override
     public void onDestroy() {
         Log.v(TAG, "XXX in LocationService OnDestroy");
+    }
+
+    public double get_latitude() {
+        Log.v(TAG, "XXX get_latitude return " + latitude);
+        return latitude;
+    }
+
+    public double get_longitude() {
+        Log.v(TAG, "XXX get_longitude return " + longitude);
+        return longitude;
+    }
+
+    public double get_altitude() {
+        Log.v(TAG, "XXX get_altitude return " + altitude);
+        return altitude;
     }
 }

@@ -4,7 +4,7 @@
 
 // xxx comments needed, this file
 
-void log_msg(char *lvl, const char *func, char *fmt, ...)
+void log_msg(const char *lvl, const char *func, const char *fmt, ...)
 {
     va_list ap;
     char    msg[1000];

@@ -242,8 +242,8 @@ public class SDLActivity extends Activity implements View.OnSystemUiVisibilityCh
     protected static boolean mDispatchingKeyEvent = false;
 
     // xxx
-    boolean isBound = false;   // xxx use 'm'
-    LocationService locationService;
+    boolean mIsBound = false;
+    LocationService mLocationService;
 
     protected static SDLGenericMotionListener_API14 getMotionListener() {
         if (mMotionListener == null) {
@@ -702,7 +702,7 @@ public class SDLActivity extends Activity implements View.OnSystemUiVisibilityCh
         Log.v(TAG, "onDestroy()");
 
         // xxx
-        if (isBound) {
+        if (mIsBound) {
             unbindService(serviceConnection);
         }
 
@@ -2192,36 +2192,44 @@ public class SDLActivity extends Activity implements View.OnSystemUiVisibilityCh
         @Override
         public void onServiceConnected(ComponentName name, IBinder service) {
             LocationService.InnerBinder binder = (LocationService.InnerBinder) service;
-            locationService = binder.getService();
-            isBound = true;
-            Log.v(TAG, "XXX isBound = true");
+            mLocationService = binder.getService();
+            mIsBound = true;
+            Log.v(TAG, "XXX mIsBound = true");
         }
 
         @Override
         public void onServiceDisconnected(ComponentName name) {
-            isBound = false;
-            Log.v(TAG, "XXX isBound = false");
+            mIsBound = false;
+            Log.v(TAG, "XXX mIsBound = false");
         }
     };
 
     // xxx
+    public double get_latitude() {
+        return mLocationService.get_latitude();
+    }
+
+    public double get_longitude() {
+        return mLocationService.get_longitude();
+    }
+
     public double get_altitude() {
         double altitude;
 
         Log.v(TAG, "XXX call get_altitude");
 
         // xxx wait for bound
-        int millisecs = 0;
-        while (!isBound) {
-            SystemClock.sleep(100);
-            millisecs = millisecs + 100;
-            if (millisecs > 2000) {
-                break;
-            }
-        }
-        Log.v(TAG, "XXXXXXXXXXXXXXXXXXXXXXXXXXXXX millisecs " + millisecs);
+//      int millisecs = 0;
+//      while (!mIsBound) {
+//          SystemClock.sleep(100);
+//          millisecs = millisecs + 100;
+//          if (millisecs > 2000) {
+//              break;
+//          }
+//      }
+//      Log.v(TAG, "XXXXXXXXXXXXXXXXXXXXXXXXXXXXX millisecs " + millisecs);
 
-        altitude = locationService.get_altitude();
+        altitude = mLocationService.get_altitude();
 
         Log.v(TAG, "XXX back from get_altitude " + altitude);
         return altitude;

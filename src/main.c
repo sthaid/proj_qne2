@@ -76,10 +76,6 @@ static void kill_child_processes(pid_t pid);
 
 extern int picoc_ezapp(char *args);
 
-#ifdef ANDROID
-extern void get_altitude(void);
-#endif
-
 // -----------------  MAIN  ------------------------------------------
 
 static int init(void);
@@ -182,13 +178,15 @@ static int init(void)
         ERROR("failed to get permission ACTIVITY_RECOGNITION\n");
     }
 
-    INFO("XXXXXXXXXXXXXXXXXXXXXX get alt\n");
-    get_altitude();
-    INFO("XXXXXXXXXXXXXXXXXXXXXX get alt done\n");
 #endif
 
     // start services that are configured for autostart
     init_services();
+
+    //INFO("XXXXXXXXXXXXXXXXXXXXXX get location\n");
+    //double lat, lng, alt;
+    //get_location(&lat, &lng, &alt);
+    //INFO("XXXXXXXXXXXXXXXXXXXXXX get location done %f %f %f\n", lat, lng, alt);
 
     // init okay
     return 0;
@@ -1252,6 +1250,11 @@ static int server_thread(void *cx)
 
     // save server thread id in global, so that signals can be sent to this thread
     server_tid = pthread_self();
+
+    sleep(5); //xxx
+    double lat, lng, alt;
+    get_location(&lat, &lng, &alt);  // return 9999 if not bound
+    INFO("XXXXXXXXXXXXXXX %f %f %f\n", lat, lng, alt);
 
 again:
     // wait for developer mode to be enabled

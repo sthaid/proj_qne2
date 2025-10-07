@@ -6,8 +6,8 @@ SRCS :=  \
   ../src/sdl_audio.c \
   ../src/sdl_sensor.c \
   ../src/sdl_event.c \
-  ../src/test.cpp \
   ../src/utils.c \
+  ../src/utils_location.cpp \
   ../src/logging.c \
   ../cJSON/cJSON.c \
   ../picoc/picoc_ezapp.c \

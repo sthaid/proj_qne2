@@ -1,6 +1,10 @@
 #ifndef __UTILS_H__
 #define __UTILS_H__
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 // -----------------  TIME  ----------------------------------
 
 long util_microsec_timer(void);
@@ -54,5 +58,13 @@ typedef struct {
 void *util_json_parse(char *str);
 void util_json_free(void *json_root);
 json_value_t *util_json_get_value(void *json_item, ...);
+
+// -----------------  JSON  ----------------------------------
+
+void get_location(double *latitude, double *longitude, double *altitude);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif
