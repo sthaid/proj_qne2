@@ -6,26 +6,25 @@ make ip address static in router
 
 move Services to Settings
 
----TODO --------
-
 add page to Test app for location
 
 update *.h for cpp
+
+---TODO --------
+
+upde copyright for json
 
 sensors and location
 - freq of location service
 - 10 minute cycle in sensor service
 - add lat long alt to sensors
 
-
 is any improvement to weather.gov needed
 
 fix ezsh for vi and cmd recall
 
-
 add test page for weather.gov to Test
 
-upde copyright for json
 
 fresh start new repo
 

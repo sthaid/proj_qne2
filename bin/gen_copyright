@@ -14,5 +14,8 @@ cat android/SDL/LICENSE.txt >> $tmp_copyright
 echo -e "\n---------- PICOC ----------\n" >> $tmp_copyright
 picoc/picoc -c >> $tmp_copyright
 
-fmt -w 40 $tmp_copyright > android/assets/copyright
+echo -e "\n---------- CJSON ----------\n" >> $tmp_copyright
+cat cJSON/LICENSE >> $tmp_copyright
+
+fmt -w 40 $tmp_copyright > files/copyright
 

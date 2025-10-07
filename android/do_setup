@@ -102,8 +102,8 @@ ln -s ../../../../../../../picoc/ .
 ln -s ../../../../../../../cJSON/ .
 echo
 
-# create assets dir, and create symbolic links to assets
-echo "Creating assets directory"
+# add symbolic link to assets
+echo "Creating symbolic links to assets"
 cd $BUILD_DIR/app/src/main
 ln -s ../../../../../../assets/ .
 echo
