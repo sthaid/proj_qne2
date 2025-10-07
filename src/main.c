@@ -302,8 +302,6 @@ static void processing(void)
                 ERROR("apps[%d] is NULL\n", id);
             } else if (strcmp(apps[id], "Settings") == 0) {
                 settings();
-            } else if (strcmp(apps[id], "Services") == 0) {
-                services();
             } else {
                 run(apps[id], -1);
             }
@@ -605,7 +603,7 @@ static void get_list_of_apps(void)
      (state) == SERVICE_STATE_STOPPING          ? COLOR_YELLOW : \
                                                   COLOR_RED)
 
-#define MAX_SERVICES 100
+#define MAX_SERVICES 100 // xxx dont need this many
 
 #define LOCK do { pthread_mutex_lock(&services_mutex); } while (0)
 #define UNLOCK do { pthread_mutex_unlock(&services_mutex); } while (0)
@@ -1072,6 +1070,7 @@ static void settings(void)
     #define EVID_DEVEL_PORT           1001
     #define EVID_RESET_APPS_AND_SVCS  1002
     #define EVID_COPYRIGHT            1004
+    #define EVID_SERVICES             1005
 
     // get this device ipaddr
     ipaddr = util_get_ipaddr();
@@ -1104,9 +1103,16 @@ static void settings(void)
         loc = sdlx_render_printf(0, ROW2Y(9), "Devel_Port = %d", params.devel_port);
         sdlx_register_event(loc, EVID_DEVEL_PORT);
 
+        // display Services
+        loc = sdlx_render_printf(0, ROW2Y(11), "Services");
+        sdlx_register_event(loc, EVID_SERVICES);
+
 #ifdef ANDROID
         // display Reset_Apps
-        loc = sdlx_render_printf(0, ROW2Y(11), "Reset_Apps/Svcs");
+        // note: not supported on Linux build because executing
+        //       this on Linux build would delete files apps or svcs files
+        //       that are being developed
+        loc = sdlx_render_printf(0, ROW2Y(13), "Reset_Apps/Svcs");
         sdlx_register_event(loc, EVID_RESET_APPS_AND_SVCS);
 #endif
 
@@ -1172,6 +1178,9 @@ static void settings(void)
 #endif
         case EVID_COPYRIGHT:
             copyright();
+            break;
+        case EVID_SERVICES:
+            services();
             break;
         case EVID_QUIT:
             done = true;

@@ -4,7 +4,7 @@ Test        Reversi   Env
 -           -           -
 -           -           -
 -           -           -
--           Services    Settings
+-           -           Settings
 
 # -------- Page 1 --------
 Test        -           -
@@ -12,5 +12,5 @@ Test        -           -
 -           -           -
 -           -           -
 -           -           -
--           Services    Settings
+-           -           Settings
 

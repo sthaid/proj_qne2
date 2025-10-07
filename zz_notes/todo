@@ -1,19 +1,25 @@
+---- DONE -----
+
+use sdx or sdlx
+
+make ip address static in router
+
+move Services to Settings
+
+---TODO --------
+
+add page to Test app for location
+
 sensors and location
 - freq of location service
 - 10 minute cycle in sensor service
 - add lat long alt to sensors
 
-use sdx or sdlx
-
-add page to Test app for location
 
 is any improvement to weather.gov needed
 
 fix ezsh for vi and cmd recall
 
-move Services to Settings
-
-make ip address static
 
 add test page for weather.gov to Test
 
@@ -25,6 +31,8 @@ have program start automatically,
 - 4 pillars of android?
 
 add setup option to remove data files
+
+ifdef cplusplus
 
 xxxxxxxxxxxxxxxx
 xxxxxxxxxxxxxxxx
