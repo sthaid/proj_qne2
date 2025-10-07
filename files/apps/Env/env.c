@@ -4,7 +4,7 @@
 #include <string.h>
 #include <math.h>
 
-#include <sdl.h>
+#include <sdlx.h>
 #include <utils.h>
 
 #include "svcs/Sensors/sensors.h"
@@ -79,12 +79,12 @@ sensors_data_t *data;
 int start_hour_of_tomorrow(void);
 
 void plot_hourly(plot_t *p, int psh, int peh, int ybottom, int ytop);
-void get_hourly_plot_pts(int which, int psh, int peh, sdl_plot_point_t *pts, int *num_pts);
+void get_hourly_plot_pts(int which, int psh, int peh, sdlx_plot_point_t *pts, int *num_pts);
 
 void plot_daily(plot_t *p, int psh, int peh, int ybottom, int ytop);
 void get_daily_plot_pts(
             int which, int psh, int peh,
-            sdl_plot_point_t *pts_avg, sdl_plot_point_t * pts_min, sdl_plot_point_t * pts_max,
+            sdlx_plot_point_t *pts_avg, sdlx_plot_point_t * pts_min, sdlx_plot_point_t * pts_max,
             int *num_pts);
 
 // -----------------  MAIN  ------------------------------------------
@@ -92,11 +92,11 @@ void get_daily_plot_pts(
 int main(int argc, char **argv)
 {
     int             rc, i;
-    sdl_event_t     event;
+    sdlx_event_t     event;
     bool            end_program = false;
     int             psh, peh;
     double          peh_float;
-    sdl_loc_t      *loc;
+    sdlx_loc_t      *loc;
     char           *str;
 
     // save args
@@ -137,9 +137,9 @@ int main(int argc, char **argv)
     printf("INFO %s: sensors.dat mapped and version verified\n", progname);
 
     // init sdl
-    rc = sdl_init(SUBSYS_VIDEO);
+    rc = sdlx_init(SUBSYS_VIDEO);
     if (rc != 0) {
-        printf("ERROR %s: sdl_init failed\n", progname);
+        printf("ERROR %s: sdlx_init failed\n", progname);
         return 1;
     }
 
@@ -149,28 +149,28 @@ int main(int argc, char **argv)
     // runtime loop
     while (true) {
         // init the backbuffer, and printing
-        sdl_display_init(COLOR_BLACK);
-        sdl_print_init(DEFAULT_FONT, COLOR_WHITE, COLOR_BLACK);
+        sdlx_display_init(COLOR_BLACK);
+        sdlx_print_init(DEFAULT_FONT, COLOR_WHITE, COLOR_BLACK);
 
         // register control events
         // 'X' - end prorgram
-        sdl_register_control_events(NULL, NULL, "X", 
+        sdlx_register_control_events(NULL, NULL, "X", 
                                     COLOR_BLACK,
                                     0, 0, EVID_QUIT);
-        sdl_register_event(NULL, EVID_MOTION);
+        sdlx_register_event(NULL, EVID_MOTION);
 
         // xxx
-        sdl_print_init_color(COLOR_LIGHT_BLUE, COLOR_BLACK);
+        sdlx_print_init_color(COLOR_LIGHT_BLUE, COLOR_BLACK);
 
-        loc = sdl_render_printf(sdl_win_width-3*sdl_char_width, sdl_win_height-200, "%s", "EOD");
-        sdl_register_event(loc, EVID_EOD);
+        loc = sdlx_render_printf(sdlx_win_width-3*sdlx_char_width, sdlx_win_height-200, "%s", "EOD");
+        sdlx_register_event(loc, EVID_EOD);
 
         str = (display_mode == DISPLAY_MODE_DAILY ? "DAILY" : "HOURLY");
-        loc = sdl_render_printf(sdl_win_width/2-strlen(str)*sdl_char_width/2, 
-                                sdl_win_height-200, "%s", str);
-        sdl_register_event(loc, EVID_DISPLAY_MODE);
+        loc = sdlx_render_printf(sdlx_win_width/2-strlen(str)*sdlx_char_width/2, 
+                                sdlx_win_height-200, "%s", str);
+        sdlx_register_event(loc, EVID_DISPLAY_MODE);
 
-        sdl_print_init_color(COLOR_WHITE, COLOR_BLACK);
+        sdlx_print_init_color(COLOR_WHITE, COLOR_BLACK);
 
         // xxx comment
         if (display_mode == DISPLAY_MODE_DAILY) {
@@ -208,11 +208,11 @@ int main(int argc, char **argv)
         }
 
         // present the display
-        sdl_display_present();
+        sdlx_display_present();
 
         // wait for an event with 500 ms timeout;
         // if no event available, then redraw display
-        sdl_get_event(500000, &event);
+        sdlx_get_event(500000, &event);
         if (event.event_id == -1) {
             continue;
         }
@@ -224,9 +224,9 @@ int main(int argc, char **argv)
             break;      
         case EVID_MOTION: {
             if (display_mode == DISPLAY_MODE_HOURLY) {
-                peh_float -= event.u.motion.xrel * (24. / sdl_win_width);
+                peh_float -= event.u.motion.xrel * (24. / sdlx_win_width);
             } else {
-                peh_float -= event.u.motion.xrel * ((24. * NUM_DAYS) / sdl_win_width);
+                peh_float -= event.u.motion.xrel * ((24. * NUM_DAYS) / sdlx_win_width);
             }
             int xxx = start_hour_of_tomorrow();
             if (peh_float > xxx) {
@@ -270,7 +270,7 @@ int main(int argc, char **argv)
     }
 
     // cleanup and end program
-    sdl_quit(SUBSYS_VIDEO);
+    sdlx_quit(SUBSYS_VIDEO);
     util_unmap_file(data);
     printf("INFO %s: terminating\n", progname);
     return 0;
@@ -288,7 +288,7 @@ int start_hour_of_tomorrow(void)
 
 void plot_daily(plot_t *p, int psh, int peh, int ybottom, int ytop)
 {
-    sdl_plot_point_t pts_avg[MAX_PTS], pts_min[MAX_PTS], pts_max[MAX_PTS];
+    sdlx_plot_point_t pts_avg[MAX_PTS], pts_min[MAX_PTS], pts_max[MAX_PTS];
     void            *cx;
     int              num_pts;
     char             xmin_str[50], xmax_str[50], ymin_str[50], ymax_str[50];
@@ -299,15 +299,15 @@ void plot_daily(plot_t *p, int psh, int peh, int ybottom, int ytop)
     get_daily_plot_pts(p->which, psh, peh, pts_avg, pts_min, pts_max, &num_pts);
 
     // create the plot context
-    cx =  sdl_plot_create(p->title,                    // title
-                          0, sdl_win_width-1,          // xleft, xright
+    cx =  sdlx_plot_create(p->title,                    // title
+                          0, sdlx_win_width-1,          // xleft, xright
                           ybottom, ytop,               // ybottom, ytop
                           psh, peh,                    // xval_left, xval_right
                           p->yval_bottom, p->yval_top, // yval_bottom, yval_top
                           p->yval_of_x_axis);          // yval_of_x_axis
 
     // plot the data points, using bar graph
-    sdl_plot_bars(cx, pts_avg, pts_min, pts_max, num_pts, 24);
+    sdlx_plot_bars(cx, pts_avg, pts_min, pts_max, num_pts, 24);
 
     // init strings for the plot x/y-axis labels
     t = psh * 3600;
@@ -321,15 +321,15 @@ void plot_daily(plot_t *p, int psh, int peh, int ybottom, int ytop)
     sprintf(ymax_str, "%.0f", p->yval_top);
 
     // plot the axes
-    sdl_plot_axis(cx, xmin_str, xmax_str, ymin_str, ymax_str);
+    sdlx_plot_axis(cx, xmin_str, xmax_str, ymin_str, ymax_str);
 
     // free the plot
-    sdl_plot_free(cx);
+    sdlx_plot_free(cx);
 }
 
 void get_daily_plot_pts(
             int which, int psh, int peh,
-            sdl_plot_point_t *pts_avg, sdl_plot_point_t * pts_min, sdl_plot_point_t * pts_max,
+            sdlx_plot_point_t *pts_avg, sdlx_plot_point_t * pts_min, sdlx_plot_point_t * pts_max,
             int *num_pts)
 {
     int    day_start_hour, hour, idx, k, n=0;
@@ -377,7 +377,7 @@ void get_daily_plot_pts(
 
 void plot_hourly(plot_t *p, int psh, int peh, int ybottom, int ytop)
 {
-    sdl_plot_point_t    pts[MAX_PTS];
+    sdlx_plot_point_t    pts[MAX_PTS];
     void           *cx;
     int             num_pts;
     char            xmin_str[50], xmax_str[50], ymin_str[50], ymax_str[50];
@@ -388,8 +388,8 @@ void plot_hourly(plot_t *p, int psh, int peh, int ybottom, int ytop)
     get_hourly_plot_pts(p->which, psh, peh, pts, &num_pts);
 
     // create the plot context
-    cx =  sdl_plot_create(p->title,                    // title
-                          0, sdl_win_width-1,          // xleft, xright
+    cx =  sdlx_plot_create(p->title,                    // title
+                          0, sdlx_win_width-1,          // xleft, xright
                           ybottom, ytop,               // ybottom, ytop
                           //xxx psh, psh+NUM_DAYS*24,        // xval_left, xval_right
                           psh, peh,        // xval_left, xval_right
@@ -397,7 +397,7 @@ void plot_hourly(plot_t *p, int psh, int peh, int ybottom, int ytop)
                           p->yval_of_x_axis);          // yval_of_x_axis
 
     // plot the data points, using bar graph
-    sdl_plot_bars(cx, pts, pts, pts, num_pts, 1);
+    sdlx_plot_bars(cx, pts, pts, pts, num_pts, 1);
 
     // init strings for the plot x/y-axis labels
     t = psh * 3600;
@@ -411,13 +411,13 @@ void plot_hourly(plot_t *p, int psh, int peh, int ybottom, int ytop)
     sprintf(ymax_str, "%.0f", p->yval_top);
 
     // plot the axes
-    sdl_plot_axis(cx, xmin_str, xmax_str, ymin_str, ymax_str);
+    sdlx_plot_axis(cx, xmin_str, xmax_str, ymin_str, ymax_str);
 
     // free the plot
-    sdl_plot_free(cx);
+    sdlx_plot_free(cx);
 }
 
-void get_hourly_plot_pts(int which, int psh, int peh, sdl_plot_point_t *pts, int *num_pts)
+void get_hourly_plot_pts(int which, int psh, int peh, sdlx_plot_point_t *pts, int *num_pts)
 {
     int hour, idx, n=0;
     double value;

@@ -5,7 +5,7 @@
 #include <string.h>
 #include <errno.h>
 
-#include <sdl.h>
+#include <sdlx.h>
 #include <utils.h>
 
 #include <svcs/Sensors/common.h>

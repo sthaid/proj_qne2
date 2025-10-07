@@ -5,7 +5,7 @@
 #include <stdbool.h>
 #include <stdlib.h>
 
-#include <sdl.h>
+#include <sdlx.h>
 #include <utils.h>
 
 #include "apps/Test/common.h"
@@ -35,7 +35,7 @@ static void page_2_draw(void);
 
 static void page_3_init(void);
 static void page_3_draw(void);
-static void page_3_process_event(sdl_event_t *event);
+static void page_3_process_event(sdlx_event_t *event);
 static void page_3_exit(void);
 
 static void page_4_draw(void);
@@ -48,7 +48,7 @@ static void page_6_draw(void);
 
 static void page_7_init(void);
 static void page_7_draw(void);
-static void page_7_process_event(sdl_event_t *event);
+static void page_7_process_event(sdlx_event_t *event);
 static void page_7_exit(void);
 
 static void page_8_init(void);
@@ -70,16 +70,16 @@ int main(int argc, char **argv)
     printf("INFO %s: starting, data_dir=%s\n", progname, data_dir);
 
     // init sdl
-    rc = sdl_init(SUBSYS_VIDEO | SUBSYS_AUDIO | SUBSYS_SENSOR);
+    rc = sdlx_init(SUBSYS_VIDEO | SUBSYS_AUDIO | SUBSYS_SENSOR);
     if (rc != 0) {
-        printf("ERROR %s: sdl_init failed\n", progname);
+        printf("ERROR %s: sdlx_init failed\n", progname);
         return 1;
     }
 
     // print window and char sized, these are global variables from sdl.c;
     // the initial char size provides 20 chars across the display width
-    printf("INFO %s: sdl_win_width/height  = %d %d\n", progname, sdl_win_width, sdl_win_height);
-    printf("INFO %s: sdl_char_width/height = %d %d\n", progname, sdl_char_width, sdl_char_height);
+    printf("INFO %s: sdlx_win_width/height  = %d %d\n", progname, sdlx_win_width, sdlx_win_height);
+    printf("INFO %s: sdlx_char_width/height = %d %d\n", progname, sdlx_char_width, sdlx_char_height);
 
     // test calling a routine that is defined in another file
     test1_proc();
@@ -93,7 +93,7 @@ int main(int argc, char **argv)
     }
 
     // exit sdl
-    sdl_quit(SUBSYS_VIDEO | SUBSYS_AUDIO | SUBSYS_SENSOR);
+    sdlx_quit(SUBSYS_VIDEO | SUBSYS_AUDIO | SUBSYS_SENSOR);
 
     // return success
     printf("INFO %s: terminating\n", progname);
@@ -125,7 +125,7 @@ static int pagenum = 0;
 
 static void page_hndlr()
 {
-    sdl_event_t event;
+    sdlx_event_t event;
     int         new_pagenum = -1;
 
     // call the page specific init routine, if provided
@@ -139,22 +139,22 @@ static void page_hndlr()
 
     while (true) {
         // init the backbuffer, and print font/color
-        sdl_display_init(COLOR_BLACK);
-        sdl_print_init(DEFAULT_FONT, COLOR_WHITE, COLOR_BLACK);
+        sdlx_display_init(COLOR_BLACK);
+        sdlx_print_init(DEFAULT_FONT, COLOR_WHITE, COLOR_BLACK);
 
         // draw title line
-        sdl_render_text_xyctr(sdl_win_width/2, sdl_char_height/2, page_title[pagenum]);
+        sdlx_render_text_xyctr(sdlx_win_width/2, sdlx_char_height/2, page_title[pagenum]);
 
         // register control events
         // "<" - previous page
         // ">" - next page
         // 'X' - end prorgram
-        sdl_register_control_events("<", ">", "X", COLOR_BLACK,
+        sdlx_register_control_events("<", ">", "X", COLOR_BLACK,
                                     EVID_PREV_PAGE, EVID_NEXT_PAGE, EVID_QUIT);
 
         // register swipe events, also used to change page
-        sdl_register_event(NULL, EVID_SWIPE_LEFT);
-        sdl_register_event(NULL, EVID_SWIPE_RIGHT);
+        sdlx_register_event(NULL, EVID_SWIPE_LEFT);
+        sdlx_register_event(NULL, EVID_SWIPE_RIGHT);
 
         // draw display
         switch (pagenum) {
@@ -175,11 +175,11 @@ static void page_hndlr()
         }
 
         // present the display
-        sdl_display_present();
+        sdlx_display_present();
 
         // wait for an event with 50 ms timeout;
         // if no event available, then redraw display
-        sdl_get_event(50000, &event);
+        sdlx_get_event(50000, &event);
         if (event.event_id == -1) {
             continue;
         }
@@ -243,12 +243,12 @@ static void page_0_draw(void)
     time(&t);
     tm = localtime(&t);
     sprintf(str, "%02d:%02d:%02d", tm->tm_hour, tm->tm_min, tm->tm_sec);
-    sdl_render_text_xyctr(sdl_win_width/2, ROW2Y(5), str);
+    sdlx_render_text_xyctr(sdlx_win_width/2, ROW2Y(5), str);
 
     // print the time in microsecs
     usecs = util_get_real_time_microsec();
     util_time2str(str, usecs, false, true, false);
-    sdl_render_text_xyctr(sdl_win_width/2, ROW2Y(7), str);
+    sdlx_render_text_xyctr(sdlx_win_width/2, ROW2Y(7), str);
 
     // print microsecs since this page is first viewed, and
     // print the delta time since last display update
@@ -258,11 +258,11 @@ static void page_0_draw(void)
     }
     delta_ms = (usecs - usecs_last) / 1000;
     usecs_last = usecs;
-    sdl_render_printf_xyctr(sdl_win_width/2, ROW2Y(9), "%0.3f delta=%ld ms", 
+    sdlx_render_printf_xyctr(sdlx_win_width/2, ROW2Y(9), "%0.3f delta=%ld ms", 
         (usecs-usecs_first)/1000000., delta_ms);
 
     // print ipaddr
-    sdl_render_printf_xyctr(sdl_win_width/2, ROW2Y(11), "%s", util_get_ipaddr());
+    sdlx_render_printf_xyctr(sdlx_win_width/2, ROW2Y(11), "%s", util_get_ipaddr());
 }
 
 // -----------------  PAGE 1: FONT  ---------------------------
@@ -278,7 +278,7 @@ static void page_1_draw(void)
                 ch+0, ch+1, ch+2, ch+3, ch+4, ch+5, ch+6, ch+7,
                 ch+8, ch+9, ch+10, ch+11, ch+12, ch+13, ch+14, ch+15);
 
-        sdl_render_text(0, ROW2Y(i+2), str);
+        sdlx_render_text(0, ROW2Y(i+2), str);
         ch += 16;
     }
 }
@@ -289,24 +289,24 @@ static void page_2_draw(void)
 {
     int r = 2;
 
-    sdl_render_printf(0, ROW2Y(r++), "sizoef(char)   = %zd", sizeof(char));
-    sdl_render_printf(0, ROW2Y(r++), "sizoef(short)  = %zd", sizeof(short));
-    sdl_render_printf(0, ROW2Y(r++), "sizoef(int)    = %zd", sizeof(int));
-    sdl_render_printf(0, ROW2Y(r++), "sizoef(long)   = %zd", sizeof(long));
-    sdl_render_printf(0, ROW2Y(r++), "sizoef(size_t) = %zd", sizeof(size_t));
-    sdl_render_printf(0, ROW2Y(r++), "sizoef(off_t)  = %zd", sizeof(off_t));
-    sdl_render_printf(0, ROW2Y(r++), "sizoef(time_t) = %zd", sizeof(time_t));
-    sdl_render_printf(0, ROW2Y(r++), "sizoef(float)  = %zd", sizeof(float));
-    sdl_render_printf(0, ROW2Y(r++), "sizoef(double) = %zd", sizeof(double));
-    sdl_render_printf(0, ROW2Y(r++), "sizeof(1)      = %zd", sizeof(1));
-    sdl_render_printf(0, ROW2Y(r++), "sizeof(1L)     = %zd", sizeof(1L));
+    sdlx_render_printf(0, ROW2Y(r++), "sizoef(char)   = %zd", sizeof(char));
+    sdlx_render_printf(0, ROW2Y(r++), "sizoef(short)  = %zd", sizeof(short));
+    sdlx_render_printf(0, ROW2Y(r++), "sizoef(int)    = %zd", sizeof(int));
+    sdlx_render_printf(0, ROW2Y(r++), "sizoef(long)   = %zd", sizeof(long));
+    sdlx_render_printf(0, ROW2Y(r++), "sizoef(size_t) = %zd", sizeof(size_t));
+    sdlx_render_printf(0, ROW2Y(r++), "sizoef(off_t)  = %zd", sizeof(off_t));
+    sdlx_render_printf(0, ROW2Y(r++), "sizoef(time_t) = %zd", sizeof(time_t));
+    sdlx_render_printf(0, ROW2Y(r++), "sizoef(float)  = %zd", sizeof(float));
+    sdlx_render_printf(0, ROW2Y(r++), "sizoef(double) = %zd", sizeof(double));
+    sdlx_render_printf(0, ROW2Y(r++), "sizeof(1)      = %zd", sizeof(1));
+    sdlx_render_printf(0, ROW2Y(r++), "sizeof(1L)     = %zd", sizeof(1L));
 }
 
 // -----------------  PAGE 3: MULTI LINE TEXT  ----------------
 
 // This tests both
-// - sdl_render_multiline_text, and
-// - sdl_render_multiline_text_2
+// - sdlx_render_multiline_text, and
+// - sdlx_render_multiline_text_2
 // on alternate entering of this page.
 
 static double y_top;
@@ -330,22 +330,22 @@ static void page_3_init(void)
 
     y_top = ROW2Y(2); 
     y_display_begin = ROW2Y(2);
-    y_display_end = sdl_win_height-3*sdl_char_height;
+    y_display_end = sdlx_win_height-3*sdlx_char_height;
     test_v1 = !test_v1;
 }
 
 static void page_3_draw(void)
 {
-    sdl_register_event(NULL, EVID_MOTION);
+    sdlx_register_event(NULL, EVID_MOTION);
 
     if (test_v1) {
-        sdl_render_multiline_text(y_top, y_display_begin, y_display_end, lines);
+        sdlx_render_multiline_text(y_top, y_display_begin, y_display_end, lines);
     } else {
-        sdl_render_multiline_text_2(y_top, y_display_begin, y_display_end, lines_2, 100);
+        sdlx_render_multiline_text_2(y_top, y_display_begin, y_display_end, lines_2, 100);
     }
 }
 
-static void page_3_process_event(sdl_event_t *event)
+static void page_3_process_event(sdlx_event_t *event)
 {
     if (event->event_id == EVID_MOTION) {
         y_top += event->u.motion.yrel;
@@ -365,64 +365,64 @@ static void page_3_exit(void)
 
 // -----------------  PAGE 4: DRAWING  ------------------------
 
-static void add_point(sdl_point_t **p, int x, int y);
+static void add_point(sdlx_point_t **p, int x, int y);
 
 static void page_4_draw(void)
 {
     // draw rect around perimeter
-    sdl_render_rect(0, 0, sdl_win_width, sdl_win_height, 2, COLOR_PURPLE);
+    sdlx_render_rect(0, 0, sdlx_win_width, sdlx_win_height, 2, COLOR_PURPLE);
 
     // draw fill rect, y = 170 .. 400
-    sdl_render_fill_rect(100, 170, 800, 230, COLOR_RED);
+    sdlx_render_fill_rect(100, 170, 800, 230, COLOR_RED);
 
     // draw circles, y = 400 .. 500
-    sdl_render_circle(1*sdl_win_width/4, 450, 50, 3, COLOR_YELLOW);
-    sdl_render_circle(2*sdl_win_width/4, 450, 50, 3, COLOR_YELLOW);
-    sdl_render_circle(3*sdl_win_width/4, 450, 50, 3, COLOR_YELLOW);
+    sdlx_render_circle(1*sdlx_win_width/4, 450, 50, 3, COLOR_YELLOW);
+    sdlx_render_circle(2*sdlx_win_width/4, 450, 50, 3, COLOR_YELLOW);
+    sdlx_render_circle(3*sdlx_win_width/4, 450, 50, 3, COLOR_YELLOW);
 
     // draw 6 lines, y = 500 .. 600
     for (int y = 500; y <= 600; y += 20) {
-        sdl_render_line(0, y, 1000, y, COLOR_WHITE);
+        sdlx_render_line(0, y, 1000, y, COLOR_WHITE);
     }
 
     // draw 3 lines to make a triangle, y = 600 .. 800
-    sdl_point_t pts[4], *ptsx=pts;
+    sdlx_point_t pts[4], *ptsx=pts;
     add_point(&ptsx, 500, 600);
     add_point(&ptsx, 700, 800);
     add_point(&ptsx, 300, 800);
     add_point(&ptsx, 500, 600);
-    sdl_render_lines(pts, 4, COLOR_RED);
+    sdlx_render_lines(pts, 4, COLOR_RED);
 
     // draw 2 squares and vary intensity and wavelen, y = 800 .. 900
     static double inten;
     int color;
     inten = inten + 0.01;
     if (inten > 1) inten = 0;
-    color = sdl_scale_color(COLOR_YELLOW, inten);
-    sdl_render_fill_rect(100, 800, 100, 100, color);
+    color = sdlx_scale_color(COLOR_YELLOW, inten);
+    sdlx_render_fill_rect(100, 800, 100, 100, color);
 
     static double wavelen = 750;
     wavelen -= 2;
     if (wavelen < 440) wavelen = 750;
-    color = sdl_wavelength_to_color(wavelen);
-    sdl_render_fill_rect(800, 800, 100, 100, color);
+    color = sdlx_wavelength_to_color(wavelen);
+    sdlx_render_fill_rect(800, 800, 100, 100, color);
 
     // draw points with varying size, y = 1000
-    color = sdl_create_color(0, 255, 0, 255);
+    color = sdlx_create_color(0, 255, 0, 255);
     for (int pointsize = 0; pointsize <= 9; pointsize++) {
-        sdl_render_point(pointsize*100+50, 1000, color, pointsize);
+        sdlx_render_point(pointsize*100+50, 1000, color, pointsize);
     }
 
     // draw 10 points of the same size, y = 1100
-    sdl_point_t points[10];
+    sdlx_point_t points[10];
     for (int i = 0; i < 10; i++) {
         points[i].x = i*100+50;
         points[i].y = 1100;
     }
-    sdl_render_points(points, 10, COLOR_PURPLE, 5);
+    sdlx_render_points(points, 10, COLOR_PURPLE, 5);
 }
 
-static void add_point(sdl_point_t **p, int x, int y)
+static void add_point(sdlx_point_t **p, int x, int y)
 {
     (*p)->x = x;
     (*p)->y = y;
@@ -431,41 +431,41 @@ static void add_point(sdl_point_t **p, int x, int y)
 
 // -----------------  PAGE 5: TEXTURES  -----------------------
 
-static sdl_texture_t *circle;
-static sdl_texture_t *text;
+static sdlx_texture_t *circle;
+static sdlx_texture_t *text;
 
 static void page_5_init(void)
 {
-    circle = sdl_create_filled_circle_texture(100, COLOR_RED);
-    text   = sdl_create_text_texture("XXXXX");
+    circle = sdlx_create_filled_circle_texture(100, COLOR_RED);
+    text   = sdlx_create_text_texture("XXXXX");
 }
 
 static void page_5_draw(void)
 {
     int ret, w, h, file_length;
-    sdl_texture_t *t;
-    sdl_pixels_t *pixels;
+    sdlx_texture_t *t;
+    sdlx_pixels_t *pixels;
 
     // render the circle texture at varying x location, y = 200 .. 400
     static int circle_x=-200;
-    sdl_render_texture(circle_x, 200, -1, -1, 0, circle);
+    sdlx_render_texture(circle_x, 200, -1, -1, 0, circle);
     circle_x += 10;
     if (circle_x > 1000) circle_x = -200;
 
     // render the circle texture using scaling, y = 400 .. 600
-    sdl_render_texture(500-200, 400, 400, 200, 0, circle);
+    sdlx_render_texture(500-200, 400, 400, 200, 0, circle);
 
     // render text texture, at y = 500
-    sdl_query_texture(text, &w, &h);
-    sdl_render_texture(0, 500-h/2, -1, -1, 0, text);
+    sdlx_query_texture(text, &w, &h);
+    sdlx_render_texture(0, 500-h/2, -1, -1, 0, text);
 
     // rotate and render the text texture at y = 600 .. 850
     static double angle = 0;
     angle += 5;
-    sdl_render_texture(500-w/2, 600+w/2-h/2, -1, -1, angle, text);
+    sdlx_render_texture(500-w/2, 600+w/2-h/2, -1, -1, angle, text);
 
     // create unit_test_pixels file from the top row of the display
-    pixels = sdl_read_display_pixels(0, 0, sdl_win_width, sdl_char_height);
+    pixels = sdlx_read_display_pixels(0, 0, sdlx_win_width, sdlx_char_height);
     if (pixels == NULL || pixels->magic != PIXELS_MAGIC) {
         printf("ERROR %s: failed to read unit_test_pixels, pixels==NULL\n", progname);
     } else {
@@ -489,9 +489,9 @@ static void page_5_draw(void)
                    progname, pixels->magic, pixels->struct_len, file_length);
         }
     } else {
-        t = sdl_create_texture_from_pixels(pixels);
-        sdl_render_texture(0, 900, -1, -1, 0, t);
-        sdl_destroy_texture(t);
+        t = sdlx_create_texture_from_pixels(pixels);
+        sdlx_render_texture(0, 900, -1, -1, 0, t);
+        sdlx_destroy_texture(t);
     }
     free(pixels);
     pixels = NULL;
@@ -502,8 +502,8 @@ static void page_5_draw(void)
 
 static void page_5_exit(void)
 {
-    sdl_destroy_texture(circle);
-    sdl_destroy_texture(text);
+    sdlx_destroy_texture(circle);
+    sdlx_destroy_texture(text);
 }
 
 // -----------------  PAGE 6: COLORS  -------------------------
@@ -533,10 +533,10 @@ static void page_6_draw(void)
 
 static void color_test(int idx, char *color_name, int color)
 {
-    int y = 2 * sdl_char_height + idx * 100;
+    int y = 2 * sdlx_char_height + idx * 100;
 
-    sdl_render_text(0, y, color_name);
-    sdl_render_fill_rect(500, y, 500, sdl_char_height, color);
+    sdlx_render_text(0, y, color_name);
+    sdlx_render_fill_rect(500, y, 500, sdlx_char_height, color);
 }
 
 // -----------------  PAGE 7: AUDIO  --------------------------
@@ -552,45 +552,45 @@ static void color_test(int idx, char *color_name, int color)
 #define EVID_AUDIO_PAUSE            31
 #define EVID_AUDIO_CONT             32
 
-static void add_tone(sdl_tone_t **t, int freq, int intvl);
-static void add_gap(sdl_tone_t **t, int intvl);
-static void add_terminator(sdl_tone_t **t);
+static void add_tone(sdlx_tone_t **t, int freq, int intvl);
+static void add_gap(sdlx_tone_t **t, int intvl);
+static void add_terminator(sdlx_tone_t **t);
 static char *audio_state_str(int x);
-static void generate_morse_code_tones(sdl_tone_t **t, char *letters);
+static void generate_morse_code_tones(sdlx_tone_t **t, char *letters);
        
 static void page_7_init(void)
 {
-    sdl_audio_print_devices_info();
+    sdlx_audio_print_devices_info();
 }
 
 static void page_7_draw(void)
 {
-    sdl_loc_t *loc;
-    sdl_audio_state_t state;
+    sdlx_loc_t *loc;
+    sdlx_audio_state_t state;
     int y;
-    sdl_print_state_t print_state;
+    sdlx_print_state_t print_state;
 
     //
     // get audio state
     //
 
-    sdl_audio_state(&state);
+    sdlx_audio_state(&state);
 
     //
     // record section
     //
 
-    sdl_print_save(&print_state);
+    sdlx_print_save(&print_state);
 
-    sdl_print_init_color(state.state == AUDIO_STATE_RECORD ? COLOR_RED : COLOR_WHITE, COLOR_BLACK);
-    loc = sdl_render_text(0, 200, "RECORD");
-    sdl_register_event(loc, EVID_AUDIO_RECORD);
+    sdlx_print_init_color(state.state == AUDIO_STATE_RECORD ? COLOR_RED : COLOR_WHITE, COLOR_BLACK);
+    loc = sdlx_render_text(0, 200, "RECORD");
+    sdlx_register_event(loc, EVID_AUDIO_RECORD);
 
-    sdl_print_init_color(state.state == AUDIO_STATE_RECORD_APPEND ? COLOR_RED : COLOR_WHITE, COLOR_BLACK);
-    loc = sdl_render_text(sdl_win_width/2, 200, "APPEND");
-    sdl_register_event(loc, EVID_AUDIO_RECORD_APPEND);
+    sdlx_print_init_color(state.state == AUDIO_STATE_RECORD_APPEND ? COLOR_RED : COLOR_WHITE, COLOR_BLACK);
+    loc = sdlx_render_text(sdlx_win_width/2, 200, "APPEND");
+    sdlx_register_event(loc, EVID_AUDIO_RECORD_APPEND);
 
-    sdl_print_restore(&print_state);
+    sdlx_print_restore(&print_state);
 
     //
     // play section
@@ -598,27 +598,27 @@ static void page_7_draw(void)
 
     y = 400;
 
-    sdl_render_text_xyctr(sdl_win_width/2, y, "--- PLAY ---");
+    sdlx_render_text_xyctr(sdlx_win_width/2, y, "--- PLAY ---");
     y += 150;
 
-    loc = sdl_render_text(0, y, "RECORDING");
-    sdl_register_event(loc, EVID_AUDIO_PLAY_RECORDING);
+    loc = sdlx_render_text(0, y, "RECORDING");
+    sdlx_register_event(loc, EVID_AUDIO_PLAY_RECORDING);
     y += 150;
 
-    loc = sdl_render_text(0, y, "TONE");
-    sdl_register_event(loc, EVID_AUDIO_PLAY_TONE);
+    loc = sdlx_render_text(0, y, "TONE");
+    sdlx_register_event(loc, EVID_AUDIO_PLAY_TONE);
     y += 150;
 
-    loc = sdl_render_text(0, y, "FREQ_SWEEP");
-    sdl_register_event(loc, EVID_AUDIO_PLAY_FREQ_SWEEP);
+    loc = sdlx_render_text(0, y, "FREQ_SWEEP");
+    sdlx_register_event(loc, EVID_AUDIO_PLAY_FREQ_SWEEP);
     y += 150;
 
-    loc = sdl_render_text(0, y, "SQUARE_WAVE");
-    sdl_register_event(loc, EVID_AUDIO_PLAY_SQUARE_WAVE);
+    loc = sdlx_render_text(0, y, "SQUARE_WAVE");
+    sdlx_register_event(loc, EVID_AUDIO_PLAY_SQUARE_WAVE);
     y += 150;
 
-    loc = sdl_render_text(0, y, "MORSE_CODE");
-    sdl_register_event(loc, EVID_AUDIO_PLAY_MORSE_CODE);
+    loc = sdlx_render_text(0, y, "MORSE_CODE");
+    sdlx_register_event(loc, EVID_AUDIO_PLAY_MORSE_CODE);
     y += 150;
 
     //
@@ -626,25 +626,25 @@ static void page_7_draw(void)
     //
 
     if (state.state != AUDIO_STATE_IDLE) {
-        y = sdl_win_height-650;
+        y = sdlx_win_height-650;
 
         // state, processed/total time, and paused
-        sdl_render_printf(0, y, "%s %d/%d", 
+        sdlx_render_printf(0, y, "%s %d/%d", 
                           audio_state_str(state.state), state.processed_secs, state.total_secs);
         if (state.paused) {
-            sdl_render_printf(sdl_win_width-sdl_char_width, y, "%s", "P");
+            sdlx_render_printf(sdlx_win_width-sdlx_char_width, y, "%s", "P");
         }
-        y += sdl_char_height;
+        y += sdlx_char_height;
 
         // volume
-        sdl_render_fill_rect(0, y, sdl_win_width * state.volume / 100, sdl_char_height, COLOR_RED);
-        sdl_render_rect(0, y, sdl_win_width, sdl_char_height, 2, COLOR_WHITE);
-        y += sdl_char_height;
+        sdlx_render_fill_rect(0, y, sdlx_win_width * state.volume / 100, sdlx_char_height, COLOR_RED);
+        sdlx_render_rect(0, y, sdlx_win_width, sdlx_char_height, 2, COLOR_WHITE);
+        y += sdlx_char_height;
 
         // filename
         if (state.filename[0]) {
-            sdl_render_printf(0, y, "%s", state.filename);
-            y += sdl_char_height;
+            sdlx_render_printf(0, y, "%s", state.filename);
+            y += sdlx_char_height;
         }
 
     }
@@ -653,36 +653,36 @@ static void page_7_draw(void)
     // stop, pause, cont controls section
     //
 
-    loc = sdl_render_text(0, sdl_win_height-300, "STOP");
-    sdl_register_event(loc, EVID_AUDIO_STOP);
+    loc = sdlx_render_text(0, sdlx_win_height-300, "STOP");
+    sdlx_register_event(loc, EVID_AUDIO_STOP);
 
-    loc = sdl_render_text(sdl_win_width/2-2.5*sdl_char_width, sdl_win_height-300, "PAUSE");
-    sdl_register_event(loc, EVID_AUDIO_PAUSE);
+    loc = sdlx_render_text(sdlx_win_width/2-2.5*sdlx_char_width, sdlx_win_height-300, "PAUSE");
+    sdlx_register_event(loc, EVID_AUDIO_PAUSE);
 
-    loc = sdl_render_text(sdl_win_width-4*sdl_char_width, sdl_win_height-300, "CONT");
-    sdl_register_event(loc, EVID_AUDIO_CONT);
+    loc = sdlx_render_text(sdlx_win_width-4*sdlx_char_width, sdlx_win_height-300, "CONT");
+    sdlx_register_event(loc, EVID_AUDIO_CONT);
 }
 
-static void page_7_process_event(sdl_event_t *ev)
+static void page_7_process_event(sdlx_event_t *ev)
 {
     int rc, i, freq;
-    sdl_tone_t tones[5000];
-    sdl_tone_t *t;
-    sdl_audio_state_t state;
+    sdlx_tone_t tones[5000];
+    sdlx_tone_t *t;
+    sdlx_audio_state_t state;
 
     switch (ev->event_id) {
     case EVID_AUDIO_PLAY_TONE:
-        sdl_audio_create_test_file(data_dir, "audio_test.raw", 10, 1000);
-        rc = sdl_audio_play(data_dir, "audio_test.raw");
+        sdlx_audio_create_test_file(data_dir, "audio_test.raw", 10, 1000);
+        rc = sdlx_audio_play(data_dir, "audio_test.raw");
         if (rc != 0) {
-            printf("ERROR %s: sdl_audio_play audio_test.raw failed\n", progname);
+            printf("ERROR %s: sdlx_audio_play audio_test.raw failed\n", progname);
         }
         unlink("audio_test.raw");
         break;
     case EVID_AUDIO_PLAY_RECORDING:
-        rc = sdl_audio_play(data_dir, "recording.raw");
+        rc = sdlx_audio_play(data_dir, "recording.raw");
         if (rc != 0) {
-            printf("ERROR %s: sdl_audio_play recording.raw failed\n", progname);
+            printf("ERROR %s: sdlx_audio_play recording.raw failed\n", progname);
         }
         break;
     case EVID_AUDIO_PLAY_FREQ_SWEEP:
@@ -691,7 +691,7 @@ static void page_7_process_event(sdl_event_t *ev)
             add_tone(&t, freq, 1);
         }
         add_terminator(&t);
-        sdl_audio_play_tones(500, tones); // intvl=500 ms
+        sdlx_audio_play_tones(500, tones); // intvl=500 ms
         break;
     case EVID_AUDIO_PLAY_SQUARE_WAVE:
         t = tones;
@@ -700,54 +700,54 @@ static void page_7_process_event(sdl_event_t *ev)
             add_gap(&t, 1);
         }
         add_terminator(&t);
-        sdl_audio_play_tones(500, tones);
+        sdlx_audio_play_tones(500, tones);
         break;
     case EVID_AUDIO_PLAY_MORSE_CODE:
         t = tones;
         generate_morse_code_tones(&t, "CQ CQ HELLO WORLD CQ CQ");
-        sdl_audio_play_tones(100, tones); // intvl = 100 ms
+        sdlx_audio_play_tones(100, tones); // intvl = 100 ms
         break;
     case EVID_AUDIO_RECORD:
-        sdl_audio_state(&state);
+        sdlx_audio_state(&state);
         if (state.state == AUDIO_STATE_RECORD) {
-            sdl_audio_ctl(AUDIO_REQ_STOP);
+            sdlx_audio_ctl(AUDIO_REQ_STOP);
             break;
         }
 
         // 30 sec max, 3 sec auto stop, new recording
-        rc = sdl_audio_record(data_dir, "recording.raw", 30, 3, false);
+        rc = sdlx_audio_record(data_dir, "recording.raw", 30, 3, false);
         if (rc != 0) {
-            printf("ERROR %s: sdl_audio_record failed\n", progname);
+            printf("ERROR %s: sdlx_audio_record failed\n", progname);
         }
         break;
     case EVID_AUDIO_RECORD_APPEND:
-        sdl_audio_state(&state);
+        sdlx_audio_state(&state);
         if (state.state == AUDIO_STATE_RECORD_APPEND) {
-            sdl_audio_ctl(AUDIO_REQ_STOP);
+            sdlx_audio_ctl(AUDIO_REQ_STOP);
             break;
         }
 
         // 30 sec max, 3 sec auto stop, append
-        rc = sdl_audio_record(data_dir, "recording.raw", 30, 3, true);
+        rc = sdlx_audio_record(data_dir, "recording.raw", 30, 3, true);
         if (rc != 0) {
-            printf("ERROR %s: sdl_audio_record append failed\n", progname);
+            printf("ERROR %s: sdlx_audio_record append failed\n", progname);
         }
         break;
     case EVID_AUDIO_STOP:
-        sdl_audio_ctl(AUDIO_REQ_STOP);
+        sdlx_audio_ctl(AUDIO_REQ_STOP);
         break;
     case EVID_AUDIO_PAUSE:
-        sdl_audio_ctl(AUDIO_REQ_PAUSE);
+        sdlx_audio_ctl(AUDIO_REQ_PAUSE);
         break;
     case EVID_AUDIO_CONT:
-        sdl_audio_ctl(AUDIO_REQ_UNPAUSE);
+        sdlx_audio_ctl(AUDIO_REQ_UNPAUSE);
         break;
     }
 }
 
 static void page_7_exit(void)
 {
-    sdl_audio_ctl(AUDIO_REQ_STOP);
+    sdlx_audio_ctl(AUDIO_REQ_STOP);
 }
 
 static char *audio_state_str(int x)
@@ -760,21 +760,21 @@ static char *audio_state_str(int x)
     return "INVLD_STATE";
 }
 
-static void add_tone(sdl_tone_t **t, int freq, int intvl)
+static void add_tone(sdlx_tone_t **t, int freq, int intvl)
 {
     (*t)->freq = freq;
     (*t)->intvl = intvl;
     *t = *t + 1;
 }
 
-static void add_gap(sdl_tone_t **t, int intvl)
+static void add_gap(sdlx_tone_t **t, int intvl)
 {
     (*t)->freq = 0;
     (*t)->intvl = intvl;
     *t = *t + 1;
 }
 
-static void add_terminator(sdl_tone_t **t)
+static void add_terminator(sdlx_tone_t **t)
 {
     (*t)->freq = 0;
     (*t)->intvl = 0;
@@ -783,7 +783,7 @@ static void add_terminator(sdl_tone_t **t)
 
 #define MORSE_FREQ 1000
 
-static void generate_morse_code_tones(sdl_tone_t **t, char *letters)
+static void generate_morse_code_tones(sdlx_tone_t **t, char *letters)
 {
     char *morse_chars[] = {
                     /* A */ ".-",      /* B */ "-...",    /* C */ "-.-.",
@@ -814,7 +814,7 @@ static void generate_morse_code_tones(sdl_tone_t **t, char *letters)
 
 // -----------------  PAGE 8: SENSOR INFO TBL -----------------
 
-static sdl_sensor_info_t *sit;
+static sdlx_sensor_info_t *sit;
 static int                max_sit;
 static char              *sit_lines[100];
 
@@ -822,14 +822,14 @@ static void page_8_init(void)
 {
     char str[200];
 
-    sit = sdl_sensor_get_info_tbl(&max_sit);
+    sit = sdlx_sensor_get_info_tbl(&max_sit);
     if (sit == NULL) {
-        printf("ERROR %s: sdl_sensor_get_info_tbl failed\n", progname);
+        printf("ERROR %s: sdlx_sensor_get_info_tbl failed\n", progname);
     }
 
     y_top = ROW2Y(2); 
     y_display_begin = ROW2Y(2);
-    y_display_end = sdl_win_height-3*sdl_char_height;
+    y_display_end = sdlx_win_height-3*sdlx_char_height;
 
     for (int i = 0; i < max_sit; i++) {
         sprintf(str, "%2d %2d %s", sit[i].id, sit[i].type, sit[i].name);
@@ -839,8 +839,8 @@ static void page_8_init(void)
 
 static void page_8_draw(void)
 {
-    sdl_print_init(SMALL_FONT, COLOR_WHITE, COLOR_BLACK);
-    sdl_render_multiline_text_2(y_top, y_display_begin, y_display_end, sit_lines, max_sit);
+    sdlx_print_init(SMALL_FONT, COLOR_WHITE, COLOR_BLACK);
+    sdlx_render_multiline_text_2(y_top, y_display_begin, y_display_end, sit_lines, max_sit);
 }
 
 static void page_8_exit(void)
@@ -877,7 +877,7 @@ static void page_9_init(void)
 
     for (int i = 0; i < MAX_SENSOR_TEST_TBL; i++) {
         struct sensor_test_s *x = &sensor_test_tbl[i];
-        x->id = sdl_sensor_find(x->type);
+        x->id = sdlx_sensor_find(x->type);
     }
 }
 
@@ -889,47 +889,47 @@ static void page_9_draw(void)
     double step_count;
     double mag_heading, roll, pitch, millibars, degrees_c, percent;
 
-    sdl_print_init(SMALL_FONT, COLOR_WHITE, COLOR_BLACK);
+    sdlx_print_init(SMALL_FONT, COLOR_WHITE, COLOR_BLACK);
 
     for (int i = 0; i < MAX_SENSOR_TEST_TBL; i++) {
         struct sensor_test_s *x = &sensor_test_tbl[i];
         if (x->id != -1) {
-            sdl_sensor_read_raw(x->id, data, 3);
-            sdl_render_printf(0, ROW2Y(row++), "%-5s %6.2f %6.2f %6.2f", x->name, data[0], data[1], data[2]);
+            sdlx_sensor_read_raw(x->id, data, 3);
+            sdlx_render_printf(0, ROW2Y(row++), "%-5s %6.2f %6.2f %6.2f", x->name, data[0], data[1], data[2]);
         }
     }
 
     row++;
 
-    sdl_print_init(DEFAULT_FONT, COLOR_WHITE, COLOR_BLACK);
+    sdlx_print_init(DEFAULT_FONT, COLOR_WHITE, COLOR_BLACK);
 
-    rc = sdl_sensor_read_step_counter(&step_count);
+    rc = sdlx_sensor_read_step_counter(&step_count);
     if (rc == 0) {
-        sdl_render_printf(0, ROW2Y(row++), "stepc = %.0f", step_count);
+        sdlx_render_printf(0, ROW2Y(row++), "stepc = %.0f", step_count);
     }
 
-    rc = sdl_sensor_read_mag_heading(&mag_heading);
+    rc = sdlx_sensor_read_mag_heading(&mag_heading);
     if (rc == 0) {
-        sdl_render_printf(0, ROW2Y(row++), "magh  = %.0f", mag_heading);
+        sdlx_render_printf(0, ROW2Y(row++), "magh  = %.0f", mag_heading);
     }
 
-    rc = sdl_sensor_read_tilt(&roll, &pitch);
+    rc = sdlx_sensor_read_tilt(&roll, &pitch);
     if (rc == 0) {
-        sdl_render_printf(0, ROW2Y(row++), "tilt  = %.1f %.1f", roll, pitch);
+        sdlx_render_printf(0, ROW2Y(row++), "tilt  = %.1f %.1f", roll, pitch);
     }
 
-    rc = sdl_sensor_read_pressure(&millibars);
+    rc = sdlx_sensor_read_pressure(&millibars);
     if (rc == 0) {
-        sdl_render_printf(0, ROW2Y(row++), "press = %.0f", millibars);
+        sdlx_render_printf(0, ROW2Y(row++), "press = %.0f", millibars);
     }
 
-    rc = sdl_sensor_read_temperature(&degrees_c);
+    rc = sdlx_sensor_read_temperature(&degrees_c);
     if (rc == 0) {
-        sdl_render_printf(0, ROW2Y(row++), "temp  = %.1f", degrees_c);
+        sdlx_render_printf(0, ROW2Y(row++), "temp  = %.1f", degrees_c);
     }
 
-    rc = sdl_sensor_read_humidity(&percent);
+    rc = sdlx_sensor_read_humidity(&percent);
     if (rc == 0) {
-        sdl_render_printf(0, ROW2Y(row++), "humid = %.0f", percent);
+        sdlx_render_printf(0, ROW2Y(row++), "humid = %.0f", percent);
     }
 }

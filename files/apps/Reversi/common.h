@@ -7,7 +7,7 @@
 #include <string.h>
 #include <math.h>
 
-#include <sdl.h>
+#include <sdlx.h>
 #include <utils.h>
 
 #define NONE   0

@@ -6,14 +6,14 @@
 #include <string.h>
 #include <errno.h>
 
-#include <sdl.h>
+#include <sdlx.h>
 #include <utils.h>
 
 #include <svcs/Sensors/common.h>
 #include <svcs/Sensors/sensors.h>
 
 // defines
-#define VERSION       1.0
+#define VERSION       "1.0"   // xxx use master versin
 #define SECS_PER_HOUR 3600
 #define INTVL_SECS    10
 
@@ -42,14 +42,14 @@ int main(int argc, char **argv)
     sscanf(argv[2], "%d", &id);
 
     // print starting message
-    printf("INFO %s: starting: version=%d data_dir=%s id=%d\n",
+    printf("INFO %s: starting: version=%s data_dir=%s id=%d\n",
            progname, VERSION, data_dir, id); // xxx use same fmt in all apps
     printf("INFO %s: sensors.dat:\n", progname);
     printf("INFO %s:   version supported = %lx\n", progname, SENSORS_DATA_FILE_VERSION);
     printf("INFO %s:   size              = %zd\n", progname, sizeof(sensors_data_t));
 
     // init the SDL sensor subsystem
-    rc = sdl_init(SUBSYS_SENSOR);
+    rc = sdlx_init(SUBSYS_SENSOR);
     if (rc != 0) {
         printf("ERROR %s: failed to init SUBSYS_SENSOR\n", progname);
         return 1;
@@ -121,9 +121,9 @@ int main(int argc, char **argv)
 
             // read android sensor values; these are read just this one time
             // at the begining of the hour
-            sdl_sensor_read_pressure(&sv->sensors[ASENSOR_PRESSURE]);
-            sdl_sensor_read_temperature(&sv->sensors[ASENSOR_TEMPERATURE]);
-            sdl_sensor_read_humidity(&sv->sensors[ASENSOR_HUMIDITY]);
+            sdlx_sensor_read_pressure(&sv->sensors[ASENSOR_PRESSURE]);
+            sdlx_sensor_read_temperature(&sv->sensors[ASENSOR_TEMPERATURE]);
+            sdlx_sensor_read_humidity(&sv->sensors[ASENSOR_HUMIDITY]);
 
             // get values from weather.gov
             get_weather(&weather_gov_temperature, &weather_gov_relhumidity);
@@ -157,7 +157,7 @@ int main(int argc, char **argv)
         // the step counter sensor value needs special attention
         // because the sensor value continuously increases; 
         // this code accumulates the number of steps taken during this hour
-        sdl_sensor_read_step_counter(&stepc_now);
+        sdlx_sensor_read_step_counter(&stepc_now);
         if (stepc_now != INVALID_NUMBER && stepc_last != INVALID_NUMBER) {
             sv->sensors[ASENSOR_STEP_COUNT] += (stepc_now - stepc_last);
             if (stepc_now > stepc_last) {
@@ -175,7 +175,7 @@ int main(int argc, char **argv)
 
     // cleanup and end program
     util_unmap_file(data);
-    sdl_quit(SUBSYS_SENSOR);
+    sdlx_quit(SUBSYS_SENSOR);
     printf("INFO %s: terminating\n", progname);
     return 0;
 }

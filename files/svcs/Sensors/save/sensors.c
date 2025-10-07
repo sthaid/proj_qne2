@@ -7,7 +7,7 @@
 #include <string.h>
 #include <errno.h>
 
-#include <sdl.h>
+#include <sdlx.h>
 #include <utils.h>
 
 #include "svcs/Sensors/sensors.h"
@@ -63,7 +63,7 @@ int main(int argc, char **argv)
     return 0;
 
     // init the SDL sensor subsystem
-    rc = sdl_init(SUBSYS_SENSOR);
+    rc = sdlx_init(SUBSYS_SENSOR);
     if (rc != 0) {
         printf("ERROR %s: failed to init SUBSYS_SENSOR\n", progname);
         return 1;
@@ -108,7 +108,7 @@ int main(int argc, char **argv)
     }
 
     // init variables used in the loop below
-    sdl_sensor_read_step_counter(&stepc_last);
+    sdlx_sensor_read_step_counter(&stepc_last);
     hour_last = 0;
 
     // loop
@@ -143,9 +143,9 @@ int main(int argc, char **argv)
                 sv->sensors[HUMIDITY]    = 50;
             } else {
                 sv->sensors[STEP_COUNT] = 0;
-                sdl_sensor_read_pressure(&sv->sensors[PRESSURE]);
-                sdl_sensor_read_temperature(&sv->sensors[TEMPERATURE]);
-                sdl_sensor_read_humidity(&sv->sensors[HUMIDITY]);
+                sdlx_sensor_read_pressure(&sv->sensors[PRESSURE]);
+                sdlx_sensor_read_temperature(&sv->sensors[TEMPERATURE]);
+                sdlx_sensor_read_humidity(&sv->sensors[HUMIDITY]);
             }
 
             // update hdr.last_idx 
@@ -170,7 +170,7 @@ int main(int argc, char **argv)
         // the step counter sensor value requires special attention
         // because the sensor value continuously increases; but what
         // is desired is the number of steps in the past interval
-        sdl_sensor_read_step_counter(&stepc_now);
+        sdlx_sensor_read_step_counter(&stepc_now);
         if (stepc_now == INVALID_SENSOR_VALUE || stepc_last == INVALID_SENSOR_VALUE) {
             stepc_change = INVALID_SENSOR_VALUE;
         } else {
@@ -192,7 +192,7 @@ int main(int argc, char **argv)
 
     // cleanup and end program
     util_unmap_file(data);
-    sdl_quit(SUBSYS_SENSOR);
+    sdlx_quit(SUBSYS_SENSOR);
     printf("INFO %s: terminating\n", progname);
     return 0;
 }

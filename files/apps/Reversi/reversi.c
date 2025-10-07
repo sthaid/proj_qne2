@@ -66,7 +66,7 @@ int main(int argc, char **argv)
     //srandom(util_microsec_timer());
 
     // init sdl
-    sdl_init(SUBSYS_VIDEO);
+    sdlx_init(SUBSYS_VIDEO);
 
     // xxx
     update_display_init();
@@ -74,14 +74,14 @@ int main(int argc, char **argv)
     // loop until end program
     while (true) {
         // init display to black, and init print size/color
-        sdl_display_init(COLOR_BLACK);
-        sdl_print_init(20, COLOR_WHITE, COLOR_BLACK);
+        sdlx_display_init(COLOR_BLACK);
+        sdlx_print_init(20, COLOR_WHITE, COLOR_BLACK);
 
         // update the display and register events
         update_display_and_register_events(&board, game_state, eval_str);
 
         // present display
-        sdl_display_present();
+        sdlx_display_present();
 
         // if it is human's turn then 
         //   wait forever for an event
@@ -91,7 +91,7 @@ int main(int argc, char **argv)
         //   poll for an event (100 ms wait)
         // endif
         long timeout;  // microsecs
-        sdl_event_t event;
+        sdlx_event_t event;
         if (game_state == GAME_STATE_ACTIVE && humans_turn(&board)) {
             timeout = -1;
         } else if (game_state == GAME_STATE_ACTIVE && !humans_turn(&board)) {
@@ -99,7 +99,7 @@ int main(int argc, char **argv)
         } else {
             timeout = 100000;  // 100 ms
         }
-        sdl_get_event(timeout, &event);
+        sdlx_get_event(timeout, &event);
 
         // xxx motion or other unexpected events can be misinterpreted
         if (event.event_id == 9990 || event.event_id == 9991 || event.event_id == 9992) {
@@ -156,7 +156,7 @@ int main(int argc, char **argv)
     update_display_unload();
 
     // exit sdl
-    sdl_quit(SUBSYS_VIDEO);
+    sdlx_quit(SUBSYS_VIDEO);
 
     // return success
     printf("INFO %s: terminating\n", progname);
@@ -235,19 +235,19 @@ static bool event_id_is_game_move(int evid)
 // variables
 //
 
-static sdl_loc_t rc_to_loc[10][10];
+static sdlx_loc_t rc_to_loc[10][10];
 
 static int            piece_circle_radius;
-static sdl_texture_t *piece_black_circle;
-static sdl_texture_t *piece_white_circle;
+static sdlx_texture_t *piece_black_circle;
+static sdlx_texture_t *piece_white_circle;
 
 static int            prompt_circle_radius;
-static sdl_texture_t *prompt_black_circle;
-static sdl_texture_t *prompt_white_circle;
+static sdlx_texture_t *prompt_black_circle;
+static sdlx_texture_t *prompt_white_circle;
 
 static int            info_circle_radius;
-static sdl_texture_t *info_black_circle;
-static sdl_texture_t *info_white_circle;
+static sdlx_texture_t *info_black_circle;
+static sdlx_texture_t *info_white_circle;
 
 // - - - - - - - - - - - - - - - - - 
 
@@ -267,166 +267,166 @@ static void update_display_init(void)
     int sq_wh = 123;  // xxx is this correct
 
     piece_circle_radius  = nearbyint(0.4*sq_wh);   // xxx need rint,  use nearybint
-    piece_black_circle   = sdl_create_filled_circle_texture(piece_circle_radius, COLOR_BLACK);
-    piece_white_circle   = sdl_create_filled_circle_texture(piece_circle_radius, COLOR_WHITE);
+    piece_black_circle   = sdlx_create_filled_circle_texture(piece_circle_radius, COLOR_BLACK);
+    piece_white_circle   = sdlx_create_filled_circle_texture(piece_circle_radius, COLOR_WHITE);
 
     prompt_circle_radius = nearbyint(0.08*sq_wh);
-    prompt_black_circle  = sdl_create_filled_circle_texture(prompt_circle_radius, COLOR_BLACK);
-    prompt_white_circle  = sdl_create_filled_circle_texture(prompt_circle_radius, COLOR_WHITE);
+    prompt_black_circle  = sdlx_create_filled_circle_texture(prompt_circle_radius, COLOR_BLACK);
+    prompt_white_circle  = sdlx_create_filled_circle_texture(prompt_circle_radius, COLOR_WHITE);
 
     info_circle_radius = nearbyint(0.3*sq_wh);
-    info_black_circle  = sdl_create_filled_circle_texture(info_circle_radius, COLOR_BLACK);
-    info_white_circle  = sdl_create_filled_circle_texture(info_circle_radius, COLOR_WHITE);
+    info_black_circle  = sdlx_create_filled_circle_texture(info_circle_radius, COLOR_BLACK);
+    info_white_circle  = sdlx_create_filled_circle_texture(info_circle_radius, COLOR_WHITE);
 }
 
 static void update_display_unload(void)
 {
-    sdl_destroy_texture(piece_black_circle);
-    sdl_destroy_texture(piece_white_circle);
+    sdlx_destroy_texture(piece_black_circle);
+    sdlx_destroy_texture(piece_white_circle);
 
-    sdl_destroy_texture(prompt_black_circle);
-    sdl_destroy_texture(prompt_white_circle);
+    sdlx_destroy_texture(prompt_black_circle);
+    sdlx_destroy_texture(prompt_white_circle);
 
-    sdl_destroy_texture(info_black_circle);
-    sdl_destroy_texture(info_white_circle);
+    sdlx_destroy_texture(info_black_circle);
+    sdlx_destroy_texture(info_white_circle);
 }
 
 static void update_display_and_register_events(board_t *b, int game_state, char *eval_str)
 {
     possible_moves_t pm;
-    sdl_loc_t *ploc;
+    sdlx_loc_t *ploc;
 
     // display game state lines (1 or 2 lines), directly below board
     char *str = "";
     if (game_state == GAME_STATE_READY)  str = "READY";  
     if (game_state == GAME_STATE_ACTIVE) str = "IN PROGRESS";  
     if (game_state == GAME_STATE_OVER)   str = "GAME OVER";  
-    sdl_render_text_xyctr(sdl_win_width/2, 1000+0.5*sdl_char_height, str);
+    sdlx_render_text_xyctr(sdlx_win_width/2, 1000+0.5*sdlx_char_height, str);
 
     // xxx
     if (game_state == GAME_STATE_OVER) {
         if (b->black_cnt > b->white_cnt) {
-            sdl_render_printf_xyctr(sdl_win_width/2, 1000+1.5*sdl_char_height,
+            sdlx_render_printf_xyctr(sdlx_win_width/2, 1000+1.5*sdlx_char_height,
                 "BLACK WINS BY %d", b->black_cnt - b->white_cnt);
         } else if (b->white_cnt > b->black_cnt) {
-            sdl_render_printf_xyctr(sdl_win_width/2, 1000+1.5*sdl_char_height,
+            sdlx_render_printf_xyctr(sdlx_win_width/2, 1000+1.5*sdlx_char_height,
                 "WHITE WINS BY %d", b->white_cnt - b->black_cnt);
         } else {
-            sdl_render_printf_xyctr(sdl_win_width/2, 1000+1.5*sdl_char_height,
+            sdlx_render_printf_xyctr(sdlx_win_width/2, 1000+1.5*sdlx_char_height,
                 "TIE");
         }
     }       
 
     // xxx
     if (game_state == GAME_STATE_ACTIVE || game_state == GAME_STATE_OVER) {
-        sdl_render_text(0, sdl_win_height - 3 * sdl_char_height, eval_str);  //xxx need char height of font 10
+        sdlx_render_text(0, sdlx_win_height - 3 * sdlx_char_height, eval_str);  //xxx need char height of font 10
     }
 
     // display player info, and register for events to change the players
     for (int i = 0; i < 2; i++) {
         int player                 = (i == 0 ? b->player_black : b->player_white);
         int evid                   = (i == 0 ? EVID_PLAYER_BLACK_SELECT : EVID_PLAYER_WHITE_SELECT);
-        sdl_texture_t *info_circle = (i == 0 ? info_black_circle : info_white_circle);
+        sdlx_texture_t *info_circle = (i == 0 ? info_black_circle : info_white_circle);
         int x_origin               = (i == 0 ? 0 : 500);
         int y_origin               = 1300;
         int piece_cnt              = (i == 0 ? b->black_cnt : b->white_cnt);
         bool is_turn               = (i == 0 ? b->whose_turn == BLACK : b->whose_turn == WHITE);
 
-        sdl_render_fill_rect(x_origin, y_origin, info_circle_radius*2, info_circle_radius*2, COLOR_GREEN);
-        sdl_render_texture(x_origin, y_origin, -1, -1, 0, info_circle);
+        sdlx_render_fill_rect(x_origin, y_origin, info_circle_radius*2, info_circle_radius*2, COLOR_GREEN);
+        sdlx_render_texture(x_origin, y_origin, -1, -1, 0, info_circle);
 
         if (game_state == GAME_STATE_ACTIVE) {
-            sdl_render_text(x_origin, y_origin+100, player_name(player));
+            sdlx_render_text(x_origin, y_origin+100, player_name(player));
         } else {
-            sdl_print_init_color(COLOR_LIGHT_BLUE, COLOR_BLACK);
-            ploc = sdl_render_text(x_origin, y_origin+100, player_name(player));
-            sdl_register_event(ploc, evid);
+            sdlx_print_init_color(COLOR_LIGHT_BLUE, COLOR_BLACK);
+            ploc = sdlx_render_text(x_origin, y_origin+100, player_name(player));
+            sdlx_register_event(ploc, evid);
         }
 
         if (game_state == GAME_STATE_ACTIVE || game_state == GAME_STATE_OVER) {
             if (game_state == GAME_STATE_OVER) is_turn = false;
-            sdl_render_printf(x_origin+100, y_origin, "%c %d", is_turn ? '*' : ' ', piece_cnt);
+            sdlx_render_printf(x_origin+100, y_origin, "%c %d", is_turn ? '*' : ' ', piece_cnt);
         }
     }
 
     // register control event to end program
-    sdl_register_control_events(NULL, NULL, "X", COLOR_BLACK, 0, 0, EVID_QUIT);
+    sdlx_register_control_events(NULL, NULL, "X", COLOR_BLACK, 0, 0, EVID_QUIT);
 
     // register game start and reset events
-    sdl_print_init_color(COLOR_LIGHT_BLUE, COLOR_BLACK);
+    sdlx_print_init_color(COLOR_LIGHT_BLUE, COLOR_BLACK);
     if (game_state == GAME_STATE_READY) {
-        ploc = sdl_render_text(0, 1600, "START");
-        sdl_register_event(ploc, EVID_GAME_START);
+        ploc = sdlx_render_text(0, 1600, "START");
+        sdlx_register_event(ploc, EVID_GAME_START);
     } else {
-        ploc = sdl_render_text(0, 1600, "RESET");
-        sdl_register_event(ploc, EVID_GAME_RESET);
+        ploc = sdlx_render_text(0, 1600, "RESET");
+        sdlx_register_event(ploc, EVID_GAME_RESET);
     }
-    sdl_print_init_color(COLOR_WHITE, COLOR_BLACK);
+    sdlx_print_init_color(COLOR_WHITE, COLOR_BLACK);
 
     // if the game is in progress and it is the humans turn then
     // register events for the human players possible moves
     if (game_state == GAME_STATE_ACTIVE && humans_turn(b)) {
         get_possible_moves(b, &pm);
         if (pm.max == 0) {
-            sdl_print_init_color(COLOR_LIGHT_BLUE, COLOR_BLACK);
-            ploc = sdl_render_text(0, 1750, "PASS");  // xxx move this
-            sdl_register_event(ploc, EVID_MOVE_PASS);
+            sdlx_print_init_color(COLOR_LIGHT_BLUE, COLOR_BLACK);
+            ploc = sdlx_render_text(0, 1750, "PASS");  // xxx move this
+            sdlx_register_event(ploc, EVID_MOVE_PASS);
         } else {
             for (int i = 0; i < pm.max; i++) {
                 int r, c;
-                sdl_loc_t loc;
+                sdlx_loc_t loc;
 
                 move_to_rc(pm.move[i], &r, &c);
                 loc = rc_to_loc[r][c];
-                sdl_register_event(&loc, pm.move[i]);
+                sdlx_register_event(&loc, pm.move[i]);
             }
         }
     }
 
     // draw the empty board, using green background and 
     // lines to separate the squares
-    sdl_render_fill_rect(1, 1, 998, 998, COLOR_GREEN);
+    sdlx_render_fill_rect(1, 1, 998, 998, COLOR_GREEN);
     for (int i = 0; i < 9; i++) {
         int x1, y1, x2, y2;
 
         x1 = x2 = 125 * i;
         y1 = 0;
         y2 = 999;
-        sdl_render_line(x1, y1, x2, y2, COLOR_BLACK);
+        sdlx_render_line(x1, y1, x2, y2, COLOR_BLACK);
 
         x1 = 0;
         x2 = 999;
         y1 = y2 = 125 * i;
-        sdl_render_line(x1, y1, x2, y2, COLOR_BLACK);
+        sdlx_render_line(x1, y1, x2, y2, COLOR_BLACK);
     }
 
     // draw the black and white pieces 
     for (int r = 1; r <= 8; r++) {
         for (int c = 1; c <= 8; c++) {
             if (b->pos[r][c] != NONE) {
-                sdl_texture_t *piece;
-                sdl_loc_t loc;
+                sdlx_texture_t *piece;
+                sdlx_loc_t loc;
                 int offset;
 
                 piece = (b->pos[r][c] == BLACK ? piece_black_circle : piece_white_circle);
                 loc = rc_to_loc[r][c];
                 offset = loc.w / 2 - piece_circle_radius;
-                sdl_render_texture(loc.x+offset, loc.y+offset, -1, -1, 0, piece);
+                sdlx_render_texture(loc.x+offset, loc.y+offset, -1, -1, 0, piece);
             }
         }
     }
 
     // display the human player's possilbe moves as small circles
     if (game_state == GAME_STATE_ACTIVE && humans_turn(b)) {
-        sdl_texture_t *prompt = (b->whose_turn == BLACK ? prompt_black_circle : prompt_white_circle);
+        sdlx_texture_t *prompt = (b->whose_turn == BLACK ? prompt_black_circle : prompt_white_circle);
         for (int i = 0; i < pm.max; i++) {
             int r, c, offset;
-            sdl_loc_t loc;
+            sdlx_loc_t loc;
 
             move_to_rc(pm.move[i], &r, &c);
             loc = rc_to_loc[r][c];
             offset = loc.w / 2 - prompt_circle_radius;
-            sdl_render_texture(loc.x+offset, loc.y+offset, -1, -1, 0, prompt);
+            sdlx_render_texture(loc.x+offset, loc.y+offset, -1, -1, 0, prompt);
         }
     }
 }
