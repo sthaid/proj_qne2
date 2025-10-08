@@ -626,6 +626,7 @@ static void process_stop_req(int id);
 static void process_stopped_callback(int id, int rc);
 static void run_svc(int id);
 static void get_list_of_svcs(bool *changed);
+static void start_all_autostart_services(void);
 static int alloc_service(char *name);
 static void free_service(int id);
 static bool is_name_in_svcs(char *name);
@@ -633,9 +634,7 @@ static bool is_name_in_services(char *name);
 
 static void init_services(void)
 {
-    int i, id, rc;
-    struct stat statbuf;
-    char autostart[100];
+    int  i;
     bool changed;
 
     get_list_of_svcs(&changed);
@@ -644,21 +643,7 @@ static void init_services(void)
         alloc_service(svcs[i]);
     }
 
-    for (id = 0; id < MAX_SERVICES; id++) {
-        service_t *x = &services_tbl[id];
-        if (x->name == NULL) {
-            continue;
-        }
-
-        sprintf(autostart, "svcs/%s/autostart", x->name);
-        rc = stat(autostart, &statbuf);
-        if (rc == 0) {
-            INFO("autostarting service %s\n", x->name);
-            x->state = SERVICE_STATE_RUNNING;
-            stop_requested[id] = false;
-            run_svc(id);
-        }
-    }
+    start_all_autostart_services();
 }
 
 static void services(void)
@@ -998,6 +983,34 @@ static void stop_all_services(void)
     }
 }
 
+static void start_all_autostart_services(void)
+{
+    int id, rc;
+    struct stat statbuf;
+    char autostart[100];
+
+    for (id = 0; id < MAX_SERVICES; id++) {
+        service_t *x = &services_tbl[id];
+        if (x->name == NULL) {
+            continue;
+        }
+
+        if (x->state != SERVICE_STATE_STOPPED) {
+            continue;
+        }
+
+        // xxx use a util to check if file exists
+        sprintf(autostart, "svcs/%s/autostart", x->name);
+        rc = stat(autostart, &statbuf);
+        if (rc == 0) {
+            INFO("autostarting service %s\n", x->name);
+            x->state = SERVICE_STATE_RUNNING;
+            stop_requested[id] = false;
+            run_svc(id);
+        }
+    }
+}
+
 static int alloc_service(char *name)
 {
     int id;
@@ -1011,8 +1024,8 @@ static int alloc_service(char *name)
     if (services_tbl[id].name != NULL) {
         return -1;
     }
-    INFO("allocated %d\n", id);
 
+    INFO("allocating %d\n", id);
     service_t *x = &services_tbl[id];
     memset(x, 0, sizeof(service_t));
     x->name = strdup(name);
@@ -1065,11 +1078,12 @@ static void settings(void)
     long        msg_time = 0;
     char       *ipaddr;
 
-    #define EVID_DEVEL_MODE           1000
-    #define EVID_DEVEL_PORT           1001
-    #define EVID_RESET_APPS_AND_SVCS  1002
-    #define EVID_COPYRIGHT            1004
-    #define EVID_SERVICES             1005
+    #define EVID_COPYRIGHT            1001
+    #define EVID_DEVEL_MODE           1002
+    #define EVID_DEVEL_PORT           1003
+    #define EVID_SERVICES             1004
+    #define EVID_RESET_APPS_AND_SVCS  1005
+    #define EVID_DEL_APPS_SVCS_DATA   1006
 
     // get this device ipaddr
     ipaddr = util_get_ipaddr();
@@ -1106,14 +1120,13 @@ static void settings(void)
         loc = sdlx_render_printf(0, ROW2Y(11), "Services");
         sdlx_register_event(loc, EVID_SERVICES);
 
-#ifdef ANDROID
-        // display Reset_Apps
-        // note: not supported on Linux build because executing
-        //       this on Linux build would delete files apps or svcs files
-        //       that are being developed
+        // display Reset_Apps/Svcs
         loc = sdlx_render_printf(0, ROW2Y(13), "Reset_Apps/Svcs");
         sdlx_register_event(loc, EVID_RESET_APPS_AND_SVCS);
-#endif
+
+        // display Del_Apps/Svcs_Data
+        loc = sdlx_render_printf(0, ROW2Y(15), "Del_Apps/Svcs_Data");
+        sdlx_register_event(loc, EVID_DEL_APPS_SVCS_DATA);
 
         // change print color back to white
         sdlx_print_init_color(COLOR_WHITE, BG_COLOR);
@@ -1142,6 +1155,9 @@ static void settings(void)
         // process the event
         INFO("proc event_id %d\n", event.event_id);
         switch (event.event_id) {
+        case EVID_COPYRIGHT:
+            copyright();
+            break;
         case EVID_DEVEL_MODE:
             params.devel_mode = (params.devel_mode ? 0 : 1);
             util_set_int_param(".", "devel_mode", params.devel_mode);
@@ -1164,23 +1180,37 @@ static void settings(void)
                 }
             }
             break; }
-#ifdef ANDROID
+        case EVID_SERVICES:
+            services();
+            break;
         case EVID_RESET_APPS_AND_SVCS: {
             char *str; 
             str = sdlx_get_input_str("Reset y/n?", false, BG_COLOR);
             if (strcasecmp(str, "y") == 0) {
+#ifdef ANDROID
                 create_default_files();
-                msg = "Apps/Svcs are reset.";
+                msg = "Apps/Svcs are reset";
+                msg_time = util_microsec_timer();
+#else
+                // not supported on Linux build because executing
+                // this on Linux build may delete apps or svcs files
+                // that are being developed
+                msg = "N/A in Linux ver";
+                msg_time = util_microsec_timer();
+#endif
+            }
+            break; }
+        case EVID_DEL_APPS_SVCS_DATA: {
+            char *str; 
+            str = sdlx_get_input_str("Delete Data y/n?", false, BG_COLOR);
+            if (strcasecmp(str, "y") == 0) {
+                stop_all_services();
+                system("rm -rf apps_data svcs_data");
+                start_all_autostart_services();
+                msg = "Data is deleted";
                 msg_time = util_microsec_timer();
             }
             break; }
-#endif
-        case EVID_COPYRIGHT:
-            copyright();
-            break;
-        case EVID_SERVICES:
-            services();
-            break;
         case EVID_QUIT:
             done = true;
             break;
