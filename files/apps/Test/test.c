@@ -86,6 +86,15 @@ int main(int argc, char **argv)
     // test calling a routine that is defined in another file
     test1_proc();
 
+    // test reading a file in the 'progname' dir
+    int file_len;
+    char *file_content = util_read_file(progname, "common.h", &file_len);
+    if (file_content == NULL) {
+        printf("ERROR %s: failed to read file common.h\n", progname);
+    } else {
+        printf("INFO %s: read file common.h okay, file_len = %d\n", progname, file_len);
+    }
+
     // call handler routine for the current page
     while (true) {
         page_hndlr();
