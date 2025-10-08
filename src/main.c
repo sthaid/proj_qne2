@@ -165,7 +165,7 @@ static int init(void)
 
 #ifdef ANDROID
     // get permissions when running on Android
-    if (sdlx_get_permission("android.permission.POST_NOTIFICATION") != 0) {
+    if (sdlx_get_permission("android.permission.POST_NOTIFICATIONS") != 0) {
         ERROR("failed to get permission POST_NOTIFICATION\n");
     }
     if (sdlx_get_permission("android.permission.ACCESS_COARSE_LOCATION") != 0) {
@@ -177,7 +177,6 @@ static int init(void)
     if (sdlx_get_permission("android.permission.ACTIVITY_RECOGNITION") != 0) {
         ERROR("failed to get permission ACTIVITY_RECOGNITION\n");
     }
-
 #endif
 
     // start services that are configured for autostart

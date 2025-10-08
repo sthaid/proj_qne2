@@ -12,13 +12,15 @@ update *.h for cpp
 
 upde copyright for json
 
+why is POST_NOTIFICATION not granted
+
 ---TODO --------
 
 add setup option to remove data files
 
-remove curl.out when done with it
 
-why is OST_NOTIFICATION not granted
+add test page for weather.gov to Test
+
 
 sensors and location
 - freq of location service
@@ -29,7 +31,6 @@ is any improvement to weather.gov needed
 
 fix ezsh for vi and cmd recall
 
-add test page for weather.gov to Test
 
 have program start automatically,  
 - 4 pillars of android?
@@ -40,6 +41,10 @@ fresh start with new repo
 
 start picoc issue list
 - const not allowd
+
+---- MAYBE LATER ----
+
+remove curl.out when done with it
 
 xxxxxxxxxxxxxxxx
 xxxxxxxxxxxxxxxx
