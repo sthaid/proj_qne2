@@ -27,9 +27,9 @@ SRCS_COMMON="\
        ../src/logging.c \
        ../cJSON/cJSON.c"
 
-TARGET=$APP_DIR
+APP_NAME=$APP_DIR
 CFLAGS="-Wall -Werror -Wno-unused-result -g -I. -I../src -fcommon $(pkg-config sdl3 --cflags)"
-DATA_DIR="${PARENT_DIR}_data/$TARGET"
+DATA_DIR="${PARENT_DIR}_data/$APP_NAME"
 
 # build and run is performed from the 'files' dir
 cd ../..
@@ -38,26 +38,26 @@ cd ../..
 SRCS=$(echo $PARENT_DIR/$APP_DIR/*.c)
 
 # debug
-#echo $PARENT_DIR
-#echo $APP_DIR
-#echo $SRCS
-#echo $SRCS_COMMON
-#echo $CFLAGS
-#echo $DATA_DIR
+#echo "PARENT_DIR  = $PARENT_DIR"
+#echo "APP_DIR     = $APP_DIR"
+#echo "SRCS        = $SRCS"
+#echo "SRCS_COMMON = $SRCS_COMMON"
+#echo "CFLAGS      = $CFLAGS"
+#echo "DATA_DIR    = $DATA_DIR"
 
 # perform command
 if [ "$CMD" = build ]; then
     set -x
-    gcc -o /tmp/$TARGET $CFLAGS $SRCS $SRCS_COMMON -lSDL3 -lSDL3_ttf -lm || exit 1
+    gcc -o /tmp/$APP_NAME $CFLAGS $SRCS $SRCS_COMMON -lSDL3 -lSDL3_ttf -lm || exit 1
     set +x
 elif [ "$CMD" = run_linux ]; then
     set -x
-    gcc -o /tmp/$TARGET $CFLAGS $SRCS $SRCS_COMMON -lSDL3 -lSDL3_ttf -lm || exit 1
+    gcc -o /tmp/$APP_NAME $CFLAGS $SRCS $SRCS_COMMON -lSDL3 -lSDL3_ttf -lm || exit 1
     set +x
     mkdir -p $DATA_DIR
-    /tmp/$TARGET $DATA_DIR 0
+    exec -a  $PARENT_DIR/$APP_NAME /tmp/$APP_NAME $DATA_DIR 0
 elif [ "$CMD" = run_picoc ]; then
     mkdir -p $DATA_DIR
-    ../picoc/picoc -n $TARGET $SRCS - $DATA_DIR 0
+    ../picoc/picoc -n $PARENT_DIR/$APP_NAME $SRCS - $DATA_DIR 0
 fi
 

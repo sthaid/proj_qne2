@@ -1,26 +1,27 @@
+ANDROID:             INFO apps/Test: starting, data_dir=apps_data/Test
+
+LINUX:               INFO apps/Test: starting, data_dir=apps_data/Test
+
+TEST_APP_RUN_PICOC   INFO apps/Test: starting, data_dir=apps_data/Test
+TEST_APP_RUN_LINUX:  INFO apps/Test: starting, data_dir=apps_data/Test
+
+--------------
+
+
+TEST_APP_RUN_LINUX:  INFO /tmp/Test: starting, data_dir=apps_data/Test
+TEST_APP_RUN_PICOC   INFO Test: starting, data_dir=apps_data/Test
+
 ---- DONE -----
 
-use sdx or sdlx
-
-make ip address static in router
-
-move Services to Settings
-
-add page to Test app for location
-
-update *.h for cpp
-
-upde copyright for json
-
-why is POST_NOTIFICATION not granted
+dl_get_permission: android.permission.POST_NOTIFICATION not granted
 
 ---TODO --------
 
+how to know what dir an app is running from   run_dir
+
 add setup option to remove data files
 
-
 add test page for weather.gov to Test
-
 
 sensors and location
 - freq of location service
@@ -31,11 +32,12 @@ is any improvement to weather.gov needed
 
 fix ezsh for vi and cmd recall
 
-
 have program start automatically,  
 - 4 pillars of android?
 
 fresh start with new repo
+
+https://stock.adobe.com/
 
 ---- PICOC ISSUES ------
 
@@ -50,7 +52,6 @@ xxxxxxxxxxxxxxxx
 xxxxxxxxxxxxxxxx
 xxxxxxxxxxxxxxxx
 
-dl_get_permission: android.permission.POST_NOTIFICATION not granted
 
 code to read latitude longitude on android
 
