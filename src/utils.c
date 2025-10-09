@@ -131,6 +131,27 @@ void util_delete_file(char *dir, char *fn)
     unlink(path);
 }
 
+// xxx XXX add to picoc
+bool util_file_exists(char *dir, char *fn, long *mtime, long *size)
+{
+    char path[200];
+    struct stat statbuf;
+    int rc;
+
+    sprintf(path, "%s/%s", dir, fn);
+
+    rc = stat(path, &statbuf);
+    if (rc != 0) {
+        if (mtime) *mtime = 0;
+        if (size)  *size = 0;
+        return false;
+    }
+
+    if (mtime) *mtime = statbuf.st_mtime;
+    if (size)  *size  = statbuf.st_size;
+    return true;
+}
+
 // -----------------  FILE MAP -------------------------------
 
 #define PAGE_SIZE        0x1000    // xxx 0x4000  // 16k  need to support 16k too

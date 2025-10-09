@@ -15,11 +15,13 @@ TEST_APP_RUN_PICOC   INFO Test: starting, data_dir=apps_data/Test
 
 dl_get_permission: android.permission.POST_NOTIFICATION not granted
 
----TODO --------
-
-how to know what dir an app is running from   run_dir
+how to know what dir an app is running from     DONE
 
 add setup option to remove data files
+
+---TODO --------
+
+work on compass app
 
 add test page for weather.gov to Test
 
