@@ -21,6 +21,10 @@ add setup option to remove data files
 
 ---TODO --------
 
+reset services did not work
+- took long time
+- Sensors not started
+
 work on compass app
 
 add test page for weather.gov to Test

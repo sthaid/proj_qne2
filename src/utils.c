@@ -131,8 +131,7 @@ void util_delete_file(char *dir, char *fn)
     unlink(path);
 }
 
-// xxx XXX add to picoc
-bool util_file_exists(char *dir, char *fn, long *mtime, long *size)
+bool util_file_exists(char *dir, char *fn)
 {
     char path[200];
     struct stat statbuf;
@@ -141,15 +140,31 @@ bool util_file_exists(char *dir, char *fn, long *mtime, long *size)
     sprintf(path, "%s/%s", dir, fn);
 
     rc = stat(path, &statbuf);
-    if (rc != 0) {
-        if (mtime) *mtime = 0;
-        if (size)  *size = 0;
-        return false;
-    }
+    return rc == 0;
+}
 
-    if (mtime) *mtime = statbuf.st_mtime;
-    if (size)  *size  = statbuf.st_size;
-    return true;
+long util_file_mtime(char *dir, char *fn)
+{
+    char path[200];
+    struct stat statbuf;
+    int rc;
+
+    sprintf(path, "%s/%s", dir, fn);
+
+    rc = stat(path, &statbuf);
+    return (rc == 0 ? statbuf.st_mtime : 0);
+}
+
+long util_file_size(char *dir, char *fn)
+{
+    char path[200];
+    struct stat statbuf;
+    int rc;
+
+    sprintf(path, "%s/%s", dir, fn);
+
+    rc = stat(path, &statbuf);
+    return (rc == 0 ? statbuf.st_size : 0);
 }
 
 // -----------------  FILE MAP -------------------------------

@@ -67,9 +67,13 @@ static pthread_t   server_tid;
 //
 
 static void processing(void);
+
 static int services_monitor_thread(void *cx);
-static void stop_all_services(void);
-static void request_start_all_autostart_services(void);
+static void stop_all_services(bool lock_held_by_caller);
+static void request_start_all_autostart_services(bool lock_held_by_caller);
+static void acquire_services_lock(void) __attribute__((unused));
+static void release_services_lock(void) __attribute__((unused));
+
 static int server_thread(void *cx);
 static int waiter_thread(void *cx);
 static void kill_child_processes(pid_t pid);
@@ -85,7 +89,7 @@ extern int picoc_ezapp(char *args);
 static int init(void);
 static void cleanup(void);
 static void sigusr2_hndlr(int signum);
-#ifdef ANDROID
+#ifdef ANDROID  // xxx get rid of some ifdefs
 static void create_files(int action);
 #endif
 
@@ -139,7 +143,7 @@ static int init(void)
     // if apps dir doesn't exist then 
     // extract all from files.tar
     // xxx true is temporary
-    if (true || !utils_file_exists(".", "apps")) { 
+    if (true || !util_file_exists(".", "apps")) { 
         create_files(CREATE_FILES_INIT);
     }
 #endif
@@ -177,7 +181,7 @@ static int init(void)
 #endif
 
     // start the services_monitor_thread
-    request_start_all_autostart_services();
+    request_start_all_autostart_services(false);
     sdlx_create_detached_thread(services_monitor_thread, NULL);
 
     // init okay
@@ -188,7 +192,7 @@ static void cleanup(void)
 {
     INFO("TERMINATING\n");
 
-    stop_all_services();
+    stop_all_services(false);
 
     kill_child_processes(getpid());
 
@@ -207,11 +211,16 @@ static void create_files(int action)
         system("tar -xvf files.tar apps");
         system("mkdir -p apps_data");
         break;
-    }
     case CREATE_FILES_RESET_SVCS:
+        acquire_services_lock();
+        stop_all_services(true);
+
         system("rm -rf svcs svcs_data");
         system("tar -xvf files.tar svcs");
         system("mkdir -p svcs_data");
+
+        request_start_all_autostart_services(true);
+        release_services_lock();
         break;
     }
 }
@@ -586,8 +595,12 @@ static void get_list_of_apps(void)
      (state) == SERVICE_STATE_STOPPING          ? COLOR_YELLOW : \
                                                   COLOR_RED)
 
+#define SERVICE_IS_STOPPED(state)  ((state) == SERVICE_STATE_STOPPED || \
+                                    (state) == SERVICE_STATE_STOPPED_BY_ERROR)
+
 #define MAX_SERVICES 100 // xxx dont need this many
 
+// xxx should this use SDL Mutex
 #define LOCK do { pthread_mutex_lock(&services_mutex); } while (0)
 #define UNLOCK do { pthread_mutex_unlock(&services_mutex); } while (0)
 
@@ -617,11 +630,27 @@ static void free_service(int id);
 static bool is_name_in_svcs(char *name);
 static bool is_name_in_services(char *name);
 
-static void request_start_all_autostart_services(void)
+static void acquire_services_lock(void)
 {
     LOCK;
-    start_autostart_services_req_flag = true;
+}
+
+static void release_services_lock(void)
+{
     UNLOCK;
+}
+
+static void request_start_all_autostart_services(bool lock_held_by_caller)
+{
+    if (!lock_held_by_caller) {
+        LOCK;
+    }
+
+    start_autostart_services_req_flag = true;
+
+    if (!lock_held_by_caller) {
+        UNLOCK;
+    }
 }
 
 static int services_monitor_thread(void *cx)
@@ -672,7 +701,6 @@ static void services(void)
         sdlx_render_text_xyctr(sdlx_win_width/2, sdlx_char_height/2, "Services");
 
         // display name and controls for each service
-        // xxx truncate name, and remove leading "svc_"
         row = 2;
         for (id = 0; id < MAX_SERVICES; id++) {
             service_t *x = &services_tbl[id];
@@ -685,7 +713,7 @@ static void services(void)
             sdlx_render_printf(0, ROW2Y(row), "%-s", x->name);
 
             sdlx_print_init_color(COLOR_LIGHT_BLUE, BG_COLOR);
-            if (x->state == SERVICE_STATE_STOPPED || x->state == SERVICE_STATE_STOPPED_BY_ERROR) {
+            if (SERVICE_IS_STOPPED(x->state)) {
                 loc = sdlx_render_printf(COL2X(10), ROW2Y(row), "start");
                 sdlx_register_event(loc, EVID_SVC_START+id);
             } else if (x->state == SERVICE_STATE_RUNNING) {
@@ -781,9 +809,7 @@ static void process_start_req(int id)
 
     INFO("called for id=%d name=%s\n", id, x->name);
 
-    if ((x->name == NULL) || 
-        (x->state != SERVICE_STATE_STOPPED && x->state != SERVICE_STATE_STOPPED_BY_ERROR))
-    {
+    if ((x->name == NULL) || !SERVICE_IS_STOPPED(x->state)) {
         ERROR("id=%d name=%s state=%s\n", id, x->name, SERVICE_STATE_STR(x->state));
         return;
     }
@@ -817,10 +843,8 @@ static void process_stopped_callback(int id, int rc)
 
     INFO("called for id=%d name=%s rc=%d\n", id, x->name, rc);
 
-    if ((x->name == NULL) || 
-        (x->state != SERVICE_STATE_STOPPING && x->state != SERVICE_STATE_RUNNING))
-    {
-        ERROR("id=%d name=%s state=%s\n", id, x->name, SERVICE_STATE_STR(x->state));
+    if (x->name == NULL) {
+        ERROR("service id %d does not exist\n", id);
         UNLOCK;
         return;
     }
@@ -832,10 +856,6 @@ static void process_stopped_callback(int id, int rc)
     if (x->delete_pending) {
         x->delete_pending = false;
         free_service(id);
-    } else if (rc == 0) {
-        x->state = SERVICE_STATE_STOPPED;
-    } else {
-        x->state = SERVICE_STATE_STOPPED_BY_ERROR;
     }
 
     UNLOCK;
@@ -937,12 +957,14 @@ static void get_list_of_svcs(bool *changed)
 
 // - - - - - - - - - support routines - - - - - - - - - - - - -
 
-static void stop_all_services(void)
+static void stop_all_services(bool lock_held_by_caller)
 {
     int id, duration_ms = 0;
     bool all_stopped;
 
-    LOCK;
+    if (!lock_held_by_caller) {
+        LOCK;
+    }
 
     INFO("stopping all services\n");
 
@@ -957,10 +979,7 @@ static void stop_all_services(void)
         all_stopped = true;
         for (id = 0; id < MAX_SERVICES; id++) {
             service_t *x = &services_tbl[id];
-            if (x->name && 
-                (x->state != SERVICE_STATE_STOPPED && 
-                 x->state != SERVICE_STATE_STOPPED_BY_ERROR))
-            {
+            if (x->name && !SERVICE_IS_STOPPED(x->state)) {
                 all_stopped = false;
                 break;
             }
@@ -975,7 +994,7 @@ static void stop_all_services(void)
             ERROR("the following services have failed to stop ...\n");
             for (id = 0; id < MAX_SERVICES; id++) {
                 service_t *x = &services_tbl[id];
-                if (x->name && x->state != SERVICE_STATE_STOPPED) {
+                if (x->name && !SERVICE_IS_STOPPED(x->state)) {
                     ERROR("- %-12s %s\n", x->name, SERVICE_STATE_STR(x->state));
                 }
             }
@@ -986,7 +1005,9 @@ static void stop_all_services(void)
         duration_ms += 100;
     }
 
-    UNLOCK;
+    if (!lock_held_by_caller) {
+        UNLOCK;
+    }
 }
 
 // lock held by caller
@@ -1001,13 +1022,12 @@ static void start_autostart_services(void)
             continue;
         }
 
-        sprintf(svc_dir, "svcs/%s", x->name);
-        if (!util_file_exists(svc_dir, "autostart", NULL, NULL)) {
+        if (!SERVICE_IS_STOPPED(x->state)) {
             continue;
         }
 
-        if (x->state != SERVICE_STATE_STOPPED) {
-            ERROR("svc %s is not stopped\n", x->name);
+        sprintf(svc_dir, "svcs/%s", x->name);
+        if (!util_file_exists(svc_dir, "autostart")) {
             continue;
         }
 
@@ -1208,20 +1228,17 @@ static void settings(void)
             create_files(CREATE_FILES_RESET_APPS);
             msg = "Apps are reset";
             msg_time = util_microsec_timer();
-            break;
+            break; }
         case EVID_RESET_SVCS: {
             char *str; 
             str = sdlx_get_input_str("Reset y/n?", false, BG_COLOR);
             if (strcasecmp(str, "y") != 0) {
                 break;
             }
-            stop_all_services();
-            // xxx get the services lock XXX
             create_files(CREATE_FILES_RESET_SVCS);
-            request_start_all_autostart_services();
             msg = "Svcs are reset";
             msg_time = util_microsec_timer();
-            break;
+            break; }
 #endif
         case EVID_QUIT:
             done = true;

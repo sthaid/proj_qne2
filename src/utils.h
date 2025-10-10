@@ -16,7 +16,9 @@ char *util_time2str(char * str, long us, int gmt, int display_ms, int display_da
 int util_write_file(char *dir, char *fn, void *data, int len);
 void *util_read_file(char *dir, char *fn, int *len);
 void util_delete_file(char *dir, char *fn);
-bool util_file_exists(char *dir, char *fn, long *mtime, long *size);
+bool util_file_exists(char *dir, char *fn);
+long util_file_mtime(char *dir, char *fn);
+long util_file_size(char *dir, char *fn);
 
 // -----------------  FILE MAP -------------------------------
 

@@ -983,6 +983,39 @@ void Util_delete_file (struct ParseState *Parser, struct Value *ReturnValue,
     util_delete_file(dir, fn);
 }
 
+void Util_file_exists (struct ParseState *Parser, struct Value *ReturnValue,
+	struct Value **Param, int NumArgs)
+{
+    char *dir   = Param[0]->Val->Pointer;
+    char *fn    = Param[1]->Val->Pointer;
+    bool exists;
+
+    exists = util_file_exists(dir, fn);
+    ReturnValue->Val->Integer = exists;
+}
+
+void Util_file_mtime (struct ParseState *Parser, struct Value *ReturnValue,
+	struct Value **Param, int NumArgs)
+{
+    char *dir   = Param[0]->Val->Pointer;
+    char *fn    = Param[1]->Val->Pointer;
+    long mtime;
+
+    mtime = util_file_mtime(dir, fn);
+    ReturnValue->Val->LongInteger = mtime;
+}
+
+void Util_file_size (struct ParseState *Parser, struct Value *ReturnValue,
+	struct Value **Param, int NumArgs)
+{
+    char *dir   = Param[0]->Val->Pointer;
+    char *fn    = Param[1]->Val->Pointer;
+    long size;
+
+    size = util_file_size(dir, fn);
+    ReturnValue->Val->LongInteger = size;
+}
+
 //
 // utils file map routines
 //
@@ -1156,10 +1189,13 @@ struct LibraryFunction UtilsFunctions[] = {
     { Util_microsec_timer,   "long util_microsec_timer(void);" },
     { Util_get_real_time_microsec, "long util_get_real_time_microsec(void);" },
     { Util_time2str,         "char *util_time2str(char * str, long us, bool gmt, bool display_ms, bool display_date);" },
-    // file read/write
+    // file utils     
     { Util_write_file,       "int util_write_file(char *dir, char *fn, void *data, int len);" },
     { Util_read_file,        "void *util_read_file(char *dir, char *fn, int *len);" },
     { Util_delete_file,      "void *util_delete_file(char *dir, char *fn);" },
+    { Util_file_exists,      "bool util_file_exists(char *dir, char *fn);" },
+    { Util_file_mtime,       "long util_file_mtime(char *dir, char *fn);" },
+    { Util_file_size,        "long util_file_size(char *dir, char *fn);" },
     // file map
     { Util_map_file,         "void *util_map_file(char *dir, char *file, int len, bool create_if_needed);" },
     { Util_unmap_file,       "void util_unmap_file(void *addr);" },
