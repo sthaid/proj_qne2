@@ -69,8 +69,8 @@ static pthread_t   server_tid;
 static void processing(void);
 
 static int services_monitor_thread(void *cx);
-static void stop_all_services(bool lock_held_by_caller);
-static void request_start_all_autostart_services(bool lock_held_by_caller);
+static void stop_all_services(void);
+static void request_start_all_autostart_services(void);
 static void acquire_services_lock(void) __attribute__((unused));
 static void release_services_lock(void) __attribute__((unused));
 
@@ -181,7 +181,7 @@ static int init(void)
 #endif
 
     // start the services_monitor_thread
-    request_start_all_autostart_services(false);
+    request_start_all_autostart_services();
     sdlx_create_detached_thread(services_monitor_thread, NULL);
 
     // init okay
@@ -192,7 +192,7 @@ static void cleanup(void)
 {
     INFO("TERMINATING\n");
 
-    stop_all_services(false);
+    stop_all_services();
 
     kill_child_processes(getpid());
 
@@ -212,15 +212,15 @@ static void create_files(int action)
         system("mkdir -p apps_data");
         break;
     case CREATE_FILES_RESET_SVCS:
-        acquire_services_lock();
-        stop_all_services(true);
+        stop_all_services();
 
+        acquire_services_lock();
         system("rm -rf svcs svcs_data");
         system("tar -xvf files.tar svcs");
         system("mkdir -p svcs_data");
-
-        request_start_all_autostart_services(true);
         release_services_lock();
+
+        request_start_all_autostart_services();
         break;
     }
 }
@@ -640,17 +640,11 @@ static void release_services_lock(void)
     UNLOCK;
 }
 
-static void request_start_all_autostart_services(bool lock_held_by_caller)
+static void request_start_all_autostart_services(void)
 {
-    if (!lock_held_by_caller) {
-        LOCK;
-    }
-
+    LOCK;
     start_autostart_services_req_flag = true;
-
-    if (!lock_held_by_caller) {
-        UNLOCK;
-    }
+    UNLOCK;
 }
 
 static int services_monitor_thread(void *cx)
@@ -957,14 +951,12 @@ static void get_list_of_svcs(bool *changed)
 
 // - - - - - - - - - support routines - - - - - - - - - - - - -
 
-static void stop_all_services(bool lock_held_by_caller)
+static void stop_all_services(void)
 {
     int id, duration_ms = 0;
     bool all_stopped;
 
-    if (!lock_held_by_caller) {
-        LOCK;
-    }
+    LOCK;
 
     INFO("stopping all services\n");
 
@@ -1001,13 +993,13 @@ static void stop_all_services(bool lock_held_by_caller)
             break;
         }
 
+        UNLOCK;
         usleep(100*MS);
+        LOCK;
         duration_ms += 100;
     }
 
-    if (!lock_held_by_caller) {
-        UNLOCK;
-    }
+    UNLOCK;
 }
 
 // lock held by caller
