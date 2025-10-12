@@ -15,6 +15,7 @@
 void set_fd_non_blocking(int fd);
 void clear_fd_non_blocking(int fd);
 int read_ez_cfg(char *ipaddr, int *port);
+int write_loop(int fd, char *buff, int len);
 
 int main(int argc, char **argv)
 {
@@ -79,7 +80,7 @@ int main(int argc, char **argv)
         // read from stdin and write to sockfd
         ret1 = read(STDIN_FILENO, buff, sizeof(buff));
         if (ret1 > 0) {
-            write(sockfd, buff, ret1);
+            write_loop(sockfd, buff, ret1);
         }
         if (ret1 == 0) {
             if (shut_wr == false) {
@@ -94,7 +95,7 @@ int main(int argc, char **argv)
             break;
         }
         if (ret2 > 0) {
-            write(STDOUT_FILENO, buff, ret2);
+            write_loop(STDOUT_FILENO, buff, ret2);
         }
 
         // sleep if connection is idle
@@ -195,4 +196,27 @@ int read_ez_cfg(char *ipaddr, int *port)
 
     // success
     return 0;
+}
+
+int write_loop(int fd, char *buff, int len)
+{
+    int len_xfered = 0;
+    int sleep_usecs = 0;
+    int ret;
+
+    while (len_xfered < len) {
+        ret = write(fd, buff+len_xfered, len-len_xfered);
+        if (ret > 0) {
+            len_xfered += ret;
+        } else {
+            usleep(100000);  // 100 ms
+            sleep_usecs += 100000;  // 100 ms
+        }
+
+        if (sleep_usecs > 10000000) {  // 10 seconds
+            fprintf(stderr, "ERROR: write_loop timedout\n");
+        }
+    }
+
+    return len_xfered;
 }
