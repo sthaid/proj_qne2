@@ -237,7 +237,7 @@ sdlx_sensor_info_t *sdlx_sensor_get_info_tbl(int *max);
 int sdlx_sensor_find(int type);  // returns sensor id, or -1 if not found
 int sdlx_sensor_read_raw(int id, double *data, int num_values);
 
-int sdlx_sensor_read_step_counter(double *step_count);
+int sdlx_sensor_read_step_counter(double *step_count);  // xxx just return INVALID_NUMBER
 int sdlx_sensor_read_mag_heading(double *mag_heading);
 int sdlx_sensor_read_tilt(double *roll, double *pitch);
 int sdlx_sensor_read_pressure(double *millibars);
@@ -268,7 +268,7 @@ typedef struct {
 
 // event registration and query
 void sdlx_register_event(sdlx_loc_t *loc, int event_id);
-void sdlx_register_control_events(char *evstr1, char *evstr2, char *evstr3, int bg_color,
+void sdlx_register_control_events(char *evstr1, char *evstr2, char *evstr3, int bg_color, // xxx fg
                                  int evid1, int evid2, int evid3);
 void sdlx_get_event(long timeout_us, sdlx_event_t *event);
 

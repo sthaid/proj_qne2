@@ -170,7 +170,6 @@ int sdlx_video_init(void)
         return -1;
     }
 #else
-    // xxx test with larger win width
     if (!SDL_CreateWindowAndRenderer("ezApp", 450, 975, 0, &window, &renderer)) {
         ERROR("SDL_CreateWindowAndRenderer failed\n");
         return -1;

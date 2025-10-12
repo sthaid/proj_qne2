@@ -262,6 +262,14 @@ int sdlx_sensor_read_tilt(double *roll, double *pitch)
     az = data[2];
     *roll  = -atan(ay / sqrt(ax*ax + az*az)) * RAD_TO_DEG;
     *pitch = -atan(-ax / sqrt(ay*ay + az*az)) * RAD_TO_DEG;
+
+    // if nan then set mag_heading to INVALID_NUMBER, 
+    // because picoc does not support nan
+    if (isnan(*roll) || isnan(*pitch)) {
+        *roll = INVALID_NUMBER;
+        *pitch = INVALID_NUMBER;
+    }
+
     return 0;
 }
 
@@ -309,6 +317,13 @@ int sdlx_sensor_read_mag_heading(double *mag_heading)
     if (*mag_heading < 0) {
         *mag_heading += 360;
     }
+
+    // if nan then set mag_heading to INVALID_NUMBER, 
+    // because picoc does not support nan
+    if (isnan(*mag_heading)) {
+        *mag_heading = INVALID_NUMBER;
+    }
+
     return 0;
 }
 
