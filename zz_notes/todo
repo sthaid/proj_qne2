@@ -1,7 +1,11 @@
+add fg_color to sdl_register_control_events
+
 make the compass circular
 reduce the pixels file size
 improve the jpeg to pixels converter
 download from stokc the weather symbols
+
+try to get NAN working in picoc
 
 xxxxxxxxxxxxx
 
