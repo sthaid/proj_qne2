@@ -38,7 +38,7 @@ TARGET = ezApp
 
 # xxx add -O2
 
-CFLAGS = -Wall -Werror -Wno-unused-result -g -I../src $(shell pkg-config sdl3--cflags)
+CFLAGS = -Wall -Werror -Wno-unused-result -g -I../src $(shell pkg-config sdl3 --cflags)
 
 $(TARGET):
 	../bin/gen_version
