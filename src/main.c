@@ -293,8 +293,10 @@ static void processing(void)
             if (apps[id] == NULL) {
                 ERROR("apps[%d] is NULL\n", id);
             } else if (strcmp(apps[id], "Settings") == 0) {
+                sdlx_print_init(DEFAULT_FONT, COLOR_WHITE, COLOR_BLACK);
                 settings();
             } else {
+                sdlx_print_init(DEFAULT_FONT, COLOR_WHITE, COLOR_BLACK);
                 run(apps[id], -1);
             }
         }
