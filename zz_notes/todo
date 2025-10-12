@@ -1,3 +1,17 @@
+make the compass circular
+reduce the pixels file size
+improve the jpeg to pixels converter
+download from stokc the weather symbols
+
+xxxxxxxxxxxxx
+
+cancel stock.adobe.com before Nov 10, if desired
+
+use standard format for picels data
+
+------------
+
+
 ANDROID:             INFO apps/Test: starting, data_dir=apps_data/Test
 
 LINUX:               INFO apps/Test: starting, data_dir=apps_data/Test
@@ -19,11 +33,12 @@ how to know what dir an app is running from     DONE
 
 add setup option to remove data files
 
----TODO --------
-
 reset services did not work
 - took long time
 - Sensors not started
+
+---TODO --------
+
 
 work on compass app
 
