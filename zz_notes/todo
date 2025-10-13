@@ -17,17 +17,21 @@
 	modified:   src/utils.h
 	modified:   zz_notes/todo
 
-cleanup bin/src jpeg_to_pixels
+add README to compass dir on how the image was created
 
-rename test_app to 'tester'
+cleanup bin/src jpeg_to_pixels
 
 compass pgm needs more comments
 
 test pgm file extension for audio files
 
-update copyright generateor
+--- done ---
 
-point picoc build lodepng.c to the cpp file
+rename test_app to 'tester'
+
+wxxx hxxx
+
+update copyright generateor
 
 --------------
 

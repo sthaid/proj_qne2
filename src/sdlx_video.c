@@ -1018,7 +1018,7 @@ void sdlx_query_texture(sdlx_texture_t *texture, int * width, int * height)
 }
 
 // caller must free returned ptr to pixels
-unsigned char *sdlx_read_display_pixels(int x, int y, int w, int h, int *wxxx, int *hxxx)
+unsigned char *sdlx_read_display_pixels(int x, int y, int w, int h, int *w_pixels, int *h_pixels)
 {
     SDL_Rect       loc;
     SDL_Surface   *surface;
@@ -1059,8 +1059,8 @@ unsigned char *sdlx_read_display_pixels(int x, int y, int w, int h, int *wxxx, i
     SDL_DestroySurface(surface);
 
     // success, return pixels
-    *wxxx = loc.w;
-    *hxxx = loc.h;
+    *w_pixels = loc.w;
+    *h_pixels = loc.h;
     return pixels_malloced;
 }
 
