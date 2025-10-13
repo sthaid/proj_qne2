@@ -351,10 +351,12 @@ void Sdl_render_points (struct ParseState *Parser, struct Value *ReturnValue,
 void Sdl_create_texture_from_pixels (struct ParseState *Parser, struct Value *ReturnValue,
         struct Value **Param, int NumArgs)
 {
-    sdlx_pixels_t *pixels = Param[0]->Val->Pointer;
+    unsigned char  *pixels = Param[0]->Val->Pointer;
+    int             w      = Param[1]->Val->Integer;
+    int             h      = Param[2]->Val->Integer;
     sdlx_texture_t *texture;
 
-    texture = sdlx_create_texture_from_pixels(pixels);
+    texture = sdlx_create_texture_from_pixels(pixels, w, h);
     ReturnValue->Val->Pointer = (char*)texture; 
 }
 
@@ -413,14 +415,16 @@ void Sdl_query_texture (struct ParseState *Parser, struct Value *ReturnValue,
 void Sdl_read_display_pixels (struct ParseState *Parser, struct Value *ReturnValue,
 	struct Value **Param, int NumArgs)
 {
-    int x = Param[0]->Val->Integer;
-    int y = Param[1]->Val->Integer;
-    int w = Param[2]->Val->Integer;
-    int h = Param[3]->Val->Integer;
-    sdlx_pixels_t *pixels;
+    int   x        = Param[0]->Val->Integer;
+    int   y        = Param[1]->Val->Integer;
+    int   w        = Param[2]->Val->Integer;
+    int   h        = Param[3]->Val->Integer;
+    int  *w_pixels = Param[4]->Val->Pointer;
+    int  *h_pixels = Param[5]->Val->Pointer;
+    unsigned char *pixels;
 
-    pixels = sdlx_read_display_pixels(x, y, w, h);
-    ReturnValue->Val->Pointer = (char*)pixels; 
+    pixels = sdlx_read_display_pixels(x, y, w, h, w_pixels, h_pixels);
+    ReturnValue->Val->Pointer = pixels; 
 }
 
 //
@@ -726,13 +730,13 @@ struct LibraryFunction SdlFunctions[] = {
     { Sdl_render_points,   "void sdlx_render_points(sdlx_point_t *points, int count, int color, int point_size);" },
 
     // render using textures
-    { Sdl_create_texture_from_pixels,   "sdlx_texture_t *sdlx_create_texture_from_pixels(sdlx_pixels_t *pixels);" },
+    { Sdl_create_texture_from_pixels,   "sdlx_texture_t *sdlx_create_texture_from_pixels(unsigned char *pixels, int w, int h);" },
     { Sdl_create_filled_circle_texture, "sdlx_texture_t *sdlx_create_filled_circle_texture(int radius, int color);" },
     { Sdl_create_text_texture,          "sdlx_texture_t *sdlx_create_text_texture(char *str);" },
     { Sdl_render_texture,               "void sdlx_render_texture(int x, int y, int w, int h, double angle, sdlx_texture_t *texture);" },
     { Sdl_destroy_texture,              "void sdlx_destroy_texture(sdlx_texture_t *texture);" },
     { Sdl_query_texture,                "void sdlx_query_texture(sdlx_texture_t *texture, int *width, int *height);" },
-    { Sdl_read_display_pixels,          "void *sdlx_read_display_pixels(int x, int y, int w, int h);" },
+    { Sdl_read_display_pixels,          "void *sdlx_read_display_pixels(int x, int y, int w, int h, int *w_pixels, int *h_pixels);" },
 
     // plotting
     { Sdl_plot_create,                   "void *sdlx_plot_create("
@@ -793,13 +797,6 @@ typedef struct { \n\
     } u; \n\
 } sdlx_event_t; \n\
 typedef struct { \n\
-    int magic; \n\
-    int struct_len; \n\
-    int w; \n\
-    int h; \n\
-    int pixels[0]; \n\
-} sdlx_pixels_t; \n\
-typedef struct { \n\
     short freq; \n\
     short intvl; \n\
 } sdlx_tone_t; \n\
@@ -857,8 +854,6 @@ typedef struct { \n\
  \n\
 #define ROW2Y(r) ((r) * sdlx_char_height) \n\
 #define COL2X(c) ((c) * sdlx_char_width) \n\
-\n\
-#define PIXELS_MAGIC 0x11223344 \n\
 \n\
 #define EVID_SWIPE_RIGHT       9990 \n\
 #define EVID_SWIPE_LEFT        9991 \n\
@@ -1166,6 +1161,10 @@ void Util_json_get_value(struct ParseState *Parser, struct Value *ReturnValue,
     ReturnValue->Val->Pointer = value;
 }
 
+//
+// utils get location: latitude, longitude, and altitude
+//
+
 void Util_get_location(struct ParseState *Parser, struct Value *ReturnValue,
         struct Value **Param, int NumArgs)
 {
@@ -1176,6 +1175,39 @@ void Util_get_location(struct ParseState *Parser, struct Value *ReturnValue,
     util_get_location(lat, lng, alt);
 }
 
+//
+// utils read/write 32-bit RGBA png files
+//
+
+void Util_read_png_file(struct ParseState *Parser, struct Value *ReturnValue,
+        struct Value **Param, int NumArgs)
+{
+    char           *dir      = Param[0]->Val->Pointer;
+    char           *filename = Param[1]->Val->Pointer;
+    unsigned char **pixels   = Param[2]->Val->Pointer;
+    int            *w        = Param[3]->Val->Pointer;
+    int            *h        = Param[4]->Val->Pointer;
+    int             rc;
+
+    rc = util_read_png_file(dir, filename, pixels, w, h);
+
+    ReturnValue->Val->Integer = rc;
+}
+
+void Util_write_png_file(struct ParseState *Parser, struct Value *ReturnValue,
+        struct Value **Param, int NumArgs)
+{
+    char          *dir      = Param[0]->Val->Pointer;
+    char          *filename = Param[1]->Val->Pointer;
+    unsigned char *pixels   = Param[2]->Val->Pointer;
+    int            w        = Param[3]->Val->Integer;
+    int            h        = Param[4]->Val->Integer;
+    int            rc;
+
+    rc = util_write_png_file(dir, filename, pixels, w, h);
+
+    ReturnValue->Val->Integer = rc;
+}
 //
 // UTILS REGISTRATION
 //
@@ -1214,6 +1246,9 @@ struct LibraryFunction UtilsFunctions[] = {
     { Util_json_get_value,   "json_value_t *util_json_get_value(void *json_item, ...);" },
     // location
     { Util_get_location,     "void util_get_location(double *latitude, double *longitude, double *altitude);" },
+    // png file read/write
+    { Util_read_png_file,    "int util_read_png_file(char *dir, char *filename, unsigned char **pixels, int *w, int *h);" },
+    { Util_write_png_file,   "int util_write_png_file(char *dir, char *filename, unsigned char *pixels, int w, int h);" },
 
     { NULL, NULL } };
 

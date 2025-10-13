@@ -10,6 +10,7 @@ LOCAL_SRC_FILES :=  \
   src/sdlx_misc.c src/sdlx_video.c src/sdlx_audio.c src/sdlx_sensor.c src/sdlx_event.c \
   src/utils_location.cpp \
   cJSON/cJSON.c \
+  lodepng/lodepng.c \
   picoc/picoc_ezapp.c \
   picoc/clibrary.c \
   picoc/debug.c \

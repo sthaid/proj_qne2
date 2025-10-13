@@ -4,6 +4,7 @@
 #include <logging.h>
 
 #include "../cJSON/cJSON.h"
+#include "../lodepng/lodepng.h"
 
 // ----------------- TIME --------------------
 
@@ -753,3 +754,38 @@ json_value_t *util_json_get_value(void *json_item, ...)
 
     return &value;
 }
+
+// ----------------- PNG  --------------------
+
+int util_read_png_file(char *dir, char *filename, unsigned char **pixels, int *w, int *h)
+{
+    char path[200];
+    int rc;
+
+    sprintf(path, "%s/%s", dir, filename);
+
+    rc = lodepng_decode32_file(pixels, (unsigned int*)w, (unsigned int*)h, path);
+    if (rc != 0) {
+        ERROR("lodepng_decode32_file %s failed, rc=%d\n", path, rc);
+        return -1;
+    }
+
+    return 0;
+}
+
+int util_write_png_file(char *dir, char *filename, unsigned char *pixels, int w, int h)
+{
+    char path[200];
+    int rc;
+
+    sprintf(path, "%s/%s", dir, filename);
+
+    rc = lodepng_encode32_file(path, pixels, w, h);
+    if (rc != 0) {
+        ERROR("lodepng_encode32_file %s w=%d h=%d failed, rc=%d\n", path, w, h, rc);
+        return -1;
+    }
+
+    return 0;
+}
+

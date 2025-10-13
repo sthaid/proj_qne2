@@ -856,7 +856,8 @@ void sdlx_render_points(sdlx_point_t *points, int count, int color, int point_si
 
 // -----------------  RENDER USING TEXTURES  ---------------------------- 
 
-sdlx_texture_t *sdlx_create_texture_from_pixels(sdlx_pixels_t *pixels)
+
+sdlx_texture_t *sdlx_create_texture_from_pixels(unsigned char *pixels, int w, int h)
 {
     sdlx_texture_t *texture;
 
@@ -865,14 +866,14 @@ sdlx_texture_t *sdlx_create_texture_from_pixels(sdlx_pixels_t *pixels)
               SDL_CreateTexture(renderer,
                                 SDL_PIXELFORMAT_ABGR8888,
                                 SDL_TEXTUREACCESS_STREAMING,
-                                pixels->w, pixels->h);
+                                w, h);
     if (texture == NULL) {
         ERROR("failed to allocate texture\n");
         return NULL;
     }
 
     // update the texture with the pixels
-    SDL_UpdateTexture((SDL_Texture*)texture, NULL, pixels->pixels, pixels->w * BYTES_PER_PIXEL);
+    SDL_UpdateTexture((SDL_Texture*)texture, NULL, pixels, w * BYTES_PER_PIXEL);
 
     // return the texture
     return texture;
@@ -1016,53 +1017,51 @@ void sdlx_query_texture(sdlx_texture_t *texture, int * width, int * height)
     *height = rint(h_float / scale);
 }
 
-// caller must free pixels
-sdlx_pixels_t *sdlx_read_display_pixels(int x, int y, int w, int h)
+// caller must free returned ptr to pixels
+unsigned char *sdlx_read_display_pixels(int x, int y, int w, int h, int *wxxx, int *hxxx)
 {
-    sdlx_pixels_t *pixels;
-    SDL_Rect      loc;
-    int           malloc_len;
-    SDL_Surface  *surface;
+    SDL_Rect       loc;
+    SDL_Surface   *surface;
+    unsigned char *pixels;
+    unsigned char *pixels_malloced;
 
+    // init display location to read the pixels from
     loc.x = x * scale; // xxx rint
     loc.y = y * scale;
     loc.w = w * scale;
     loc.h = h * scale;
 
-    // read the pixels  xxx check all rets
+    // read the pixels to SDL_Surface  xxx check all rets 
     surface = SDL_RenderReadPixels(renderer, &loc);
     if (surface == NULL) {
         ERROR("SDL_RenderReadPixels, %s\n", SDL_GetError());
         return NULL;
     }
 
-    // allocate memory for the pixels
-    malloc_len = sizeof(sdlx_pixels_t) + loc.w * loc.h * BYTES_PER_PIXEL;
-    pixels = malloc(malloc_len);
-    if (pixels == NULL) {
+    // allocate memory for the return array of pixels
+    pixels_malloced = malloc(loc.w * loc.h * BYTES_PER_PIXEL);
+    if (pixels_malloced == NULL) {
         ERROR("allocate pixels failed\n");
         SDL_DestroySurface(surface);
         return NULL;
     }
 
-    // init return pixels struct
-    pixels->magic      = PIXELS_MAGIC;
-    pixels->struct_len = malloc_len;
-    pixels->w          = loc.w;
-    pixels->h          = loc.h;
-    void *pxls = pixels->pixels;
+    // copy pixels from 'surface' to pixels buffer
+    pixels = pixels_malloced;
     for (int row = 0; row < loc.h; row++) {
-        memcpy(pxls, 
+        memcpy(pixels, 
                surface->pixels + (row * surface->pitch), 
                loc.w * BYTES_PER_PIXEL);
-        pxls += (loc.w * BYTES_PER_PIXEL);
+        pixels += (loc.w * BYTES_PER_PIXEL);
     }
 
     // destroy surface
     SDL_DestroySurface(surface);
 
-    // success, return allocated sdlx_pixels_t   
-    return pixels;
+    // success, return pixels
+    *wxxx = loc.w;
+    *hxxx = loc.h;
+    return pixels_malloced;
 }
 
 // -----------------  PLOTTING  ----------------------------------------- 

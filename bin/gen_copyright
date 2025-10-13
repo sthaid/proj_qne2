@@ -17,5 +17,8 @@ picoc/picoc -c >> $tmp_copyright
 echo -e "\n---------- CJSON ----------\n" >> $tmp_copyright
 cat cJSON/LICENSE >> $tmp_copyright
 
+echo -e "\n---------- LODEPNG --------\n" >> $tmp_copyright
+cat lodepng/LICENSE >> $tmp_copyright
+
 fmt -w 40 $tmp_copyright > files/copyright
 

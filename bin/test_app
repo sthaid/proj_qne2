@@ -25,7 +25,8 @@ SRCS_COMMON="\
        ../src/utils.c \
        ../src/utils_location.cpp \
        ../src/logging.c \
-       ../cJSON/cJSON.c"
+       ../cJSON/cJSON.c \
+       ../lodepng/lodepng.c"
 
 APP_NAME=$APP_DIR
 CFLAGS="-Wall -Werror -Wno-unused-result -g -I. -I../src -fcommon $(pkg-config sdl3 --cflags)"

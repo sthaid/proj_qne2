@@ -18,10 +18,10 @@ char *abbreviation(double heading);
 
 int main(int argc, char **argv)
 {
-    int             rc, len;
+    int             rc, w, h;
     sdlx_event_t    event;
-    sdlx_pixels_t  *pixels = NULL;
     sdlx_texture_t *compass = NULL;
+    unsigned char  *pixels = NULL;
     double          heading = 0;
     bool            quit = false;
 
@@ -40,12 +40,12 @@ int main(int argc, char **argv)
 
     // read the compass image pixels from file, and
     // create compass image texture
-    pixels = util_read_file("apps/Compass", "compass.pixels", &len);
-    if (pixels == NULL) {
-        printf("ERROR %s failed to read compass.pixels\n", progname);
+    rc = util_read_png_file(progname, "compass.png", &pixels, &w, &h);
+    if (rc != 0) {
+        printf("ERROR %s failed to decode png file %s\n", progname, "compass.png");
         goto cleanup_and_return;
     }
-    compass = sdlx_create_texture_from_pixels(pixels);
+    compass = sdlx_create_texture_from_pixels(pixels, w, h);
     if (compass == NULL) {
         printf("ERROR %s failed to create compass texture\n", progname);
         goto cleanup_and_return;
@@ -70,11 +70,17 @@ int main(int argc, char **argv)
         if (heading != INVALID_NUMBER) {
             heading = smooth(heading);
 
-            sdlx_render_texture(0, 0, 1000, 1000, -heading, compass);
+            sdlx_render_fill_rect(0, 100, 1000, 1000, COLOR_WHITE);
+
+            for (int x = sdlx_win_width/2-3; x < sdlx_win_width/2+3; x++) {
+                sdlx_render_line(x, 100, x, 150, COLOR_BLACK);
+            }
+
+            sdlx_render_texture(50, 150, 900, 900, -heading, compass);
 
             sdlx_print_init(LARGE_FONT, COLOR_WHITE, COLOR_BLACK);
-            sdlx_render_printf_xyctr(sdlx_win_width / 2, 1000 + 0.5 * sdlx_char_height, "%.0f", heading);
-            sdlx_render_printf_xyctr(sdlx_win_width / 2, 1000 + 2.0 * sdlx_char_height, "%s",
+            sdlx_render_printf_xyctr(sdlx_win_width / 2, 1000 + 2.0 * sdlx_char_height, "%.0f", heading);
+            sdlx_render_printf_xyctr(sdlx_win_width / 2, 1000 + 3.5 * sdlx_char_height, "%s",
                                      abbreviation(heading));
         } else {
             sdlx_print_init(LARGE_FONT, COLOR_WHITE, COLOR_BLACK);
@@ -104,6 +110,9 @@ int main(int argc, char **argv)
 
 cleanup_and_return:
     // cleanup
+    if (pixels) {
+        free(pixels);
+    }
     if (compass) {
         sdlx_destroy_texture(compass);
     }

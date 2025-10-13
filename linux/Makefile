@@ -10,6 +10,7 @@ SRCS :=  \
   ../src/utils_location.cpp \
   ../src/logging.c \
   ../cJSON/cJSON.c \
+  ../lodepng/lodepng.c \
   ../picoc/picoc_ezapp.c \
   ../picoc/clibrary.c \
   ../picoc/debug.c \

@@ -455,9 +455,10 @@ static void page_5_init(void)
 
 static void page_5_draw(void)
 {
-    int ret, w, h, file_length;
+    int ret, w, h;
     sdlx_texture_t *t;
-    sdlx_pixels_t *pixels;
+    unsigned char *pixels;
+    int w_pixels, h_pixels;
 
     // render the circle texture at varying x location, y = 200 .. 400
     static int circle_x=-200;
@@ -478,39 +479,35 @@ static void page_5_draw(void)
     sdlx_render_texture(500-w/2, 600+w/2-h/2, -1, -1, angle, text);
 
     // create unit_test_pixels file from the top row of the display
-    pixels = sdlx_read_display_pixels(0, 0, sdlx_win_width, sdlx_char_height);
-    if (pixels == NULL || pixels->magic != PIXELS_MAGIC) {
-        printf("ERROR %s: failed to read unit_test_pixels, pixels==NULL\n", progname);
-    } else {
-        ret = util_write_file(data_dir, "unit_test_pixels", pixels, pixels->struct_len);
-        if (ret != 0) {
-            printf("ERROR %s: failed to write file unit_test_pixels\n", progname);
-        }
+    pixels = sdlx_read_display_pixels(0, 0, sdlx_win_width, sdlx_char_height, &w_pixels, &h_pixels);
+    if (pixels == NULL) {
+        printf("ERROR %s: failed to read display pixels\n", progname);
+        return;
     }
-    free(pixels);
-    pixels = NULL;
 
-    // read the unit_test_pixels file that as created above
+    ret = util_write_png_file(data_dir, "test5.png", pixels, w_pixels, h_pixels);
+    if (ret != 0) {
+        printf("ERROR %s: failed to write test5.png\n", progname);
+        free(pixels);
+        return;
+    }
+
+    free(pixels);
+
+    // read the png file created above
     // create a texture from the pixels, and
-    // display the texture
-    pixels = util_read_file(data_dir, "unit_test_pixels", &file_length);
-    if (pixels == NULL || pixels->magic != PIXELS_MAGIC || pixels->struct_len != file_length) {
-        if (pixels == NULL) {
-            printf("ERROR %s: failed to read unit_test_pixels, pixels==NULL\n", progname);
-        } else {
-            printf("ERROR %s: unit_test_pixels file invalid, magic=0x%x struct_len=%d file_length=%d\n",
-                   progname, pixels->magic, pixels->struct_len, file_length);
-        }
-    } else {
-        t = sdlx_create_texture_from_pixels(pixels);
-        sdlx_render_texture(0, 900, -1, -1, 0, t);
-        sdlx_destroy_texture(t);
+    // display the texture rotated 180 degrees
+    ret = util_read_png_file(data_dir, "test5.png", &pixels, &w_pixels, &h_pixels);
+    if (ret != 0) {
+        printf("ERROR %s: failed to read test5.png\n", progname);
+        return;
     }
-    free(pixels);
-    pixels = NULL;
 
-    // delete unit_test_pixels
-    unlink("unit_test_pixels");
+    t = sdlx_create_texture_from_pixels(pixels, w_pixels, h_pixels);
+    sdlx_render_texture(0, 900, sdlx_win_width, sdlx_char_height, 180, t);
+    sdlx_destroy_texture(t);
+
+    free(pixels);
 }
 
 static void page_5_exit(void)
@@ -676,6 +673,7 @@ static void page_7_draw(void)
     sdlx_register_event(loc, EVID_AUDIO_CONT);
 }
 
+// xxx extension for audio files ?
 static void page_7_process_event(sdlx_event_t *ev)
 {
     int rc, i, freq;
@@ -690,7 +688,7 @@ static void page_7_process_event(sdlx_event_t *ev)
         if (rc != 0) {
             printf("ERROR %s: sdlx_audio_play audio_test.raw failed\n", progname);
         }
-        unlink("audio_test.raw");
+        util_delete_file(data_dir, "audio_test.raw");
         break;
     case EVID_AUDIO_PLAY_RECORDING:
         rc = sdlx_audio_play(data_dir, "recording.raw");

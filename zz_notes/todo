@@ -1,3 +1,96 @@
+	modified:   android/do_setup
+	modified:   android/setup_files/app_jni_src_Android.mk
+	modified:   bin/gen_copyright
+	modified:   bin/src/Makefile
+	modified:   bin/src/jpeg_to_pixels.c
+	modified:   bin/test_app
+	modified:   files/apps/Compass/compass.c
+	deleted:    files/apps/Compass/compass.pixels
+	modified:   files/apps/Test/test.c
+	modified:   files/copyright
+	modified:   linux/Makefile
+	modified:   picoc/Makefile
+	modified:   picoc/platform/library_unix.c
+	modified:   src/sdlx.h
+	modified:   src/sdlx_video.c
+	modified:   src/utils.c
+	modified:   src/utils.h
+	modified:   zz_notes/todo
+
+cleanup bin/src jpeg_to_pixels
+
+rename test_app to 'tester'
+
+compass pgm needs more comments
+
+test pgm file extension for audio files
+
+update copyright generateor
+
+point picoc build lodepng.c to the cpp file
+
+--------------
+
+cleanup jpeg 2 pixels,  not needed inthis form; may still be needed to divide an image to 
+ multiple png files
+
+work on tranparanet colors
+
+
+
+lodepng
+https://github.com/lvandeve/lodepng
+
+
+------------
+
+start documentation outline
+doc file for images
+- explain imagegick
+- go through example of how compass was done
+   stock
+   checkered background  means png is available with the checkered area being transparent, alpha=0
+   resize, so that file is not bigger than neccessary
+   read file
+   creat texture
+   render texture
+
+add tool to convert png or jpeg to pxl format
+
+add transparent color support to sdlx_video
+
+define extensions
+- audio               .audio     xxx do these all have magic values
+- sdlx_pixel_t        .image
+- history             .dat
+
+
+
+
+
+--------
+
+sudo apt install imagemagick
+
+convert input.png -resize 500x300 output.png
+convert input.jpg -scale 50% output.png
+
+identify -format "%w x %h\n" t1out.png
+
+convert AdobeStock_1094425893.png -resize 1000x1000 ../../files/apps/Compass/compass.png
+
+-------------------
+
+how to change video to support alpha colors
+- then would not need to tweak the compass
+
+xxxxxxxxxxx
+xxxxxxxxxxx
+xxxxxxxxxxx
+xxxxxxxxxxx
+
+get better compass image
+
 add fg_color to sdl_register_control_events
 
 make the compass circular

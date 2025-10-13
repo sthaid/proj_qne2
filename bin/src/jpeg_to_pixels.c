@@ -7,11 +7,13 @@
 #include <unistd.h>
 #include <string.h>
 #include <errno.h>
-//#include <inttypes.h>  xxx check these
+#include <inttypes.h>  //xxx check these
 #include <limits.h>
 
 #include <setjmp.h>
 #include <jpeglib.h>
+
+#include <png.h>
 
 #include "../../src/sdlx.h"
 
@@ -41,6 +43,8 @@
 
 static int read_jpeg_file(char* file_name, unsigned char ** pixels, int * width, int * height);
 static int write_jpeg_file(char* file_name, unsigned char * pixels, int width, int height);
+
+int32_t read_png_file(char* file_name, uint8_t ** pixels, int32_t * width, int32_t * height);
 
 // -----------------  MAIN  ----------------------------------------------------------------
 
@@ -78,22 +82,44 @@ int main(int argc, char **argv)
     sdlx_pixels_t  *x;
     sdlx_texture_t *texture;
     FILE           *fp;
+    char           *filename = argv[1];
 
-    char *jpeg_filename = "AdobeStock_82564951.jpeg";
-
-    // read jpeg file
-    rc = read_jpeg_file(jpeg_filename, &pixels, &w, &h);
-    printf("rc = %d w = %d h = %d\n", rc, w, h);
-    if (rc != 0) {
-        printf("ERROR: read_jpeg_file %s failed\n", jpeg_filename);
+    if (argc != 2) {
+        printf("ERROR filename expected\n");
         return 1;
     }
 
+    if (strstr(filename, ".jpeg")) {
+        // read jpeg file
+        rc = read_jpeg_file(filename, &pixels, &w, &h);
+        printf("rc = %d w = %d h = %d\n", rc, w, h);
+        if (rc != 0) {
+            printf("ERROR: read_jpeg_file %s failed\n", filename);
+            return 1;
+        }
+    } else if (strstr(filename, ".png")) {
+        // read png file
+        rc = read_png_file(filename, &pixels, &w, &h);
+        printf("rc = %d w = %d h = %d\n", rc, w, h);
+        if (rc != 0) {
+            printf("ERROR: read_png_file %s failed\n", filename);
+            return 1;
+        }
+    } else {
+        printf("ERROR not jpeg or png\n");
+        return 1;
+    }
+
+    unsigned int *p32 = (unsigned int *)pixels;
+    for (int i = 0; i < 10; i++) {
+        printf("%08x\n", p32[i]);
+    }
+
     // tweaks
-    tweaks(pixels, w, h);
+    //tweaks(pixels, w, h);
 
     // xxx
-    rc = write_jpeg_file("jpeg.out", pixels, w, h);
+    rc = write_jpeg_file("out.jpeg", pixels, w, h);
     printf("write_jpeg_file ret %d\n", rc);
 
     // create sdlx_pixels_t
@@ -108,7 +134,7 @@ int main(int argc, char **argv)
 
     // display using sdlx
     sdlx_init(SUBSYS_VIDEO);
-    sdlx_display_init(COLOR_BLACK);
+    sdlx_display_init(COLOR_BLUE);
     texture = sdlx_create_texture_from_pixels(x);
     sdlx_render_texture(0, 0, sdlx_win_width ,sdlx_win_width, 0, texture);
     sdlx_display_present();
@@ -337,3 +363,153 @@ static void jpeg_decode_output_message_override(j_common_ptr cinfo)
         printf("ERROR: %s\n", buffer);
     }
 }
+
+
+
+
+
+// -----------------  READ PNG FILE  ---------------------------------------------------
+
+#define PNG_COLOR_TYPE_STR(x) \
+    ((x) == PNG_COLOR_TYPE_GRAY       ? "PNG_COLOR_TYPE_GRAY" : \
+     (x) == PNG_COLOR_TYPE_PALETTE    ? "PNG_COLOR_TYPE_PALETTE" : \
+     (x) == PNG_COLOR_TYPE_RGB        ? "PNG_COLOR_TYPE_RGB" : \
+     (x) == PNG_COLOR_TYPE_RGB_ALPHA  ? "PNG_COLOR_TYPE_RGB_ALPHA" : \
+     (x) == PNG_COLOR_TYPE_GRAY_ALPHA ? "PNG_COLOR_TYPE_GRAY_ALPHA"  \
+                                      : "????")
+
+
+
+//
+// Args:  
+// - file_name: pathname of the png file to be read
+// - max_image_dim: currently not implemented; the intent is if the 
+//   image width or height exceeds max_image_dim then the image size would be
+//   scaled down such that the width and height are less or equal to max_image_dim
+// - pixels: the pixels_arg is malloced by read_png_file; the caller should free
+//   this memory when done; 4 bytes per pixel; in SDL_PIXELFORMAT_ABGR8888
+// - width_arg, height_arg: return the image width and height
+//
+// Notes:          
+// - the only png file format currently supported is PNG_COLOR_TYPE_RGB_ALPHA
+//
+
+int32_t read_png_file(char* file_name,
+                   uint8_t ** pixels_arg, int32_t * width_arg, int32_t * height_arg)
+{
+    FILE        * fp           = NULL;
+    png_structp   png_ptr      = NULL;
+    png_infop     png_info     = NULL;
+    uint8_t     * pixels       = NULL;
+    uint8_t    ** row_pointers = NULL;
+    uint8_t       hdr[8];
+    int32_t       len, width, height, color_type, rowbytes, y, ret;
+    int32_t       bit_depth __attribute__((unused));
+
+    // preset returns to caller
+    *pixels_arg = NULL;
+    *width_arg  = 0;
+    *height_arg = 0;
+
+    // open file_name
+    fp = fopen(file_name, "rb");
+    if (!fp) {
+        printf("ERROR: %s: fopen failed, %s\n", file_name, strerror(errno));
+        goto error;
+    }
+
+    // read and verify header
+    len = fread(hdr, 1, sizeof(hdr), fp);
+    if (len != sizeof(hdr)) {
+        printf("ERROR: %s: hdr read failed, len=%d, %s\n", file_name, len, strerror(errno));
+        goto error;
+    }
+    if (png_sig_cmp(hdr, 0, sizeof(hdr))) {
+        printf("ERROR: %s: is not a png file\n", file_name);
+        goto error;
+    }
+
+    // init
+    png_ptr = png_create_read_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
+    if (png_ptr == NULL) {
+        printf("ERROR: %s: png_create_read_struct failed\n", file_name);
+        goto error;
+    }
+
+    png_info = png_create_info_struct(png_ptr);
+    if (png_info == NULL) {
+        printf("ERROR: %s: png_create_info_struct failed\n", file_name);
+        goto error;
+    }
+
+    // register error jmpbuf
+    if (setjmp(png_jmpbuf(png_ptr))) {
+        printf("ERROR: %s: failed\n", file_name);
+        goto error;
+    }
+
+    // provide the file-pointer to png
+    png_init_io(png_ptr, fp);
+
+    // inform png that we've already read the signature
+    png_set_sig_bytes(png_ptr, 8);
+
+    // read png info
+    png_read_info(png_ptr, png_info);
+    width      = png_get_image_width(png_ptr, png_info);
+    height     = png_get_image_height(png_ptr, png_info);
+    color_type = png_get_color_type(png_ptr, png_info);
+    bit_depth  = png_get_bit_depth(png_ptr, png_info);
+    printf("INFO: width=%d height=%d color_type=%s bit_depth=%d\n",
+          width, height, PNG_COLOR_TYPE_STR(color_type), bit_depth);
+
+    // currently this routine supports only PNG_COLOR_TYPE_RGB_ALPHA
+    if (color_type != PNG_COLOR_TYPE_RGB_ALPHA) {
+        printf("ERROR: %s: unsupported color_type %s\n", file_name, PNG_COLOR_TYPE_STR(color_type));
+        goto error;
+    }
+
+    // get the number of bytes in a row, and
+    // allocate memory for the pixels
+    rowbytes = png_get_rowbytes(png_ptr,png_info);
+    printf("INFO: rowbytes=%d\n", rowbytes);
+    pixels = malloc(height*rowbytes);
+    if (pixels == NULL) {
+        printf("ERROR: %s: malloc pixels failed, %dx%d\n", file_name, width, height);
+        goto error;
+    }
+
+    // allocate and init row_pointers
+    row_pointers = malloc(sizeof(void*) * height);
+    for (y = 0; y < height; y++) {
+        row_pointers[y] = pixels + y * rowbytes;
+    }
+
+    // read the image
+    png_read_image(png_ptr, row_pointers);
+
+    // success return
+    *width_arg  = width;
+    *height_arg = height;
+    *pixels_arg = pixels;
+    ret = 0;
+    goto cleanup;
+
+    // error return
+error:
+    ret = -1;
+    goto cleanup;
+
+    // cleanup and return
+cleanup:
+    if (fp) {
+        fclose(fp);
+    }
+    free(row_pointers);
+    if (ret == -1) {
+        free(pixels);
+    }
+    png_destroy_read_struct(&png_ptr, &png_info, NULL);
+    return ret;
+}
+

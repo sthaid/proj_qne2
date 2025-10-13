@@ -66,6 +66,12 @@ json_value_t *util_json_get_value(void *json_item, ...);
 
 void util_get_location(double *latitude, double *longitude, double *altitude);
 
+// ----------------- PNG  --------------------
+
+// these routines read/write 32-bit RGBA png files
+int util_read_png_file(char *dir, char *filename, unsigned char **pixels, int *w, int *h);
+int util_write_png_file(char *dir, char *filename, unsigned char *pixels, int w, int h);
+
 #ifdef __cplusplus
 }
 #endif

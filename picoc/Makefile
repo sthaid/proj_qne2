@@ -6,7 +6,7 @@ CC=gcc
 
 CFLAGS=  -Wall -Wno-unused-result -Werror -O2 -g
 CFLAGS+= -DVER=\"a97d94fa\" -DTAG=\"v3.2.2\" -DUNIX_HOST
-CFLAGS+= -I../src -I../cJSON $(shell pkg-config sdl3--cflags)
+CFLAGS+= -I../src -I../cJSON -I../lodepng $(shell pkg-config sdl3 --cflags)
 LIBS=    -lm -lreadline -lSDL3 -lSDL3_ttf
 CXXFLAGS = $(CFLAGS)
 
@@ -18,7 +18,8 @@ SRCS	= picoc.c table.c lex.c parse.c expression.c heap.c type.c \
 	  cstdlib/time.c cstdlib/errno.c cstdlib/ctype.c cstdlib/stdbool.c \
 	  cstdlib/unistd.c \
           sdlx_misc.c sdlx_video.c sdlx_audio.c sdlx_sensor.c sdlx_event.c logging.c utils.c utils_location.cpp \
-          cJSON.c
+          cJSON.c \
+          lodepng.c
 
 OBJS	:= $(SRCS:%.c=%.o)
 OBJS	:= $(OBJS:%.cpp=%.o)

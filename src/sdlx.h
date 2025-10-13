@@ -61,15 +61,6 @@ typedef struct {
 
 typedef struct sdlx_texture sdlx_texture_t;
 
-#define PIXELS_MAGIC 0x11223344
-typedef struct {
-    int magic;
-    int struct_len;
-    int w;
-    int h;
-    int pixels[0];
-} sdlx_pixels_t;
-
 typedef struct {
     int ptsize;
     int char_width;
@@ -128,13 +119,13 @@ void sdlx_render_point(int x, int y, int color, int point_size);
 void sdlx_render_points(sdlx_point_t *points, int count, int color, int point_size);
 
 // render using textures
-sdlx_texture_t *sdlx_create_texture_from_pixels(sdlx_pixels_t *pixels);
+sdlx_texture_t *sdlx_create_texture_from_pixels(unsigned char *pixels, int w, int h);
 sdlx_texture_t *sdlx_create_filled_circle_texture(int radius, int color);
 sdlx_texture_t *sdlx_create_text_texture(char *str);
 void sdlx_render_texture(int x, int y, int w, int h, double angle, sdlx_texture_t *texture);
 void sdlx_destroy_texture(sdlx_texture_t *texture);
 void sdlx_query_texture(sdlx_texture_t *texture, int *w, int *h);
-sdlx_pixels_t *sdlx_read_display_pixels(int x, int y, int w, int h);
+unsigned char *sdlx_read_display_pixels(int x, int y, int w, int h, int *w_pixels, int *h_pixels);
 
 // plotting
 void *sdlx_plot_create(char *title,
