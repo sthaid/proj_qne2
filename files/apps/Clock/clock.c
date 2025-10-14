@@ -2,11 +2,18 @@
 #include <stdbool.h>
 #include <stdlib.h>
 #include <math.h>
+#include <time.h>
 
 #include <sdlx.h>
 #include <utils.h>
 
-// xxx maybe pixels shoudl be unsigned int
+// xxx 
+// - maybe pixels shoudl be unsigned int
+// - options to:
+//   - utc vs local
+//   - differnet styles
+// - add prints for time in local,  and also day / date
+
 
 // variables
 static char *progname;
@@ -14,7 +21,7 @@ static char *data_dir;
 
 // prototypes
 static void draw_analog_clock_numbers(void);
-static void draw_analog_clock_hands(void);
+static void draw_analog_clock_hands(struct tm *tm);
 sdlx_texture_t * create_rectangle_texture(int w, int h, int color);
 
 // select different faces
@@ -33,6 +40,8 @@ int main(int argc, char **argv)
     sdlx_event_t    event;
     int             rc;
     bool            quit = false;
+    time_t          t;
+    struct tm       tm;
 
     // save arg values
     progname = argv[0];
@@ -57,16 +66,21 @@ int main(int argc, char **argv)
         // register control event to end program
         sdlx_register_control_events(">", NULL, "X", COLOR_BLACK, EVID_XXX, 0, EVID_QUIT);
 
-        // draw the analog clock
+        // xxx get the time
+        t = time(NULL);
+        localtime_r(&t, &tm);
+
+
+        // draw the analog clock  xxx just one call
         draw_analog_clock_numbers();
-        draw_analog_clock_hands();
+        draw_analog_clock_hands(&tm);
 
         // present the display
         sdlx_display_present();
 
-        // wait for an event with 50 ms timeout;
+        // wait for an event with 1 s timeout;
         // if no event, then redraw display
-        sdlx_get_event(50000, &event);
+        sdlx_get_event(1000000, &event);
         if (event.event_id == -1) {
             continue;
         }
@@ -118,13 +132,16 @@ static void draw_analog_clock_numbers(void)
 #define H_MH  375
 #define O_MH  60
 
-#define W_SH  7
-#define H_SH  470
-#define O_SH  120
+#define W_SH  4
+#define H_SH  425
+#define O_SH  100
 
-static void draw_analog_clock_hands(void)
+static void draw_analog_clock_hands(struct tm *tm)
 {
     static bool first_call = true;
+
+    double hour_hand_angle, minute_hand_angle, second_hand_angle;
+    long   secs;
 
     if (first_call) {
         hour_hand = create_rectangle_texture(W_HH, H_HH, COLOR_BLACK);
@@ -133,21 +150,27 @@ static void draw_analog_clock_hands(void)
         first_call = false;
     }
 
+    secs = 3600 * tm->tm_hour + 60 * tm->tm_min + tm->tm_sec;
+
+    hour_hand_angle   = secs * (360. / (12 * 3600));
+    minute_hand_angle = secs * (360. / 3600);
+    second_hand_angle = secs * (360. / 60);
+
     sdlx_render_texture_ex(X_CLOCK-(W_HH/2), Y_CLOCK-H_HH+O_HH, 
                            W_HH, H_HH, 
-                           angle, 
+                           hour_hand_angle, 
                            W_HH/2, H_HH-O_HH,
                            hour_hand);
 
     sdlx_render_texture_ex(X_CLOCK-(W_MH/2), Y_CLOCK-H_MH+O_MH, 
                            W_MH, H_MH, 
-                           angle+90, 
+                           minute_hand_angle, 
                            W_MH/2, H_MH-O_MH,
                            minute_hand);
 
     sdlx_render_texture_ex(X_CLOCK-(W_SH/2), Y_CLOCK-H_SH+O_SH, 
                            W_SH, H_SH, 
-                           angle+150,
+                           second_hand_angle,
                            W_SH/2, H_SH-O_SH,
                            second_hand);
 
