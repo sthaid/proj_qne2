@@ -205,6 +205,9 @@ int sdlx_video_init(void)
         ERROR("chw,chh, expected = 50,83  actual = %d,%d\n", sdlx_char_width, sdlx_char_height);
     }
 
+    // enable alpha blending
+    SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
+
     // this is needed so that the first actual display present works
     sdlx_display_init(COLOR_BLACK);
     sdlx_display_present();
@@ -291,6 +294,11 @@ int sdlx_scale_color(int color, double inten)
     b *= inten;
 
     return (r << 0) | (g << 8) | (b << 16) | (a << 24);
+}
+
+int sdlx_set_color_alpha(int color, int alpha)
+{
+    return (color & 0x00ffffff) | ((alpha & 0xff) << 24);
 }
 
 // ported from http://www.noah.org/wiki/Wavelength_to_RGB_in_Python

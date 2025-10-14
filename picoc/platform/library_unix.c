@@ -120,6 +120,18 @@ void Sdl_scale_color (struct ParseState *Parser, struct Value *ReturnValue,
     ReturnValue->Val->Integer = scaled_color;
 }
 
+void Sdl_set_color_alpha (struct ParseState *Parser, struct Value *ReturnValue,
+	struct Value **Param, int NumArgs)
+{
+    int color = Param[0]->Val->Integer;
+    int alpha = Param[1]->Val->Integer;
+    int ret_color;
+
+    ret_color = sdlx_set_color_alpha(color, alpha);
+
+    ReturnValue->Val->Integer = ret_color;
+}
+
 void Sdl_wavelength_to_color (struct ParseState *Parser, struct Value *ReturnValue,
 	struct Value **Param, int NumArgs)
 {
@@ -706,6 +718,7 @@ struct LibraryFunction SdlFunctions[] = {
     // create colors
     { Sdl_create_color,    "int sdlx_create_color(int r, int g, int b, int a);" },
     { Sdl_scale_color,     "int sdlx_scale_color(int color, double inten);" },
+    { Sdl_set_color_alpha, "int sdlx_set_color_alpha(int color, int alpha);" },
     { Sdl_wavelength_to_color, "int sdlx_wavelength_to_color(int wavelength);" },
 
     // render text
@@ -830,22 +843,23 @@ typedef struct { \n\
 #define SUBSYS_SENSOR 4 \n\
 \n\
 #define BYTES_PER_PIXEL  4 \n\
-#define COLOR_BLACK      (   0  |    0<<8 |    0<<16 |  255<<24 ) \n\
-#define COLOR_WHITE      ( 255  |  255<<8 |  255<<16 |  255<<24 ) \n\
-#define COLOR_RED        ( 255  |    0<<8 |    0<<16 |  255<<24 ) \n\
-#define COLOR_ORANGE     ( 255  |  128<<8 |    0<<16 |  255<<24 ) \n\
-#define COLOR_YELLOW     ( 255  |  255<<8 |    0<<16 |  255<<24 ) \n\
-#define COLOR_GREEN      (   0  |  255<<8 |    0<<16 |  255<<24 ) \n\
-#define COLOR_BLUE       (   0  |    0<<8 |  255<<16 |  255<<24 ) \n\
-#define COLOR_INDIGO     (  75  |    0<<8 |  130<<16 |  255<<24 ) \n\
-#define COLOR_VIOLET     ( 238  |  130<<8 |  238<<16 |  255<<24 ) \n\
-#define COLOR_PURPLE     ( 127  |    0<<8 |  255<<16 |  255<<24 ) \n\
-#define COLOR_LIGHT_BLUE (   0  |  255<<8 |  255<<16 |  255<<24 ) \n\
-#define COLOR_PINK       ( 255  |  105<<8 |  180<<16 |  255<<24 ) \n\
-#define COLOR_TEAL       (   0  |  128<<8 |  128<<16 |  255<<24 ) \n\
-#define COLOR_LIGHT_GRAY ( 192  |  192<<8 |  192<<16 |  255<<24 ) \n\
-#define COLOR_GRAY       ( 128  |  128<<8 |  128<<16 |  255<<24 ) \n\
-#define COLOR_DARK_GRAY  (  64  |   64<<8 |   64<<16 |  255<<24 ) \n\
+#define COLOR_BLACK       (   0  |    0<<8 |    0<<16 |  255<<24 ) \n\
+#define COLOR_WHITE       ( 255  |  255<<8 |  255<<16 |  255<<24 ) \n\
+#define COLOR_RED         ( 255  |    0<<8 |    0<<16 |  255<<24 ) \n\
+#define COLOR_ORANGE      ( 255  |  128<<8 |    0<<16 |  255<<24 ) \n\
+#define COLOR_YELLOW      ( 255  |  255<<8 |    0<<16 |  255<<24 ) \n\
+#define COLOR_GREEN       (   0  |  255<<8 |    0<<16 |  255<<24 ) \n\
+#define COLOR_BLUE        (   0  |    0<<8 |  255<<16 |  255<<24 ) \n\
+#define COLOR_INDIGO      (  75  |    0<<8 |  130<<16 |  255<<24 ) \n\
+#define COLOR_VIOLET      ( 238  |  130<<8 |  238<<16 |  255<<24 ) \n\
+#define COLOR_PURPLE      ( 127  |    0<<8 |  255<<16 |  255<<24 ) \n\
+#define COLOR_LIGHT_BLUE  (   0  |  255<<8 |  255<<16 |  255<<24 ) \n\
+#define COLOR_LIGHT_GREEN ( 144  |  238<<8 |  144<<16 |  255<<24 ) \n\
+#define COLOR_PINK        ( 255  |  105<<8 |  180<<16 |  255<<24 ) \n\
+#define COLOR_TEAL        (   0  |  128<<8 |  128<<16 |  255<<24 ) \n\
+#define COLOR_LIGHT_GRAY  ( 192  |  192<<8 |  192<<16 |  255<<24 ) \n\
+#define COLOR_GRAY        ( 128  |  128<<8 |  128<<16 |  255<<24 ) \n\
+#define COLOR_DARK_GRAY   (  64  |   64<<8 |   64<<16 |  255<<24 ) \n\
 \n\
 #define SMALLEST_FONT 40 \n\
 #define SMALL_FONT    30 \n\

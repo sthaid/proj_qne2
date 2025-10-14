@@ -20,24 +20,28 @@ void sdlx_quit(int subsys);
 // video    
 // --------------------
 
+#define BYTES_PER_PIXEL   4
+
 // https://www.w3schools.com/colors/colors_converter.asp
-#define BYTES_PER_PIXEL  4
-#define COLOR_BLACK      (   0  |    0<<8 |    0<<16 |  255<<24 )
-#define COLOR_WHITE      ( 255  |  255<<8 |  255<<16 |  255<<24 )
-#define COLOR_RED        ( 255  |    0<<8 |    0<<16 |  255<<24 )
-#define COLOR_ORANGE     ( 255  |  128<<8 |    0<<16 |  255<<24 )
-#define COLOR_YELLOW     ( 255  |  255<<8 |    0<<16 |  255<<24 )
-#define COLOR_GREEN      (   0  |  255<<8 |    0<<16 |  255<<24 )
-#define COLOR_BLUE       (   0  |    0<<8 |  255<<16 |  255<<24 )
-#define COLOR_INDIGO     (  75  |    0<<8 |  130<<16 |  255<<24 )
-#define COLOR_VIOLET     ( 238  |  130<<8 |  238<<16 |  255<<24 )
-#define COLOR_PURPLE     ( 127  |    0<<8 |  255<<16 |  255<<24 )
-#define COLOR_LIGHT_BLUE (   0  |  255<<8 |  255<<16 |  255<<24 )
-#define COLOR_PINK       ( 255  |  105<<8 |  180<<16 |  255<<24 )
-#define COLOR_TEAL       (   0  |  128<<8 |  128<<16 |  255<<24 )
-#define COLOR_LIGHT_GRAY ( 192  |  192<<8 |  192<<16 |  255<<24 )
-#define COLOR_GRAY       ( 128  |  128<<8 |  128<<16 |  255<<24 )
-#define COLOR_DARK_GRAY  (  64  |   64<<8 |   64<<16 |  255<<24 )
+// these colors are opaque (alpha equals 255)
+//                          red      green       blue      alpha
+#define COLOR_BLACK       (   0  |    0<<8 |    0<<16 |  255<<24 )
+#define COLOR_WHITE       ( 255  |  255<<8 |  255<<16 |  255<<24 )
+#define COLOR_RED         ( 255  |    0<<8 |    0<<16 |  255<<24 )
+#define COLOR_ORANGE      ( 255  |  128<<8 |    0<<16 |  255<<24 )
+#define COLOR_YELLOW      ( 255  |  255<<8 |    0<<16 |  255<<24 )
+#define COLOR_GREEN       (   0  |  255<<8 |    0<<16 |  255<<24 )
+#define COLOR_BLUE        (   0  |    0<<8 |  255<<16 |  255<<24 )
+#define COLOR_INDIGO      (  75  |    0<<8 |  130<<16 |  255<<24 )
+#define COLOR_VIOLET      ( 238  |  130<<8 |  238<<16 |  255<<24 )
+#define COLOR_PURPLE      ( 127  |    0<<8 |  255<<16 |  255<<24 )
+#define COLOR_LIGHT_BLUE  (   0  |  255<<8 |  255<<16 |  255<<24 )
+#define COLOR_LIGHT_GREEN ( 144  |  238<<8 |  144<<16 |  255<<24 )
+#define COLOR_PINK        ( 255  |  105<<8 |  180<<16 |  255<<24 )
+#define COLOR_TEAL        (   0  |  128<<8 |  128<<16 |  255<<24 )
+#define COLOR_LIGHT_GRAY  ( 192  |  192<<8 |  192<<16 |  255<<24 )
+#define COLOR_GRAY        ( 128  |  128<<8 |  128<<16 |  255<<24 )
+#define COLOR_DARK_GRAY   (  64  |   64<<8 |   64<<16 |  255<<24 )
 
 #define ROW2Y(r) ((r) * sdlx_char_height)
 #define COL2X(c) ((c) * sdlx_char_width)
@@ -95,6 +99,7 @@ void sdlx_display_present(void);
 // create colors
 int sdlx_create_color(int r, int g, int b, int a);
 int sdlx_scale_color(int color, double inten);
+int sdlx_set_color_alpha(int color, int alpha);
 int sdlx_wavelength_to_color(int wavelength);
 
 // render text

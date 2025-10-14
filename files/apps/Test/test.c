@@ -519,6 +519,7 @@ static void page_5_exit(void)
 // -----------------  PAGE 6: COLORS  -------------------------
 
 static void color_test(int idx, char *color_name, int color);
+static void alpha_test(int idx, char *test_name, int bg_color, int fg_color);
 
 static void page_6_draw(void)
 {
@@ -534,11 +535,13 @@ static void page_6_draw(void)
     color_test(idx++, "VIOLET", COLOR_VIOLET);
     color_test(idx++, "PURPLE", COLOR_PURPLE);
     color_test(idx++, "LIGHT_BLUE", COLOR_LIGHT_BLUE);
+    color_test(idx++, "LIGHT_GREEN", COLOR_LIGHT_GREEN);
     color_test(idx++, "PINK", COLOR_PINK);
     color_test(idx++, "TEAL", COLOR_TEAL);
     color_test(idx++, "LIGHT_GRAY", COLOR_LIGHT_GRAY);
     color_test(idx++, "GRAY", COLOR_GRAY);
     color_test(idx++, "DARK_GRAY", COLOR_DARK_GRAY);
+    alpha_test(idx++, "ALPHA_TEST", COLOR_WHITE, COLOR_BLUE);
 }
 
 static void color_test(int idx, char *color_name, int color)
@@ -547,6 +550,23 @@ static void color_test(int idx, char *color_name, int color)
 
     sdlx_render_text(0, y, color_name);
     sdlx_render_fill_rect(500, y, 500, sdlx_char_height, color);
+}
+
+static void alpha_test(int idx, char *test_name, int bg_color, int fg_color)
+{
+    int y = 2 * sdlx_char_height + idx * 100;
+    int alpha, x, color;
+
+    sdlx_render_text(0, y, test_name);
+    sdlx_render_fill_rect(500, y, 500, sdlx_char_height, bg_color);
+
+    for (x = 500; x < 1000; x+=2) {
+        alpha = (x - 500) / 2;  // will range from 0 to 249
+        color = sdlx_set_color_alpha(fg_color, alpha);
+        sdlx_render_line(x, y, x, y+sdlx_char_height, color);
+        sdlx_render_line(x+1, y, x+1, y+sdlx_char_height, color);
+    }
+
 }
 
 // -----------------  PAGE 7: AUDIO  --------------------------
