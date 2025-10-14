@@ -1,135 +1,33 @@
-work on tranparanet colors
+add clock app
 
-add clock
+simple app - flashlight
 
---- done ---
-
-tester defaults to picoc
-
-test pgm file extension for audio files
-
-compass pgm needs more comments
-
-cleanup bin/src jpeg_to_pixels
-
-rename test_app to 'tester'
-
-wxxx hxxx
-
-update copyright generateor
-
-add README to compass dir on how the image was created
-
---------------
-
-cleanup jpeg 2 pixels,  not needed inthis form; may still be needed to divide an image to 
- multiple png files
-
-
-
-
-lodepng
-https://github.com/lvandeve/lodepng
-
-
-------------
-
-start documentation outline
-doc file for images
-- explain imagegick
-- go through example of how compass was done
-   stock
-   checkered background  means png is available with the checkered area being transparent, alpha=0
-   resize, so that file is not bigger than neccessary
-   read file
-   creat texture
-   render texture
-
-add tool to convert png or jpeg to pxl format
-
-add transparent color support to sdlx_video
-
-define extensions
-- audio               .audio     xxx do these all have magic values
-- sdlx_pixel_t        .image
-- history             .dat
-
-
-
-
-
---------
-
-sudo apt install imagemagick
-
-convert input.png -resize 500x300 output.png
-convert input.jpg -scale 50% output.png
-
-identify -format "%w x %h\n" t1out.png
-
-convert AdobeStock_1094425893.png -resize 1000x1000 ../../files/apps/Compass/compass.png
-
--------------------
-
-how to change video to support alpha colors
-- then would not need to tweak the compass
-
-xxxxxxxxxxx
-xxxxxxxxxxx
-xxxxxxxxxxx
-xxxxxxxxxxx
-
-get better compass image
+update jpeg_pixels to split a png file or a jpeg file
 
 add fg_color to sdl_register_control_events
 
-make the compass circular
-reduce the pixels file size
-improve the jpeg to pixels converter
-download from stokc the weather symbols
+weather app
+- download from stock the weather symbols
 
-try to get NAN working in picoc
-
-xxxxxxxxxxxxx
+picoc improvements
+- identify problems
+  - const not allowed
+  - location of defines
+  - struct declaration and init
+  - problem when declaring static structures
+  - expressions that evaluate to long need to be cast
+- document the limitations
+- try to fix some of them
+  - try to get NAN working in picoc
 
 cancel stock.adobe.com before Nov 10, if desired
 
-use standard format for picels data
+add test page for weather.gov to Test  OR just add the weather app
 
-------------
+fix ezsh for vi and cmd recall
 
-
-ANDROID:             INFO apps/Test: starting, data_dir=apps_data/Test
-
-LINUX:               INFO apps/Test: starting, data_dir=apps_data/Test
-
-TEST_APP_RUN_PICOC   INFO apps/Test: starting, data_dir=apps_data/Test
-TEST_APP_RUN_LINUX:  INFO apps/Test: starting, data_dir=apps_data/Test
-
---------------
-
-
-TEST_APP_RUN_LINUX:  INFO /tmp/Test: starting, data_dir=apps_data/Test
-TEST_APP_RUN_PICOC   INFO Test: starting, data_dir=apps_data/Test
-
----- DONE -----
-
-dl_get_permission: android.permission.POST_NOTIFICATION not granted
-
-how to know what dir an app is running from     DONE
-
-add setup option to remove data files
-
-reset services did not work
-- took long time
-- Sensors not started
-
----TODO --------
-
-
-work on compass app
-
-add test page for weather.gov to Test
+have program start automatically,  
+- 4 pillars of android?
 
 sensors and location
 - freq of location service
@@ -138,153 +36,35 @@ sensors and location
 
 is any improvement to weather.gov needed
 
-fix ezsh for vi and cmd recall
-
-have program start automatically,  
-- 4 pillars of android?
-
-fresh start with new repo
-
-https://stock.adobe.com/
-
----- PICOC ISSUES ------
-
-start picoc issue list
-- const not allowd
-
----- MAYBE LATER ----
-
-remove curl.out when done with it
-
-xxxxxxxxxxxxxxxx
-xxxxxxxxxxxxxxxx
-xxxxxxxxxxxxxxxx
-
-
-code to read latitude longitude on android
-
-if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-    ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.ACCESS_FINE_LOCATION}, LOCATION_PERMISSION_REQUEST_CODE);
-}
-
-import com.google.android.gms.location.FusedLocationProviderClient;
-import com.google.android.gms.location.LocationServices;
-import com.google.android.gms.location.LocationRequest;
-import com.google.android.gms.location.LocationCallback;
-import com.google.android.gms.location.LocationResult;
-
-public class MainActivity extends AppCompatActivity {
-
-    private FusedLocationProviderClient fusedLocationClient;
-    private LocationCallback locationCallback;
-
-    @Override
-    protected void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_main);
-
-        fusedLocationClient = LocationServices.getFusedLocationProviderClient(this);
-
-        locationCallback = new LocationCallback() {
-            @Override
-            public void onLocationResult(LocationResult locationResult) {
-                if (locationResult == null) {
-                    return;
-                }
-                for (Location location : locationResult.getLocations()) {
-                    // Handle the location here
-                    double latitude = location.getLatitude();
-                    double longitude = location.getLongitude();
-                    // Update UI or perform actions with latitude and longitude
-                }
-            }
-        };
-
-        startLocationUpdates();
-    }
-
-    private void startLocationUpdates() {
-        LocationRequest locationRequest = LocationRequest.create();
-        locationRequest.setInterval(10000); // Update interval in milliseconds
-        locationRequest.setFastestInterval(5000); // Fastest update interval
-        locationRequest.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
-
-        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
-            fusedLocationClient.requestLocationUpdates(locationRequest, locationCallback, Looper.getMainLooper());
-        }
-    }
-
-    @Override
-    protected void onPause() {
-        super.onPause();
-        stopLocationUpdates();
-    }
-
-    private void stopLocationUpdates() {
-        fusedLocationClient.removeLocationUpdates(locationCallback);
-    }
-}
-
-gradle.properties
-android.useAndroidX=true
-
-why did curl fail
+why did curl fail in the Sensors Service
 - try testing it in a loop, and do retry if it fails
 - dont use -s
+- may want to retry
 
-xxxxxxxxxxxxxxxxxxxx
-xxxxxxxxxxxxxxxxxxxx
-xxxxxxxxxxxxxxxxxxxx
-xxxxxxxxxxxxxxxxxxxx
+finish plot programs
+- weather
+- steps
+- lat/long/alt
 
-add weather sensors
-select number of weather points
-finishup plotting i nEnv
+add more weather sensors
 
-clean this file
-read latitude and longitude
-add primes to Test
-simple app - flashlight
+add primes benchmark  to Test
+
+MAYBE LATER 
+- fresh start with new repo
+- remove curl.out when done with it
+
+------------
+--- done ---
+------------
+
+
+=====================================================================
+REVIEW THIS SECTION
+=====================================================================
 
 boot start the service
    - check into auto start   SampleForegroundService
-xxxxxxxxxxxxx
-
---------
-cJSON
---------
-
-sudo apt  install libcjson-dev
-
-[HOME2 | json]$ find /usr/include -name cJSON.h
-/usr/include/cjson/cJSON.h
-
-gcc -o t2 t2.c -I /usr/include/cjson -lcjson
-
-https://github.com/DaveGamble/cJSON
-
-gcc -o test test.c -I. test.c cJSON.c
-
-"how to decode a cjson file using cJSON"
-
----------
-
-clone and checkin github cJSON      done
-add util routines to access         done
-add code to Sensors.c               done / in progress
-learn how to use weather.gov        done
-
-xxxxxxxxxxxxxxxxxxx
-
-https://github.com/json-c/json-c
-
-https://www.weather.gov/documentation/services-web-api#:~:text=All%20of%20the%20information%20presented,to%20use%20for%20any%20purpose.
-
-https://api.weather.gov/
-
-https://api.weather.gov/points/{latitude},{longitude}
-https://api.weather.gov/points/41.0,90.1
-
 
 example using api.weather.gov to get temeprature at latitude longitude
 curl "https://api.weather.gov/points/38.8894,-77.0352" -H "User-Agent: my-weather-app (myemail@example.com)"
@@ -299,21 +79,12 @@ simulated sensor values
 capture data differently
 use localtime
 
-xxxxxxxx
-
 sensor mutex
 add option to clear apps and files, what about restarting a service
 add plot routine
 rename env to sensors
 
-xxxxxxxxxxx
-xxxxxxxxxxx
-xxxxxxxxxxx
-
 apps/Env: utc=09/21/25 18:00:00) pressure=0  step_count=34294
-
-
-xxxxxxxxxx
 
 Apps
 - env
@@ -327,26 +98,16 @@ Apps
 - flashlight  (white or red)
 - lat/long/elevation
 
--------------
-
 add app for pressure and maybe temperature/ humidity
 move services to within settings
 change color for devel mode, or use title line
 logging display
-
----------------
 
 picoc
 - why doesn't it have an 'open' call;  try adding that
 - picoc return value - probably okay
 
 ezput all
-
-shell should accept cmd recall, and vi
-
-xxxxxxxxxxxxxxxx
-xxxxxxxxxxxxxxxx
-xxxxxxxxxxxxxxxx
 
 what happens to main sdl thread when paused, is it blocked on the event,
 - is renderer being cleared
@@ -362,8 +123,6 @@ magnetic field compensation for roll and pitch
 https://www.google.com/search?q=how+to+caclulate+magnetic+heading+from+magnetic+field+strength+and+sensor+tilt&oq=how+to+caclulate+magnetic+heading+from+magnetic+field+strength+and+sensor+tilt&gs_lcrp=EgZjaHJvbWUyBggAEEUYOTIHCAEQIRiPAjIHCAIQIRiPAtIBCTIxNzAyajBqN6gCCLACAfEFUqpUJ6MY3DU&sourceid=chrome&ie=UTF-8
 
 https://www.google.com/search?q=how+to+combine+magnetic+field+and+roll%2Fpitch+data+to+obtain+heading&oq=how+to+combine+magnetic+field+and+roll%2Fpitch+data+to+obtain+heading&gs_lcrp=EgZjaHJvbWUyBggAEEUYOTIHCAEQIRiPAjIHCAIQIRiPAtIBCTE5NjAyajBqOagCBrACAfEFcKSM7Wr74wU&sourceid=chrome&ie=UTF-8
-
----------------
 
 does sdl main keep running when AP is paused?
 - when foreground is enabled
@@ -382,13 +141,9 @@ foreground service
 sensor api, and updates to test pgm
 calling java routines, pass param and return value  test.cpp name
 
----------------
-
 restrict event id for user
 move KEYBD event id
 update logging to use the different SDL levels
-
-----------------------
 
 primes benchmark
 
@@ -397,8 +152,6 @@ fix some picoc issues
 - setting 64 bit value
 
 recording static
-
-xxxxxxxxxxxxxxxx
 
 comment on the purpose of the Makefile and Font file in the apps subdirs
 
@@ -409,8 +162,6 @@ should SDL logging be used instead, or in addition to mine?
 try doxygen
 
 updaes to picoc ...
-
-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 
 is recording volume control needed
 
@@ -428,18 +179,10 @@ recording:
 - record append
 - auto quiet stop
 
-- - - - - - - - - - - - - 
-
 test case for swipe and motion
 
 QUERY info on using java:
 "on android using sdl3 how to get phone ip address"
-
-xxxxxxx xxxxxxxx xxxxxxxx xxxxxxxx xxxxxxxx xxxxxxxx
-xxxxxxx xxxxxxxx xxxxxxxx xxxxxxxx xxxxxxxx xxxxxxxx
-xxxxxxx xxxxxxxx xxxxxxxx xxxxxxxx xxxxxxxx xxxxxxxx
-
-try creating a simple test app
 
 how to start program when booting
 
@@ -559,3 +302,102 @@ code formatting
 test with both windows and linux developer 
 - is windows crlf a problem
 
+=======================================
+SAMPLES
+=======================================
+
+public class MainActivity extends AppCompatActivity {
+
+    private FusedLocationProviderClient fusedLocationClient;
+    private LocationCallback locationCallback;
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_main);
+
+        fusedLocationClient = LocationServices.getFusedLocationProviderClient(this);
+
+        locationCallback = new LocationCallback() {
+            @Override
+            public void onLocationResult(LocationResult locationResult) {
+                if (locationResult == null) {
+                    return;
+                }
+                for (Location location : locationResult.getLocations()) {
+                    // Handle the location here
+                    double latitude = location.getLatitude();
+                    double longitude = location.getLongitude();
+                    // Update UI or perform actions with latitude and longitude
+                }
+            }
+        };
+
+        startLocationUpdates();
+    }
+
+    private void startLocationUpdates() {
+        LocationRequest locationRequest = LocationRequest.create();
+        locationRequest.setInterval(10000); // Update interval in milliseconds
+        locationRequest.setFastestInterval(5000); // Fastest update interval
+        locationRequest.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
+
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
+            fusedLocationClient.requestLocationUpdates(locationRequest, locationCallback, Looper.getMainLooper());
+        }
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        stopLocationUpdates();
+    }
+
+    private void stopLocationUpdates() {
+        fusedLocationClient.removeLocationUpdates(locationCallback);
+    }
+}
+
+====================================================
+DOC
+====================================================
+
+lodepng: https://github.com/lvandeve/lodepng
+
+doc file for images
+- explain imagegick
+- go through example of how compass was done
+   stock
+   checkered background  means png is available with the checkered area being transparent, alpha=0
+   resize, so that file is not bigger than neccessary
+   read file
+   creat texture
+   render texture
+
+define extensions
+- audio               .audio     xxx do these all have magic values
+- sdlx_pixel_t        .image
+- history             .dat
+
+sudo apt install imagemagick
+convert input.png -resize 500x300 output.png
+convert input.jpg -scale 50% output.png
+identify -format "%w x %h\n" t1out.png
+convert AdobeStock_1094425893.png -resize 1000x1000 ../../files/apps/Compass/compass.png
+
+https://stock.adobe.com/
+
+gradle.properties
+android.useAndroidX=true
+
+cJSON
+sudo apt  install libcjson-dev
+/usr/include/cjson/cJSON.h
+https://github.com/DaveGamble/cJSON
+
+references
+https://github.com/json-c/json-c
+https://www.weather.gov/documentation/services-web-api#:~:text=All%20of%20the%20information%20presented,to%20use%20for%20any%20purpose.
+https://api.weather.gov/
+https://api.weather.gov/points/{latitude},{longitude}
+https://api.weather.gov/points/41.0,90.1

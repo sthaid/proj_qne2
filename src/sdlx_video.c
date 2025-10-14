@@ -985,7 +985,7 @@ void sdlx_render_texture(int x, int y, int w, int h, double angle, sdlx_texture_
         return;
     }
 
-    if (w == -1 || h == -1) {  // xxx check these both yield the same result
+    if (w == -1 || h == -1) {  // xxx check these both yield the same result  OR require them
         SDL_GetTextureSize((SDL_Texture *)texture, &w_float, &h_float);
         dest.x = x * scale;
         dest.y = y * scale;
@@ -999,6 +999,36 @@ void sdlx_render_texture(int x, int y, int w, int h, double angle, sdlx_texture_
     }
 
     SDL_RenderTextureRotated(renderer, (SDL_Texture*)texture, NULL, &dest, angle, NULL, false);
+}
+
+void sdlx_render_texture_ex(int x, int y, int w, int h, double angle, int xctr, int yctr,
+                            sdlx_texture_t *texture)
+{
+    SDL_FRect dest;
+    SDL_FPoint ctr;
+    float w_float, h_float;
+
+    if (texture == NULL) {
+        return;
+    }
+
+    if (w == -1 || h == -1) {  // xxx check these both yield the same result  OR require them
+        SDL_GetTextureSize((SDL_Texture *)texture, &w_float, &h_float);
+        dest.x = x * scale;
+        dest.y = y * scale;
+        dest.w = w_float * scale;  // xxx or delete
+        dest.h = h_float * scale;
+    } else {
+        dest.x = x * scale;
+        dest.y = y * scale;
+        dest.w = w * scale;
+        dest.h = h * scale;
+    }
+
+    ctr.x = xctr * scale;
+    ctr.y = yctr * scale;
+
+    SDL_RenderTextureRotated(renderer, (SDL_Texture*)texture, NULL, &dest, angle, &ctr, false);
 }
 
 void sdlx_destroy_texture(sdlx_texture_t *texture)
