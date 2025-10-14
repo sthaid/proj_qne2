@@ -1,31 +1,14 @@
-	modified:   android/do_setup
-	modified:   android/setup_files/app_jni_src_Android.mk
-	modified:   bin/gen_copyright
-	modified:   bin/src/Makefile
-	modified:   bin/src/jpeg_to_pixels.c
-	modified:   bin/test_app
-	modified:   files/apps/Compass/compass.c
-	deleted:    files/apps/Compass/compass.pixels
-	modified:   files/apps/Test/test.c
-	modified:   files/copyright
-	modified:   linux/Makefile
-	modified:   picoc/Makefile
-	modified:   picoc/platform/library_unix.c
-	modified:   src/sdlx.h
-	modified:   src/sdlx_video.c
-	modified:   src/utils.c
-	modified:   src/utils.h
-	modified:   zz_notes/todo
+work on tranparanet colors
 
-add README to compass dir on how the image was created
+add clock
 
-cleanup bin/src jpeg_to_pixels
-
-compass pgm needs more comments
+--- done ---
 
 test pgm file extension for audio files
 
---- done ---
+compass pgm needs more comments
+
+cleanup bin/src jpeg_to_pixels
 
 rename test_app to 'tester'
 
@@ -33,12 +16,13 @@ wxxx hxxx
 
 update copyright generateor
 
+add README to compass dir on how the image was created
+
 --------------
 
 cleanup jpeg 2 pixels,  not needed inthis form; may still be needed to divide an image to 
  multiple png files
 
-work on tranparanet colors
 
 
 

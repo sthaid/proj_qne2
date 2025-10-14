@@ -673,7 +673,6 @@ static void page_7_draw(void)
     sdlx_register_event(loc, EVID_AUDIO_CONT);
 }
 
-// xxx extension for audio files ?
 static void page_7_process_event(sdlx_event_t *ev)
 {
     int rc, i, freq;

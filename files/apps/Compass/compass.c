@@ -68,19 +68,26 @@ int main(int argc, char **argv)
         //   display "NO DATA"
         // endif
         if (heading != INVALID_NUMBER) {
+            // remove jitter from the heading value
             heading = smooth(heading);
 
+            // display white background in the area where the compass 
+            // will be displayed
             sdlx_render_fill_rect(0, 100, 1000, 1000, COLOR_WHITE);
 
+            // draw reference mark at the top center 
             for (int x = sdlx_win_width/2-3; x < sdlx_win_width/2+3; x++) {
                 sdlx_render_line(x, 100, x, 150, COLOR_BLACK);
             }
 
+            // draw the compass rotated by heading
             sdlx_render_texture(50, 150, 900, 900, -heading, compass);
 
+            // print the heading and the heading abbreviation below 
+            // the area where the compass is displayed
             sdlx_print_init(LARGE_FONT, COLOR_WHITE, COLOR_BLACK);
-            sdlx_render_printf_xyctr(sdlx_win_width / 2, 1000 + 2.0 * sdlx_char_height, "%.0f", heading);
-            sdlx_render_printf_xyctr(sdlx_win_width / 2, 1000 + 3.5 * sdlx_char_height, "%s",
+            sdlx_render_printf_xyctr(sdlx_win_width / 2, 1100 + 1.0 * sdlx_char_height, "%.0f", heading);
+            sdlx_render_printf_xyctr(sdlx_win_width / 2, 1100 + 2.5 * sdlx_char_height, "%s",
                                      abbreviation(heading));
         } else {
             sdlx_print_init(LARGE_FONT, COLOR_WHITE, COLOR_BLACK);
