@@ -4,6 +4,8 @@ It has a transparent background, as indicated by the checkerboard, and
 was downloaded in png format. Png supports transparent background, jpeg doesn't
 
 The image was then resized, using the imagemagick convert program.
+Resizing is peformed to reduce the size of the image file. The resizing does
+not affect the size of the image displayed by the compass program.
 
 Install imagemagick:
   sudo apt install imagemagick
