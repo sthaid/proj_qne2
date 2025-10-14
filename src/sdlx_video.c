@@ -976,54 +976,52 @@ sdlx_texture_t *sdlx_create_text_texture(char * str)
     return (sdlx_texture_t*)texture;
 }
 
-void sdlx_render_texture(int x, int y, int w, int h, double angle, sdlx_texture_t *texture)
+void sdlx_render_texture(int x, int y, int w, int h, sdlx_texture_t *texture)
 {
     SDL_FRect dest;
-    float w_float, h_float;
 
     if (texture == NULL) {
         return;
     }
 
-    if (w == -1 || h == -1) {  // xxx check these both yield the same result  OR require them
-        SDL_GetTextureSize((SDL_Texture *)texture, &w_float, &h_float);
-        dest.x = x * scale;
-        dest.y = y * scale;
-        dest.w = w_float;
-        dest.h = h_float;
-    } else {
-        dest.x = x * scale;
-        dest.y = y * scale;
-        dest.w = w * scale;
-        dest.h = h * scale;
+    dest.x = x * scale;
+    dest.y = y * scale;
+    dest.w = w * scale;
+    dest.h = h * scale;
+
+    SDL_RenderTextureRotated(renderer, (SDL_Texture*)texture, NULL, &dest, 0, NULL, false);
+}
+
+void sdlx_render_texture_ex(int x, int y, int w, int h, double angle, sdlx_texture_t *texture)
+{
+    SDL_FRect dest;
+
+    if (texture == NULL) {
+        return;
     }
+
+    dest.x = x * scale;
+    dest.y = y * scale;
+    dest.w = w * scale;
+    dest.h = h * scale;
 
     SDL_RenderTextureRotated(renderer, (SDL_Texture*)texture, NULL, &dest, angle, NULL, false);
 }
 
-void sdlx_render_texture_ex(int x, int y, int w, int h, double angle, int xctr, int yctr,
+void sdlx_render_texture_ex2(int x, int y, int w, int h, double angle, int xctr, int yctr,
                             sdlx_texture_t *texture)
 {
     SDL_FRect dest;
     SDL_FPoint ctr;
-    float w_float, h_float;
 
     if (texture == NULL) {
         return;
     }
 
-    if (w == -1 || h == -1) {  // xxx check these both yield the same result  OR require them
-        SDL_GetTextureSize((SDL_Texture *)texture, &w_float, &h_float);
-        dest.x = x * scale;
-        dest.y = y * scale;
-        dest.w = w_float * scale;  // xxx or delete
-        dest.h = h_float * scale;
-    } else {
-        dest.x = x * scale;
-        dest.y = y * scale;
-        dest.w = w * scale;
-        dest.h = h * scale;
-    }
+    dest.x = x * scale;
+    dest.y = y * scale;
+    dest.w = w * scale;
+    dest.h = h * scale;
 
     ctr.x = xctr * scale;
     ctr.y = yctr * scale;

@@ -462,21 +462,22 @@ static void page_5_draw(void)
 
     // render the circle texture at varying x location, y = 200 .. 400
     static int circle_x=-200;
-    sdlx_render_texture(circle_x, 200, -1, -1, 0, circle);
+    sdlx_query_texture(circle, &w, &h);
+    sdlx_render_texture(circle_x, 200, w, h, circle);
     circle_x += 10;
     if (circle_x > 1000) circle_x = -200;
 
     // render the circle texture using scaling, y = 400 .. 600
-    sdlx_render_texture(500-200, 400, 400, 200, 0, circle);
+    sdlx_render_texture(500-200, 400, 400, 200, circle);
 
     // render text texture, at y = 500
     sdlx_query_texture(text, &w, &h);
-    sdlx_render_texture(0, 500-h/2, -1, -1, 0, text);
+    sdlx_render_texture(0, 500-h/2, w, h, text);
 
     // rotate and render the text texture at y = 600 .. 850
     static double angle = 0;
     angle += 5;
-    sdlx_render_texture(500-w/2, 600+w/2-h/2, -1, -1, angle, text);
+    sdlx_render_texture_ex(500-w/2, 600+w/2-h/2, w, h, angle, text);
 
     // create unit_test_pixels file from the top row of the display
     pixels = sdlx_read_display_pixels(0, 0, sdlx_win_width, sdlx_char_height, &w_pixels, &h_pixels);
@@ -504,7 +505,7 @@ static void page_5_draw(void)
     }
 
     t = sdlx_create_texture_from_pixels(pixels, w_pixels, h_pixels);
-    sdlx_render_texture(0, 900, sdlx_win_width, sdlx_char_height, 180, t);
+    sdlx_render_texture_ex(0, 900, sdlx_win_width, sdlx_char_height, 180, t);
     sdlx_destroy_texture(t);
 
     free(pixels);

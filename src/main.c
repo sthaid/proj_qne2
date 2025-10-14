@@ -376,7 +376,7 @@ static int run(char *name, int svc_id)
 static void display_menu(void)
 {
     static sdlx_texture_t *circle;
-    int first, last;
+    int first, last, w, h;
     sdlx_print_state_t print_state;
 
     #define RADIUS 100
@@ -451,7 +451,8 @@ static void display_menu(void)
         // display the menu item
         // - first render the circle
         // - then render the app name text within the circle
-        sdlx_render_texture(x-RADIUS, y-RADIUS, -1, -1,  0, circle);
+        sdlx_query_texture(circle, &w, &h);
+        sdlx_render_texture(x-RADIUS, y-RADIUS, w, h, circle);
         sdlx_print_init(numchars, COLOR_WHITE, COLOR_BLUE);
         if (s2[0] == '\0') {
             sdlx_render_text_xyctr(x, y, s1);

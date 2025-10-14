@@ -124,8 +124,8 @@ static void draw_analog_clock_numbers(void)
 #define X_CLOCK 500
 #define Y_CLOCK 600
 
-#define W_HH  27
-#define H_HH  300
+#define W_HH  34
+#define H_HH  280
 #define O_HH  40
 
 #define W_MH  17
@@ -156,23 +156,23 @@ static void draw_analog_clock_hands(struct tm *tm)
     minute_hand_angle = secs * (360. / 3600);
     second_hand_angle = secs * (360. / 60);
 
-    sdlx_render_texture_ex(X_CLOCK-(W_HH/2), Y_CLOCK-H_HH+O_HH, 
-                           W_HH, H_HH, 
-                           hour_hand_angle, 
-                           W_HH/2, H_HH-O_HH,
-                           hour_hand);
+    sdlx_render_texture_ex2(X_CLOCK-(W_HH/2), Y_CLOCK-H_HH+O_HH, 
+                            W_HH, H_HH, 
+                            hour_hand_angle, 
+                            W_HH/2, H_HH-O_HH,
+                            hour_hand);
 
-    sdlx_render_texture_ex(X_CLOCK-(W_MH/2), Y_CLOCK-H_MH+O_MH, 
-                           W_MH, H_MH, 
-                           minute_hand_angle, 
-                           W_MH/2, H_MH-O_MH,
-                           minute_hand);
+    sdlx_render_texture_ex2(X_CLOCK-(W_MH/2), Y_CLOCK-H_MH+O_MH, 
+                            W_MH, H_MH, 
+                            minute_hand_angle, 
+                            W_MH/2, H_MH-O_MH,
+                            minute_hand);
 
-    sdlx_render_texture_ex(X_CLOCK-(W_SH/2), Y_CLOCK-H_SH+O_SH, 
-                           W_SH, H_SH, 
-                           second_hand_angle,
-                           W_SH/2, H_SH-O_SH,
-                           second_hand);
+    sdlx_render_texture_ex2(X_CLOCK-(W_SH/2), Y_CLOCK-H_SH+O_SH, 
+                            W_SH, H_SH, 
+                            second_hand_angle,
+                            W_SH/2, H_SH-O_SH,
+                            second_hand);
 
     sdlx_render_point(X_CLOCK, Y_CLOCK, COLOR_RED, 9);
 }

@@ -400,10 +400,37 @@ void Sdl_render_texture (struct ParseState *Parser, struct Value *ReturnValue,
     int            y       = Param[1]->Val->Integer;
     int            w       = Param[2]->Val->Integer;
     int            h       = Param[3]->Val->Integer;
+    sdlx_texture_t *texture = (sdlx_texture_t*)Param[4]->Val->Pointer;
+
+    sdlx_render_texture(x, y, w, h, texture);
+}
+
+void Sdl_render_texture_ex (struct ParseState *Parser, struct Value *ReturnValue,
+	struct Value **Param, int NumArgs)
+{
+    int            x       = Param[0]->Val->Integer;
+    int            y       = Param[1]->Val->Integer;
+    int            w       = Param[2]->Val->Integer;
+    int            h       = Param[3]->Val->Integer;
     double         angle   = Param[4]->Val->FP;
     sdlx_texture_t *texture = (sdlx_texture_t*)Param[5]->Val->Pointer;
 
-    sdlx_render_texture(x, y, w, h, angle, texture);
+    sdlx_render_texture_ex(x, y, w, h, angle, texture);
+}
+
+void Sdl_render_texture_ex2 (struct ParseState *Parser, struct Value *ReturnValue,
+	struct Value **Param, int NumArgs)
+{
+    int            x       = Param[0]->Val->Integer;
+    int            y       = Param[1]->Val->Integer;
+    int            w       = Param[2]->Val->Integer;
+    int            h       = Param[3]->Val->Integer;
+    double         angle   = Param[4]->Val->FP;
+    int            xctr    = Param[5]->Val->Integer;
+    int            yctr    = Param[6]->Val->Integer;
+    sdlx_texture_t *texture = (sdlx_texture_t*)Param[7]->Val->Pointer;
+
+    sdlx_render_texture_ex2(x, y, w, h, angle, xctr, yctr, texture);
 }
 
 void Sdl_destroy_texture (struct ParseState *Parser, struct Value *ReturnValue,
@@ -746,7 +773,9 @@ struct LibraryFunction SdlFunctions[] = {
     { Sdl_create_texture_from_pixels,   "sdlx_texture_t *sdlx_create_texture_from_pixels(unsigned char *pixels, int w, int h);" },
     { Sdl_create_filled_circle_texture, "sdlx_texture_t *sdlx_create_filled_circle_texture(int radius, int color);" },
     { Sdl_create_text_texture,          "sdlx_texture_t *sdlx_create_text_texture(char *str);" },
-    { Sdl_render_texture,               "void sdlx_render_texture(int x, int y, int w, int h, double angle, sdlx_texture_t *texture);" },
+    { Sdl_render_texture,               "void sdlx_render_texture(int x, int y, int w, int h, sdlx_texture_t *texture);" },
+    { Sdl_render_texture_ex,            "void sdlx_render_texture_ex(int x, int y, int w, int h, double angle, sdlx_texture_t *texture);" },
+    { Sdl_render_texture_ex2,           "void sdlx_render_texture_ex2(int x, int y, int w, int h, double angle, int xctr, int yctr, sdlx_texture_t *texture);" },
     { Sdl_destroy_texture,              "void sdlx_destroy_texture(sdlx_texture_t *texture);" },
     { Sdl_query_texture,                "void sdlx_query_texture(sdlx_texture_t *texture, int *width, int *height);" },
     { Sdl_read_display_pixels,          "void *sdlx_read_display_pixels(int x, int y, int w, int h, int *w_pixels, int *h_pixels);" },

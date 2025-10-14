@@ -295,6 +295,7 @@ static void update_display_and_register_events(board_t *b, int game_state, char 
 {
     possible_moves_t pm;
     sdlx_loc_t *ploc;
+    int w, h;
 
     // display game state lines (1 or 2 lines), directly below board
     char *str = "";
@@ -333,7 +334,8 @@ static void update_display_and_register_events(board_t *b, int game_state, char 
         bool is_turn               = (i == 0 ? b->whose_turn == BLACK : b->whose_turn == WHITE);
 
         sdlx_render_fill_rect(x_origin, y_origin, info_circle_radius*2, info_circle_radius*2, COLOR_GREEN);
-        sdlx_render_texture(x_origin, y_origin, -1, -1, 0, info_circle);
+        sdlx_query_texture(info_circle, &w, &h);
+        sdlx_render_texture(x_origin, y_origin, w, h, info_circle);
 
         if (game_state == GAME_STATE_ACTIVE) {
             sdlx_render_text(x_origin, y_origin+100, player_name(player));
@@ -411,7 +413,8 @@ static void update_display_and_register_events(board_t *b, int game_state, char 
                 piece = (b->pos[r][c] == BLACK ? piece_black_circle : piece_white_circle);
                 loc = rc_to_loc[r][c];
                 offset = loc.w / 2 - piece_circle_radius;
-                sdlx_render_texture(loc.x+offset, loc.y+offset, -1, -1, 0, piece);
+                sdlx_query_texture(piece, &w, &h);
+                sdlx_render_texture(loc.x+offset, loc.y+offset, w, h, piece);
             }
         }
     }
@@ -426,7 +429,8 @@ static void update_display_and_register_events(board_t *b, int game_state, char 
             move_to_rc(pm.move[i], &r, &c);
             loc = rc_to_loc[r][c];
             offset = loc.w / 2 - prompt_circle_radius;
-            sdlx_render_texture(loc.x+offset, loc.y+offset, -1, -1, 0, prompt);
+            sdlx_query_texture(prompt, &w, &h);
+            sdlx_render_texture(loc.x+offset, loc.y+offset, w, h, prompt);
         }
     }
 }
