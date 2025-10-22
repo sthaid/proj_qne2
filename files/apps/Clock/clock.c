@@ -10,35 +10,32 @@
 // xxx 
 // - maybe pixels shoudl be unsigned int
 // - options to:
-//   - utc vs local
-//   - differnet styles
-// - add prints for time in local,  and also day / date
+//   - 24 hr time
 
+// defines
+#define XCTR_CLOCK 500
+#define YCTR_CLOCK 600
+#define W_CLOCK    1000
+#define H_CLOCK    1000
 
 // variables
 static char *progname;
 static char *data_dir;
 
+static char *day[7] = { "Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat" };
+static char *month[12] = { "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec" };
+
 // prototypes
-static void draw_analog_clock_numbers(void);
+static void draw_analog_clock_face(void);
 static void draw_analog_clock_hands(struct tm *tm);
-sdlx_texture_t * create_rectangle_texture(int w, int h, int color);
-
-// select different faces
-//sprintf(s, "%d", hour);
-//t = sdlx_create_text_texture(s);
-//#define CLOCK_CENTER_X  500
-//#define CLOCK_CENTER_Y  600
-
-int angle = 30;
-#define EVID_XXX 1
+static sdlx_texture_t * create_rectangle_texture(int w, int h, int color);
 
 // -----------------  MAIN  ------------------------------------------
 
 int main(int argc, char **argv)
 {
     sdlx_event_t    event;
-    int             rc;
+    int             rc, y;
     bool            quit = false;
     time_t          t;
     struct tm       tm;
@@ -46,8 +43,8 @@ int main(int argc, char **argv)
     // save arg values
     progname = argv[0];
     data_dir = argv[1];
-    printf("INFO %s: starting, data_dir=%s\n", progname, data_dir);
-    printf("INFO %s: sdlx_win_width/height  = %d %d\n", progname, sdlx_win_width, sdlx_win_height);
+    printf("INFO %s: starting, data_dir=%s, wXh=%d %d\n", 
+           progname, data_dir, sdlx_win_width, sdlx_win_height);
 
     // init sdl video subsystem
     rc = sdlx_init(SUBSYS_VIDEO);
@@ -56,25 +53,40 @@ int main(int argc, char **argv)
         return 1;
     }
 
-    // 
-
     // runtime loop
     while (!quit) {
         // init the backbuffer
         sdlx_display_init(COLOR_BLACK);
 
         // register control event to end program
-        sdlx_register_control_events(">", NULL, "X", COLOR_BLACK, EVID_XXX, 0, EVID_QUIT);
+        sdlx_register_control_events(NULL, NULL, "X", COLOR_BLACK, 0, 0, EVID_QUIT);
 
         // xxx get the time
         t = time(NULL);
         localtime_r(&t, &tm);
 
-
-        // draw the analog clock  xxx just one call
-        draw_analog_clock_numbers();
+        // display the analog clock  xxx just one call
+        draw_analog_clock_face();
         draw_analog_clock_hands(&tm);
 
+        // display the date and time below the analog clock, example:
+        // 01:30:00 PM EDT  or  13:30:00 EDT
+        // Wed Oct 21 2025
+        y = YCTR_CLOCK + H_CLOCK / 2 + 2 * sdlx_char_height;
+        sdlx_render_printf_xyctr(
+                sdlx_win_width/2, y, 
+                "%02d:%02d:%02d %s",
+                tm.tm_hour, tm.tm_min, tm.tm_sec, tm.tm_zone);
+        y += 1.5 * sdlx_char_height;
+        sdlx_render_printf_xyctr(
+                sdlx_win_width/2, y, 
+                "%s %s %d %d",
+                day[tm.tm_wday], month[tm.tm_mon], tm.tm_mday, tm.tm_year+1900);
+
+        // display sunrise, midday, sunset times, example:
+        // RISE     MID      SET
+        // 07:00   12:00   17:00
+    
         // present the display
         sdlx_display_present();
 
@@ -87,9 +99,6 @@ int main(int argc, char **argv)
 
         // process events
         switch (event.event_id) {
-        case EVID_XXX:
-            angle += 30;
-            break;
         case EVID_QUIT:
             quit = true;
             break;
@@ -97,16 +106,17 @@ int main(int argc, char **argv)
     }
 
     // cleanup and end program
+    //xxx cleanup_analog_clock();
     sdlx_quit(SUBSYS_VIDEO);
     printf("INFO %s: terminating\n", progname);
     return 0;
 }
 
-sdlx_texture_t *hour_hand;
-sdlx_texture_t *minute_hand;
-sdlx_texture_t *second_hand;
+// -----------------  ANALOG CLOCK FACE  -----------------------------
 
-static void draw_analog_clock_numbers(void)
+// xxx save the face in a texture
+
+static void draw_analog_clock_face(void)
 {
     int hour, x, y;
 
@@ -121,8 +131,7 @@ static void draw_analog_clock_numbers(void)
     }
 }
 
-#define X_CLOCK 500
-#define Y_CLOCK 600
+// -----------------  ANALOG CLOCK HANDS -----------------------------
 
 #define W_HH  34
 #define H_HH  280
@@ -135,6 +144,10 @@ static void draw_analog_clock_numbers(void)
 #define W_SH  4
 #define H_SH  425
 #define O_SH  100
+
+sdlx_texture_t *hour_hand;
+sdlx_texture_t *minute_hand;
+sdlx_texture_t *second_hand;
 
 static void draw_analog_clock_hands(struct tm *tm)
 {
@@ -156,25 +169,25 @@ static void draw_analog_clock_hands(struct tm *tm)
     minute_hand_angle = secs * (360. / 3600);
     second_hand_angle = secs * (360. / 60);
 
-    sdlx_render_texture_ex2(X_CLOCK-(W_HH/2), Y_CLOCK-H_HH+O_HH, 
+    sdlx_render_texture_ex2(XCTR_CLOCK-(W_HH/2), YCTR_CLOCK-H_HH+O_HH, 
                             W_HH, H_HH, 
                             hour_hand_angle, 
                             W_HH/2, H_HH-O_HH,
                             hour_hand);
 
-    sdlx_render_texture_ex2(X_CLOCK-(W_MH/2), Y_CLOCK-H_MH+O_MH, 
+    sdlx_render_texture_ex2(XCTR_CLOCK-(W_MH/2), YCTR_CLOCK-H_MH+O_MH, 
                             W_MH, H_MH, 
                             minute_hand_angle, 
                             W_MH/2, H_MH-O_MH,
                             minute_hand);
 
-    sdlx_render_texture_ex2(X_CLOCK-(W_SH/2), Y_CLOCK-H_SH+O_SH, 
+    sdlx_render_texture_ex2(XCTR_CLOCK-(W_SH/2), YCTR_CLOCK-H_SH+O_SH, 
                             W_SH, H_SH, 
                             second_hand_angle,
                             W_SH/2, H_SH-O_SH,
                             second_hand);
 
-    sdlx_render_point(X_CLOCK, Y_CLOCK, COLOR_RED, 9);
+    sdlx_render_point(XCTR_CLOCK, YCTR_CLOCK, COLOR_RED, 9);
 }
     
 sdlx_texture_t * create_rectangle_texture(int w, int h, int color)
