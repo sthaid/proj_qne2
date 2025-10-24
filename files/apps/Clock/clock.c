@@ -53,6 +53,10 @@ int main(int argc, char **argv)
     //sunrise_sunset_web(sunrise_web, sunset_web, midday_web);
     //printf("INFO %s: WEB   %s %s %s\n", progname, sunrise_web, midday_web, sunset_web);
 
+    // xxx move this and the unit test above to a routine and call from
+    //   inside the loop, stop calling once lat & long acquired
+    // xxx return INVALID NUMBER when getting lat/lng if they are 0
+
     // get the sunrise, sunset, and midday (solar noon) times
     sunrise_sunset_calc(sunrise_calc, sunset_calc, midday_calc);
     printf("INFO %s: CALC  %s %s %s\n", progname, sunrise_calc, midday_calc, sunset_calc);
@@ -165,6 +169,7 @@ static void settings(void)
 
         y_top = ROW2Y(2);
         y_bottom = ROW2Y(5);
+// xxx improve this text
         sdlx_render_multiline_text(y_top, y_top, y_bottom, 
 "The sunrise & sunset times are\n\
 verified by comparison with\n\
@@ -181,7 +186,9 @@ https://sunrise-sunset.org/api\n");
     }
 }
 
-// -----------------  ANALOG CLOCK FACE  -----------------------------
+// -----------------  ANALOG CLOCK  ----------------------------------
+
+// - - - - - - face  - - - - - - - - - - - 
 
 static void draw_analog_clock_face(void)
 {
@@ -198,7 +205,7 @@ static void draw_analog_clock_face(void)
     }
 }
 
-// -----------------  ANALOG CLOCK HANDS -----------------------------
+// - - - - - - hands - - - - - - - - - - - 
 
 #define W_HH  34  // width of the hour-hand
 #define H_HH  280 // height of the hour-hand
@@ -273,6 +280,8 @@ static sdlx_texture_t * create_rectangle_texture(int w, int h, int color)
 
     return t;
 }
+
+// - - - - - - cleanup - - - - - - - - - - 
 
 static void cleanup_analog_clock(void)
 {
