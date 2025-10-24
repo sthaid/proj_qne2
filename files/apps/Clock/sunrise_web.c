@@ -86,44 +86,9 @@ void sunrise_sunset_web(char *sunrise, char *sunset, char *midday)
     localtime_r(&t_midday_gm, &tm);
     sprintf(midday, "%02d:%02d", tm.tm_hour, tm.tm_min);
 
-
-
-
-    //make_local_time_str(rise.u.string, sunrise, "RISE");
-
-    //set = *util_json_get_value(root, "results", "sunset", NULL);
-    //make_local_time_str(set.u.string, sunset, "SET ");
-
 done:
     util_json_free(root);
 }
-
-#if 0
-static void make_local_time_str(char *str_in, char *str_out, char *debug)
-{
-    int cnt, hour, min, sec;
-    char ampm[100];
-
-    // extract hour,min,sec from str_in
-    cnt = sscanf(str_in, "%d:%d:%d %s", &hour, &min, &sec, ampm);
-    if (cnt != 4) {
-        strcpy(str_out, "N/A");
-        return;
-    }
-
-    // adjust pm time
-    if (strcmp(ampm, "PM") == 0) {
-        hour += 12;
-    }
-
-    // convert from utc to localtime
-    hour -= 4;  // xxx todo
-
-    // create str_out
-    sprintf(str_out, "%02d:%02d", hour, min);
-    //printf("INFO %s: WEB %s %s\n", progname, debug, str_out);
-}
-#endif
 
 static int run_curl(char *url, char *filename)
 {
@@ -132,8 +97,7 @@ static int run_curl(char *url, char *filename)
 
     util_delete_file(data_dir, filename);
 
-    sprintf(cmd, "curl -s %s > %s/%s", url, data_dir, "curl.out");
-
+    sprintf(cmd, "curl -s %s > %s/%s", url, data_dir, filename);
     ret = system(cmd);
     if (ret != 0) {
         printf("ERROR %s: curl failed for url '%s'\n", progname, url);
