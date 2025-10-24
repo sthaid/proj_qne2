@@ -103,9 +103,9 @@ void sunrise_sunset_calc(char *sunrise, char *sunset, char *midday)
     jmid = (jset + jrise) / 2;
 
     // xxx
-    make_local_time_str(jrise, sunrise, "RISE");
-    make_local_time_str(jset, sunset, "SET ");
-    make_local_time_str(jmid, midday, "MID ");
+    make_local_time_str(jrise, sunrise, "CALC RISE");
+    make_local_time_str(jset, sunset,   "CALC SET ");
+    make_local_time_str(jmid, midday,   "CALC MID ");
 
     // xxx mid
 }
@@ -131,10 +131,10 @@ static void make_local_time_str(double jd, char *str, char *debug)
     t = timegm(&tm_gmt);
 
     localtime_r(&t, &tm_local);
-    printf("INFO %s: %s %02d/%02d/%d %02d:%02d:%02d\n", 
-           progname, debug,
-           tm_local.tm_mon+1, tm_local.tm_mday, tm_local.tm_year+1900,
-           tm_local.tm_hour, tm_local.tm_min, tm_local.tm_sec);
+    //printf("INFO %s: %s %02d/%02d/%d %02d:%02d:%02d\n", 
+    //       progname, debug,
+    //       tm_local.tm_mon+1, tm_local.tm_mday, tm_local.tm_year+1900,
+    //       tm_local.tm_hour, tm_local.tm_min, tm_local.tm_sec);
 
     sprintf(str, "%02d:%02d", tm_local.tm_hour, tm_local.tm_min);  // xxx round to minute
 }
