@@ -1,16 +1,13 @@
-#include <stdio.h>  // xxx
-#include <stdbool.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
-#include <math.h>
     
-#include <sdlx.h> //xxx
+#include <sdlx.h>
 #include <utils.h>
 
 #include "apps/Clock/common.h"
 
-//static void make_local_time_str(char *str_in, char *str_out, char *debug);
 static int run_curl(char *url, char *filename);
 static void *get_json_root(char *filename);
 
@@ -36,7 +33,10 @@ void sunrise_sunset_web(char *sunrise, char *sunset, char *midday)
         goto done;
     }
 
-    // xxx
+    // get sunrise and sunset times in json format from sunrise-sunset.org
+    // references:
+    //   https://sunrise-sunset.org/
+    //   https://sunrise-sunset.org/api
     sprintf(curl_url, "\"https://api.sunrise-sunset.org/json?lat=%0.4f&lng=%0.4f&formatted=0\"", latitude, longitude);
     ret = run_curl(curl_url, "curl.out");
     if (ret != 0) {
@@ -44,16 +44,16 @@ void sunrise_sunset_web(char *sunrise, char *sunset, char *midday)
         goto done;
     }
 
-    // xxx
+    // parse ths json
     root = get_json_root("curl.out");
     if (root == NULL) {
         printf("ERROR %s: json parse failed\n", progname);
         goto done;
     }
 
-    // get sunrise time
+    // extract sunrise time from json
     rise = *util_json_get_value(root, "results", "sunrise", NULL);
-    //printf("INFO %s: WEB  RISE %s\n", progname, rise.u.string);
+    printf("INFO %s: web  RISE %s UTC\n", progname, rise.u.string);
     memset(&tm, 0, sizeof(tm));
     cnt = sscanf(rise.u.string, "%d-%d-%dT%d:%d:%d", &tm.tm_year, &tm.tm_mon, &tm.tm_mday, &tm.tm_hour, &tm.tm_min, &tm.tm_sec);
     if (cnt != 6) {
@@ -66,9 +66,9 @@ void sunrise_sunset_web(char *sunrise, char *sunset, char *midday)
     localtime_r(&t_rise_gm, &tm);
     sprintf(sunrise, "%02d:%02d", tm.tm_hour, tm.tm_min);
 
-    // get sunset time
+    // extract sunset time from json
     set = *util_json_get_value(root, "results", "sunset", NULL);
-    //printf("INFO %s: WEB  SET  %s\n", progname, set.u.string);
+    printf("INFO %s: web  SET  %s UTC\n", progname, set.u.string);
     memset(&tm, 0, sizeof(tm));
     cnt = sscanf(set.u.string, "%d-%d-%dT%d:%d:%d", &tm.tm_year, &tm.tm_mon, &tm.tm_mday, &tm.tm_hour, &tm.tm_min, &tm.tm_sec);
     if (cnt != 6) {
@@ -81,9 +81,13 @@ void sunrise_sunset_web(char *sunrise, char *sunset, char *midday)
     localtime_r(&t_set_gm, &tm);
     sprintf(sunset, "%02d:%02d", tm.tm_hour, tm.tm_min);
 
-    // get midday time
-    t_midday_gm = (t_rise_gm + t_set_gm) / 2;
+    // calculate midday time, (solar noon)
+    //t_midday_gm = ((long)t_rise_gm + (long)t_set_gm) / 2;  // xxx why doesnt this work in picoc
+    char s[100];
+    t_midday_gm = t_rise_gm / 2 + t_set_gm / 2;
     localtime_r(&t_midday_gm, &tm);
+    strftime(s, sizeof(s), "%c", &tm);
+    printf("INFO %s: web  MID  %s\n", progname, s);
     sprintf(midday, "%02d:%02d", tm.tm_hour, tm.tm_min);
 
 done:

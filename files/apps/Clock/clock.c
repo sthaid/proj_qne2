@@ -1,7 +1,6 @@
-#include <stdio.h>  // xxx
-#include <stdbool.h>
+#include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
+#include <stdbool.h>
 #include <time.h>
 #include <math.h>
 
@@ -10,10 +9,9 @@
 
 #include "apps/Clock/common.h"
 
-// xxx 
+// xxx
+// - adjust size of control bottons
 // - maybe pixels shoudl be unsigned int
-// - options to:
-//   - 24 hr time ?
 
 // defines
 #define XCTR_CLOCK 500
@@ -21,16 +19,15 @@
 #define W_CLOCK    1000
 #define H_CLOCK    1000
 
-// variables
-static char *day[7] = { "Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat" };
-static char *month[12] = { "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec" };
+#define EVID_SETTINGS 1
 
 // prototypes
+static char *day_of_week(struct tm *tm);
+static char *month(struct tm *tm);
+static void settings(void);
 static void draw_analog_clock_face(void);
 static void draw_analog_clock_hands(struct tm *tm);
-int sunrise_sunset(int year, int month, int day, time_t *trise, time_t *tset); //xxx static
-
-// xxx add ack to settings
+static void cleanup_analog_clock(void);
 
 // -----------------  MAIN  ------------------------------------------
 
@@ -49,12 +46,14 @@ int main(int argc, char **argv)
     printf("INFO %s: starting, data_dir=%s, wXh=%d %d\n", 
            progname, data_dir, sdlx_win_width, sdlx_win_height);
 
-    // xxx
+    // Get sunrise / sunset times from https://sunrise-sunset.org/api.
+    // The purpose of this is to test that the sunrise_sunset_calc code (below)
+    // produces the correct result.
     //char sunrise_web[50], sunset_web[50], midday_web[50];
     //sunrise_sunset_web(sunrise_web, sunset_web, midday_web);
     //printf("INFO %s: WEB   %s %s %s\n", progname, sunrise_web, midday_web, sunset_web);
 
-    // xxx
+    // get the sunrise, sunset, and midday (solar noon) times
     sunrise_sunset_calc(sunrise_calc, sunset_calc, midday_calc);
     printf("INFO %s: CALC  %s %s %s\n", progname, sunrise_calc, midday_calc, sunset_calc);
 
@@ -71,22 +70,22 @@ int main(int argc, char **argv)
         sdlx_display_init(COLOR_BLACK);
 
         // register control event to end program
-        sdlx_register_control_events(NULL, NULL, "X", COLOR_BLACK, 0, 0, EVID_QUIT);
+        sdlx_register_control_events("stg", NULL, "X", COLOR_BLACK, EVID_SETTINGS, 0, EVID_QUIT);
 
-        // xxx get the time
+        // get the current time
         t = time(NULL);
         localtime_r(&t, &tm);
 
-        // display the analog clock  xxx just one call
+        // display the analog clock
         draw_analog_clock_face();
         draw_analog_clock_hands(&tm);
 
-        // xxx
+        // set the font fg and bg colors for the code that follows
         sdlx_print_init(DEFAULT_FONT, COLOR_WHITE, COLOR_BLACK);
 
         // display the date and time below the analog clock, example:
-        // 01:30:00 PM EDT  or  13:30:00 EDT
-        // Wed Oct 21 2025
+        //   13:30:00 EDT
+        //   Wed Oct 21 2025
         y = YCTR_CLOCK + H_CLOCK / 2 + 1.5 * sdlx_char_height;
         sdlx_render_printf_xyctr(
                 sdlx_win_width/2, y, 
@@ -96,12 +95,12 @@ int main(int argc, char **argv)
         sdlx_render_printf_xyctr(
                 sdlx_win_width/2, y, 
                 "%s %s %d %d",
-                day[tm.tm_wday], month[tm.tm_mon], tm.tm_mday, tm.tm_year+1900);
+                day_of_week(&tm), month(&tm), tm.tm_mday, tm.tm_year+1900);
         y += 1.5 * sdlx_char_height;
 
         // display sunrise, midday, sunset times, example:
-        // RISE     MID      SET
-        // 07:00   12:00   17:00
+        //   RISE     MID      SET
+        //   07:00   12:00   17:00
         sdlx_render_printf(sdlx_char_width/2, y, "RISE");
         sdlx_render_printf(sdlx_win_width/2-3*sdlx_char_width/2, y, "MID");
         sdlx_render_printf(sdlx_win_width-4*sdlx_char_width, y, "SET");
@@ -109,7 +108,6 @@ int main(int argc, char **argv)
         sdlx_render_printf(0, y, "%s", sunrise_calc);
         sdlx_render_printf(sdlx_win_width/2-5*sdlx_char_width/2, y, "%s", midday_calc);
         sdlx_render_printf(sdlx_win_width-5*sdlx_char_width, y, "%s", sunset_calc);
-        // xxx
     
         // present the display
         sdlx_display_present();
@@ -123,6 +121,9 @@ int main(int argc, char **argv)
 
         // process events
         switch (event.event_id) {
+        case EVID_SETTINGS:
+            settings();
+            break;
         case EVID_QUIT:
             quit = true;
             break;
@@ -130,26 +131,68 @@ int main(int argc, char **argv)
     }
 
     // cleanup and end program
-    //xxx cleanup_analog_clock();
+    cleanup_analog_clock();
     sdlx_quit(SUBSYS_VIDEO);
     printf("INFO %s: terminating\n", progname);
     return 0;
 }
 
-// -----------------  ANALOG CLOCK FACE  -----------------------------
+static char *day_of_week(struct tm *tm)
+{
+    static char s[30];
+    strftime(s, sizeof(s), "%a", tm);
+    return s;
+}
 
-// xxx save the face in a texture
+static char *month(struct tm *tm)
+{
+    static char s[30];
+    strftime(s, sizeof(s), "%b", tm);
+    return s;
+}
+
+static void settings(void)
+{
+    bool done = false;
+    sdlx_event_t event;
+    int y_top, y_bottom;
+
+    while (!done) {
+        sdlx_display_init(COLOR_BLACK);
+        sdlx_print_init(SMALL_FONT, COLOR_WHITE, COLOR_BLACK);
+
+        sdlx_register_control_events(NULL, NULL, "X", COLOR_BLACK, 0, 0, EVID_QUIT);
+
+        y_top = ROW2Y(2);
+        y_bottom = ROW2Y(5);
+        sdlx_render_multiline_text(y_top, y_top, y_bottom, 
+"The sunrise & sunset times are\n\
+verified by comparison with\n\
+https://sunrise-sunset.org/api\n");
+
+        sdlx_display_present();
+
+        sdlx_get_event(-1, &event);
+        switch (event.event_id) {
+        case EVID_QUIT:
+            done = true;
+            break;
+        }
+    }
+}
+
+// -----------------  ANALOG CLOCK FACE  -----------------------------
 
 static void draw_analog_clock_face(void)
 {
     int hour, x, y;
 
-    sdlx_render_fill_rect(0, 100, 1000, 1000, COLOR_WHITE);
+    sdlx_render_fill_rect(0, 100, 1000, 1000, COLOR_WHITE); //xxx use defines
 
     sdlx_print_init(DEFAULT_FONT, COLOR_BLACK, COLOR_WHITE);
 
     for (hour = 1; hour <= 12; hour++) {
-        x = XCTR_CLOCK + 400 * sin(hour * 30 * (M_PI / 180));  //xxx use deines
+        x = XCTR_CLOCK + 400 * sin(hour * 30 * (M_PI / 180));
         y = YCTR_CLOCK - 400 * cos(hour * 30 * (M_PI / 180));
         sdlx_render_printf_xyctr(x, y, "%d", hour);
     }
@@ -157,15 +200,15 @@ static void draw_analog_clock_face(void)
 
 // -----------------  ANALOG CLOCK HANDS -----------------------------
 
-#define W_HH  34
-#define H_HH  280
-#define O_HH  40
+#define W_HH  34  // width of the hour-hand
+#define H_HH  280 // height of the hour-hand
+#define O_HH  40  // amount of the hour-hand that extends beyond the clock center
 
-#define W_MH  17
+#define W_MH  17  // minute hand defines
 #define H_MH  375
 #define O_MH  60
 
-#define W_SH  4
+#define W_SH  4   // second hand defines
 #define H_SH  425
 #define O_SH  100
 
@@ -184,8 +227,8 @@ static void draw_analog_clock_hands(struct tm *tm)
 
     if (first_call) {
         hour_hand = create_rectangle_texture(W_HH, H_HH, COLOR_BLACK);
-        minute_hand = create_rectangle_texture(W_MH, H_MH, COLOR_BLACK);  // xxx free these
-        second_hand = create_rectangle_texture(W_SH, H_SH, COLOR_RED);  // xxx free these
+        minute_hand = create_rectangle_texture(W_MH, H_MH, COLOR_BLACK);
+        second_hand = create_rectangle_texture(W_SH, H_SH, COLOR_RED);
         first_call = false;
     }
 
@@ -216,7 +259,7 @@ static void draw_analog_clock_hands(struct tm *tm)
     sdlx_render_point(XCTR_CLOCK, YCTR_CLOCK, COLOR_RED, 9);
 }
     
-sdlx_texture_t * create_rectangle_texture(int w, int h, int color)
+static sdlx_texture_t * create_rectangle_texture(int w, int h, int color)
 {
     unsigned int *pixels = malloc(w * h * BYTES_PER_PIXEL);
     sdlx_texture_t *t;
@@ -231,3 +274,9 @@ sdlx_texture_t * create_rectangle_texture(int w, int h, int color)
     return t;
 }
 
+static void cleanup_analog_clock(void)
+{
+    sdlx_destroy_texture(hour_hand);
+    sdlx_destroy_texture(minute_hand);
+    sdlx_destroy_texture(second_hand);
+}

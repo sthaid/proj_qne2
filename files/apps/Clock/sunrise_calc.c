@@ -1,11 +1,9 @@
-#include <stdio.h>  // xxx
-#include <stdbool.h>
-#include <stdlib.h>
+#include <stdio.h>
 #include <string.h>
 #include <time.h>
 #include <math.h>
     
-#include <sdlx.h> //xxx
+#include <sdlx.h>
 #include <utils.h>
 
 #include "apps/Clock/common.h"
@@ -40,14 +38,14 @@ void sunrise_sunset_calc(char *sunrise, char *sunset, char *midday)
     strcpy(sunset, "N/A");
     strcpy(midday, "N/A");
 
-    // get gps location
+    // get location
     util_get_location(&latitude, &longitude, NULL);
     if (latitude == INVALID_NUMBER || longitude == INVALID_NUMBER) {
-        printf("ERROR %s: failed to get gps location\n", progname);
+        printf("ERROR %s: failed to get location\n", progname);
         return;
     }
 
-    // xxx
+    // get the current utc year, month, and day
     t = time(NULL);
     gmtime_r(&t, &tm);
     year = tm.tm_year + 1900;
@@ -66,7 +64,7 @@ void sunrise_sunset_calc(char *sunrise, char *sunset, char *midday)
     // solar mean anomaly
     M = (357.5291 + 0.98560028 * jstar);
     if (M < 0) {
-        printf("ERROR %s: BUG M < 0\n", progname);  // xxx ret error?
+        printf("ERROR %s: BUG M < 0\n", progname);
         return;
     }
     while (M >= 360) M -= 360; 
@@ -77,7 +75,7 @@ void sunrise_sunset_calc(char *sunrise, char *sunset, char *midday)
     // ecliptic longitude
     lambda = (M +  C + 180 + 102.9372);
     if (lambda < 0) {
-        printf("ERROR %s: BUG lambda < 0\n", progname);  // xxx ret error?
+        printf("ERROR %s: BUG lambda < 0\n", progname);
         return;
     }
     while (lambda >= 360) lambda -= 360;
@@ -102,12 +100,10 @@ void sunrise_sunset_calc(char *sunrise, char *sunset, char *midday)
     jrise = jtransit - hour_angle / 360;
     jmid = (jset + jrise) / 2;
 
-    // xxx
-    make_local_time_str(jrise, sunrise, "CALC RISE");
-    make_local_time_str(jset, sunset,   "CALC SET ");
-    make_local_time_str(jmid, midday,   "CALC MID ");
-
-    // xxx mid
+    // convert julian date to the local time strings that are returned
+    make_local_time_str(jrise, sunrise, "calc RISE");
+    make_local_time_str(jset, sunset,   "calc SET ");
+    make_local_time_str(jmid, midday,   "calc MID ");
 }
 
 static void make_local_time_str(double jd, char *str, char *debug)
@@ -131,12 +127,12 @@ static void make_local_time_str(double jd, char *str, char *debug)
     t = timegm(&tm_gmt);
 
     localtime_r(&t, &tm_local);
-    //printf("INFO %s: %s %02d/%02d/%d %02d:%02d:%02d\n", 
-    //       progname, debug,
-    //       tm_local.tm_mon+1, tm_local.tm_mday, tm_local.tm_year+1900,
-    //       tm_local.tm_hour, tm_local.tm_min, tm_local.tm_sec);
+    printf("INFO %s: %s %02d/%02d/%d %02d:%02d:%02d\n", 
+           progname, debug,
+           tm_local.tm_mon+1, tm_local.tm_mday, tm_local.tm_year+1900,
+           tm_local.tm_hour, tm_local.tm_min, tm_local.tm_sec);
 
-    sprintf(str, "%02d:%02d", tm_local.tm_hour, tm_local.tm_min);  // xxx round to minute
+    sprintf(str, "%02d:%02d", tm_local.tm_hour, tm_local.tm_min);
 }
 
 // based on https://aa.usno.navy.mil/faq/docs/JD_Formula.php
