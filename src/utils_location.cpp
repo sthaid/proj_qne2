@@ -1,3 +1,5 @@
+#include <stddef.h>
+
 #include <utils.h>
 #include <logging.h>
 
@@ -37,16 +39,17 @@ void util_get_location(double *latitude, double *longitude, double *altitude)
     jclass clazz(env->GetObjectClass(activity));
 
     // get the method_id and call the methods to get location information
+    // xxx clean this up
     method_id = env->GetMethodID(clazz, "get_latitude", "()D");
-    if (method_id != 0) {
+    if (method_id != 0 && latitude != NULL) {
         *latitude = env->CallDoubleMethod(activity, method_id);
     }
     method_id = env->GetMethodID(clazz, "get_longitude", "()D");
-    if (method_id != 0) {
+    if (method_id != 0 && longitude != NULL) {
         *longitude = env->CallDoubleMethod(activity, method_id);
     }
     method_id = env->GetMethodID(clazz, "get_altitude", "()D");
-    if (method_id != 0) {
+    if (method_id != 0 && altitude != NULL) {
         *altitude = env->CallDoubleMethod(activity, method_id);
     }
 
@@ -58,11 +61,26 @@ cleanup:
 
 #else
 
+#define BOLTON_MASS_LATITUDE     42.4334
+#define BOLTON_MASS_LONGITUDE   -71.6078
+#define BOLTON_MASS_ELEVATION    100    // range is 63 to 201 meters
+
+// xxx google AI: does android provide gps altitude in feet or meters
+// - says meters
+// - accuracy 10 - 20 meters
+
+// xxx rename this to get_gps_location
 void util_get_location(double *latitude, double *longitude, double *altitude)
 {
-    *latitude = INVALID_NUMBER;
-    *longitude = INVALID_NUMBER;
-    *altitude = INVALID_NUMBER;
+    if (latitude != NULL) {
+        *latitude = BOLTON_MASS_LATITUDE;
+    }
+    if (longitude != NULL) {
+        *longitude = BOLTON_MASS_LONGITUDE;
+    }
+    if (altitude != NULL) {
+        *altitude = BOLTON_MASS_ELEVATION;
+    }
 }
 
 #endif

@@ -105,7 +105,7 @@ void StdTimegm(struct ParseState *Parser, struct Value *ReturnValue,
 const char StdTimeDefs[] = "\
 typedef int time_t; \
 typedef int clock_t; \
-struct tm { int tm_sec; int tm_min; int tm_hour; int tm_mday; int tm_mon; int tm_year; int tm_wday; int tm_yday; int tm_isdst; char reserved[64]; }; \
+struct tm { int tm_sec; int tm_min; int tm_hour; int tm_mday; int tm_mon; int tm_year; int tm_wday; int tm_yday; int tm_isdst; long tm_gmtoff; char *tm_zone; char reserved[64]; }; \
 ";
 
 /* all string.h functions */

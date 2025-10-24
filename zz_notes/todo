@@ -1,6 +1,21 @@
+Hexcalc
+Light
+Tennis
+
+make pixels unsigned int
+xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+
+{"results":{
+"sunrise":"11:06:47 AM",
+"sunset":"9:54:52 PM",
+"solar_noon":"4:30:49 PM","day_length":"10:48:05","civil_twilight_begin":"10:39:38 AM","civil_twilight_end":"10:22:01 PM","nautical_twilight_begin":"10:06:51 AM","nautical_twilight_end":"10:54:48 PM","astronomical_twilight_begin":"9:34:18 AM","astronomical_twilight_end":"11:27:21 PM"},"status":"OK","tzid":"UTC"}
+
+
 https://sunrise-sunset.org/api
 https://api.sunrise-sunset.org/json?lat=36.7201600&lng=-4.4203400
 https://api.sunrise-sunset.org/json?lat=42.4334&lng=-71.6078
+https://api.sunrise-sunset.org/json?lat=42.4334&lng=-71.6078&formatted=0
+https://api.sunrise-sunset.org/json?lat=42.4334&lng=-71.6078@formatted=1
 {"results":{
    "sunrise":"11:06:47 AM",
    "sunset":"9:54:52 PM",

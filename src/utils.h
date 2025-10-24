@@ -62,7 +62,7 @@ void *util_json_parse(char *str);
 void util_json_free(void *json_root);
 json_value_t *util_json_get_value(void *json_item, ...);
 
-// -----------------  JSON  ----------------------------------
+// -----------------  LOCATION  ------------------------------
 
 void util_get_location(double *latitude, double *longitude, double *altitude);
 
