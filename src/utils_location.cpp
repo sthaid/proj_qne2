@@ -1,9 +1,9 @@
-#include <stddef.h>
+//#include <stddef.h>
 
 #include <utils.h>
 #include <logging.h>
 
-#define INVALID_NUMBER 999999999  // get this from sdlx.h
+#define INVALID_NUMBER 999999999  // xxx get this from sdlx.h; or fix picoc so NAN/isnan works
 
 #ifdef ANDROID
 
@@ -19,15 +19,26 @@
 // Therefore references need to be manually deleted because otherwise the
 // references will first be cleaned if main() returns (application exit).
 
+// Notes on altitude, from Google AI Overview:
+//  "GPS altitude is a height above the WGS84 reference ellipsoid,
+//   which is an approximation of the Earth's surface. This value is
+//   not the same as height above mean sea level and may require a
+//   correction, according to Stack Overflow"
+//   https://stackoverflow.com/questions/11168306/is-androids-gps-altitude-incorrect-due-to-not-including-geoid-height
+
+// args:
+// - latitude:  degress, north latitude is positive
+// - longitude: degress, east longitude is positive
+// - altitude:  meters, accuracy is 10-20 meters
 void util_get_location(double *latitude, double *longitude, double *altitude)
 {
     jmethodID method_id;
 
     INFO("XXX TEST INFO PRINT FROM CPP\n");
 
-    *latitude = INVALID_NUMBER;
-    *longitude = INVALID_NUMBER;
-    *altitude = INVALID_NUMBER;
+    if (latitude)  *latitude = INVALID_NUMBER;
+    if (longitude) *longitude = INVALID_NUMBER;
+    if (altitude)  *altitude = INVALID_NUMBER;
 
     // retrieve the JNI environment.
     JNIEnv* env = (JNIEnv*)SDL_GetAndroidJNIEnv();
@@ -39,19 +50,26 @@ void util_get_location(double *latitude, double *longitude, double *altitude)
     jclass clazz(env->GetObjectClass(activity));
 
     // get the method_id and call the methods to get location information
-    // xxx clean this up
-    method_id = env->GetMethodID(clazz, "get_latitude", "()D");
-    if (method_id != 0 && latitude != NULL) {
-        *latitude = env->CallDoubleMethod(activity, method_id);
+    if (latitude) {
+        method_id = env->GetMethodID(clazz, "get_latitude", "()D");
+        if (method_id != 0) {
+            *latitude = env->CallDoubleMethod(activity, method_id);
+        }
     }
-    method_id = env->GetMethodID(clazz, "get_longitude", "()D");
-    if (method_id != 0 && longitude != NULL) {
-        *longitude = env->CallDoubleMethod(activity, method_id);
+    if (longitude) {
+        method_id = env->GetMethodID(clazz, "get_longitude", "()D");
+        if (method_id != 0) {
+            *longitude = env->CallDoubleMethod(activity, method_id);
+        }
     }
-    method_id = env->GetMethodID(clazz, "get_altitude", "()D");
-    if (method_id != 0 && altitude != NULL) {
-        *altitude = env->CallDoubleMethod(activity, method_id);
+    if (altitude) {
+        method_id = env->GetMethodID(clazz, "get_altitude", "()D");
+        if (method_id != 0) {
+            *altitude = env->CallDoubleMethod(activity, method_id);
+        }
     }
+
+    // xxx retry if results are 0.0
 
 cleanup:
     // clean up the localreferences.
@@ -61,24 +79,21 @@ cleanup:
 
 #else
 
+// unit test version returns my town location
+
 #define BOLTON_MASS_LATITUDE     42.4334
 #define BOLTON_MASS_LONGITUDE   -71.6078
 #define BOLTON_MASS_ELEVATION    100    // range is 63 to 201 meters
 
-// xxx google AI: does android provide gps altitude in feet or meters
-// - says meters
-// - accuracy 10 - 20 meters
-
-// xxx rename this to get_gps_location
 void util_get_location(double *latitude, double *longitude, double *altitude)
 {
-    if (latitude != NULL) {
+    if (latitude) {
         *latitude = BOLTON_MASS_LATITUDE;
     }
-    if (longitude != NULL) {
+    if (longitude) {
         *longitude = BOLTON_MASS_LONGITUDE;
     }
-    if (altitude != NULL) {
+    if (altitude) {
         *altitude = BOLTON_MASS_ELEVATION;
     }
 }
