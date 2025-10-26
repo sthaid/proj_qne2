@@ -1,14 +1,27 @@
+calc
+https://github.com/codeplea/tinyexpr/blob/master/tinyexpr.c
+
+
+
+----- 
+
 apps
-- Light               ALMOST DONE
-- morse code app
 - Hexcalc
+- Calc
 - Tennis
 - Location lat,long,alt
 - Altitude - with history
+- Memo
+- Weather
 
-try to cleanup morse tones
+use flexible colors for control events, and default to light blue
 
 make pixels unsigned int
+
+--- DONE ---
+try to cleanup morse tones
+- Light               ALMOST DONE
+- morse code app
 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 
 {"results":{
