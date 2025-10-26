@@ -4,6 +4,7 @@
 #include <string.h>
 #include <stdbool.h>
 #include <stdlib.h>
+#include <ctype.h>
 
 #include <sdlx.h>
 #include <utils.h>
@@ -583,11 +584,11 @@ static void alpha_test(int idx, char *test_name, int bg_color, int fg_color)
 #define EVID_AUDIO_PAUSE            31
 #define EVID_AUDIO_CONT             32
 
-static void add_tone(sdlx_tone_t **t, int freq, int intvl);
-static void add_gap(sdlx_tone_t **t, int intvl);
+static void add_tone(sdlx_tone_t **t, int freq, int intvl_ms);
+static void add_gap(sdlx_tone_t **t, int intvl_ms);
 static void add_terminator(sdlx_tone_t **t);
 static char *audio_state_str(int x);
-static void generate_morse_code_tones(sdlx_tone_t **t, char *letters);
+static void generate_morse_code_tones(sdlx_tone_t **t, char *letters, int wpm);
        
 static void page_7_init(void)
 {
@@ -719,24 +720,24 @@ static void page_7_process_event(sdlx_event_t *ev)
     case EVID_AUDIO_PLAY_FREQ_SWEEP:
         t = tones;
         for (freq = 100; freq <= 3000; freq += 100) {
-            add_tone(&t, freq, 1);
+            add_tone(&t, freq, 500);
         }
         add_terminator(&t);
-        sdlx_audio_play_tones(500, tones); // intvl=500 ms
+        sdlx_audio_play_tones(tones);
         break;
     case EVID_AUDIO_PLAY_SQUARE_WAVE:
         t = tones;
         for (i = 0; i < 10; i++) {
-            add_tone(&t, 500, 1);
-            add_gap(&t, 1);
+            add_tone(&t, 500, 500);  // freq=500 dur=500ms
+            add_gap(&t, 500);        // dur=500ms
         }
         add_terminator(&t);
-        sdlx_audio_play_tones(500, tones);
+        sdlx_audio_play_tones(tones);
         break;
     case EVID_AUDIO_PLAY_MORSE_CODE:
         t = tones;
-        generate_morse_code_tones(&t, "CQ CQ HELLO WORLD CQ CQ");
-        sdlx_audio_play_tones(100, tones); // intvl = 100 ms
+        generate_morse_code_tones(&t, "CQ CQ HELLO WORLD CQ CQ", 10);  // 10 words-per-minute
+        sdlx_audio_play_tones(tones);
         break;
     case EVID_AUDIO_RECORD:
         sdlx_audio_state(&state);
@@ -791,32 +792,11 @@ static char *audio_state_str(int x)
     return "INVLD_STATE";
 }
 
-static void add_tone(sdlx_tone_t **t, int freq, int intvl)
-{
-    (*t)->freq = freq;
-    (*t)->intvl = intvl;
-    *t = *t + 1;
-}
-
-static void add_gap(sdlx_tone_t **t, int intvl)
-{
-    (*t)->freq = 0;
-    (*t)->intvl = intvl;
-    *t = *t + 1;
-}
-
-static void add_terminator(sdlx_tone_t **t)
-{
-    (*t)->freq = 0;
-    (*t)->intvl = 0;
-    *t = *t + 1;
-}
-
 #define MORSE_FREQ 1000
 
-static void generate_morse_code_tones(sdlx_tone_t **t, char *letters)
+static void generate_morse_code_tones(sdlx_tone_t **t, char *letters, int wpm)
 {
-    char *morse_chars[] = {
+    char *morse_chars[] = {  // xxx this cant be static due to picoc limitation
                     /* A */ ".-",      /* B */ "-...",    /* C */ "-.-.",
                     /* D */ "-..",     /* E */ ".",       /* F */ "..-.",
                     /* G */ "--.",     /* H */ "....",    /* I */ "..",
@@ -826,21 +806,48 @@ static void generate_morse_code_tones(sdlx_tone_t **t, char *letters)
                     /* S */ "...",     /* T */ "-",       /* U */ "..-",
                     /* V */ "...-",    /* W */ ".--",     /* X */ "-..-",
                     /* Y */ "-.--",    /* Z */ "--..", };
+    int dit_dur         = 1200 / wpm;   // millisecs
+    int dah_dur         = 3 * dit_dur;
+    int dit_dah_gap_dur = dit_dur;
+    int char_gap_dur    = 2 * dit_dur;
+    int word_gap_dur    = 4 * dit_dur;
 
     for (int i = 0; letters[i]; i++) {
         int ch = letters[i];
+        ch = toupper(ch);
         if (ch >= 'A' && ch <='Z') {
             for (int j = 0; morse_chars[ch-'A'][j]; j++) {
-                int intvl = (morse_chars[ch-'A'][j] == '.') ? 1 : 3;
-                add_tone(t, MORSE_FREQ, intvl);
-                add_gap(t, 1);
+                int intvl_ms = (morse_chars[ch-'A'][j] == '.') ? dit_dur : dah_dur;
+                add_tone(t, MORSE_FREQ, intvl_ms);
+                add_gap(t, dit_dah_gap_dur);
             }
-            add_gap(t, 2);
-        } else if (ch == ' ') {
-            add_gap(t, 4);
+            add_gap(t, char_gap_dur);
+        } else if (ch == ' ' || ch == '\n') {
+            add_gap(t, word_gap_dur);
         }
     }
     add_terminator(t);
+}
+
+static void add_tone(sdlx_tone_t **t, int freq, int intvl_ms)
+{       
+    (*t)->freq = freq;
+    (*t)->intvl_ms = intvl_ms;
+    *t = *t + 1;
+}       
+            
+static void add_gap(sdlx_tone_t **t, int intvl_ms)
+{       
+    (*t)->freq = 0;
+    (*t)->intvl_ms = intvl_ms;
+    *t = *t + 1;
+}           
+        
+static void add_terminator(sdlx_tone_t **t)
+{       
+    (*t)->freq = 0;
+    (*t)->intvl_ms = 0;
+    *t = *t + 1;
 }
 
 // -----------------  PAGE 8: SENSOR INFO TBL -----------------

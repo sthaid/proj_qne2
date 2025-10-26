@@ -34,7 +34,7 @@ static char **words;
 // prototypes
 static int read_word_list(void);
 static void free_word_list(void);
-static void generate_morse_code_tones(sdlx_tone_t **t, char *letters);
+static void generate_morse_code_tones(sdlx_tone_t **t, char *letters, int wpm);
 
 // -----------------  MAIN  ------------------------------------------
     
@@ -142,11 +142,10 @@ int main(int argc, char **argv)
             // each element of this array contains a duration and a frequency;
             // the frequency is either 0 for a gap, or MORSE_FREQ for a dit or dah
             sdlx_tone_t *t = tones;
-            generate_morse_code_tones(&t, random_words);
+            generate_morse_code_tones(&t, random_words, wpm);
 
             // start playing the tones
-            int dit_duration_ms = 1200 / wpm;
-            sdlx_audio_play_tones(dit_duration_ms, tones);
+            sdlx_audio_play_tones(tones);
             break; }
         case EVID_CANCEL:
             sdlx_audio_ctl(AUDIO_REQ_STOP);
@@ -240,13 +239,13 @@ static void free_word_list(void)
 
 #define MORSE_FREQ 1000
 
-static void add_tone(sdlx_tone_t **t, int freq, int intvl);
-static void add_gap(sdlx_tone_t **t, int intvl);
+static void add_tone(sdlx_tone_t **t, int freq, int intvl_ms);
+static void add_gap(sdlx_tone_t **t, int intvl_ms);
 static void add_terminator(sdlx_tone_t **t);
 
-static void generate_morse_code_tones(sdlx_tone_t **t, char *letters)
+static void generate_morse_code_tones(sdlx_tone_t **t, char *letters, int wpm)
 {
-    char *morse_chars[] = {
+    char *morse_chars[] = {  // xxx this cant be static due to picoc limitation
                     /* A */ ".-",      /* B */ "-...",    /* C */ "-.-.",
                     /* D */ "-..",     /* E */ ".",       /* F */ "..-.",
                     /* G */ "--.",     /* H */ "....",    /* I */ "..",
@@ -256,42 +255,47 @@ static void generate_morse_code_tones(sdlx_tone_t **t, char *letters)
                     /* S */ "...",     /* T */ "-",       /* U */ "..-",
                     /* V */ "...-",    /* W */ ".--",     /* X */ "-..-",
                     /* Y */ "-.--",    /* Z */ "--..", };
+    int dit_dur         = 1200 / wpm;   // millisecs
+    int dah_dur         = 3 * dit_dur;
+    int dit_dah_gap_dur = dit_dur;
+    int char_gap_dur    = 2 * dit_dur;
+    int word_gap_dur    = 4 * dit_dur;
 
     for (int i = 0; letters[i]; i++) {
         int ch = letters[i];
         ch = toupper(ch);
         if (ch >= 'A' && ch <='Z') {
             for (int j = 0; morse_chars[ch-'A'][j]; j++) {
-                int intvl = (morse_chars[ch-'A'][j] == '.') ? 1 : 3;
-                add_tone(t, MORSE_FREQ, intvl);
-                add_gap(t, 1);
+                int intvl_ms = (morse_chars[ch-'A'][j] == '.') ? dit_dur : dah_dur;
+                add_tone(t, MORSE_FREQ, intvl_ms);
+                add_gap(t, dit_dah_gap_dur);
             }
-            add_gap(t, 2);
+            add_gap(t, char_gap_dur);
         } else if (ch == ' ' || ch == '\n') {
-            add_gap(t, 4);
+            add_gap(t, word_gap_dur);
         }
     }
     add_terminator(t);
 }
 
-static void add_tone(sdlx_tone_t **t, int freq, int intvl)
+static void add_tone(sdlx_tone_t **t, int freq, int intvl_ms)
 {       
     (*t)->freq = freq;
-    (*t)->intvl = intvl;
+    (*t)->intvl_ms = intvl_ms;
     *t = *t + 1;
 }       
             
-static void add_gap(sdlx_tone_t **t, int intvl)
+static void add_gap(sdlx_tone_t **t, int intvl_ms)
 {       
     (*t)->freq = 0;
-    (*t)->intvl = intvl;
+    (*t)->intvl_ms = intvl_ms;
     *t = *t + 1;
 }           
         
 static void add_terminator(sdlx_tone_t **t)
 {       
     (*t)->freq = 0;
-    (*t)->intvl = 0;
+    (*t)->intvl_ms = 0;
     *t = *t + 1;
 }
 

@@ -3,6 +3,10 @@ apps
 - morse code app
 - Hexcalc
 - Tennis
+- Location lat,long,alt
+- Altitude - with history
+
+try to cleanup morse tones
 
 make pixels unsigned int
 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx

@@ -562,7 +562,6 @@ typedef struct {
 } sine_wave_t;
 
 typedef struct {
-    int time_units_ms;
     int num_tones;
     sdlx_tone_t tones[0];
 } play_tones_cx_t;
@@ -572,7 +571,7 @@ typedef struct {
 
 static sine_wave_t *sine_waves[MAX_TONE_FREQ+1];
 
-int sdlx_audio_play_tones(int time_units_ms, sdlx_tone_t *tones)
+int sdlx_audio_play_tones(sdlx_tone_t *tones)
 {
     int num_tones, duration_ms, i, rc;
     play_tones_cx_t *cx;
@@ -587,9 +586,9 @@ int sdlx_audio_play_tones(int time_units_ms, sdlx_tone_t *tones)
     // loop over tones to determine total duration and num_tones
     num_tones = 0;
     duration_ms = 0;
-    for (i = 0; tones[i].intvl > 0; i++) {
+    for (i = 0; tones[i].intvl_ms > 0; i++) {
         sdlx_tone_t *t = &tones[i];
-        duration_ms += (t->intvl * time_units_ms);
+        duration_ms += t->intvl_ms;
         num_tones++;
     }
 
@@ -602,7 +601,6 @@ int sdlx_audio_play_tones(int time_units_ms, sdlx_tone_t *tones)
 
     // create thread to play the tones
     cx = malloc(sizeof(play_tones_cx_t) + num_tones * sizeof(sdlx_tone_t));
-    cx->time_units_ms  = time_units_ms;
     cx->num_tones = num_tones;
     memcpy(cx->tones, tones, num_tones * sizeof(sdlx_tone_t));
     sdlx_create_detached_thread(tones_thread, cx);
@@ -661,29 +659,30 @@ static int tones_thread(void *cx_arg)
     // loop over the tones
     for (int i = 0; i < cx->num_tones; i++) {
         sdlx_tone_t *t = &cx->tones[i];
-        int tone_intvl_ms = t->intvl * cx->time_units_ms;
         int len;
 
-        INFO("tone[%d] freq=%d millisecs=%d\n", i, t->freq, tone_intvl_ms);
+        INFO("tone[%d] freq=%d millisecs=%d\n", i, t->freq, t->intvl_ms);
 
         // construct buff for either:
         // - gap  (when t->freq == 0), or
         // - tone
         if (t->freq == 0) {
-            len = FRAMES_PER_SEC * tone_intvl_ms / 1000 * sizeof(short);
+            len = FRAMES_PER_SEC * t->intvl_ms / 1000 * sizeof(short);
             if (len > buff_len) {
                 len = buff_len;
             }
             memset(buff, 0, len);
         } else {
             sine_wave_t *sw = sine_waves[t->freq];
-            int num_sine_waves = tone_intvl_ms * t->freq / 1000;
+            int num_sine_waves = t->intvl_ms * t->freq / 1000;
             char *buff_ptr = buff;
 
             if (num_sine_waves * sw->n * sizeof(short) > buff_len) {
                 num_sine_waves = buff_len / (sw->n * sizeof(short));
             }
 
+// 3x^{2} - 2x^{3}
+// 3 * x^2 - 2* x^3
             for (int j = 0; j < num_sine_waves; j++) {
                 memcpy(buff_ptr, sw->data, sw->n * sizeof(short));
                 buff_ptr += sw->n * sizeof(short);

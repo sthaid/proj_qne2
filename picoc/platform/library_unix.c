@@ -569,11 +569,10 @@ void Sdl_audio_record (struct ParseState *Parser, struct Value *ReturnValue,
 void Sdl_audio_play_tones (struct ParseState *Parser, struct Value *ReturnValue,
 	struct Value **Param, int NumArgs)
 {
-    int         time_units_ms = Param[0]->Val->Integer;
-    sdlx_tone_t *tones         = Param[1]->Val->Pointer;
+    sdlx_tone_t *tones = Param[0]->Val->Pointer;
     int         rc;
 
-    rc = sdlx_audio_play_tones(time_units_ms, tones);
+    rc = sdlx_audio_play_tones(tones);
     ReturnValue->Val->Integer = rc; 
 }
 
@@ -799,7 +798,7 @@ struct LibraryFunction SdlFunctions[] = {
     // audio
     { Sdl_audio_play,                   "int sdlx_audio_play(char *dir, char *filename);" },
     { Sdl_audio_record,                 "int sdlx_audio_record(char *dir, char *filename, int max_duration_secs, int auto_stop_secs, bool append); "},
-    { Sdl_audio_play_tones,             "int sdlx_audio_play_tones(int time_units_ms, sdlx_tone_t *tones);" },
+    { Sdl_audio_play_tones,             "int sdlx_audio_play_tones(sdlx_tone_t *tones);" },
     { Sdl_audio_ctl,                    "void sdlx_audio_ctl(int req);" },
     { Sdl_audio_state,                  "void sdlx_audio_state(sdlx_audio_state_t * state);" },
     { Sdl_audio_print_device_info,      "void sdlx_audio_print_devices_info(void);" },
@@ -840,7 +839,7 @@ typedef struct { \n\
 } sdlx_event_t; \n\
 typedef struct { \n\
     short freq; \n\
-    short intvl; \n\
+    short intvl_ms; \n\
 } sdlx_tone_t; \n\
 typedef struct { \n\
     int  state; \n\

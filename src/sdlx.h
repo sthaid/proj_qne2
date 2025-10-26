@@ -163,7 +163,7 @@ void sdlx_plot_free(void *cx);
 
 typedef struct {
     short freq;
-    short intvl;
+    short intvl_ms;
 } sdlx_tone_t;
 
 typedef struct {
@@ -177,7 +177,7 @@ typedef struct {
 
 int sdlx_audio_play(char *dir, char *filename);
 int sdlx_audio_record(char *dir, char *filename, int max_duration_secs, int auto_stop_secs, bool append);
-int sdlx_audio_play_tones(int time_units_ms, sdlx_tone_t *tones);
+int sdlx_audio_play_tones(sdlx_tone_t *tones);
 
 void sdlx_audio_ctl(int req);
 void sdlx_audio_state(sdlx_audio_state_t * state);
