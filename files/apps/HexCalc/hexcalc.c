@@ -171,6 +171,16 @@ void init_buttons(void)
     init_button(1, 2, EVID_0+6, "6");
     init_button(1, 3, EVID_0+7, "7");
 
+    init_button(2, 0, EVID_0+8, "8");
+    init_button(2, 1, EVID_0+9, "9");
+    init_button(2, 2, EVID_0+0xa, "A");
+    init_button(2, 3, EVID_0+0xb, "B");
+
+    init_button(3, 0, EVID_0+0xc, "C");
+    init_button(3, 1, EVID_0+0xd, "D");
+    init_button(3, 2, EVID_0+0xe, "E");
+    init_button(3, 3, EVID_0+0xf, "F");
+
     init_button(0, 4, EVID_BACKSPACE, "BS");
     init_button(1, 4, EVID_CHANGE_SIGN, "+/-");
 
