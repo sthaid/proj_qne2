@@ -571,6 +571,8 @@ typedef struct {
 
 static sine_wave_t *sine_waves[MAX_TONE_FREQ+1];
 
+static void smooth(short *buff, int len);
+
 int sdlx_audio_play_tones(sdlx_tone_t *tones)
 {
     int num_tones, duration_ms, i, rc;
@@ -661,7 +663,7 @@ static int tones_thread(void *cx_arg)
         sdlx_tone_t *t = &cx->tones[i];
         int len;
 
-        INFO("tone[%d] freq=%d millisecs=%d\n", i, t->freq, t->intvl_ms);
+        //INFO("tone[%d] freq=%d millisecs=%d\n", i, t->freq, t->intvl_ms);
 
         // construct buff for either:
         // - gap  (when t->freq == 0), or
@@ -681,13 +683,14 @@ static int tones_thread(void *cx_arg)
                 num_sine_waves = buff_len / (sw->n * sizeof(short));
             }
 
-// 3x^{2} - 2x^{3}
-// 3 * x^2 - 2* x^3
             for (int j = 0; j < num_sine_waves; j++) {
                 memcpy(buff_ptr, sw->data, sw->n * sizeof(short));
                 buff_ptr += sw->n * sizeof(short);
             }
             len = buff_ptr - buff;
+
+            // xxx comments needed in this section
+            smooth((short*)buff, len/2);
         }
 
         // play the tone, or gap
@@ -711,4 +714,34 @@ done:
     free(buff);
     memset(&state, 0, sizeof(state));
     return 0;
+}
+
+#define MAX_SMOOTHER  (FRAMES_PER_SEC / 200)   // number of frames in 5 ms
+
+void smooth(short *buff, int len)
+{
+    // xxx comment
+    // "equation for an s curve to smootly ramp up or down audio data"
+    // "plot 3x^2 - 2x^3"
+
+    static double *smoother;
+
+    if (len < 3 * MAX_SMOOTHER) {
+        return;
+    }
+
+    if (smoother == NULL) {
+        smoother = calloc(MAX_SMOOTHER, sizeof(double));
+        for (int i = 0; i < MAX_SMOOTHER; i++) {
+            double x = (double)i / MAX_SMOOTHER;
+            double x_squared = x * x;
+            double x_cubed   = x_squared * x;
+            smoother[i] = 3 * x_squared - 2 * x_cubed;
+        }
+    }
+
+    for (int i = 0; i < MAX_SMOOTHER; i++) {
+        buff[i] *= smoother[i];
+        buff[len-1-i] *= smoother[i];
+    }
 }
