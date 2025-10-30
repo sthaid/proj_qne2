@@ -124,9 +124,9 @@ void sdlx_render_point(int x, int y, int color, int point_size);
 void sdlx_render_points(sdlx_point_t *points, int count, int color, int point_size);
 
 // render using textures
-sdlx_texture_t *sdlx_create_texture_from_pixels(unsigned char *pixels, int w, int h);
-sdlx_texture_t *sdlx_create_filled_circle_texture(int radius, int color);
-sdlx_texture_t *sdlx_create_text_texture(char *str);
+sdlx_texture_t *sdlx_create_texture_from_pixels(unsigned char *pixels, int w, int h);  // xxx color
+sdlx_texture_t *sdlx_create_filled_circle_texture(int radius, int color);  // xxx color
+sdlx_texture_t *sdlx_create_text_texture(char *str);  // xxx color
 void sdlx_render_texture(int x, int y, int w, int h, sdlx_texture_t *texture);
 void sdlx_render_texture_ex(int x, int y, int w, int h, double angle, sdlx_texture_t *texture);
 void sdlx_render_texture_ex2(int x, int y, int w, int h, double angle, int xctr, int yctr,
