@@ -7,7 +7,6 @@
 
 // xxx
 // - code cleanup and comments
-// - display results in green
 
 // display locations
 #define DISPLAY_Y_TOP       100
@@ -19,10 +18,12 @@
 #define MAX_BUTTON_ROW 7
 #define MAX_BUTTON_COL 5
 
+#define BUTTON_HIGHLIGHT_DURATION_MS 100
+
 #define EVID_64BIT   ('6' | '4' << 8)
 #define EVID_32BIT   ('3' | '2' << 8)
-#define EVID_DSPHEX  ('H' | 'E' << 8 | 'X' << 16)
-#define EVID_DSPDEC  ('D' | 'E' << 8 | 'C' << 16)
+#define EVID_DSP_HEX ('H' | 'E' << 8 | 'X' << 16)
+#define EVID_DSP_DEC ('D' | 'E' << 8 | 'C' << 16)
 #define EVID_CLR     ('C' | 'L' << 8 | 'R' << 16)
 #define EVID_CE      ('C' | 'E' << 8)
 #define EVID_SHL     ('<' | '<' << 8)
@@ -30,13 +31,13 @@
 #define BLANK 0
 
 int button[MAX_BUTTON_ROW][MAX_BUTTON_COL] = {
-    { EVID_64BIT, EVID_DSPHEX,  BLANK,   EVID_CE,    EVID_CLR,   },
-    {    'C',         'D',       'E',       'F',      BLANK,     },
-    {    '8',         '9',       'A',       'B',      BLANK,     },
-    {    '4',         '5',       '6',       '7',      BLANK,     },
-    {    '0',         '1',       '2',       '3',       '~',      },
-    {    '&',         '|',       '^',    EVID_SHL,   EVID_SHR,   },
-    {    '+',         '-',       '*',       '/',      '=',       },
+    { EVID_32BIT, EVID_DSP_HEX,  BLANK,   EVID_CE,    EVID_CLR,   },
+    {    'C',         'D',        'E',       'F',      BLANK,     },
+    {    '8',         '9',        'A',       'B',      BLANK,     },
+    {    '4',         '5',        '6',       '7',      BLANK,     },
+    {    '0',         '1',        '2',       '3',       '~',      },
+    {    '&',         '|',        '^',    EVID_SHL,   EVID_SHR,   },
+    {    '+',         '-',        '*',       '/',      '=',       },
         };
 
 // colors
@@ -44,7 +45,7 @@ int button[MAX_BUTTON_ROW][MAX_BUTTON_COL] = {
 #define BUTTON_COLOR_NORMAL      COLOR_WHITE
 #define BUTTON_COLOR_HIGHLIGHT   COLOR_GRAY
 #define BUTTON_COLOR_TEXT        COLOR_BLACK
-#define BUTTON_HIGHLIGHT_DURATION_MS 100
+#define DISPLAY_NUMBER_COLOR     COLOR_BLACK
 
 // values for display_state
 #define RESULT     0
@@ -75,7 +76,7 @@ int main(int argc, char **argv)
     int           highlight_button_col = -1;
 
     int           bits          = EVID_32BIT; 
-    int           display_fmt   = EVID_DSPHEX;
+    int           display_fmt   = EVID_DSP_HEX;
     int           display_state = RESULT;
     int           op            = OP_NONE;
     unsigned long display_value = 0;
@@ -175,21 +176,30 @@ int main(int argc, char **argv)
                 operand_value = (unsigned int)operand_value;
             }
             break;
-        case EVID_DSPHEX: case EVID_DSPDEC:
-            display_fmt = (display_fmt == EVID_DSPHEX ? EVID_DSPDEC : EVID_DSPHEX);
+        case EVID_DSP_HEX: case EVID_DSP_DEC:
+            display_fmt = (display_fmt == EVID_DSP_HEX ? EVID_DSP_DEC : EVID_DSP_HEX);
             button[0][1] = display_fmt;
             break;
 
-        // number input events xxx XXX data entry in 32 bit mode exceeds limit
+        // number input events
         case '0': case '1': case '2': case '3': case '4': case '5': case '6': case '7': case '8': case '9':
         case 'A': case 'B': case 'C':  case 'D':  case 'E':  case 'F': {
             int n = (event.event_id <= '9' ? event.event_id - '0' : event.event_id - 'A' + 0xa);
-            printf("INFO %s: got number button %d\n", progname, n);  // xxx dont print
+
             if (display_state == RESULT || display_state == NO_VALUE) {
                 display_value = 0;
                 display_state = INPUTTING;
             }
-            display_value = (display_value << 4) | n;
+
+            if (bits == EVID_64BIT) {
+                if ((display_value & (0xful << 60)) == 0) {
+                    display_value = (display_value << 4) | n;
+                }
+            } else {
+                if ((display_value & (0xful << 28)) == 0) {
+                    display_value = (display_value << 4) | n;
+                }
+            }
             break; }
 
         // unary ops
@@ -235,26 +245,28 @@ int main(int argc, char **argv)
 
 // -----------------  SUPPORT ROUTINES  ----------------------------
 
-// xxx right justify
 void update_numeric_display(unsigned long value, int bits, int display_fmt, bool error)
 {
     int max_chars;
-    int color = (error ? COLOR_RED : COLOR_BLACK);
+    char fmt[20];
 
-    if (display_fmt == EVID_DSPHEX) {
+    if (display_fmt == EVID_DSP_HEX) {
         max_chars = (bits == EVID_32BIT ? 8 : 16);
     } else {
         max_chars = (bits == EVID_32BIT ? 10 : 20);
     }
 
-    sdlx_print_init(max_chars, color, BACKGROUND_COLOR);
+    sdlx_print_init(max_chars, DISPLAY_NUMBER_COLOR, BACKGROUND_COLOR);
 
     if (error) {
-        sdlx_render_printf(0, DISPLAY_Y_TOP, "%s", "error");
-    } else if (display_fmt == EVID_DSPHEX) {
-        sdlx_render_printf(0, DISPLAY_Y_TOP, "%lX", value);
+        sprintf(fmt, "%%%ds", max_chars);
+        sdlx_render_printf(0, DISPLAY_Y_TOP, fmt, "error");
+    } else if (display_fmt == EVID_DSP_HEX) {
+        sprintf(fmt, "%%%dlX", max_chars);
+        sdlx_render_printf(0, DISPLAY_Y_TOP, fmt, value);
     } else {
-        sdlx_render_printf(0, DISPLAY_Y_TOP, "%lu", value);
+        sprintf(fmt, "%%%dlu", max_chars);
+        sdlx_render_printf(0, DISPLAY_Y_TOP, fmt, value);
     }
 }
 
