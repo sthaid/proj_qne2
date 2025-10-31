@@ -8,73 +8,77 @@
 // xxx
 // - comments
 // - cleanup
+// - display results in green
 
-// XXX 32bit mode
+// display locations
+#define DISPLAY_Y_TOP       100
+#define BUTTONS_X_LEFT      100
+#define BUTTONS_Y_TOP       (DISPLAY_Y_TOP + 350)
+#define BUTTONS_SPACING     200
 
 // buttons
 #define MAX_BUTTON_ROW 7
 #define MAX_BUTTON_COL 5
 
-#define EVID_64BIT  ('6' | '4' << 8)
-#define EVID_32BIT  ('3' | '2' << 8)
-#define EVID_CLR    ('C' | 'L' << 8 | 'R' << 16)
-#define EVID_CE     ('C' | 'E' << 8)
-#define EVID_CHGSN  ('+' | '/' << 8 | '-' << 16)
-#define EVID_SHL    ('<' | '<' << 8)
-#define EVID_SHR    ('>' | '>' << 8)
+#define EVID_64BIT   ('6' | '4' << 8)
+#define EVID_32BIT   ('3' | '2' << 8)
+#define EVID_DSPHEX  ('H' | 'E' << 8 | 'X' << 16)
+#define EVID_DSPDEC  ('D' | 'E' << 8 | 'C' << 16)
+#define EVID_CLR     ('C' | 'L' << 8 | 'R' << 16)
+#define EVID_CE      ('C' | 'E' << 8)
+#define EVID_SHL     ('<' | '<' << 8)
+#define EVID_SHR     ('>' | '>' << 8)
 #define BLANK 0
 
-#define BUTTONS_X_LEFT    100
-#define BUTTONS_X_SPACING 200
-#define BUTTONS_Y_TOP     350
-#define BUTTONS_Y_SPACING 200
-
 int button[MAX_BUTTON_ROW][MAX_BUTTON_COL] = {
-    { EVID_64BIT, BLANK,  BLANK,   EVID_CE,      EVID_CLR,   },
-    { 'C',         'D',    'E',       'F',      EVID_CHGSN, },
-    { '8',         '9',    'A',       'B',      '~',        },
-    { '4',         '5',    '6',       '7',      BLANK,      },
-    { '0',         '1',    '2',       '3',      BLANK,      },
-    { '&',         '|',    '^',       EVID_SHL, EVID_SHR,   },
-    { '+',         '-',    '*',       '/',      '=',        },
+    { EVID_64BIT, EVID_DSPHEX,  BLANK,   EVID_CE,    EVID_CLR,   },
+    {    'C',         'D',       'E',       'F',      BLANK,     },
+    {    '8',         '9',       'A',       'B',      BLANK,     },
+    {    '4',         '5',       '6',       '7',      BLANK,     },
+    {    '0',         '1',       '2',       '3',       '~',      },
+    {    '&',         '|',       '^',    EVID_SHL,   EVID_SHR,   },
+    { '   +',         '-',       '*',       '/',      '=',       },
         };
 
+// colors
 #define BACKGROUND_COLOR         COLOR_LIGHT_GRAY
 #define BUTTON_COLOR_NORMAL      COLOR_WHITE
 #define BUTTON_COLOR_HIGHLIGHT   COLOR_GRAY
-#define BUTTON_TEXT_COLOR        COLOR_BLACK
-#define HIGHLIGHT_DURATION_MS 100
+#define BUTTON_COLOR_TEXT        COLOR_BLACK
+#define BUTTON_HIGHLIGHT_DURATION_MS 100
 
 // values for display_state
 #define RESULT     0
 #define NO_VALUE   1
 #define INPUTTING  2
 
-// values for op
+// value for no operation
 #define OP_NONE 0
 
-// variables
+// global variables
 char *progname;
 char *data_dir;
 
 // prototypes
-void evid_to_button_row_and_col(int evid, int *button_row, int *button_col);
-unsigned long process_op(int op, unsigned long operand1, unsigned long operand2, int mode);
+void update_numeric_display(unsigned long value, int color, int bits, int display);
 void draw_button(int row, int col, bool highlight);
+void evid_to_button_row_and_col(int evid, int *button_row, int *button_col);
+unsigned long process_op(int op, unsigned long operand1, unsigned long operand2, int bits);
 
 // -----------------  MAIN  ----------------------------------
 
 int main(int argc, char **argv)
 {
-    int          rc;
-    sdlx_event_t event;
-    bool         done = false;
-    int          highlight_button_row = -1;
-    int          highlight_button_col = -1;
+    int           rc;
+    sdlx_event_t  event;
+    bool          done = false;
+    int           highlight_button_row = -1;
+    int           highlight_button_col = -1;
 
-    int mode          = EVID_64BIT;
-    int display_state = RESULT;
-    int op            = OP_NONE;
+    int           bits          = EVID_32BIT; 
+    int           display_fmt   = EVID_DSPHEX;
+    int           display_state = RESULT;
+    int           op            = OP_NONE;
     unsigned long display_value = 0;
     unsigned long operand_value = 0;
 
@@ -96,11 +100,10 @@ int main(int argc, char **argv)
         // init the backbuffer
         sdlx_display_init(BACKGROUND_COLOR);
 
-        // register control event to
-        // - end program
+        // register control event to end program
         sdlx_register_control_events(NULL, NULL, "X", COLOR_BLACK, 0, 0, EVID_QUIT);  // xxx colors
 
-        // register button events
+        // display buttons, and register button events
         for (int row = 0; row < MAX_BUTTON_ROW; row++) {
             for (int col = 0; col < MAX_BUTTON_COL; col++) {
                 bool highlight = (row == highlight_button_row && col == highlight_button_col);
@@ -108,16 +111,14 @@ int main(int argc, char **argv)
             }
         }
         
-        // display the most recent calculated value
-        // xxx make this a routine XXX
-        sdlx_render_printf(0, 0, "%20lX", display_value);
-        //sdlx_render_printf(0, ROW2Y(1), "%20lX", operand_value);
+        // update numeric display
+        update_numeric_display(display_value, COLOR_BLACK, bits, display_fmt);
 
         // present the display
         sdlx_display_present();
 
-        // wait for event, with infinite timeout
-        sdlx_get_event(highlight_button_row != -1 ? HIGHLIGHT_DURATION_MS * 1000 : -1, &event);
+        // wait for event, with xxx timeout
+        sdlx_get_event(highlight_button_row != -1 ? BUTTON_HIGHLIGHT_DURATION_MS * 1000 : -1, &event);
 
         // xxx comment
         if (event.event_id == -1) {
@@ -126,11 +127,12 @@ int main(int argc, char **argv)
             continue;
         }
 
+        // xxx
         evid_to_button_row_and_col(event.event_id, &highlight_button_row, &highlight_button_col);
 
         // process event ...
         switch (event.event_id) {
-        // control functions: clear, clear entry, mode select, and quit
+        // control functions: clear, clear entry, bits select, display format select, and quit
         case EVID_QUIT:
             done = true;
             break;
@@ -146,20 +148,23 @@ int main(int argc, char **argv)
             }
             break;
         case EVID_64BIT: case EVID_32BIT:
-            mode = (mode == EVID_64BIT ? EVID_32BIT : EVID_64BIT);
-            button[0][0] = (mode == EVID_64BIT ? EVID_64BIT : EVID_32BIT); // xxx 0,0
-            if (mode == EVID_32BIT) {
+            bits = (bits == EVID_64BIT ? EVID_32BIT : EVID_64BIT);
+            button[0][0] = bits;
+            if (bits == EVID_32BIT) {
                 display_value = (unsigned int)display_value;
                 operand_value = (unsigned int)operand_value;
             }
-                
+            break;
+        case EVID_DSPHEX: case EVID_DSPDEC:
+            display_fmt = (display_fmt == EVID_DSPHEX ? EVID_DSPDEC : EVID_DSPHEX);
+            button[0][1] = display_fmt;
             break;
 
-        // number input events XXX data entry in 32 bit mode exceeds limit
+        // number input events xxx XXX data entry in 32 bit mode exceeds limit
         case '0': case '1': case '2': case '3': case '4': case '5': case '6': case '7': case '8': case '9':
         case 'A': case 'B': case 'C':  case 'D':  case 'E':  case 'F': {
             int n = (event.event_id <= '9' ? event.event_id - '0' : event.event_id - 'A' + 0xa);
-            printf("INFO %s: got number button %d\n", progname, n);
+            printf("INFO %s: got number button %d\n", progname, n);  // xxx dont print
             if (display_state == RESULT || display_state == NO_VALUE) {
                 display_value = 0;
                 display_state = INPUTTING;
@@ -168,16 +173,9 @@ int main(int argc, char **argv)
             break; }
 
         // unary ops
-        case EVID_CHGSN:
-            display_value = -display_value;
-            if (mode == EVID_32BIT) {
-                display_value = (unsigned int)display_value;
-            }
-            display_state = RESULT;
-            break;
         case '~':
             display_value = ~display_value;
-            if (mode == EVID_32BIT) {
+            if (bits == EVID_32BIT) {
                 display_value = (unsigned int)display_value;
             }
             display_state = RESULT;
@@ -190,15 +188,17 @@ int main(int argc, char **argv)
                 break;
             }
             if (op != OP_NONE) {
-                display_value = process_op(op, operand_value, display_value, mode);
+                display_value = process_op(op, operand_value, display_value, bits);
             }
             operand_value = display_value;
             op = event.event_id;
-            display_state = NO_VALUE;
+            display_state = NO_VALUE;  // xxx name
             break;
+
+        // equals op
         case '=':
             if (op != OP_NONE && display_state != NO_VALUE) {
-                display_value = process_op(op, operand_value, display_value, mode);
+                display_value = process_op(op, operand_value, display_value, bits);
             }
             operand_value = 0;
             op = OP_NONE;
@@ -210,6 +210,65 @@ int main(int argc, char **argv)
     sdlx_quit(SUBSYS_VIDEO);
     printf("INFO %s: terminating\n", progname);
     return 0;
+}
+
+// -----------------  SUPPORT ROUTINES  ----------------------------
+
+void update_numeric_display(unsigned long value, int color, int bits, int display_fmt)
+{
+    int max_chars;
+
+    if (display_fmt == EVID_DSPHEX) {
+        // display hex
+        max_chars = (bits == EVID_32BIT ? 8 : 16);
+        sdlx_print_init(max_chars, color, BACKGROUND_COLOR);
+        sdlx_render_printf(0, DISPLAY_Y_TOP, "%*lX", max_chars, value);
+    } else {
+        // display decimal
+        max_chars = (bits == EVID_32BIT ? 10 : 20);
+        sdlx_print_init(max_chars, color, BACKGROUND_COLOR);
+        sdlx_render_printf(0, DISPLAY_Y_TOP, "%*lu", max_chars, value);
+    }
+}
+
+void draw_button(int row, int col, bool highlight)
+{
+    sdlx_loc_t loc;
+    int x, y, radius;
+    char str[8];
+
+    static sdlx_texture_t *button_texture;
+    static sdlx_texture_t *highlighted_button_texture;
+    static int texture_w, texture_h;
+
+    if (button_texture == NULL) {
+        radius = BUTTONS_SPACING * 45 / 100;
+        button_texture = sdlx_create_filled_circle_texture(radius, BUTTON_COLOR_NORMAL);  // xxx free XXX
+        highlighted_button_texture = sdlx_create_filled_circle_texture(radius,BUTTON_COLOR_HIGHLIGHT);
+        sdlx_query_texture(button_texture, &texture_w, &texture_h);
+        // xxx printf("texture w,h = %d %d\n", texture_w, texture_h);
+    }
+
+    if (button[row][col] == 0) {
+        return;
+    }    
+
+    x = BUTTONS_X_LEFT + col * BUTTONS_SPACING;
+    y = BUTTONS_Y_TOP + row * BUTTONS_SPACING;
+
+    sdlx_render_texture(x-texture_w/2, y-texture_h/2, texture_w, texture_h,
+        !highlight ? button_texture : highlighted_button_texture);
+
+    sdlx_print_init(20, BUTTON_COLOR_TEXT, !highlight ? BUTTON_COLOR_NORMAL : BUTTON_COLOR_HIGHLIGHT);
+    memset(str, 0, sizeof(str));
+    memcpy(str, &button[row][col], 4);
+    sdlx_render_printf_xyctr(x, y, "%s", str);
+
+    loc.x = x - texture_w/2;
+    loc.y = y - texture_h/2;
+    loc.w = texture_w;
+    loc.h = texture_h;
+    sdlx_register_event(&loc, button[row][col]);
 }
 
 void evid_to_button_row_and_col(int evid, int *button_row, int *button_col)
@@ -231,69 +290,30 @@ void evid_to_button_row_and_col(int evid, int *button_row, int *button_col)
     *button_col = -1;
 }
 
-unsigned long process_op(int op, unsigned long operand1, unsigned long operand2, int mode)
+// xxx div by zero XXX
+unsigned long process_op(int op, unsigned long operand1, unsigned long operand2, int bits)
 {
-    // xxx div by zero XXX
     unsigned long result;
 
     switch (op) {
-    case '&': result = operand1 & operand2; break;
-    case '|': result = operand1 | operand2; break;
-    case '^': result = operand1 ^ operand2; break;
+    case '&':      result = operand1 & operand2; break;
+    case '|':      result = operand1 | operand2; break;
+    case '^':      result = operand1 ^ operand2; break;
     case EVID_SHL: result = operand1 << operand2; break;
     case EVID_SHR: result = operand1 >> operand2; break;
-    case '+': result = operand1 + operand2; break;
-    case '-': result = operand1 - operand2; break;
-    case '*': result = operand1 * operand2; break;
-    case '/': result = operand1 / operand2; break;
+    case '+':      result = operand1 + operand2; break;
+    case '-':      result = operand1 - operand2; break;
+    case '*':      result = operand1 * operand2; break;
+    case '/':      result = operand1 / operand2; break;
     default:
         printf("ERROR %s: BUG process_op, op=%x\n", progname, op);
         return 0;
     }
 
-    if (mode == EVID_32BIT) {
+    if (bits == EVID_32BIT) {
         result = (unsigned int)result;
     }
 
     return result;
 }
 
-void draw_button(int row, int col, bool highlight)
-{
-    sdlx_loc_t loc;
-    int x, y, radius;
-    char str[8];
-
-    static sdlx_texture_t *button_texture;
-    static sdlx_texture_t *highlighted_button_texture;
-    static int texture_w, texture_h;
-
-    if (button_texture == NULL) {
-        radius = BUTTONS_X_SPACING * 45 / 100;
-        button_texture = sdlx_create_filled_circle_texture(radius, BUTTON_COLOR_NORMAL);  // xxx free XXX
-        highlighted_button_texture = sdlx_create_filled_circle_texture(radius,BUTTON_COLOR_HIGHLIGHT);
-        sdlx_query_texture(button_texture, &texture_w, &texture_h);
-        printf("texture w,h = %d %d\n", texture_w, texture_h);
-    }
-
-    if (button[row][col] == 0) {
-        return;
-    }    
-
-    x = BUTTONS_X_LEFT + col * BUTTONS_X_SPACING;
-    y = BUTTONS_Y_TOP + row * BUTTONS_Y_SPACING;
-
-    sdlx_render_texture(x-texture_w/2, y-texture_h/2, texture_w, texture_h,
-        !highlight ? button_texture : highlighted_button_texture);
-
-    sdlx_print_init(20, BUTTON_TEXT_COLOR, !highlight ? BUTTON_COLOR_NORMAL : BUTTON_COLOR_HIGHLIGHT);
-    memset(str, 0, sizeof(str));
-    memcpy(str, &button[row][col], 4);
-    sdlx_render_printf_xyctr(x, y, "%s", str);
-
-    loc.x = x - texture_w/2;
-    loc.y = y - texture_h/2;
-    loc.w = texture_w;
-    loc.h = texture_h;
-    sdlx_register_event(&loc, button[row][col]);
-}
