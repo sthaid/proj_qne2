@@ -6,8 +6,7 @@
 #include <utils.h>
 
 // xxx
-// - comments
-// - cleanup
+// - code cleanup and comments
 // - display results in green
 
 // display locations
@@ -37,7 +36,7 @@ int button[MAX_BUTTON_ROW][MAX_BUTTON_COL] = {
     {    '4',         '5',       '6',       '7',      BLANK,     },
     {    '0',         '1',       '2',       '3',       '~',      },
     {    '&',         '|',       '^',    EVID_SHL,   EVID_SHR,   },
-    { '   +',         '-',       '*',       '/',      '=',       },
+    {    '+',         '-',       '*',       '/',      '=',       },
         };
 
 // colors
@@ -60,10 +59,11 @@ char *progname;
 char *data_dir;
 
 // prototypes
-void update_numeric_display(unsigned long value, int color, int bits, int display);
+void update_numeric_display(unsigned long value, int bits, int display, bool error);
 void draw_button(int row, int col, bool highlight);
 void evid_to_button_row_and_col(int evid, int *button_row, int *button_col);
-unsigned long process_op(int op, unsigned long operand1, unsigned long operand2, int bits);
+unsigned long process_op(int op, unsigned long operand1, unsigned long operand2, int bits, bool *error);
+void cleanup(void);
 
 // -----------------  MAIN  ----------------------------------
 
@@ -71,7 +71,6 @@ int main(int argc, char **argv)
 {
     int           rc;
     sdlx_event_t  event;
-    bool          done = false;
     int           highlight_button_row = -1;
     int           highlight_button_col = -1;
 
@@ -81,6 +80,7 @@ int main(int argc, char **argv)
     int           op            = OP_NONE;
     unsigned long display_value = 0;
     unsigned long operand_value = 0;
+    bool          error         = false;
 
     // get arg values
     progname = argv[0];
@@ -96,14 +96,18 @@ int main(int argc, char **argv)
     }
 
     // runtime loop
-    while (!done) {
+    while (true) {
+        // -------------------------
+        // display update processing
+        // -------------------------
+
         // init the backbuffer
         sdlx_display_init(BACKGROUND_COLOR);
 
         // register control event to end program
         sdlx_register_control_events(NULL, NULL, "X", COLOR_BLACK, 0, 0, EVID_QUIT);  // xxx colors
 
-        // display buttons, and register button events
+        // display calculator buttons, which will also register the button events
         for (int row = 0; row < MAX_BUTTON_ROW; row++) {
             for (int col = 0; col < MAX_BUTTON_COL; col++) {
                 bool highlight = (row == highlight_button_row && col == highlight_button_col);
@@ -112,35 +116,51 @@ int main(int argc, char **argv)
         }
         
         // update numeric display
-        update_numeric_display(display_value, COLOR_BLACK, bits, display_fmt);
+        update_numeric_display(display_value, bits, display_fmt, error);
 
         // present the display
         sdlx_display_present();
 
-        // wait for event, with xxx timeout
+        // --------------------
+        // event processing
+        // --------------------
+
+        // wait for event;
+        // if a button is highlighted then use a short timeout to clear the button highlight;
+        // otherwise use infinite timeout
         sdlx_get_event(highlight_button_row != -1 ? BUTTON_HIGHLIGHT_DURATION_MS * 1000 : -1, &event);
 
-        // xxx comment
+        // if sdlx_get_event timed out then clear the button highlight, and continue
         if (event.event_id == -1) {
             highlight_button_row = -1;
             highlight_button_col = -1;
             continue;
         }
 
-        // xxx
+        // if quit event then end program
+        if (event.event_id == EVID_QUIT) {
+            break;
+        }
+
+        // calculator button has been pressed ...
+
+        // if in error state then ignore all button presses, except CLR
+        if (error && event.event_id != EVID_CLR) {
+            continue;
+        }
+
+        // set highlight_button_row/col so the button will be briefly hightlighted
         evid_to_button_row_and_col(event.event_id, &highlight_button_row, &highlight_button_col);
 
-        // process event ...
+        // process the calculator button
         switch (event.event_id) {
-        // control functions: clear, clear entry, bits select, display format select, and quit
-        case EVID_QUIT:
-            done = true;
-            break;
+        // calculator control buttons: clear, clear entry, bits select, display format select
         case EVID_CLR:
-            display_value = 0;
             display_state = RESULT;
-            op = OP_NONE;
+            op            = OP_NONE;
+            display_value = 0;
             operand_value = 0;
+            error         = false;
             break;
         case EVID_CE:
             if (display_state == INPUTTING) {
@@ -188,17 +208,17 @@ int main(int argc, char **argv)
                 break;
             }
             if (op != OP_NONE) {
-                display_value = process_op(op, operand_value, display_value, bits);
+                display_value = process_op(op, operand_value, display_value, bits, &error);
             }
             operand_value = display_value;
             op = event.event_id;
-            display_state = NO_VALUE;  // xxx name
+            display_state = NO_VALUE;
             break;
 
         // equals op
         case '=':
             if (op != OP_NONE && display_state != NO_VALUE) {
-                display_value = process_op(op, operand_value, display_value, bits);
+                display_value = process_op(op, operand_value, display_value, bits, &error);
             }
             operand_value = 0;
             op = OP_NONE;
@@ -207,6 +227,7 @@ int main(int argc, char **argv)
     }
 
     // cleanup and end program
+    cleanup();
     sdlx_quit(SUBSYS_VIDEO);
     printf("INFO %s: terminating\n", progname);
     return 0;
@@ -214,22 +235,31 @@ int main(int argc, char **argv)
 
 // -----------------  SUPPORT ROUTINES  ----------------------------
 
-void update_numeric_display(unsigned long value, int color, int bits, int display_fmt)
+// xxx right justify
+void update_numeric_display(unsigned long value, int bits, int display_fmt, bool error)
 {
     int max_chars;
+    int color = (error ? COLOR_RED : COLOR_BLACK);
 
     if (display_fmt == EVID_DSPHEX) {
-        // display hex
         max_chars = (bits == EVID_32BIT ? 8 : 16);
-        sdlx_print_init(max_chars, color, BACKGROUND_COLOR);
-        sdlx_render_printf(0, DISPLAY_Y_TOP, "%*lX", max_chars, value);
     } else {
-        // display decimal
         max_chars = (bits == EVID_32BIT ? 10 : 20);
-        sdlx_print_init(max_chars, color, BACKGROUND_COLOR);
-        sdlx_render_printf(0, DISPLAY_Y_TOP, "%*lu", max_chars, value);
+    }
+
+    sdlx_print_init(max_chars, color, BACKGROUND_COLOR);
+
+    if (error) {
+        sdlx_render_printf(0, DISPLAY_Y_TOP, "%s", "error");
+    } else if (display_fmt == EVID_DSPHEX) {
+        sdlx_render_printf(0, DISPLAY_Y_TOP, "%lX", value);
+    } else {
+        sdlx_render_printf(0, DISPLAY_Y_TOP, "%lu", value);
     }
 }
+
+sdlx_texture_t *button_texture;
+sdlx_texture_t *highlighted_button_texture;
 
 void draw_button(int row, int col, bool highlight)
 {
@@ -237,16 +267,13 @@ void draw_button(int row, int col, bool highlight)
     int x, y, radius;
     char str[8];
 
-    static sdlx_texture_t *button_texture;
-    static sdlx_texture_t *highlighted_button_texture;
     static int texture_w, texture_h;
 
     if (button_texture == NULL) {
         radius = BUTTONS_SPACING * 45 / 100;
-        button_texture = sdlx_create_filled_circle_texture(radius, BUTTON_COLOR_NORMAL);  // xxx free XXX
+        button_texture = sdlx_create_filled_circle_texture(radius, BUTTON_COLOR_NORMAL);
         highlighted_button_texture = sdlx_create_filled_circle_texture(radius,BUTTON_COLOR_HIGHLIGHT);
         sdlx_query_texture(button_texture, &texture_w, &texture_h);
-        // xxx printf("texture w,h = %d %d\n", texture_w, texture_h);
     }
 
     if (button[row][col] == 0) {
@@ -285,15 +312,18 @@ void evid_to_button_row_and_col(int evid, int *button_row, int *button_col)
         }
     }
 
-    // xxx should never fail ?
     *button_row = -1;
     *button_col = -1;
 }
 
-// xxx div by zero XXX
-unsigned long process_op(int op, unsigned long operand1, unsigned long operand2, int bits)
+unsigned long process_op(int op, unsigned long operand1, unsigned long operand2, int bits, bool *error)
 {
     unsigned long result;
+
+    if (op == '/' && operand2 == 0) {
+        *error = true;
+        return 0;
+    }
 
     switch (op) {
     case '&':      result = operand1 & operand2; break;
@@ -317,3 +347,8 @@ unsigned long process_op(int op, unsigned long operand1, unsigned long operand2,
     return result;
 }
 
+void cleanup(void)
+{
+    sdlx_destroy_texture(button_texture);
+    sdlx_destroy_texture(highlighted_button_texture);
+}
