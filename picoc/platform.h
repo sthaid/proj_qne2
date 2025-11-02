@@ -14,6 +14,11 @@
 #include <math.h>
 #include <stdbool.h>
 
+// EZAPP define UNIX_HOST here, so it is not needed in the Makefiles
+#ifndef UNIX_HOST
+#define UNIX_HOST
+#endif
+
 /* host platform includes */
 #ifdef UNIX_HOST
 # include <stdint.h>
@@ -30,7 +35,7 @@
  #define DEBUGGER
  #define USE_READLINE (defined by default for UNIX_HOST)
  */
-# EZAPP remove USE_READLINE, not supported on Android NDK
+// EZAPP remove USE_READLINE, not supported on Android NDK
 //#define USE_READLINE
 
 #if defined(WIN32) /*(predefined on MSVC)*/

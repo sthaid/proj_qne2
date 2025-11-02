@@ -8,7 +8,7 @@ CC=gcc
 # EZAPP updates to CFLAGS, CXXFLAGS, LIBS, and SRCS
 
 CFLAGS=  -Wall -Wno-unused-result -Werror -O2 -g
-CFLAGS+= -DVER=\"a97d94fa\" -DTAG=\"v3.2.2\" -DUNIX_HOST
+CFLAGS+= -DVER=\"a97d94fa\" -DTAG=\"v3.2.2\"
 CFLAGS+= -I../src -I../cJSON -I../lodepng $(shell pkg-config sdl3 --cflags)
 LIBS=    -lm -lreadline -lSDL3 -lSDL3_ttf
 CXXFLAGS = $(CFLAGS)
