@@ -89,9 +89,6 @@ int main(int argc, char **argv)
     printf("INFO %s: starting, data_dir=%s, wXh=%d %d\n",
            progname, data_dir, sdlx_win_width, sdlx_win_height);
 
-    // xxx temp testing
-    printf("HELLO %d %d %d %s %f %f WORLD\n", 5L, 6, 7L, "string", 1.23, 4.56, 7777);
-
     // init sdl video subsystem
     rc = sdlx_init(SUBSYS_VIDEO);
     if (rc != 0) {

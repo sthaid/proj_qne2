@@ -1140,7 +1140,9 @@ void ExpressionInfixOperator(struct ParseState *Parser,
         case TokenGreaterEqual:
             ResultInt = BottomInt >= TopInt;
             break;
-        case TokenShiftLeft:  // xxx don't like all this castings
+        // xxx don't like all this castings
+#if 0
+        case TokenShiftLeft:
             ResultInt = (unsigned long)BottomInt << (unsigned long)TopInt;
             break;
         case TokenShiftRight:
@@ -1158,6 +1160,26 @@ void ExpressionInfixOperator(struct ParseState *Parser,
         case TokenSlash:
             ResultInt = (unsigned long)BottomInt / (unsigned long)TopInt;
             break;
+#else
+        case TokenShiftLeft:
+            ResultInt = BottomInt << TopInt;
+            break;
+        case TokenShiftRight:
+            ResultInt = BottomInt >> TopInt;
+            break;
+        case TokenPlus:
+            ResultInt = BottomInt + TopInt;
+            break;
+        case TokenMinus:
+            ResultInt = BottomInt - TopInt;
+            break;
+        case TokenAsterisk:
+            ResultInt = BottomInt * TopInt;
+            break;
+        case TokenSlash:
+            ResultInt = BottomInt / TopInt;
+            break;
+#endif
         case TokenModulus:
             ResultInt = BottomInt % TopInt;
             break;
