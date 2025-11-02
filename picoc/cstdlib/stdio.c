@@ -238,6 +238,7 @@ int StdioBasePrintf(struct ParseState *Parser, FILE *Stream, char *StrOut,
     Picoc *pc = Parser->pc;
 
 // EZAPP TODO
+#if 0
     // xxxxxxxxxxxxx
     {
     printf("XXX FORMAT '%s'  NUM_ARGS=%d\n", Format, Args->NumArgs);
@@ -259,7 +260,7 @@ int StdioBasePrintf(struct ParseState *Parser, FILE *Stream, char *StrOut,
     printf("---------------\n");
     return char_count;  
     }
-
+#endif
 
     if (Format == NULL)
         Format = "[null format]\n";

@@ -23,9 +23,10 @@ printf("%d\n", strncmp(a, "goere", 2) == 0);
 printf("%d\n", strncmp(a, "goerg", 2) == 0);
 printf("%d\n", strncmp(a, "zebra", 2) < 0);
 
-printf("%s\n", index(a, 'o'));
-printf("%s\n", rindex(a, 'l'));
-printf("%d\n", rindex(a, 'x') == NULL);
+// EZAPP index and rindex are removed, not supported by Android NDK
+//printf("%s\n", index(a, 'o'));
+//printf("%s\n", rindex(a, 'l'));
+//printf("%d\n", rindex(a, 'x') == NULL);
 
 memset(&a[1], 'r', 4);
 printf("%s\n", a);

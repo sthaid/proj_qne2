@@ -1107,7 +1107,7 @@ void ExpressionInfixOperator(struct ParseState *Parser,
         case TokenArithmeticOr:
             ResultInt = BottomInt | TopInt;
             result_unsigned = EitherUnsigned;
-            printf("ARITHMETIC OR %lx %lx => %lx unsigned %d\n", BottomInt, TopInt, ResultInt, result_unsigned);
+            //printf("ARITHMETIC OR %lx %lx => %lx unsigned %d\n", BottomInt, TopInt, ResultInt, result_unsigned);
             break;
         case TokenArithmeticExor:
             ResultInt = BottomInt ^ TopInt;
@@ -1136,7 +1136,7 @@ void ExpressionInfixOperator(struct ParseState *Parser,
         case TokenShiftLeft:
             ResultInt = BottomInt << TopInt;
             result_unsigned = EitherUnsigned;
-            printf("SHIFT LEFT UNSIGNED %lx << %lx = %lx - %d\n", BottomInt, TopInt, ResultInt, result_unsigned);
+            //printf("SHIFT LEFT UNSIGNED %lx << %lx = %lx - %d\n", BottomInt, TopInt, ResultInt, result_unsigned);
             //printf("%lx = %lx << %lx\n", ResultInt, BottomInt, TopInt);
             break;
         case TokenShiftRight:

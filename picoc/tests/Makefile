@@ -1,9 +1,3 @@
-# EZAPP TODO
-xxx=\
-	28_strings.test \
-	39_typedef.test \
-	69_shebang_script.test \
-
 TESTS=	00_assignment.test \
 	01_comment.test \
 	02_printf.test \
@@ -31,6 +25,7 @@ TESTS=	00_assignment.test \
 	24_math_library.test \
 	25_quicksort.test \
 	26_character_constants.test \
+	28_strings.test \
 	29_array_address.test \
 	30_hanoi.test \
 	31_args.test \
@@ -41,6 +36,7 @@ TESTS=	00_assignment.test \
 	36_array_initializers.test \
 	37_sprintf.test \
 	38_multiple_array_index.test \
+	39_typedef.test \
 	40_stdio.test \
 	41_hashif.test \
 	43_void_param.test \
@@ -65,6 +61,10 @@ TESTS=	00_assignment.test \
 	66_printf_undefined.test \
 	67_macro_crash.test \
 	68_return.test \
+
+# EZAPP TODO
+TESTS_NOT_WORKING = \
+	69_shebang_script.test \
 
 include csmith/Makefile
 include jpoirier/Makefile
