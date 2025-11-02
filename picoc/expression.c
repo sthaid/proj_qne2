@@ -1,4 +1,5 @@
 // EZAPP TODO - describe changes to this file
+// and search for xxx tagged items
 
 /* picoc expression evaluator - a stack-based expression evaluation system
  * which handles operator precedence */
@@ -242,21 +243,18 @@ long ExpressionCoerceInteger(struct Value *Val)
 {
     switch (Val->Typ->Base) {
     case TypeInt:
-        //printf("COERCE INTEGER line %d  VAL=%x\n", __LINE__, Val->Val->Integer);
         return (long)Val->Val->Integer;
     case TypeChar:
         return (long)Val->Val->Character;
     case TypeShort:
         return (long)Val->Val->ShortInteger;
     case TypeLong:
-        //printf("COERCE LONG line %d  VAL=%lx\n", __LINE__, Val->Val->LongInteger);
         return (long)Val->Val->LongInteger;
     case TypeUnsignedInt:
         return (long)Val->Val->UnsignedInteger;
     case TypeUnsignedShort:
         return (long)Val->Val->UnsignedShortInteger;
     case TypeUnsignedLong:
-        //printf("COERCE UNSINGED LONG line %d  VAL = %lx\n", __LINE__, Val->Val->UnsignedLongInteger);
         return (long)Val->Val->UnsignedLongInteger;
     case TypeUnsignedChar:
         return (long)Val->Val->UnsignedCharacter;
@@ -328,8 +326,6 @@ long ExpressionAssignInt(struct ParseState *Parser, struct Value *DestValue,
     long FromInt, int After)
 {
     long Result;
-
-    //printf("FromInt = %lx\n", FromInt);
 
     if (!DestValue->IsLValue)
         ProgramFail(Parser, "can't assign to this");
@@ -451,7 +447,7 @@ void ExpressionPushInt(struct ParseState *Parser,
     struct Value *ValueLoc = VariableAllocValueFromType(Parser->pc, Parser,
                             Type, false, NULL, false);
 
-#if 0
+#if 0  // xxx want to understand the purpose of this code
     // jdp: an ugly hack to a) assign the correct value and b) properly print long values
     ValueLoc->Val->UnsignedLongInteger = (unsigned long)IntValue;
     ValueLoc->Val->LongInteger = (long)IntValue;
@@ -971,7 +967,6 @@ void ExpressionInfixOperator(struct ParseState *Parser,
 
         switch (Op) {
         case TokenAssign:
-            //printf("ASSIGN %d\n", __LINE__);
             ASSIGN_FP_OR_INT(TopFP);
             break;
         case TokenAddAssign:
@@ -1040,6 +1035,7 @@ void ExpressionInfixOperator(struct ParseState *Parser,
         struct Value *b = BottomValue;
         struct Value *t = TopValue;
 
+        // xxx comment this
         if (Op == TokenShiftLeft || Op == TokenShiftRight) {
             switch (b->Typ->Base) {
             case TypeUnsignedLong:
@@ -1144,7 +1140,7 @@ void ExpressionInfixOperator(struct ParseState *Parser,
         case TokenGreaterEqual:
             ResultInt = BottomInt >= TopInt;
             break;
-        case TokenShiftLeft:  // EZAPP TODO, xxx don't like all this castings
+        case TokenShiftLeft:  // xxx don't like all this castings
             ResultInt = (unsigned long)BottomInt << (unsigned long)TopInt;
             break;
         case TokenShiftRight:
@@ -1203,7 +1199,6 @@ void ExpressionInfixOperator(struct ParseState *Parser,
                 BottomValue->Typ);
             StackValue->Val->Pointer = Pointer;
         } else if (Op == TokenAssign && TopInt == 0) {
-            //printf("ASSIGN %d\n", __LINE__);
             /* assign a NULL pointer */
             HeapUnpopStack(Parser->pc, sizeof(struct Value));
             ExpressionAssign(Parser, BottomValue, TopValue, false, NULL, 0, false);
@@ -1232,7 +1227,6 @@ void ExpressionInfixOperator(struct ParseState *Parser,
         char *TopLoc = (char*)TopValue->Val->Pointer;
         char *BottomLoc = (char*)BottomValue->Val->Pointer;
 
-        //printf("ASSIGN %d\n", __LINE__);
         switch (Op) {
         case TokenEqual:
             ExpressionPushInt(Parser, StackTop, BottomLoc == TopLoc, &Parser->pc->IntType);
@@ -1248,7 +1242,6 @@ void ExpressionInfixOperator(struct ParseState *Parser,
             break;
         }
     } else if (Op == TokenAssign) {
-        //printf("ASSIGN %d\n", __LINE__);
         /* assign a non-numeric type */
         HeapUnpopStack(Parser->pc, sizeof(struct Value));
         /* XXX - possible bug if lvalue is a temp value and takes more
