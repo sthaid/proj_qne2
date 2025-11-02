@@ -1,8 +1,11 @@
 CC=gcc
 
+
 # Use $ xxd -i ./LICENSE > LICENSE.h
 # to create the license info file. Should be signed char, add a
 # null character to the end of the array.
+
+# EZAPP updates to CFLAGS, CXXFLAGS, LIBS, and SRCS
 
 CFLAGS=  -Wall -Wno-unused-result -Werror -O2 -g
 CFLAGS+= -DVER=\"a97d94fa\" -DTAG=\"v3.2.2\" -DUNIX_HOST
@@ -12,14 +15,14 @@ CXXFLAGS = $(CFLAGS)
 
 TARGET	= picoc
 SRCS	= picoc.c table.c lex.c parse.c expression.c heap.c type.c \
-	  variable.c clibrary.c platform.c include.c debug.c \
-	  platform/platform_unix.c platform/library_unix.c \
-	  cstdlib/stdio.c cstdlib/math.c cstdlib/string.c cstdlib/stdlib.c \
-	  cstdlib/time.c cstdlib/errno.c cstdlib/ctype.c cstdlib/stdbool.c \
-	  cstdlib/unistd.c \
-          sdlx_misc.c sdlx_video.c sdlx_audio.c sdlx_sensor.c sdlx_event.c logging.c utils.c utils_location.cpp \
-          cJSON.c \
-          lodepng.c
+	variable.c clibrary.c platform.c include.c debug.c \
+	platform/platform_unix.c platform/library_unix.c \
+	cstdlib/stdio.c cstdlib/math.c cstdlib/string.c cstdlib/stdlib.c \
+	cstdlib/time.c cstdlib/errno.c cstdlib/ctype.c cstdlib/stdbool.c \
+	cstdlib/unistd.c \
+	sdlx_misc.c sdlx_video.c sdlx_audio.c sdlx_sensor.c sdlx_event.c logging.c utils.c utils_location.cpp \
+	cJSON.c \
+	lodepng.c
 
 OBJS	:= $(SRCS:%.c=%.o)
 OBJS	:= $(OBJS:%.cpp=%.o)
@@ -35,7 +38,7 @@ test:	all
 	@(cd tests; make -s jpoirier)
 
 clean:
-	rm -f $(TARGET) $(OBJS)
+	rm -f $(TARGET) $(OBJS) *~
 
 count:
 	@echo "Core:"

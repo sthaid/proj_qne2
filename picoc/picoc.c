@@ -44,7 +44,7 @@ int main(int argc, char **argv)
     }
 
     PicocInitialize(&pc, StackSize);
-
+// EZAPP TODO - review this change, and comment
     if (strcmp(argv[ParamCount], "-n") == 0) {
         ParamCount++;
         progname = argv[ParamCount];

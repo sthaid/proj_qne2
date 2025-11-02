@@ -235,22 +235,26 @@ int IsTypeToken(struct ParseState *Parser, enum LexToken t,
     return 0;
 }
 
+// EZAPP TODO
 long ExpressionCoerceInteger(struct Value *Val)
 {
     switch (Val->Typ->Base) {
     case TypeInt:
+        //printf("COERCE INTEGER line %d  VAL=%x\n", __LINE__, Val->Val->Integer);
         return (long)Val->Val->Integer;
     case TypeChar:
         return (long)Val->Val->Character;
     case TypeShort:
         return (long)Val->Val->ShortInteger;
     case TypeLong:
+        //printf("COERCE LONG line %d  VAL=%lx\n", __LINE__, Val->Val->LongInteger);
         return (long)Val->Val->LongInteger;
     case TypeUnsignedInt:
         return (long)Val->Val->UnsignedInteger;
     case TypeUnsignedShort:
         return (long)Val->Val->UnsignedShortInteger;
     case TypeUnsignedLong:
+        //printf("COERCE UNSINGED LONG line %d  VAL = %lx\n", __LINE__, Val->Val->UnsignedLongInteger);
         return (long)Val->Val->UnsignedLongInteger;
     case TypeUnsignedChar:
         return (long)Val->Val->UnsignedCharacter;
@@ -322,6 +326,8 @@ long ExpressionAssignInt(struct ParseState *Parser, struct Value *DestValue,
     long FromInt, int After)
 {
     long Result;
+
+    //printf("FromInt = %lx\n", FromInt);
 
     if (!DestValue->IsLValue)
         ProgramFail(Parser, "can't assign to this");
@@ -441,7 +447,31 @@ void ExpressionPushInt(struct ParseState *Parser,
             struct ExpressionStack **StackTop, long IntValue)
 {
     struct Value *ValueLoc = VariableAllocValueFromType(Parser->pc, Parser,
-                            &Parser->pc->IntType, false, NULL, false);
+                            &Parser->pc->IntType, false, NULL, false);  // xxxxxxxxxxxxx added Unsigned
+
+    // jdp: an ugly hack to a) assign the correct value and b) properly print long values
+    ValueLoc->Val->UnsignedLongInteger = (unsigned long)IntValue;
+    ValueLoc->Val->LongInteger = (long)IntValue;
+    ValueLoc->Val->Integer = (int)IntValue;
+    ValueLoc->Val->ShortInteger = (short)IntValue;
+    ValueLoc->Val->UnsignedShortInteger = (unsigned short)IntValue;
+    ValueLoc->Val->UnsignedInteger = (unsigned int)IntValue;
+    ValueLoc->Val->UnsignedCharacter = (unsigned char)IntValue;
+    ValueLoc->Val->Character = (char)IntValue;
+
+    //printf("UnsignedLongInteger  = %lx\n", ValueLoc->Val->UnsignedLongInteger );
+    //printf("LongInteger  = %lx\n", ValueLoc->Val->LongInteger );
+    //printf("ShortInteger  = %x\n", ValueLoc->Val->ShortInteger );
+
+    ExpressionStackPushValueNode(Parser, StackTop, ValueLoc);
+}
+
+void ExpressionPushUnsignedInt(struct ParseState *Parser,
+            struct ExpressionStack **StackTop, long IntValue)
+{
+    struct Value *ValueLoc = VariableAllocValueFromType(Parser->pc, Parser,
+                            &Parser->pc->UnsignedLongType, false, NULL, false);  // xxxxxxxxxxxxx added Unsigned
+
     // jdp: an ugly hack to a) assign the correct value and b) properly print long values
     ValueLoc->Val->UnsignedLongInteger = (unsigned long)IntValue;
     ValueLoc->Val->LongInteger = (long)IntValue;
@@ -942,6 +972,7 @@ void ExpressionInfixOperator(struct ParseState *Parser,
 
         switch (Op) {
         case TokenAssign:
+            //printf("ASSIGN %d\n", __LINE__);
             ASSIGN_FP_OR_INT(TopFP);
             break;
         case TokenAddAssign:
@@ -1004,10 +1035,24 @@ void ExpressionInfixOperator(struct ParseState *Parser,
     } else if (IS_NUMERIC_COERCIBLE(TopValue) && IS_NUMERIC_COERCIBLE(BottomValue)) {
         /* integer operation */
         long TopInt = ExpressionCoerceInteger(TopValue);
+        //printf("TopInt=%lx\n", TopInt);
         long BottomInt = ExpressionCoerceInteger(BottomValue);
+
+//  TypeUnsignedInt,            /* unsigned integer */
+//  TypeUnsignedShort,          /* unsigned short integer */
+//  TypeUnsignedChar,           /* unsigned 8-bit number */ /* must be before unsigned long */
+//  TypeUnsignedLong,           /* unsigned long integer */
+        bool TopIntIsUnsigned = TopValue->Typ->Base == TypeUnsignedLong;     // xxx etc
+        bool BottomIntIsUnsigned = BottomValue->Typ->Base == TypeUnsignedLong;
+        bool EitherUnsigned = (TopIntIsUnsigned || BottomIntIsUnsigned);
+        bool result_unsigned = false;
+
         switch (Op) {
         case TokenAssign:
+            //printf("XXXXXXXXXXXXX ASSIGN %d\n", __LINE__);  //xxx
+            //printf("TopInt=%lx\n", TopInt);
             ResultInt = ExpressionAssignInt(Parser, BottomValue, TopInt, false);
+            //printf("ResultInt = %lx\n", ResultInt);
             break;
         case TokenAddAssign:
             ResultInt = ExpressionAssignInt(Parser, BottomValue,
@@ -1061,6 +1106,8 @@ void ExpressionInfixOperator(struct ParseState *Parser,
             break;
         case TokenArithmeticOr:
             ResultInt = BottomInt | TopInt;
+            result_unsigned = EitherUnsigned;
+            printf("ARITHMETIC OR %lx %lx => %lx unsigned %d\n", BottomInt, TopInt, ResultInt, result_unsigned);
             break;
         case TokenArithmeticExor:
             ResultInt = BottomInt ^ TopInt;
@@ -1088,6 +1135,8 @@ void ExpressionInfixOperator(struct ParseState *Parser,
             break;
         case TokenShiftLeft:
             ResultInt = BottomInt << TopInt;
+            result_unsigned = EitherUnsigned;
+            printf("SHIFT LEFT UNSIGNED %lx << %lx = %lx - %d\n", BottomInt, TopInt, ResultInt, result_unsigned);
             //printf("%lx = %lx << %lx\n", ResultInt, BottomInt, TopInt);
             break;
         case TokenShiftRight:
@@ -1099,8 +1148,10 @@ void ExpressionInfixOperator(struct ParseState *Parser,
         case TokenMinus:
             ResultInt = BottomInt - TopInt;
             break;
-        case TokenAsterisk:
+        case TokenAsterisk:  //xxx
             ResultInt = BottomInt * TopInt;
+            result_unsigned = EitherUnsigned;
+            //printf("Result = %lx   %lx %lx   UNSIGNED=%d\n", ResultInt, BottomInt, TopInt, result_unsigned);
             break;
         case TokenSlash:
             ResultInt = BottomInt / TopInt;
@@ -1112,7 +1163,11 @@ void ExpressionInfixOperator(struct ParseState *Parser,
             ProgramFail(Parser, "invalid operation");
             break;
         }
-        ExpressionPushInt(Parser, StackTop, ResultInt);
+        if (!result_unsigned) {
+            ExpressionPushInt(Parser, StackTop, ResultInt);
+        } else {
+            ExpressionPushUnsignedInt(Parser, StackTop, ResultInt);
+        }
     } else if (BottomValue->Typ->Base == TypePointer &&
             IS_NUMERIC_COERCIBLE(TopValue)) {
         /* pointer/integer infix arithmetic */
@@ -1146,6 +1201,7 @@ void ExpressionInfixOperator(struct ParseState *Parser,
                 BottomValue->Typ);
             StackValue->Val->Pointer = Pointer;
         } else if (Op == TokenAssign && TopInt == 0) {
+            //printf("ASSIGN %d\n", __LINE__);
             /* assign a NULL pointer */
             HeapUnpopStack(Parser->pc, sizeof(struct Value));
             ExpressionAssign(Parser, BottomValue, TopValue, false, NULL, 0, false);
@@ -1174,6 +1230,7 @@ void ExpressionInfixOperator(struct ParseState *Parser,
         char *TopLoc = (char*)TopValue->Val->Pointer;
         char *BottomLoc = (char*)BottomValue->Val->Pointer;
 
+        //printf("ASSIGN %d\n", __LINE__);
         switch (Op) {
         case TokenEqual:
             ExpressionPushInt(Parser, StackTop, BottomLoc == TopLoc);
@@ -1189,6 +1246,7 @@ void ExpressionInfixOperator(struct ParseState *Parser,
             break;
         }
     } else if (Op == TokenAssign) {
+        //printf("ASSIGN %d\n", __LINE__);
         /* assign a non-numeric type */
         HeapUnpopStack(Parser->pc, sizeof(struct Value));
         /* XXX - possible bug if lvalue is a temp value and takes more

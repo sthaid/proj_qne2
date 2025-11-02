@@ -6,7 +6,7 @@
 
 #include "platform.h"
 
-//xxx why needed?
+// EZAPP TODO xxx why needed?
 struct __sFILE {
   char __private[152];
 } __attribute__((aligned(sizeof(void*))));
@@ -25,7 +25,7 @@ struct __sFILE {
 #endif
 */
 /* Get the name of a type */
-#if 0
+#if 0  // EZAPP changed to avoid multi-line comment error
 #define typename(x) _Generic((x),   \
     _Bool: "_Bool", \
     unsigned char: "unsigned char", \

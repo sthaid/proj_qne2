@@ -45,6 +45,7 @@ void UnistdClose(struct ParseState *Parser, struct Value *ReturnValue,
     ReturnValue->Val->Integer = close(Param[0]->Val->Integer);
 }
 
+// EZAPP remove unistd calls not supported by Android NDK
 #if 0
 void UnistdConfstr(struct ParseState *Parser, struct Value *ReturnValue,
     struct Value **Param, int NumArgs)

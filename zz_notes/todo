@@ -1,3 +1,23 @@
+=========
+PICOC 
+========
+
+refresh picoc code
+learn how the test suite works
+write a test program for integer expressions
+
+
+========
+CALCULATOR
+========
+
+test in 32 and 64 bit modes
+
+
+
+
+------------
+
 calc
 https://github.com/codeplea/tinyexpr/blob/master/tinyexpr.c
 

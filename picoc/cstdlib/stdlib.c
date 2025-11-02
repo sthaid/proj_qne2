@@ -145,6 +145,7 @@ void StdlibLdiv(struct ParseState *Parser, struct Value *ReturnValue,
 }
 #endif
 
+// EZAPP add random() and srandom()
 void StdlibRandom(struct ParseState *Parser, struct Value *ReturnValue,
     struct Value **Param, int NumArgs)
 {

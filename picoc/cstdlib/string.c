@@ -49,6 +49,7 @@ void StringStrncat(struct ParseState *Parser, struct Value *ReturnValue,
 }
 
 #ifndef WIN32
+// EXAPP remove because not supported in Android NDK
 #if 0
 void StringIndex(struct ParseState *Parser, struct Value *ReturnValue,
     struct Value **Param, int NumArgs)
