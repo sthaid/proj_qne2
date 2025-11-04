@@ -8,7 +8,6 @@
 
 // variables
 static char *progname;
-static char *data_dir;
 
 // prototypes
 double smooth(double newval);
@@ -27,9 +26,7 @@ int main(int argc, char **argv)
 
     // save arg values
     progname = argv[0];
-    data_dir = argv[1];
-    printf("INFO %s: starting, data_dir=%s\n", progname, data_dir);
-    printf("INFO %s: sdlx_win_width/height  = %d %d\n", progname, sdlx_win_width, sdlx_win_height);
+    printf("INFO %s: starting\n", progname);
 
     // init sdl
     rc = sdlx_init(SUBSYS_VIDEO | SUBSYS_SENSOR);

@@ -41,9 +41,8 @@
 #define MS  1000
 #define SEC 1000000
 
-#define CREATE_FILES_INIT        1
-#define CREATE_FILES_RESET_APPS  2
-#define CREATE_FILES_RESET_SVCS  3
+#define CREATE_FILES_INIT  1
+#define CREATE_FILES_RESET 2
 
 //
 // typedefs
@@ -206,20 +205,12 @@ static void create_files(int action)
     case CREATE_FILES_INIT:
         system("tar -xvf files.tar");
         break;
-    case CREATE_FILES_RESET_APPS:
-        system("rm -rf apps apps_data");
-        system("tar -xvf files.tar apps");
-        system("mkdir -p apps_data");
-        break;
-    case CREATE_FILES_RESET_SVCS:
+    case CREATE_FILES_RESET:
         stop_all_services();
-
         acquire_services_lock();
-        system("rm -rf svcs svcs_data");
-        system("tar -xvf files.tar svcs");
-        system("mkdir -p svcs_data");
+        system("rm -rf apps svcs");
+        system("tar -xvf files.tar apps svcs");
         release_services_lock();
-
         request_start_all_autostart_services();
         break;
     }
@@ -311,8 +302,6 @@ static void processing(void)
 static int run(char *name, int svc_id)
 {
     char           dir_path[100];
-    char           data_dir_path[100];
-    char           cmd[120];
     int            rc;
     DIR           *dir;
     struct dirent *dirent;
@@ -322,15 +311,9 @@ static int run(char *name, int svc_id)
     // xxx comment
     if (svc_id == -1) {
         sprintf(dir_path, "apps/%s", name);
-        sprintf(data_dir_path, "apps_data/%s", name);
     } else {
         sprintf(dir_path, "svcs/%s", name);
-        sprintf(data_dir_path, "svcs_data/%s", name);
     }
-
-    // xxx
-    sprintf(cmd, "mkdir -p %s", data_dir_path);
-    system(cmd);
 
     // construct list of *.c files in the dir
     picoc_args[0] = '\0';
@@ -357,9 +340,9 @@ static int run(char *name, int svc_id)
 
     // xxx comment
     if (svc_id == -1) {
-        p += sprintf(p, " - %s %s", dir_path, data_dir_path);
+        p += sprintf(p, " - %s", dir_path);
     } else {
-        p += sprintf(p, " - %s %s %d", dir_path, data_dir_path, svc_id);
+        p += sprintf(p, " - %s %d", dir_path, svc_id);
     }
 
     // run the app using the picoc c language interpreter
@@ -1109,8 +1092,7 @@ static void settings(void)
     #define EVID_DEVEL_PORT  1003
     #define EVID_SERVICES    1004
 #ifdef ANDROID
-    #define EVID_RESET_APPS  1005
-    #define EVID_RESET_SVCS  1006
+    #define EVID_RESET_APPS_AND_SVCS  1005
 #endif
 
     // get this device ipaddr
@@ -1149,13 +1131,9 @@ static void settings(void)
         sdlx_register_event(loc, EVID_SERVICES);
 
 #ifdef ANDROID
-        // display Reset_Apps
-        loc = sdlx_render_printf(0, ROW2Y(13), "Reset_Apps");
-        sdlx_register_event(loc, EVID_RESET_APPS);
-
-        // display Reset_Svcs
-        loc = sdlx_render_printf(0, ROW2Y(15), "Reset_Svcs");
-        sdlx_register_event(loc, EVID_RESET_SVCS);
+        // display Reset_Apps_And_svcs
+        loc = sdlx_render_printf(0, ROW2Y(13), "Reset_Apps_And_Svcs");
+        sdlx_register_event(loc, EVID_RESET_APPS_AND_SVCS);
 #endif
 
         // change print color back to white
@@ -1214,24 +1192,14 @@ static void settings(void)
             services();
             break;
 #ifdef ANDROID
-        case EVID_RESET_APPS: {
+        case EVID_RESET_APPS_AND_SVCS: {
             char *str; 
             str = sdlx_get_input_str("Reset y/n?", false, BG_COLOR);
             if (strcasecmp(str, "y") != 0) {
                 break;
             }
-            create_files(CREATE_FILES_RESET_APPS);
-            msg = "Apps are reset";
-            msg_time = util_microsec_timer();
-            break; }
-        case EVID_RESET_SVCS: {
-            char *str; 
-            str = sdlx_get_input_str("Reset y/n?", false, BG_COLOR);
-            if (strcasecmp(str, "y") != 0) {
-                break;
-            }
-            create_files(CREATE_FILES_RESET_SVCS);
-            msg = "Svcs are reset";
+            create_files(CREATE_FILES_RESET);
+            msg = "Apps/Svcs are reset";
             msg_time = util_microsec_timer();
             break; }
 #endif

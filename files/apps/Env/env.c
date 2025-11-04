@@ -67,7 +67,6 @@ typedef struct {
 //
 
 char           *progname;
-char           *data_dir;
 plot_t          plots[MAX_PLOTS];
 int             display_mode = DISPLAY_MODE_HOURLY;
 sensors_data_t *data;
@@ -101,10 +100,9 @@ int main(int argc, char **argv)
 
     // save args
     progname = argv[0];
-    data_dir = argv[1];
 
     // print startup messages
-    printf("INFO %s: starting, data_dir = %s\n", progname, data_dir);
+    printf("INFO %s: starting\n", progname);
     printf("INFO %s: sensors.dat:\n", progname);
     printf("INFO %s:   version supported = %lx\n", progname, SENSORS_DATA_FILE_VERSION);
     printf("INFO %s:   size              = %zd\n", progname, sizeof(sensors_data_t));
@@ -124,7 +122,7 @@ int main(int argc, char **argv)
 
     // map the sensors.dat file;
     // if map failed or file version is incorrect then return error
-    data = util_map_file("svcs_data/Sensors", "sensors.dat", sizeof(sensors_data_t), false);
+    data = util_map_file("svcs/Sensors", "sensors.dat", sizeof(sensors_data_t), false);
     if (data == NULL) {
         printf("ERROR %s: failed to map sensors.dat\n", progname);
         return 1;

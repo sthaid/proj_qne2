@@ -27,7 +27,6 @@
 
 // variables
 static char  *progname;
-static char  *data_dir;
 static int    max_words;
 static char **words;
     
@@ -49,16 +48,14 @@ int main(int argc, char **argv)
 
     // get arg values
     progname = argv[0];
-    data_dir = argv[1];
-    printf("INFO %s: starting, data_dir=%s, wXh=%d %d\n",
-           progname, data_dir, sdlx_win_width, sdlx_win_height);
+    printf("INFO %s: starting\n", progname);
 
     // seen random number generator so that different random words are 
     // chosen on repeated runs of this program
     srandom(time(NULL));
 
     // get words-per-minute (wpm) from param store; set to default 5 if not in params
-    wpm = util_get_int_param(data_dir, "wpm", 5);
+    wpm = util_get_int_param(progname, "wpm", 5);
 
     // read word list, sets global variables word_list and max_word_list
     rc = read_word_list();
@@ -153,13 +150,13 @@ int main(int argc, char **argv)
         case EVID_WPM_INC:
             if (wpm < 20) {
                 wpm++;
-                util_set_int_param(data_dir, "wpm", wpm);
+                util_set_int_param(progname, "wpm", wpm);
             }
             break;
         case EVID_WPM_DEC:
             if (wpm > 5) {
                 wpm--;
-                util_set_int_param(data_dir, "wpm", wpm);
+                util_set_int_param(progname, "wpm", wpm);
             }
             break;
         case EVID_QUIT:

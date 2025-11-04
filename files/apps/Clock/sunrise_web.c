@@ -100,9 +100,9 @@ static int run_curl(char *url, char *filename)
     char cmd[500];
     int  ret;
 
-    util_delete_file(data_dir, filename);
+    util_delete_file(progname, filename);
 
-    sprintf(cmd, "curl -s %s > %s/%s", url, data_dir, filename);
+    sprintf(cmd, "curl -s %s > %s/%s", url, progname, filename);
     ret = system(cmd);
     if (ret != 0) {
         printf("ERROR %s: curl failed for url '%s'\n", progname, url);
@@ -118,10 +118,9 @@ static void *get_json_root(char *filename)
     void *root;
     int   len;
 
-    str = util_read_file(data_dir, filename, &len);
+    str = util_read_file(progname, filename, &len);
     if (str == NULL) {
-        printf("ERROR %s: failed to read file %s/%s\n",
-               progname, data_dir, filename);
+        printf("ERROR %s: failed to read file %s/%s\n", progname, progname, filename);
         return NULL;
     }
 

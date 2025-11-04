@@ -57,7 +57,6 @@ int button[MAX_BUTTON_ROW][MAX_BUTTON_COL] = {
 
 // global variables
 char *progname;
-char *data_dir;
 
 // prototypes
 void update_numeric_display(unsigned long value, int bits, int display, bool error);
@@ -85,9 +84,7 @@ int main(int argc, char **argv)
 
     // get arg values
     progname = argv[0];
-    data_dir = argv[1];
-    printf("INFO %s: starting, data_dir=%s, wXh=%d %d\n",
-           progname, data_dir, sdlx_win_width, sdlx_win_height);
+    printf("INFO %s: starting\n", progname);
 
     // init sdl video subsystem
     rc = sdlx_init(SUBSYS_VIDEO);

@@ -42,9 +42,7 @@ int main(int argc, char **argv)
 
     // save arg values
     progname = argv[0];
-    data_dir = argv[1];
-    printf("INFO %s: starting, data_dir=%s, wXh=%d %d\n", 
-           progname, data_dir, sdlx_win_width, sdlx_win_height);
+    printf("INFO %s: starting\n", progname);
 
     // Get sunrise / sunset times from https://sunrise-sunset.org/api.
     // The purpose of this is to test that the sunrise_sunset_calc code 

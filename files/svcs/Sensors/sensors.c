@@ -13,7 +13,6 @@
 #include <svcs/Sensors/sensors.h>
 
 // defines
-#define VERSION       "1.0"   // xxx use master versin
 #define SECS_PER_HOUR 3600
 #define INTVL_SECS    10
 
@@ -33,17 +32,15 @@ int main(int argc, char **argv)
     int                    id;
 
     // save args
-    if (argc != 3) {
-        printf("ERROR: args expected: data_dir, id\n");
+    if (argc != 2) {
+        printf("ERROR: args expected: id\n");
         return 1;
     }
     progname = argv[0];
-    data_dir = argv[1];
-    sscanf(argv[2], "%d", &id);
+    sscanf(argv[1], "%d", &id);
 
     // print starting message
-    printf("INFO %s: starting: version=%s data_dir=%s id=%d\n",
-           progname, VERSION, data_dir, id); // xxx use same fmt in all apps
+    printf("INFO %s: starting, id=%d\n", progname, id);
     printf("INFO %s: sensors.dat:\n", progname);
     printf("INFO %s:   version supported = %lx\n", progname, SENSORS_DATA_FILE_VERSION);
     printf("INFO %s:   size              = %zd\n", progname, sizeof(sensors_data_t));
@@ -57,7 +54,7 @@ int main(int argc, char **argv)
 
     // map the sensors.dat file, the file will be created if it doesnt exist 
     // or if the file exists and is the wrong size
-    data = util_map_file(data_dir, "sensors.dat", sizeof(sensors_data_t), true);
+    data = util_map_file(progname, "sensors.dat", sizeof(sensors_data_t), true);
     if (data == NULL) {
         printf("ERROR %s: failed to map or create sensors.dat\n", progname);
         return 1;

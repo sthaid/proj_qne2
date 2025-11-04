@@ -6,19 +6,18 @@
 
 int main(int argc, char **argv)
 {
-    char *progname, *data_dir;
+    char *progname;
     int   id;
 
     // save args
-    if (argc != 3) {
-        printf("ERROR: args expected: data_dir, id\n");
+    if (argc != 2) {
+        printf("ERROR: args expected: id\n");
         return 1;
     }
     progname = argv[0];
-    data_dir = argv[1];
-    sscanf(argv[2], "%d", &id);
+    sscanf(argv[1], "%d", &id);
 
-    printf("INFO %s: starting, data_dir=%s id=%d\n", progname, data_dir, id);
+    printf("INFO %s: starting, id=%d\n", progname, id);
 
     // runtime loop
     while (true) {
