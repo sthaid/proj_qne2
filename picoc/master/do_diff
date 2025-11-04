@@ -1,0 +1,24 @@
+#!/bin/bash
+
+#cd picoc-master
+#find . -type f > ../files
+#cd ..
+
+(cd picoc-master && find . -type f) | while IFS= read -r filename; do
+  filename="${filename#./}"
+
+  if [ "$filename" = msvc/picoc/picoc.vcxproj.filters -o \
+       "$filename" = msvc/picoc/picoc.vcxproj -o \
+       "$filename" = msvc/picoc/picoc.sln -o \
+       "$filename" = platform/library_msvc.c -o \
+       "$filename" = platform/platform_msvc.c ]; then
+    continue
+  fi
+
+  cmp --quiet picoc-master/$filename ../$filename
+  if [ $? -ne 0 ]; then
+    echo DIFFERS $filename
+    meld picoc-master/$filename ../$filename
+  fi
+done
+

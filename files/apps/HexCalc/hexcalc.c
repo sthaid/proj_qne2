@@ -32,9 +32,9 @@
 
 int button[MAX_BUTTON_ROW][MAX_BUTTON_COL] = {
     { EVID_32BIT, EVID_DSP_HEX,  BLANK,   EVID_CE,    EVID_CLR,   },
-    {    'C',         'D',        'E',       'F',      BLANK,     },
-    {    '8',         '9',        'A',       'B',      BLANK,     },
-    {    '4',         '5',        '6',       '7',      BLANK,     },
+    {    'C',         'D',        'E',       'F',       'G',      },
+    {    '8',         '9',        'A',       'B',       'M',      },
+    {    '4',         '5',        '6',       '7',       'K',      },
     {    '0',         '1',        '2',       '3',       '~',      },
     {    '&',         '|',        '^',    EVID_SHL,   EVID_SHR,   },
     {    '+',         '-',        '*',       '/',      '=',       },
@@ -202,6 +202,20 @@ int main(int argc, char **argv)
             }
             break; }
 
+        // number constant input
+        case 'G':
+            display_value = 0x40000000ul;
+            display_state = RESULT;
+            break;
+        case 'M':
+            display_value = 0x100000ul;
+            display_state = RESULT;
+            break;
+        case 'K':
+            display_value = 0x400;
+            display_state = RESULT;
+            break;
+            
         // unary ops
         case '~':
             display_value = ~display_value;

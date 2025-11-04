@@ -47,7 +47,7 @@ int main(int argc, char **argv)
            progname, data_dir, sdlx_win_width, sdlx_win_height);
 
     // Get sunrise / sunset times from https://sunrise-sunset.org/api.
-    // The purpose of this is to test that the sunrise_sunset_calc code (below)
+    // The purpose of this is to test that the sunrise_sunset_calc code 
     // produces the correct result.
     //char sunrise_web[50], sunset_web[50], midday_web[50];
     //sunrise_sunset_web(sunrise_web, sunset_web, midday_web);

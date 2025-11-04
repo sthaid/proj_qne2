@@ -1,0 +1,10 @@
+#!/bin/bash
+
+# remove existing 
+./do_clean
+
+# download picoc master.zip
+wget https://github.com/jpoirier/picoc/archive/refs/heads/master.zip
+
+# unzip
+unzip -q master.zip

@@ -1,42 +1,114 @@
-write tester for expressions
+elininate datadir
+
+improve service stop req
+
+get lat/long 
+- only on demand
+- hourly in service
+
+get lat/long info by city
+- https://www.geoapify.com/us-zip-codes-to-download-for-free/
+- https://www.geoapify.com/download-all-the-cities-towns-villages/
+   . The data contained in this dataset is compiled from the OpenStreetMap (OSM)
+     database and is subject to the copyright terms and conditions of OSM contributors.
+   . OpenStreetMap® is open data, licensed under the Open Data Commons Open Database License (ODbL) 
+     by the OpenStreetMap Foundation (OSMF).
+   . You are free to copy, distribute, transmit, and adapt the data, as long as you
+     credit OpenStreetMap and its contributors. If you alter or build upon our data,
+     you may distribute the result only under the same license.
+
+service
+- save location and altitude hourly
+- save steps hourly
+
+-------------
+
+Picoc -
+- picoc variable types are not being propogated to expression
+- write tester for expressions
+
 cleanup this file
 
+update clock Attribution Info
+
+lat/long to city
+- https://simplemaps.com/data/us-cities
+  Use of the free database in production requires that you link back to:
+    https://simplemaps.com/data/us-cities.
+- https://www.reddit.com/r/BusinessIntelligence/comments/ds2pcb/finding_cityzip_with_latitude_and_longitude/
+- https://latlongdata.com/latitude-longitude-lookup/
+- Haversine
+- Geohash
+  - A notable C geohash library available on GitHub is yinqiwen/geohash-int.
+  - https://github.com/simplegeo/libgeohash/blob/master/geohash.c
+- zip code databas
+   https://simplemaps.com/data/us-zips
+
+start the app automaticlly
+
+get lat/long on demand, and not always
+
+expr eval
+- test
+- fix issues, so clock and calc both work
+
+start app in background
+- when booting and when installing
+- what are the 4 pillars of Android called
+
+location
+- just enable on demand
+- fix clock program to handle case whre location is not immedeately avialable
+- get initial location when ezapp starts
+
+service
+- save location and altitude hourly
+- save steps hourly
+- also save steps when the Steps app is running,  this can be the job of the App and not the service ?
+
+Apps
+- Weather
+- Location
+- Steps
+- Tennis
+
+Location App
+- get database of locations for zip codes
+
+You can download a free zip code database from sites like Zip Code Download, Simplemaps.com, or Geoapify. For official data, the U.S. Census Bureau provides ZIP Code Tabulation Areas (ZCTAs) through its data portal. The free versions are suitable for many personal projects but may lack specific data like demographics or the most up-to-date PO box and business zip codes, which are often in paid versions.
+
+
+Free database sources
+Zip Code Download: Offers free zip code databases, but warns that professional or business use requires the more accurate, paid subscription for up-to-date data.
+Simplemaps.com: Provides a free basic version of its database, while a paid "Pro" or "Comprehensive" version includes more detailed data for business, PO boxes, and military codes.
+Geoapify: Offers free zip code data in JSON and GeoJSON formats, including geographic boundaries, and is available under an open government license.
+Census Bureau data
+U.S. Census Bureau: Provides ZIP Code Tabulation Areas (ZCTAs) through its data portal, which are approximate representations of USPS ZIP Code service areas used for statistical purposes.
+data.census.gov: The Census Bureau's official data portal allows you to find and download statistical data by ZIP Code. You can filter for ZIP Code Tabulation Areas to find relevant information.
 
 =========
 PICOC 
 ========
 
-refresh picoc code
-learn how the test suite works
-write a test program for integer expressions
-
+refresh picoc code                                 IN PORG
+learn how the test suite works                     DONE
+write a test program for integer expressions       STARTEd
 
 ========
 CALCULATOR
 ========
 
-test in 32 and 64 bit modes
+test in 32 and 64 bit modes                        NEAR DONE
 
-
-
-
-------------
-
-calc
-https://github.com/codeplea/tinyexpr/blob/master/tinyexpr.c
-
-
-
------ 
-
+=======
 apps
-- Hexcalc
-- Calc
-- Tennis
-- Location lat,long,alt
-- Altitude - with history
+=======
+- Location lat,long,alt,, with Altitude history, and location lookup history
+    - Altitude - with history
 - Memo
 - Weather
+- Tennis
+- Hexcalc                     NEAR DONE
 
 texture bg color
 
@@ -44,17 +116,15 @@ use flexible colors for control events, and default to light blue
 
 make pixels unsigned int
 
---- DONE ---
-try to cleanup morse tones
-- Light               ALMOST DONE
-- morse code app
+xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 
 {"results":{
 "sunrise":"11:06:47 AM",
 "sunset":"9:54:52 PM",
 "solar_noon":"4:30:49 PM","day_length":"10:48:05","civil_twilight_begin":"10:39:38 AM","civil_twilight_end":"10:22:01 PM","nautical_twilight_begin":"10:06:51 AM","nautical_twilight_end":"10:54:48 PM","astronomical_twilight_begin":"9:34:18 AM","astronomical_twilight_end":"11:27:21 PM"},"status":"OK","tzid":"UTC"}
-
 
 https://sunrise-sunset.org/api
 https://api.sunrise-sunset.org/json?lat=36.7201600&lng=-4.4203400
