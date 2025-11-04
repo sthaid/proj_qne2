@@ -28,6 +28,7 @@ SRCS_COMMON="\
        ../src/sdlx_audio.c \
        ../src/sdlx_sensor.c \
        ../src/sdlx_event.c \
+       ../src/svc_stubs.c \
        ../src/utils.c \
        ../src/utils_location.cpp \
        ../src/logging.c \

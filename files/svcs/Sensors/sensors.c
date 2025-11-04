@@ -101,8 +101,7 @@ int main(int argc, char **argv)
             // xxx todo, shift the data by one year to recover for idx too big
             if (idx < 0 || idx >= MAX_SENSOR_VALUES) {
                 printf("ERROR %s: idx %d out of range 0 .. %d\n", progname, idx, MAX_SENSOR_VALUES);
-                sleep(INTVL_SECS);
-                continue;
+                goto wait;
             }
 
             // init the stepcount to 0, this will be added to periodically 
@@ -159,6 +158,7 @@ int main(int argc, char **argv)
         // sync the sensor values from memory to the sensors.dat file
         util_sync_file(sv, sizeof(struct sensor_value_s));
 
+wait:
         // wait for up to 3600 secs for a request
         svc_wait(id, 3600, &req, &arg);
 
