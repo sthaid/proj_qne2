@@ -48,7 +48,6 @@ int sdlx_win_width;
 int sdlx_win_height;
 int sdlx_char_width;
 int sdlx_char_height;
-char stop_requested[100];  // xxx name
 
 //
 // variables

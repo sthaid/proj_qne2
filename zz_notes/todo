@@ -1,4 +1,20 @@
-elininate datadir
+files/svcs/Sensors/sensors.c
+  ok
+files/svcs/Test1/main.c
+  ok
+picoc/platform/library_unix.c
+  ok
+src/main.c
+  lots of cleanup
+src/sdlx.h
+  are these defined in the right placej
+src/sdlx_video.c
+  ok
+zz_notes/todo
+
+build all
+
+---------
 
 improve service stop req
 
@@ -71,6 +87,7 @@ Apps
 - Location
 - Steps
 - Tennis
+- Tilt
 
 Location App
 - get database of locations for zip codes

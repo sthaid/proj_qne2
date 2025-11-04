@@ -14,7 +14,6 @@
 
 // defines
 #define SECS_PER_HOUR 3600
-#define INTVL_SECS    10
 
 // prototypes
 static char *sensval2str(double x);
@@ -29,7 +28,7 @@ int main(int argc, char **argv)
     double                 stepc_now, stepc_last;
     struct sensor_value_s *sv;
     double                 weather_gov_temperature, weather_gov_relhumidity;
-    int                    id;
+    int                    id, req, arg;
 
     // save args
     if (argc != 2) {
@@ -87,12 +86,6 @@ int main(int argc, char **argv)
 
     // runtime loop
     while (true) {
-        // if request to stop received then break out of loop
-        if (stop_requested[id]) {
-            printf("INFO %s: got stop request\n", progname);
-            break;
-        }  
-
         // init the following:
         // - hour_now: which is the number of hours since the Unix Epoch
         // - idx: index of sensor data in the sensors.dat file
@@ -166,8 +159,13 @@ int main(int argc, char **argv)
         // sync the sensor values from memory to the sensors.dat file
         util_sync_file(sv, sizeof(struct sensor_value_s));
 
-        // sleep
-        sleep(INTVL_SECS);
+        // wait for up to 3600 secs for a request
+        svc_wait(id, 3600, &req, &arg);
+
+        // if svc stop is requested then break out of runtime loop
+        if (req == SVC_REQ_STOP) {
+            break;
+        }
     }
 
     // cleanup and end program

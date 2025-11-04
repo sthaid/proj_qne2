@@ -62,11 +62,12 @@ static params_t    params;
 static pthread_t   server_tid;
 
 //
-// prototypes  xxx put all prototypes here ?
+// prototypes
 //
 
 static void processing(void);
 
+static void init_services(void);
 static int services_monitor_thread(void *cx);
 static void stop_all_services(void);
 static void request_start_all_autostart_services(void);
@@ -179,11 +180,10 @@ static int init(void)
     }
 #endif
 
-    // start the services_monitor_thread
-    request_start_all_autostart_services();
-    sdlx_create_detached_thread(services_monitor_thread, NULL);
+    // init services, this will xxx
+    init_services();
 
-    // init okay
+    // success
     return 0;
 }
 
@@ -192,6 +192,8 @@ static void cleanup(void)
     INFO("TERMINATING\n");
 
     stop_all_services();
+
+    // xxx free svc_call allocations
 
     kill_child_processes(getpid());
 
@@ -297,8 +299,8 @@ static void processing(void)
 // args:
 // - name: the name of the app or svc
 // - svc_id: use -1 for app; else the svc_id is >= 0, and will be passed 
-//           in argv to the svc; the svc uses this value when polling for
-//           svc_stop_requested
+//           in argv to the svc; the svc uses this value when 
+//           xxx polling for  svc_stop_requested
 static int run(char *name, int svc_id)
 {
     char           dir_path[100];
@@ -563,6 +565,10 @@ static void get_list_of_apps(void)
 // - comments
 // - full review
 
+//
+// defines
+//
+
 #define SERVICE_STATE_STOPPED           0     // white
 #define SERVICE_STATE_RUNNING           1     // green
 #define SERVICE_STATE_STOPPING          2     // yellow
@@ -584,11 +590,15 @@ static void get_list_of_apps(void)
 #define SERVICE_IS_STOPPED(state)  ((state) == SERVICE_STATE_STOPPED || \
                                     (state) == SERVICE_STATE_STOPPED_BY_ERROR)
 
-#define MAX_SERVICES 100 // xxx dont need this many
+#define MAX_SERVICES 20
 
 // xxx should this use SDL Mutex
 #define LOCK do { pthread_mutex_lock(&services_mutex); } while (0)
 #define UNLOCK do { pthread_mutex_unlock(&services_mutex); } while (0)
+
+//
+// typedefs
+//
 
 typedef struct {
     char *name;
@@ -596,13 +606,27 @@ typedef struct {
     bool  delete_pending;
 } service_t;
 
+typedef struct {
+    pthread_mutex_t mutex;
+    pthread_cond_t  cond;
+    int             req;
+    int             arg;
+} svc_request_t;
+
+//
+// variables
+//
+
 static pthread_mutex_t services_mutex = PTHREAD_MUTEX_INITIALIZER;
 static service_t       services_tbl[MAX_SERVICES];
 static char           *svcs[MAX_SERVICES];
 static int             max_svcs;
 static bool            start_autostart_services_req_flag;
+static svc_request_t   svc_request[MAX_SERVICES];
 
-extern char stop_requested[MAX_SERVICES];
+//
+// prototypes
+//
 
 static void process_changed_svc_names(void);
 static void process_start_req(int id);
@@ -615,6 +639,20 @@ static int alloc_service(char *name);
 static void free_service(int id);
 static bool is_name_in_svcs(char *name);
 static bool is_name_in_services(char *name);
+
+// - - - - - - - - - xxxxxxxxxxxxx routines  - - - - - - - - - - - - - 
+
+static void init_services(void)
+{
+    for (int i = 0; i < MAX_SERVICES; i++) {
+        pthread_mutex_init(&svc_request[i].mutex, NULL);
+        pthread_cond_init(&svc_request[i].cond, NULL);
+    }
+
+    request_start_all_autostart_services();
+
+    sdlx_create_detached_thread(services_monitor_thread, NULL);
+}
 
 static void acquire_services_lock(void)
 {
@@ -632,6 +670,8 @@ static void request_start_all_autostart_services(void)
     start_autostart_services_req_flag = true;
     UNLOCK;
 }
+
+// - - - - - - - - - xxxxxxxxxxxxx - - - - - - - - - - - - - - - - - - 
 
 static int services_monitor_thread(void *cx)
 {
@@ -657,6 +697,8 @@ static int services_monitor_thread(void *cx)
 
     return 0;
 }
+
+// - - - - - - - - - xxxxxxxxxxxxx - - - - - - - - - - - - - - - - - - 
 
 static void services(void)
 {
@@ -743,6 +785,80 @@ static void services(void)
     UNLOCK;
 }
 
+// - - - - - - - - - xxxxxxxxxxxxx - - - - - - - - - - - - - - - - - - 
+
+// Function to add two timespec structures
+struct timespec timespec_add(struct timespec ts1, struct timespec ts2) 
+{
+    struct timespec result;
+
+    // Add nanoseconds
+    result.tv_nsec = ts1.tv_nsec + ts2.tv_nsec;
+    // Add seconds
+    result.tv_sec = ts1.tv_sec + ts2.tv_sec;
+
+    // Handle nanosecond overflow (if tv_nsec >= 1 second)
+    if (result.tv_nsec >= 1000000000) {
+        result.tv_sec += result.tv_nsec / 1000000000; // Add full seconds from nanoseconds
+        result.tv_nsec %= 1000000000; // Keep remaining nanoseconds
+    }
+
+    return result;
+}
+
+
+void svc_call(int id, int req, int arg)
+{
+    INFO("id=%d req=%d arg=%d\n", id, req, arg);
+
+    // acquire mutex
+    pthread_mutex_lock(&svc_request[id].mutex);
+
+    // set stop_request flag, and signal condition xxx comment
+    svc_request[id].req = req;
+    svc_request[id].arg = arg;
+    pthread_cond_signal(&svc_request[id].cond);
+
+    // release mutex
+    pthread_mutex_unlock(&svc_request[id].mutex);
+}
+
+void svc_wait(int id, int timeout_secs, int *req, int *arg)
+{
+    struct timespec ts_abstime, ts_now;
+    struct timespec ts_delta = { timeout_secs, 0 };
+    int             ret;
+
+    INFO("called id=%d timeout_secs=%d\n", id, timeout_secs);
+
+    // acquire mutex
+    pthread_mutex_lock(&svc_request[id].mutex);
+
+    // wait for xxx
+    while (svc_request[id].req == SVC_REQ_NONE) {
+        clock_gettime(CLOCK_REALTIME, &ts_now);
+        ts_abstime = timespec_add(ts_now, ts_delta);  // xxx dont need a routine, just add secs
+        ret = pthread_cond_timedwait(&svc_request[id].cond,
+                                     &svc_request[id].mutex,
+                                     &ts_abstime);
+        INFO("pthread_cond_timedwait = %d\n", ret);
+        if (ret == ETIMEDOUT) {
+            INFO("got ETIMEDOUT\n");
+            break;
+        } 
+    }
+
+    // xxxx
+    *req = svc_request[id].req;
+    *arg = svc_request[id].arg;
+    svc_request[id].req = SVC_REQ_NONE;
+    svc_request[id].arg = 0;
+    INFO("return req=%d arg=%d\n", *req, *arg);
+
+    // release mutex
+    pthread_mutex_unlock(&svc_request[id].mutex);
+}
+
 // - - - - - - - - - process event routines  - - - - - - - - - - - - - 
 
 // lock held by caller
@@ -762,7 +878,7 @@ static void process_changed_svc_names(void)
         if (is_name_in_svcs(x->name) == false) {
             if (x->state == SERVICE_STATE_RUNNING) {
                 x->state = SERVICE_STATE_STOPPING;
-                stop_requested[id] = true;
+                svc_call(id, SVC_REQ_STOP, 0);
                 x->delete_pending = true;
             } else if (x->state == SERVICE_STATE_STOPPING) {
                 x->delete_pending = true;
@@ -795,7 +911,8 @@ static void process_start_req(int id)
     }
     
     x->state = SERVICE_STATE_RUNNING;
-    stop_requested[id] = false;
+    svc_request[id].req = SVC_REQ_NONE;
+    svc_request[id].arg = 0;
     run_svc(id);
 }
 
@@ -812,7 +929,7 @@ static void process_stop_req(int id)
     }
 
     x->state = SERVICE_STATE_STOPPING;
-    stop_requested[id] = true;
+    svc_call(id, SVC_REQ_STOP, 0);
 }
 
 static void process_stopped_callback(int id, int rc)
@@ -830,8 +947,6 @@ static void process_stopped_callback(int id, int rc)
     }
 
     x->state = (rc == 0 ? SERVICE_STATE_STOPPED : SERVICE_STATE_STOPPED_BY_ERROR);
-
-    stop_requested[id] = false;
 
     if (x->delete_pending) {
         x->delete_pending = false;
@@ -949,7 +1064,7 @@ static void stop_all_services(void)
     for (id = 0; id < MAX_SERVICES; id++) {
         service_t *x = &services_tbl[id];
         if (x->name && x->state == SERVICE_STATE_RUNNING) {
-            stop_requested[id] = true;
+            svc_call(id, SVC_REQ_STOP, 0);
         }
     }
 
@@ -1011,7 +1126,8 @@ static void start_autostart_services(void)
 
         INFO("autostarting service %s\n", x->name);
         x->state = SERVICE_STATE_RUNNING;
-        stop_requested[id] = false;
+        svc_request[id].req = SVC_REQ_NONE;
+        svc_request[id].arg = 0;
         run_svc(id);
     }
 }

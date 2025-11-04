@@ -4,10 +4,11 @@
 
 #include <sdlx.h>
 
+char *progname;
+
 int main(int argc, char **argv)
 {
-    char *progname;
-    int   id;
+    int id, req, arg;
 
     // save args
     if (argc != 2) {
@@ -17,23 +18,24 @@ int main(int argc, char **argv)
     progname = argv[0];
     sscanf(argv[1], "%d", &id);
 
+    // print starting msg
     printf("INFO %s: starting, id=%d\n", progname, id);
 
-    // runtime loop
+    // service runtime loop
     while (true) {
-        // if request to stop received then break out of loop
-        if (stop_requested[id]) {
-            printf("INFO %s: got stop request\n", progname);
-            break;
-        }
-
         // print message
         printf("INFO %s service is running\n", progname);
 
-        // sleep
-        sleep(3);
+        // wait for up to 3600 secs for a request
+        svc_wait(id, 3600, &req, &arg);
+
+        // if svc stop is requested then break out of runtime loop
+        if (req == SVC_REQ_STOP) {
+            break;
+        }
     }
 
-     printf("INFO %s: terminating\n", progname);
+    // print terminating msg
+    printf("INFO %s: terminating\n", progname);
     return 0;
 }

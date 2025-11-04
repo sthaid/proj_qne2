@@ -86,7 +86,6 @@ extern int sdlx_win_width;
 extern int sdlx_win_height;
 extern int sdlx_char_width;
 extern int sdlx_char_height;
-extern char stop_requested[]; // xxx where should this be defined?
 
 //
 // prototypes
@@ -273,6 +272,16 @@ void sdlx_get_event(long timeout_us, sdlx_event_t *event);
 
 // get string, from virtual keyboard when on Android
 char *sdlx_get_input_str(char *prompt, bool numeric_keybd, int bg_color);
+
+// --------------------
+// xxxxxxxxxx
+// --------------------
+
+#define SVC_REQ_NONE 0
+#define SVC_REQ_STOP 1
+
+void svc_call(int id, int req, int arg);
+void svc_wait(int id, int timeout_secs, int *req, int *arg);
 
 // --------------------
 // not made available in picoc

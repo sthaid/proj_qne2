@@ -696,6 +696,7 @@ void Sdl_sensor_read_temperature (struct ParseState *Parser, struct Value *Retur
     ReturnValue->Val->Integer = rc;
 }
 
+// xxx use Sdlx
 void Sdl_sensor_read_humidity (struct ParseState *Parser, struct Value *ReturnValue,
 	struct Value **Param, int NumArgs)
 {
@@ -704,6 +705,28 @@ void Sdl_sensor_read_humidity (struct ParseState *Parser, struct Value *ReturnVa
 
     rc = sdlx_sensor_read_humidity(percent);
     ReturnValue->Val->Integer = rc;
+}
+
+// xxx it may be better to move these from sdlx.h
+void Svc_call (struct ParseState *Parser, struct Value *ReturnValue,
+	struct Value **Param, int NumArgs)
+{
+    int id    = Param[0]->Val->Integer;
+    int req   = Param[1]->Val->Integer;
+    int arg   = Param[2]->Val->Integer;
+
+    svc_call(id, req, arg);
+}
+
+void Svc_wait (struct ParseState *Parser, struct Value *ReturnValue,
+	struct Value **Param, int NumArgs)
+{
+    int  id           = Param[0]->Val->Integer;
+    int  timeout_secs = Param[1]->Val->Integer;
+    int *req          = Param[2]->Val->Pointer;
+    int *arg          = Param[3]->Val->Pointer;
+
+    svc_wait(id, timeout_secs, req, arg);
 }
 
 //
@@ -722,8 +745,6 @@ void SdlSetupFunction(Picoc *pc)
     PLATFORM_VAR(sdlx_win_height, &pc->IntType, false);
     PLATFORM_VAR(sdlx_char_width, &pc->IntType, false);
     PLATFORM_VAR(sdlx_char_height, &pc->IntType, false);
-
-    PLATFORM_VAR(stop_requested, pc->CharArrayType, false);
 }
 
 struct LibraryFunction SdlFunctions[] = {
@@ -814,6 +835,9 @@ struct LibraryFunction SdlFunctions[] = {
     { Sdl_sensor_read_pressure,         "int sdlx_sensor_read_pressure(double *millibars);" },
     { Sdl_sensor_read_temperature,      "int sdlx_sensor_read_temperature(double *degrees_c);" },
     { Sdl_sensor_read_humidity,         "int sdlx_sensor_read_humidity(double *percent);" },
+
+    { Svc_call,                         "void svc_call(int id, int req, void *arg); " },
+    { Svc_wait,                         "void svc_wait(int id, int timeout_secs, int *req, int *arg); " },
 
     { NULL, NULL } };
 
@@ -948,6 +972,9 @@ typedef struct { \n\
 #define ASENSOR_TYPE_HEADING 42 \n\
 \n\
 #define INVALID_NUMBER 999999999 \n\
+\n\
+#define SVC_REQ_NONE 0 \n\
+#define SVC_REQ_STOP 1 \n\
 ";
 
 // -----------------  UTILS PLATFORM ROUTINES  --------------------------
