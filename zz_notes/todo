@@ -1,12 +1,32 @@
-src/main.c
+cleanup
+- src/main.c
   lots of cleanup
-src/sdlx.h
+- src/sdlx.h
   are these defined in the right placej
-build all
+
+Location App
+- download database
+- time how long init takes
+- look at databases from other countries, do they use ASCII
+
 
 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+
+{"name":"Abbott",
+ "display_name":"Abbott, Hill County, Texas, United States",
+ "address":
+    {"city":"Abbott","county":"Hill County","state":"Texas","ISO3166-2-lvl4":"US-TX","country":"United States","country_code":"us"},
+ "population":356,
+ "osm_type":
+ "relation",
+ "osm_id":3488445,
+ "type":"administrative",
+ "location":[-97.08708306334233,31.889930149999998],
+ "bbox":[-97.0931242,31.8771025,-97.0646171,31.9028973],
+ "inferred_type":"city"}
+
 
 ---------
 

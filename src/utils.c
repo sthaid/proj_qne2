@@ -670,13 +670,13 @@ next:
 
 // ----------------- JSON --------------------
 
-void *util_json_parse(char *str)
+void *util_json_parse(char *str, char **end_ptr)
 {
-    if (str == NULL) {
+    if (str == NULL || end_ptr == NULL) {
         return NULL;
     }
 
-    return cJSON_Parse(str);
+    return cJSON_ParseWithOpts(str, (const char **)end_ptr, 0);
 }
 
 void util_json_free(void *json_root)
@@ -690,11 +690,10 @@ void util_json_free(void *json_root)
 
 json_value_t *util_json_get_value(void *json_item, ...)
 {
-    cJSON  *item = (cJSON*)json_item;
-    va_list ap;
-    char   *arg;
-    int     cnt, array_idx;
-
+    cJSON              *item = (cJSON*)json_item;
+    va_list             ap;
+    char               *arg;
+    int                 cnt, array_idx;
     static json_value_t value;
 
     memset(&value, 0, sizeof(value));

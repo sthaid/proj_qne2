@@ -58,7 +58,7 @@ typedef struct {
     } u;
 } json_value_t;
 
-void *util_json_parse(char *str);
+void *util_json_parse(char *str, char **end_ptr);
 void util_json_free(void *json_root);
 json_value_t *util_json_get_value(void *json_item, ...);
 

@@ -1190,10 +1190,11 @@ void Util_get_ipaddr(struct ParseState *Parser, struct Value *ReturnValue,
 void Util_json_parse(struct ParseState *Parser, struct Value *ReturnValue,
         struct Value **Param, int NumArgs)
 {
-    char *str = (char*)Param[0]->Val->Pointer;
+    char *str =      (char*)Param[0]->Val->Pointer;
+    char **end_ptr = (char**)Param[1]->Val->Pointer;
     void *json_root;
 
-    json_root = util_json_parse(str);
+    json_root = util_json_parse(str, end_ptr);
 
     ReturnValue->Val->Pointer = json_root;
 }
@@ -1310,7 +1311,7 @@ struct LibraryFunction UtilsFunctions[] = {
     // network
     { Util_get_ipaddr,       "char *util_get_ipaddr(void);" },
     // json
-    { Util_json_parse,       "void *util_json_parse(char *str);" },
+    { Util_json_parse,       "void *util_json_parse(char *str, char **end_ptr);" },
     { Util_json_free,        "void util_json_free(void *json_root);" },
     { Util_json_get_value,   "json_value_t *util_json_get_value(void *json_item, ...);" },
     // location
