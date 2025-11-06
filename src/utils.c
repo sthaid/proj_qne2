@@ -177,7 +177,7 @@ void util_delete_dir(char *dir, char *dir_to_delete)
 
     INFO("deleting dir %s/%s\n", dir, dir_to_delete);
     sprintf(cmd, "rm -rf %s/%s", dir, dir_to_delete);
-    //system(cmd);  xxx
+    system(cmd);
 }
 
 // -----------------  FILE MAP -------------------------------
