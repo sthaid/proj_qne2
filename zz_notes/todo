@@ -1,10 +1,6 @@
 eliminate polling for services when ezapp not running
 get lat/long on demand
 
-Template service
-Template app, => hello.c
-
-redo file mapping, make less complicated
 
 Location app can call Location service to get ptr to data file
 
@@ -15,6 +11,11 @@ how to load locations for the service
   - download more locations
   - get list of downloaded locations
   - delete downloaded location file
+
+--- done ---
+Template service
+Template app, => hello.c
+redo file mapping, make less complicated
 
 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 

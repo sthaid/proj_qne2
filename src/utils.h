@@ -23,7 +23,7 @@ long util_file_size(char *dir, char *fn);
 // -----------------  FILE MAP -------------------------------
 
 void *util_map_file(char *dir, char *file, int len, bool create_if_needed);
-void util_unmap_file(void *addr);
+void util_unmap_file(void *addr, int len);
 void util_sync_file(void *addr, int len);
 
 // -----------------  GET / SET PARAMS  ----------------------
