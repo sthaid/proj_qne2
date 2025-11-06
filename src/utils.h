@@ -20,6 +20,11 @@ bool util_file_exists(char *dir, char *fn);
 long util_file_mtime(char *dir, char *fn);
 long util_file_size(char *dir, char *fn);
 
+// -----------------  DIRECTORY UTILS  -----------------------
+
+// "rm -rf <dir>/<dir_to_delete>"
+void util_delete_dir(char *dir, char *dir_to_delete);
+
 // -----------------  FILE MAP -------------------------------
 
 void *util_map_file(char *dir, char *file, int len, bool create_if_needed);

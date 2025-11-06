@@ -129,6 +129,7 @@ void util_delete_file(char *dir, char *fn)
     char path[200];
 
     sprintf(path, "%s/%s", dir, fn);
+    INFO("deleting file %s\n", path);
     unlink(path);
 }
 
@@ -166,6 +167,17 @@ long util_file_size(char *dir, char *fn)
 
     rc = stat(path, &statbuf);
     return (rc == 0 ? statbuf.st_size : 0);
+}
+
+// -----------------  DIRECTORY UTILS  -----------------------
+
+void util_delete_dir(char *dir, char *dir_to_delete)
+{
+    char cmd[200];
+
+    INFO("deleting dir %s/%s\n", dir, dir_to_delete);
+    sprintf(cmd, "rm -rf %s/%s", dir, dir_to_delete);
+    //system(cmd);  xxx
 }
 
 // -----------------  FILE MAP -------------------------------
