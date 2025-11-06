@@ -68,28 +68,33 @@ int main(int argc, char **argv)
 
 // -----------------  COUNTRY INFO DOWNLOAD  ------------------------
 
-// xxx curl timeout option
-
-int read_and_parse_json_file(char *filename);
+int read_and_parse_json_file(char *json_filename, FILE *fp_out);
 
 int download_country_info(char *id)
 {
-    //char         cmd[100], dirname[100], *filename, *end_ptr;
-    //void        *root = NULL;
-    //char        *str = NULL, *str_orig;
-    //int          ret, len, success_cnt=0, skip_cnt=0;
-    //json_value_t name, latitude, longitude;
-    int ret;
-    char cmd[100], json_filename[100], fn[100];
+    int ret = -1;
+    char cmd[100], json_filename[100], out_filename[100], zip_filename[100];
+    FILE *fp_out = NULL;
+
+    // init
+    sprintf(zip_filename, "%s.zip", id);
+
+    // create output file
+    sprintf(out_filename, "%s/%s.dat", progname, id);
+    fp_out = fopen(out_filename, "w");
+    if (fp_out == NULL) {
+        printf("ERROR %s: failed to create %s\n", progname, out_filename);
+        goto done;
+    }
 
     // download zip file containing city/town location and names
-    // xxx allow replace
-    sprintf(cmd, "curl -o %s/%s.zip https://www.geoapify.com/data-share/localities/%s.zip",
+    util_delete_file(progname, zip_filename);
+    sprintf(cmd, "curl --silent --max-time 10 --output %s/%s.zip https://www.geoapify.com/data-share/localities/%s.zip",
             progname, id, id);
     ret = system(cmd);
     if (ret != 0) {
         printf("ERROR %s: '%s' failed, ret=%d\n", progname, cmd, ret);
-        return -1;
+        goto done;
     }
     
     // unzip
@@ -97,28 +102,36 @@ int download_country_info(char *id)
     ret = system(cmd);
     if (ret != 0) {
         printf("ERROR %s: '%s' failed, ret=%d\n", progname, cmd, ret);
-        return -1;
+        goto done;
     }
 
+    // parse the json files to obtain city/town/village names and latitude/longitude;
+    // these will be written to the file associated with 'fp_out'
     sprintf(json_filename, "%s/%s/%s", progname, id, "place_city.ndjson");
-    ret = read_and_parse_json_file(json_filename);
+    read_and_parse_json_file(json_filename, fp_out);
 
     sprintf(json_filename, "%s/%s/%s", progname, id, "place-town.ndjson");
-    ret = read_and_parse_json_file(json_filename);
+    read_and_parse_json_file(json_filename, fp_out);
 
     sprintf(json_filename, "%s/%s/%s", progname, id, "place-village.ndjson");
-    ret = read_and_parse_json_file(json_filename);
+    read_and_parse_json_file(json_filename, fp_out);
 
-    // xxx remove files
-    sprintf(fn, "%s.zip", id);
-    util_delete_file(progname, fn);
+    // set ret to success
+    ret = 0;
+
+done:
+    // cleanup
+    util_delete_file(progname, zip_filename);
     util_delete_dir(progname, id);
+    if (fp_out) {
+        fclose(fp_out);
+    }
 
-    // xxx
+    // return status
     return ret;
 }
 
-int read_and_parse_json_file(char *json_filename)
+int read_and_parse_json_file(char *json_filename, FILE *fp_out)
 {
     char         *end_ptr;
     void         *root = NULL;
@@ -157,7 +170,7 @@ int read_and_parse_json_file(char *json_filename)
             latitude.type == JSON_TYPE_NUMBER &&
             longitude.type == JSON_TYPE_NUMBER)
         {
-            printf("%f %f '%s' '%s'\n", latitude.u.number, longitude.u.number, name.u.string, display_name.u.string);
+            fprintf(fp_out, "%f %f '%s' '%s'\n", latitude.u.number, longitude.u.number, name.u.string, display_name.u.string);
             success_cnt++;
         } else {
             //printf("ERROR %s: skipping - name,lat,long type = %d %d %d\n",
