@@ -1,3 +1,23 @@
+eliminate polling for services when ezapp not running
+get lat/long on demand
+
+Template service
+Template app, => hello.c
+
+redo file mapping, make less complicated
+
+Location app can call Location service to get ptr to data file
+
+how to load locations for the service
+- app can call to request that
+- app calls
+  - get loc file
+  - download more locations
+  - get list of downloaded locations
+  - delete downloaded location file
+
+xxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+
 cleanup
 - src/main.c
   lots of cleanup
@@ -8,6 +28,21 @@ Location App
 - download database
 - time how long init takes
 - look at databases from other countries, do they use ASCII
+
+
+usage: gzip [-19cdfkt] [FILE...]
+
+Compress files. With no files, compresses stdin to stdout.
+On success, the input files are removed and replaced by new
+files with the .gz suffix.
+
+-c	Output to stdout
+-d	Decompress (act as gunzip)
+-f	Force: allow overwrite of output file
+-k	Keep input files (default is to remove)
+-t	Test integrity
+-#	Compression level 1-9 (1:fastest, 6:default, 9:best)
+
 
 
 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx

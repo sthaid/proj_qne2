@@ -1,16 +1,16 @@
 # -------- Page 0 --------
-Test        Reversi     Env
-Compass     Clock       Light
-Morse       Hello       HexCalc
+Compass     Clock       Reversi
+Morse       HexCalc     Light
+Location    -           -
 -           -           -
 -           -           -
 -           -           Settings
 
 # -------- Page 1 --------
-# -           -           -
-# -           -           -
-# -           -           -
-# -           -           -
-# -           -           -
-# -           -           Settings
+Template    Test        -
+-           -           -
+-           -           -
+-           -           -
+-           -           -
+-           -           Settings
 
