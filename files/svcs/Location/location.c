@@ -3,8 +3,6 @@
 #include <stdbool.h>
 #include <math.h>
 #include <string.h>
-//#include <stdbool.h>  // xxx check template too
-//#include <unistd.h>
 
 #include <sdlx.h>
 #include <utils.h>
@@ -30,7 +28,7 @@ int     max_loc;
 
 // prototypes
 void read_location_data(void);
-void find_closest(double latitude, double longitude);
+void find_closest_location(char *name, double *miles);
 int download_country_info(char *id);
 
 // -----------------  MAIN  -----------------------------------------
@@ -39,6 +37,8 @@ int main(int argc, char **argv)
 {
     int id, req, arg;
     bool done = false;
+    char name[MAX_NAME];
+    double miles;
 
     // save args
     if (argc != 2) {
@@ -57,18 +57,18 @@ int main(int argc, char **argv)
     // service runtime loop
     while (!done) {
         // service processing
-        find_closest(BOLTON_MASS_LATITUDE, BOLTON_MASS_LONGITUDE);
+        find_closest_location(name, &miles);
 
         // wait for up to 3600 secs for a request
         svc_wait(id, 3600, &req, &arg);
 
-        // if xxx svc stop is requested then break out of runtime loop
+        // xxx comment
         switch (req) {
         case SVC_REQ_STOP:
             done = true;
             break;
         case SVC_LOCATION_REQ_GET_LOC_INFO:
-            find_closest(BOLTON_MASS_LATITUDE, BOLTON_MASS_LONGITUDE);
+            find_closest_location(name, &miles);
             break;
         case SVC_LOCATION_REQ_COUNTRY_INFO_DOWNLOAD:
             download_country_info("us");
@@ -105,7 +105,8 @@ void read_location_data(void)
         return;
     }
 
-    // xxx maybe delete all_loc when done with it
+    // delete all_loc file
+    util_delete_file(progname, "all_loc");
 
     // set max_loc
     if ((len % sizeof(loc_t)) != 0) {
@@ -118,58 +119,68 @@ void read_location_data(void)
 
 // -----------------  FIND CLOSEST LOCAATION  -----------------------
 
-// There are approximately 364,000 feet (\(69\) miles) in one degree of latitude
+// There are approximately 364,000 feet (69 miles) in one degree of latitude
 //
 // The number of feet in one degree of longitude varies based on your latitude,
 // decreasing from approximately 364,000 feet (69 miles) at the equator to zero
 // at the poles. For a specific location, you can calculate this distance by
 // multiplying the distance at the equator by the cosine of your latitude
 
-// xxx what if not found
-void find_closest(double latitude, double longitude)
+void find_closest_location(char *name, double *miles)
 {
+    double latitude, longitude;
     double delta_lat, delta_long, cos_lat;
-    double ns_feet, ew_feet, distance_squared, min_distance_squared, min_distance;
+    double ns, ew, distance_squared, min_distance_squared;
     double point5_div_cos_lat;
-    char min_name[MAX_NAME];
+    char   closest_name[MAX_NAME];
 
+    // get current location
+    util_get_location(&latitude, &longitude, NULL);
+
+    // init
     min_distance_squared = 1e99;
     cos_lat = cos(latitude * (M_PI / 180));
     point5_div_cos_lat = 0.5 / cos_lat;
+    closest_name[0] = '\0';
 
-    //printf("min_dist start %f  cos_lat %f\n", min_distance_squared, cos_lat);
-    //printf("point5_div_cos_lat = %f\n", point5_div_cos_lat);
-
+    // loop over all locations, and find the closest
     for (int i = 0; i < max_loc; i++) {
         loc_t *x = &loc[i];
 
         delta_lat = fabs(latitude - x->latitude);
-        //printf("delta_lat %f    %f %f\n", delta_lat, latitude, x->latitude);
         if (delta_lat > 0.5) {
             continue;
         }
+
         delta_long = fabs(longitude - x->longitude);  // xxx deal with longitude near +/-180
         if (delta_long > point5_div_cos_lat) {
             continue;
         }
 
-        printf("IN BOX %s\n", x->name);
-
-        ns_feet = delta_lat;  // xxx optimize
-        ew_feet = delta_long * cos_lat;
-        //printf("xxxxxxx %f %f\n", ns_feet, ew_feet);
-        distance_squared = (ns_feet * ns_feet) + (ew_feet * ew_feet);
+        ns = delta_lat;
+        ew = delta_long * cos_lat;
+        distance_squared = (ns * ns) + (ew * ew);
 
         if (distance_squared < min_distance_squared) {
-            //printf("min_name = %s,  lat/long=%f %f\n", x->name, x->latitude, x->longitude);
-            strncpy(min_name, x->name, MAX_NAME);
-            min_name[MAX_NAME-1] = '\0';
+            strncpy(closest_name, x->name, MAX_NAME);
+            closest_name[MAX_NAME-1] = '\0';
             min_distance_squared = distance_squared;
         }
     }
 
-    min_distance = 364000 * sqrt(min_distance_squared) / 5280;
-    printf("INFO %s: name = %s  distance = %f\n", progname, min_name, min_distance);
+    // if no closest location found then return
+    if (closest_name[0] == '\0') {
+        printf("INFO %s: closest not found for %0.3f %0.3f\n", progname, latitude, longitude);
+        name[0] = '\0';
+        *miles = 0;
+        return;
+    }
+        
+    // return name and distance of the closest location
+    strcpy(name, closest_name);
+    *miles = 364000 * sqrt(min_distance_squared) / 5280;
+    printf("INFO %s: found closest to %0.3f %0.3f - name=%s miles=%0.1f\n",
+           progname, latitude, longitude, name, *miles);
 }
 
 // -----------------  COUNTRY INFO DOWNLOAD  ------------------------
@@ -194,7 +205,6 @@ int download_country_info(char *id)
     }
 
     // download zip file containing city/town location and names
-    if (0) {
     util_delete_file(progname, zip_filename);
     sprintf(cmd, "curl --silent --max-time 10 --output %s/%s.zip https://www.geoapify.com/data-share/localities/%s.zip",
             progname, id,  id);
@@ -202,7 +212,6 @@ int download_country_info(char *id)
     if (ret != 0) {
         printf("ERROR %s: '%s' failed, ret=%d\n", progname, cmd, ret);
         goto done;
-    }
     }
     
     // unzip
@@ -229,8 +238,8 @@ int download_country_info(char *id)
 
 done:
     // cleanup
-    //util_delete_file(progname, zip_filename);  xxx
-    //util_delete_dir(progname, id);  xxx
+    util_delete_file(progname, zip_filename);
+    util_delete_dir(progname, id);
     if (fp_out) {
         fclose(fp_out);
     }
@@ -247,8 +256,6 @@ int read_and_parse_json_file(char *json_filename, FILE *fp_out)
     int           len, success_cnt=0, skip_cnt=0;
     json_value_t  name, latitude, longitude;
 
-    //printf("INFO %s: read_and_parse_json_file starting for %s\n", progname, json_filename);
-
     // read json into str_orig
     str_orig = util_read_file(".", json_filename, &len);
     if (str_orig == NULL) {
@@ -260,7 +267,7 @@ int read_and_parse_json_file(char *json_filename, FILE *fp_out)
     str = str_orig;
     while (true) {
         // parse json
-        root = util_json_parse(str, &end_ptr); //xxx get rid of const
+        root = util_json_parse(str, &end_ptr);
         if (root == NULL) {
             printf("ERROR %s: util_json_parse failed, %s\n", progname, json_filename);
             goto error;
