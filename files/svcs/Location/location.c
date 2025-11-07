@@ -1,6 +1,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdbool.h>
+#include <math.h>
+#include <string.h>
 //#include <stdbool.h>  // xxx check template too
 //#include <unistd.h>
 
@@ -9,10 +11,26 @@
 
 #include "svcs/Location/location.h"
 
+// defines
+#define BOLTON_MASS_LATITUDE     42.4334
+#define BOLTON_MASS_LONGITUDE   -71.6078
+
+// typedefs
+#define MAX_NAME 32
+typedef struct {
+    double latitude;
+    double longitude;
+    char   name[MAX_NAME];
+} loc_t;
+
 // variables
-char *progname;
+char   *progname;
+loc_t  *loc;
+int     max_loc;
 
 // prototypes
+void read_location_data(void);
+void find_closest(double latitude, double longitude);
 int download_country_info(char *id);
 
 // -----------------  MAIN  -----------------------------------------
@@ -33,14 +51,13 @@ int main(int argc, char **argv)
     // print starting msg
     printf("INFO %s: starting, id=%d\n", progname, id);
 
-    // xxx test
-    download_country_info("us");
-    return 0;
+    // read location data
+    read_location_data();
 
     // service runtime loop
     while (!done) {
-        // xxx svc processing
-        printf("INFO %s service is running\n", progname);
+        // service processing
+        find_closest(BOLTON_MASS_LATITUDE, BOLTON_MASS_LONGITUDE);
 
         // wait for up to 3600 secs for a request
         svc_wait(id, 3600, &req, &arg);
@@ -51,8 +68,10 @@ int main(int argc, char **argv)
             done = true;
             break;
         case SVC_LOCATION_REQ_GET_LOC_INFO:
+            find_closest(BOLTON_MASS_LATITUDE, BOLTON_MASS_LONGITUDE);
             break;
         case SVC_LOCATION_REQ_COUNTRY_INFO_DOWNLOAD:
+            download_country_info("us");
             break;
         case SVC_LOCATION_REQ_COUNTRY_INFO_DELETE:
             break;
@@ -61,9 +80,96 @@ int main(int argc, char **argv)
         }
     }
 
-    // print terminating msg
+    // cleanup and end program
+    free(loc);
     printf("INFO %s: terminating\n", progname);
     return 0;
+}
+
+void read_location_data(void)
+{
+    char cmd[200];
+    int  len;
+
+    // init number of loc to 0
+    max_loc = 0;
+
+    // catenate the *.loc files
+    sprintf(cmd, "cat %s/*.loc > %s/all_loc", progname, progname);
+    system(cmd);
+
+    // read the catenated file
+    loc = util_read_file(progname, "all_loc", &len);
+    if (loc == NULL) {
+        printf("ERROR %s: failed to read all_loc\n", progname);
+        return;
+    }
+
+    // xxx maybe delete all_loc when done with it
+
+    // set max_loc
+    if ((len % sizeof(loc_t)) != 0) {
+        printf("ERROR %s: invalid len %d of file all_loc\n", progname, len);
+        return;        
+    }
+    max_loc = len / sizeof(loc_t);
+    printf("INFO %s: max_loc = %d\n", progname, max_loc);
+}
+
+// -----------------  FIND CLOSEST LOCAATION  -----------------------
+
+// There are approximately 364,000 feet (\(69\) miles) in one degree of latitude
+//
+// The number of feet in one degree of longitude varies based on your latitude,
+// decreasing from approximately 364,000 feet (69 miles) at the equator to zero
+// at the poles. For a specific location, you can calculate this distance by
+// multiplying the distance at the equator by the cosine of your latitude
+
+// xxx what if not found
+void find_closest(double latitude, double longitude)
+{
+    double delta_lat, delta_long, cos_lat;
+    double ns_feet, ew_feet, distance_squared, min_distance_squared, min_distance;
+    double point5_div_cos_lat;
+    char min_name[MAX_NAME];
+
+    min_distance_squared = 1e99;
+    cos_lat = cos(latitude * (M_PI / 180));
+    point5_div_cos_lat = 0.5 / cos_lat;
+
+    //printf("min_dist start %f  cos_lat %f\n", min_distance_squared, cos_lat);
+    //printf("point5_div_cos_lat = %f\n", point5_div_cos_lat);
+
+    for (int i = 0; i < max_loc; i++) {
+        loc_t *x = &loc[i];
+
+        delta_lat = fabs(latitude - x->latitude);
+        //printf("delta_lat %f    %f %f\n", delta_lat, latitude, x->latitude);
+        if (delta_lat > 0.5) {
+            continue;
+        }
+        delta_long = fabs(longitude - x->longitude);  // xxx deal with longitude near +/-180
+        if (delta_long > point5_div_cos_lat) {
+            continue;
+        }
+
+        printf("IN BOX %s\n", x->name);
+
+        ns_feet = delta_lat;  // xxx optimize
+        ew_feet = delta_long * cos_lat;
+        //printf("xxxxxxx %f %f\n", ns_feet, ew_feet);
+        distance_squared = (ns_feet * ns_feet) + (ew_feet * ew_feet);
+
+        if (distance_squared < min_distance_squared) {
+            //printf("min_name = %s,  lat/long=%f %f\n", x->name, x->latitude, x->longitude);
+            strncpy(min_name, x->name, MAX_NAME);
+            min_name[MAX_NAME-1] = '\0';
+            min_distance_squared = distance_squared;
+        }
+    }
+
+    min_distance = 364000 * sqrt(min_distance_squared) / 5280;
+    printf("INFO %s: name = %s  distance = %f\n", progname, min_name, min_distance);
 }
 
 // -----------------  COUNTRY INFO DOWNLOAD  ------------------------
@@ -80,25 +186,27 @@ int download_country_info(char *id)
     sprintf(zip_filename, "%s.zip", id);
 
     // create output file
-    sprintf(out_filename, "%s/%s.dat", progname, id);
-    fp_out = fopen(out_filename, "w");
+    sprintf(out_filename, "%s/%s.loc", progname, id);
+    fp_out = fopen(out_filename, "wb");
     if (fp_out == NULL) {
         printf("ERROR %s: failed to create %s\n", progname, out_filename);
         goto done;
     }
 
     // download zip file containing city/town location and names
+    if (0) {
     util_delete_file(progname, zip_filename);
     sprintf(cmd, "curl --silent --max-time 10 --output %s/%s.zip https://www.geoapify.com/data-share/localities/%s.zip",
-            progname, id, id);
+            progname, id,  id);
     ret = system(cmd);
     if (ret != 0) {
         printf("ERROR %s: '%s' failed, ret=%d\n", progname, cmd, ret);
         goto done;
     }
+    }
     
     // unzip
-    sprintf(cmd, "unzip -d %s %s/%s.zip", progname, progname, id);
+    sprintf(cmd, "unzip -o -d %s %s/%s.zip", progname, progname, id);
     ret = system(cmd);
     if (ret != 0) {
         printf("ERROR %s: '%s' failed, ret=%d\n", progname, cmd, ret);
@@ -121,8 +229,8 @@ int download_country_info(char *id)
 
 done:
     // cleanup
-    util_delete_file(progname, zip_filename);
-    util_delete_dir(progname, id);
+    //util_delete_file(progname, zip_filename);  xxx
+    //util_delete_dir(progname, id);  xxx
     if (fp_out) {
         fclose(fp_out);
     }
@@ -137,7 +245,7 @@ int read_and_parse_json_file(char *json_filename, FILE *fp_out)
     void         *root = NULL;
     char         *str = NULL, *str_orig = NULL;
     int           len, success_cnt=0, skip_cnt=0;
-    json_value_t  name, display_name, latitude, longitude;
+    json_value_t  name, latitude, longitude;
 
     //printf("INFO %s: read_and_parse_json_file starting for %s\n", progname, json_filename);
 
@@ -160,21 +268,23 @@ int read_and_parse_json_file(char *json_filename, FILE *fp_out)
 
         // extract json fields
         name         = *util_json_get_value(root, "name", NULL);
-        display_name = *util_json_get_value(root, "display_name", NULL);
-        latitude     = *util_json_get_value(root, "location", "0", NULL);
-        longitude    = *util_json_get_value(root, "location", "1", NULL);
+        longitude    = *util_json_get_value(root, "location", "0", NULL);
+        latitude     = *util_json_get_value(root, "location", "1", NULL);
 
         // if fields extracted okay them save info, else skip
         if (name.type == JSON_TYPE_STRING &&
-            display_name.type == JSON_TYPE_STRING &&
             latitude.type == JSON_TYPE_NUMBER &&
             longitude.type == JSON_TYPE_NUMBER)
         {
-            fprintf(fp_out, "%f %f '%s' '%s'\n", latitude.u.number, longitude.u.number, name.u.string, display_name.u.string);
+            loc_t x;
+            x.latitude = latitude.u.number;
+            x.longitude = longitude.u.number;
+            strncpy(x.name, name.u.string, MAX_NAME);
+            x.name[MAX_NAME-1] = '\0';
+
+            fwrite(&x, sizeof(loc_t), 1, fp_out);
             success_cnt++;
         } else {
-            //printf("ERROR %s: skipping - name,lat,long type = %d %d %d\n",
-            //       progname, name.type, latitude.type, longitude.type); //xxx
             skip_cnt++;
         }
 

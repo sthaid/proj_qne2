@@ -17,6 +17,11 @@ Template service
 Template app, => hello.c
 redo file mapping, make less complicated
 
+       --connect-timeout <seconds>
+max-time
+--silent
+
+
 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 
 cleanup
