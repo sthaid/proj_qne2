@@ -12,7 +12,7 @@ void svcs_display(int bg_color);
 
 // ----------------------------
 
-// values for svc_req_t req
+// common values for svc_req_t req
 #define SVC_REQ_STOP 1
 
 // values for svc_req_t state

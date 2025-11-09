@@ -28,7 +28,7 @@ SRCS_COMMON="\
        ../src/sdlx_audio.c \
        ../src/sdlx_sensor.c \
        ../src/sdlx_event.c \
-       ../src/svc_stubs.c \
+       ../src/svcs_stubs.c \
        ../src/utils.c \
        ../src/utils_location.cpp \
        ../src/logging.c \
@@ -60,8 +60,8 @@ elif [ "$CMD" = linux ]; then
     set -x
     gcc -o /tmp/$APP_NAME $CFLAGS $SRCS $SRCS_COMMON -lSDL3 -lSDL3_ttf -lm || exit 1
     set +x
-    exec -a  $PARENT_DIR/$APP_NAME /tmp/$APP_NAME 0
+    exec -a $APP_NAME /tmp/$APP_NAME $PARENT_DIR/$APP_DIR
 elif [ "$CMD" = picoc ]; then
-    ../picoc/picoc -n $PARENT_DIR/$APP_NAME $SRCS - 0
+    ../picoc/picoc -n $APP_NAME $SRCS - $PARENT_DIR/$APP_DIR
 fi
 

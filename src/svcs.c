@@ -129,7 +129,7 @@ void svcs_init(void)
     // just obtained by the preceeding code
     INFO("Services ...\n");
     for (int id = 0; id < max_svcs; id++) {
-        INFO("%20s  %c\n", svcs[id]->name, svcs[id]->autostart);
+        INFO("%20s  %c\n", svcs[id].name, svcs[id].autostart);
     }
 
     // start all autostart svcs
@@ -350,6 +350,7 @@ void svc_wait_for_req(char *svc_name, svc_req_t **req, int timeout_abstime_secs)
     id = svc_name_to_id(svc_name);
     if (id == -1) {
         ERROR("svc_name %s not found\n", svc_name);
+        *req = NULL;
         return;
     }
     svc_t *x = &svcs[id];

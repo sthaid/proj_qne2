@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdbool.h>
+#include <time.h>
 
 #include <sdlx.h>
 #include <svcs.h>
@@ -9,8 +10,9 @@ char *data_dir;  // argv[1]
 
 int main(int argc, char **argv)
 {
-    int id, req, arg;
     bool done = false;
+    svc_req_t *req;
+    time_t tnow;
 
     // save args
     if (argc != 2) {
@@ -21,18 +23,17 @@ int main(int argc, char **argv)
     data_dir = argv[1];
     printf("INFO %s: data_dir=%s\n", progname, data_dir);
 
-    // print starting msg
-    printf("INFO %s: starting, id=%d\n", progname, id);
-
     // service runtime loop
     while (!done) {
         // print message
-        printf("INFO %s service is running\n", progname);
+        printf("INFO %s: service is running\n", progname);
 
         // wait for up to 3600 secs for a request;
         // if no req received within timeout then continue
-        svc_wait_for_req(progname, 3600, &req); //xxx use abstime
+        tnow = time(NULL);
+        svc_wait_for_req(progname, &req, tnow+3600); //xxx use abstime
         if (req == NULL) {
+            printf("INFO %s: no req\n", progname);
             continue;
         }
 
@@ -40,10 +41,10 @@ int main(int argc, char **argv)
         switch (req->req) {
         case SVC_REQ_STOP:
             done = true;
-            svc_set_req_complete(req, SVC_REQ_COMP_OK);
+            svc_req_completed(req, SVC_REQ_COMP_STATUS_OK);
             break;
-        default
-            svc_set_req_complete(req, SVC_REQ_COMP_ERROR_INVALID_REQ);
+        default:
+            svc_req_completed(req, SVC_REQ_COMP_STATUS_ERROR_INVALID_REQ);
             break;
         }
     }

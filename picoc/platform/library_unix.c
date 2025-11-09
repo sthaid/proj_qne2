@@ -948,9 +948,6 @@ typedef struct { \n\
 #define ASENSOR_TYPE_HEADING 42 \n\
 \n\
 #define INVALID_NUMBER 999999999 \n\
-\n\
-#define SVC_REQ_NONE 0 \n\
-#define SVC_REQ_STOP 1 \n\
 ";
 
 // -----------------  UTILS PLATFORM ROUTINES  --------------------------

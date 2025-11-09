@@ -21,7 +21,7 @@ SRCS	= picoc.c table.c lex.c parse.c expression.c heap.c type.c \
 	cstdlib/time.c cstdlib/errno.c cstdlib/ctype.c cstdlib/stdbool.c \
 	cstdlib/unistd.c \
 	sdlx_misc.c sdlx_video.c sdlx_audio.c sdlx_sensor.c sdlx_event.c logging.c utils.c utils_location.cpp \
-	svc_stubs.c \
+	svcs_stubs.c \
 	cJSON.c \
 	lodepng.c
 

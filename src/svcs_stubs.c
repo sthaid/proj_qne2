@@ -1,13 +1,35 @@
 #include <std_hdrs.h>
 
-#include <sdlx.h>
+#include <svcs.h>
 
-void svc_call(int id, int req, int arg)
+//
+// routines called by apps
+//
+
+void svc_issue_req(char *svc_name, svc_req_t *req)
 {
 }
 
-void svc_wait(int id, int timeout_secs, int *req, int *arg)
+bool svc_is_req_complete(svc_req_t *req)
 {
-    printf("svc_wait stub, sleeping %d secs ...\n", timeout_secs);
-    sleep(timeout_secs);
+    return false;
 }
+
+void svc_wait_for_req_complete(svc_req_t *req, int timeout_secs)
+{
+}
+
+//
+// routines called by svcs
+//
+
+void svc_wait_for_req(char *svc_name, svc_req_t **req, int timeout_abstime_secs)
+{
+    sleep(300);
+    *req = NULL;
+}
+
+void svc_req_completed(svc_req_t *req, int comp_status)
+{
+}
+
