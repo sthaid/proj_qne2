@@ -32,8 +32,10 @@
                                     (state) == SERVICE_STATE_STOPPED_BY_ERROR)
 
 #define MAX_SVCS 20
+#define MAX_SVC_REQ_QUEUE 5
 
-#define MS  1000
+#define MS  1000L
+#define SEC 1000000L
 
 //
 // typedefs
@@ -45,7 +47,7 @@ typedef struct {
     int             state;
     pthread_mutex_t mutex;
     pthread_cond_t  cond;
-    svc_req_t      *req;
+    svc_req_t      *req[MAX_SVC_REQ_QUEUE];
 } svc_t;
 
 //
@@ -63,6 +65,7 @@ static void process_svc_start_req(int id);
 static void process_svc_stop_req(int id);
 static void process_svc_stopped_callback(int id, int rc);
 static void run_svc(int id);
+static int svc_name_to_id(char *svc_name);
 
 // -----------------  SVCS ROUTINES USED BY MAIN.C  ---------------
 
@@ -122,11 +125,18 @@ void svcs_init(void)
     }
     fclose(fp);
 
+    // print the list of services and autostart indicator that was
+    // just obtained by the preceeding code
+    INFO("Services ...\n");
+    for (int id = 0; id < max_svcs; id++) {
+        INFO("%20s  %c\n", svcs[id]->name, svcs[id]->autostart);
+    }
+
     // start all autostart svcs
     for (int id = 0; id < max_svcs; id++) {
         svc_t *x = &svcs[id];
         if (SERVICE_IS_STOPPED(x->state) && x->autostart == 'y') {
-            x->req = NULL;
+            memset(x->req, 0, sizeof(x->req));
             x->state = SERVICE_STATE_RUNNING;
             run_svc(id);
         }
@@ -141,7 +151,6 @@ void svcs_display(int bg_color)
     sdlx_loc_t  *loc;
     double      row;
 
-    // xxx use max_svcs in these defines
     #define EVID_SVC_START    100
     #define EVID_SVC_STOP     200
 
@@ -212,17 +221,17 @@ void svcs_stop_all(void)
     int id, duration_ms = 0;
     bool all_stopped;
     svc_req_t *req;
+    static svc_req_t svc_stop_req[MAX_SVCS];  // xxx is this okay?
 
     INFO("stopping all services\n");
 
-xxx call the process_xxx
     for (id = 0; id < max_svcs; id++) {
         svc_t *x = &svcs[id];
         if (x->state == SERVICE_STATE_RUNNING) {
-            req = calloc(1, sizeof(svc_req_t));
+            req = &svc_stop_req[id];
+            memset(req, 0, sizeof(*req));
             req->req = SVC_REQ_STOP;
-            svc_call(svcs[id].name, req, true);
-            free(req);
+            svc_issue_req(svcs[id].name, req); 
         }
     }
 
@@ -259,80 +268,127 @@ xxx call the process_xxx
 
 // -----------------  SVCS ROUTINES AVAIL IN PICOC  ---------------
 
-void svc_call(char *svc_name, svc_req_t *req, bool wait)
-{
-    int id;
+//
+// routines called by apps
+//
 
-    // find caller requested svc_name in the svcs table
-    for (id = 0; id < max_svcs; id++) {
-        if (strcmp(svcs[id].name, svc_name) == 0) {
+void svc_issue_req(char *svc_name, svc_req_t *req)
+{
+    int id, i;
+
+    // get svc id for the svc_name
+    id = svc_name_to_id(svc_name);
+    if (id == -1) {
+        ERROR("svc_name %s not found\n", svc_name);
+        svc_req_completed(req, SVC_REQ_COMP_STATUS_ERROR_INVLD_SVC_NAME);
+        return;
+    }
+    svc_t *x = &svcs[id];
+    INFO("name=%s id=%d req=%d\n", x->name, id, req->req);
+
+    // acquire mutex
+    pthread_mutex_lock(&x->mutex);
+
+    // find avail entry in the req queue
+    for (i = 0; i < MAX_SVC_REQ_QUEUE; i++) {
+        if (x->req[i] == NULL) {
             break;
         }
     }
-    if (id == max_svcs) {
-        ERROR("svc_name %s not found\n", svc_name);
+
+    // if no avail queue entry then set req state to error, and return
+    if (i == MAX_SVC_REQ_QUEUE) {
+        ERROR("svc %s req queu is full\n", x->name);
+        svc_req_completed(req, SVC_REQ_COMP_STATUS_ERROR_QUEUE_FULL);
+        pthread_mutex_unlock(&x->mutex);
         return;
     }
+        
+    // queue the req
+    x->req[i] = req;
+    req->state = SVC_REQ_STATE_QUEUED;
 
-    INFO("id=%d name=%s req=%d\n", id, svcs[id].name, req->req);
-
-    // acquire mutex
-    pthread_mutex_lock(&svcs[id].mutex);
-
-    // signal the svc so it will perform the request
-    req->state = SVC_REQ_STATE_PENDING;
-    svcs[id].req = req;
-    pthread_cond_signal(&svcs[id].cond);
+    // signal the condition, to wake the svc
+    pthread_cond_signal(&x->cond);
 
     // release mutex
-    pthread_mutex_unlock(&svcs[id].mutex);
+    pthread_mutex_unlock(&x->mutex);
+}
 
-    // if caller requested wait for completion then poll for req competion
-    if (wait) {
-        INFO("waiting for req %d %s to complete\n", req->req, svc_name);
-        while (true) {
-            if (req->state == SVC_REQ_STATE_COMPLETED) {
-                break;
-            }
-            usleep(100*MS);
+bool svc_is_req_complete(svc_req_t *req)
+{
+    return (req->comp_status != SVC_REQ_COMP_STATUS_NOT_COMPLETE);
+}
+
+void svc_wait_for_req_complete(svc_req_t *req, int timeout_secs)
+{
+    long start_us;
+
+    start_us = util_microsec_timer();
+    while (true) {
+        if (req->comp_status != SVC_REQ_COMP_STATUS_NOT_COMPLETE) {
+            break;
         }
-        INFO("completed req %d %s\n", req->req, svc_name);
+        if (util_microsec_timer() - start_us > timeout_secs * SEC) {
+            break;
+        }
+        usleep(100*MS);
     }
 }
 
-void svc_wait(int id, int timeout_secs, int *req, int *arg)
-{
-#if 0
-    struct timespec ts;
-    int             ret;
+//
+// routines called by svcs
+//
 
-    INFO("called id=%d timeout_secs=%d\n", id, timeout_secs);
+void svc_wait_for_req(char *svc_name, svc_req_t **req, int timeout_abstime_secs)  // XXX use abstime
+{
+    struct timespec ts = {timeout_abstime_secs, 0 };
+    int             ret;
+    int             id;
+
+    // get svc id for the svc_name
+    id = svc_name_to_id(svc_name);
+    if (id == -1) {
+        ERROR("svc_name %s not found\n", svc_name);
+        return;
+    }
+    svc_t *x = &svcs[id];
+    INFO("name=%s id=%d\n", x->name, id);
 
     // acquire mutex
-    pthread_mutex_lock(&svc_request[id].mutex);
+    pthread_mutex_lock(&x->mutex);
 
-    // wait for xxx
-    while (svc_request[id].req == SVC_REQ_NONE) {
-        clock_gettime(CLOCK_REALTIME, &ts);
-        ts.tv_sec += timeout_secs;
-        ret = pthread_cond_timedwait(&svc_request[id].cond, &svc_request[id].mutex, &ts);
-        INFO("pthread_cond_timedwait, ret=%d\n", ret);
+    // wait, with timeout, for a request to be available 
+    while (x->req[0] == NULL) {
+        ret = pthread_cond_timedwait(&x->cond, &x->mutex, &ts);
         if (ret == ETIMEDOUT) {
             INFO("got ETIMEDOUT\n");
-            break;
-        } 
+            *req = NULL;
+            return;
+        } else if (ret != 0) {
+            ERROR("got ret %d\n", ret);
+            *req = NULL;
+            return;
+        }
     }
 
-    // xxxx
-    *req = svc_request[id].req;
-    *arg = svc_request[id].arg;
-    svc_request[id].req = SVC_REQ_NONE;
-    svc_request[id].arg = 0;
-    INFO("return req=%d arg=%d\n", *req, *arg);
+    // return req;
+    // set req state to in progress;
+    // remove req from queue
+    *req = x->req[0];
+    (*req)->state = SVC_REQ_STATE_IN_PROGRESS;
+    memmove(&x->req[0], &x->req[1], (MAX_SVC_REQ_QUEUE-1)*sizeof(void*));
+    x->req[MAX_SVC_REQ_QUEUE-1] = NULL;
 
     // release mutex
-    pthread_mutex_unlock(&svc_request[id].mutex);
-#endif
+    pthread_mutex_unlock(&x->mutex);
+}
+
+void svc_req_completed(svc_req_t *req, int comp_status)
+{
+    __sync_synchronize();
+    req->state = SVC_REQ_STATE_COMPLETE;
+    req->comp_status = comp_status;
 }
 
 // -----------------  HANDLERS  -----------------------------------
@@ -348,8 +404,8 @@ static void process_svc_start_req(int id)
         return;
     }
     
+    memset(x->req, 0, sizeof(x->req));
     x->state = SERVICE_STATE_RUNNING;
-    x->req = NULL;
     run_svc(id);
 }
 
@@ -357,6 +413,7 @@ static void process_svc_stop_req(int id)
 {
     svc_t *x = &svcs[id];
     svc_req_t *req;
+    static svc_req_t svc_stop_req[MAX_SVCS];  //xxx is this okay
 
     INFO("called for id=%d name=%s\n", id, x->name);
 
@@ -367,10 +424,10 @@ static void process_svc_stop_req(int id)
 
     x->state = SERVICE_STATE_STOPPING;
 
-    req = calloc(1, sizeof(svc_req_t));
+    req = &svc_stop_req[id];
+    memset(req, 0, sizeof(*req));
     req->req = SVC_REQ_STOP;
-    svc_call(svcs[id].name, req, true);  // xxx dont wait ? then who frees?
-    free(req);
+    svc_issue_req(svcs[id].name, req); 
 }
 
 static void process_svc_stopped_callback(int id, int rc)
@@ -397,9 +454,25 @@ static int svc_thread(void *cx)
     svc_t *x = &svcs[id];
     int rc;
 
-    rc = run(x->name, id);  // xxx maybe doesnt need id
+    rc = run(x->name, true);  // is_svc = true
 
     process_svc_stopped_callback(id, rc);
 
     return 0;
+}
+
+// -----------------  UTILS  ----------------------------------------
+
+// return -1 if svc_name not foumd, else return the id for svc_name
+static int svc_name_to_id(char *svc_name)
+{
+    int id;
+
+    for (id = 0; id < max_svcs; id++) {
+        if (strcmp(svcs[id].name, svc_name) == 0) {
+            return id;
+        }
+    }
+
+    return -1;
 }

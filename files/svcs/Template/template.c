@@ -2,34 +2,48 @@
 #include <stdbool.h>
 
 #include <sdlx.h>
+#include <svcs.h>
 
-char *progname;
+char *progname;  // argv[0]
+char *data_dir;  // argv[1]
 
 int main(int argc, char **argv)
 {
     int id, req, arg;
+    bool done = false;
 
     // save args
     if (argc != 2) {
-        printf("ERROR: args expected: id\n");
+        printf("ERROR: data_dir arg expected\n");
         return 1;
     }
     progname = argv[0];
-    sscanf(argv[1], "%d", &id);
+    data_dir = argv[1];
+    printf("INFO %s: data_dir=%s\n", progname, data_dir);
 
     // print starting msg
     printf("INFO %s: starting, id=%d\n", progname, id);
 
     // service runtime loop
-    while (true) {
+    while (!done) {
         // print message
         printf("INFO %s service is running\n", progname);
 
-        // wait for up to 3600 secs for a request
-        svc_wait(id, 3600, &req, &arg);
+        // wait for up to 3600 secs for a request;
+        // if no req received within timeout then continue
+        svc_wait_for_req(progname, 3600, &req); //xxx use abstime
+        if (req == NULL) {
+            continue;
+        }
 
-        // if svc stop is requested then break out of runtime loop
-        if (req == SVC_REQ_STOP) {
+        // process the request
+        switch (req->req) {
+        case SVC_REQ_STOP:
+            done = true;
+            svc_set_req_complete(req, SVC_REQ_COMP_OK);
+            break;
+        default
+            svc_set_req_complete(req, SVC_REQ_COMP_ERROR_INVALID_REQ);
             break;
         }
     }

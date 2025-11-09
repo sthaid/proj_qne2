@@ -225,7 +225,6 @@ static char *apps[MAX_APPS];
 static int   max_apps;
 static int   page;
 
-int run(char *name, int svc_id);  //xxx use name?
 static void display_menu(void);
 static void get_list_of_apps(void);
 static void settings(void);
@@ -282,18 +281,13 @@ static void processing(void)
                 settings();
             } else {
                 sdlx_print_init(DEFAULT_FONT, COLOR_WHITE, COLOR_BLACK);
-                run(apps[id], -1);
+                run(apps[id], false);
             }
         }
     }
 }
 
-// args:
-// - name: the name of the app or svc
-// - svc_id: use -1 for app; else the svc_id is >= 0, and will be passed 
-//           in argv to the svc; the svc uses this value when 
-//           xxx polling for  svc_stop_requested
-int run(char *name, int svc_id)
+int run(char *name, bool is_svc)
 {
     char           dir_path[100];
     int            rc;
@@ -303,7 +297,7 @@ int run(char *name, int svc_id)
     char           picoc_args[1000];
 
     // xxx comment
-    if (svc_id == -1) {
+    if (!is_svc) {
         sprintf(dir_path, "apps/%s", name);
     } else {
         sprintf(dir_path, "svcs/%s", name);
@@ -333,15 +327,11 @@ int run(char *name, int svc_id)
     }
 
     // xxx comment
-    if (svc_id == -1) {
-        p += sprintf(p, " - %s", dir_path);
-    } else {
-        p += sprintf(p, " - %s %d", dir_path, svc_id);
-    }
+    p += sprintf(p, " - %s %s", name, dir_path);
 
     // run the app using the picoc c language interpreter
     INFO("%s: starting, args = %s\n", name, picoc_args);
-    rc = picoc_ezapp(picoc_args);  // xxx get rid of picoc_bg
+    rc = picoc_ezapp(picoc_args);
     INFO("%s: completed, rc = %d\n", name, rc);
 
     // return completion status
