@@ -2,7 +2,9 @@
 
 #include <sdlx.h>
 #include <utils.h>
+#include <svcs.h>
 #include <logging.h>
+#include <main.h>
 
 #ifdef ANDROID
 #include <SDL3/SDL.h>
@@ -66,13 +68,6 @@ static pthread_t   server_tid;
 //
 
 static void processing(void);
-
-static void init_services(void);
-static int services_monitor_thread(void *cx);
-static void stop_all_services(void);
-static void request_start_all_autostart_services(void);
-static void acquire_services_lock(void) __attribute__((unused));
-static void release_services_lock(void) __attribute__((unused));
 
 static int server_thread(void *cx);
 static int waiter_thread(void *cx);
@@ -181,7 +176,7 @@ static int init(void)
 #endif
 
     // init services, this will xxx
-    init_services();
+    svcs_init();
 
     // success
     return 0;
@@ -191,7 +186,7 @@ static void cleanup(void)
 {
     INFO("TERMINATING\n");
 
-    stop_all_services();
+    svcs_stop_all();
 
     // xxx free svc_call allocations
 
@@ -208,12 +203,10 @@ static void create_files(int action)
         system("tar -xvf files.tar");
         break;
     case CREATE_FILES_RESET:
-        stop_all_services();
-        acquire_services_lock();
+        svcs_stop_all();
         system("rm -rf apps svcs");
         system("tar -xvf files.tar apps svcs");
-        release_services_lock();
-        request_start_all_autostart_services();
+        svcs_init();
         break;
     }
 }
@@ -232,11 +225,10 @@ static char *apps[MAX_APPS];
 static int   max_apps;
 static int   page;
 
-static int run(char *name, int svc_id);
+int run(char *name, int svc_id);  //xxx use name?
 static void display_menu(void);
 static void get_list_of_apps(void);
 static void settings(void);
-static void services(void);
 
 static void processing(void)
 {
@@ -301,7 +293,7 @@ static void processing(void)
 // - svc_id: use -1 for app; else the svc_id is >= 0, and will be passed 
 //           in argv to the svc; the svc uses this value when 
 //           xxx polling for  svc_stop_requested
-static int run(char *name, int svc_id)
+int run(char *name, int svc_id)
 {
     char           dir_path[100];
     int            rc;
@@ -527,8 +519,8 @@ static void get_list_of_apps(void)
         // xxx cleanup input str by removing terminating newline 
         // and removing leading spaces
 
-        // ignore lines that are blank or begin with comment char
-        if (str[0] == '\n' || str[0] == '#') {
+        // ignore lines that begin with '#', space, or newline
+        if (str[0] == '\n' || str[0] == ' ' || str[0] == '#') {
             continue;
         }
 
@@ -557,637 +549,6 @@ static void get_list_of_apps(void)
             INFO("apps[%d] = %s\n", i, apps[i]);
         }
     }
-}
-
-// -----------------  SERVICES  -----------------------------------
-
-// xxx 
-// - comments
-// - full review
-
-//
-// defines
-//
-
-#define SERVICE_STATE_STOPPED           0     // white
-#define SERVICE_STATE_RUNNING           1     // green
-#define SERVICE_STATE_STOPPING          2     // yellow
-#define SERVICE_STATE_STOPPED_BY_ERROR  3     // red
-
-#define SERVICE_STATE_STR(state) \
-    ((state) == SERVICE_STATE_STOPPED           ? "STOPPED"          : \
-     (state) == SERVICE_STATE_RUNNING           ? "RUNNING"          : \
-     (state) == SERVICE_STATE_STOPPING          ? "STOPPING"         : \
-     (state) == SERVICE_STATE_STOPPED_BY_ERROR  ? "STOPPED_BY_ERROR" : \
-                                                  "????")
-
-#define SERVICE_STATE_TO_COLOR(state) \
-    ((state) == SERVICE_STATE_STOPPED           ? COLOR_WHITE  : \
-     (state) == SERVICE_STATE_RUNNING           ? COLOR_GREEN  : \
-     (state) == SERVICE_STATE_STOPPING          ? COLOR_YELLOW : \
-                                                  COLOR_RED)
-
-#define SERVICE_IS_STOPPED(state)  ((state) == SERVICE_STATE_STOPPED || \
-                                    (state) == SERVICE_STATE_STOPPED_BY_ERROR)
-
-#define MAX_SERVICES 20
-
-// xxx should this use SDL Mutex
-#define LOCK do { pthread_mutex_lock(&services_mutex); } while (0)
-#define UNLOCK do { pthread_mutex_unlock(&services_mutex); } while (0)
-
-//
-// typedefs
-//
-
-typedef struct {
-    char *name;
-    int   state;
-    bool  delete_pending;
-} service_t;
-
-typedef struct {
-    pthread_mutex_t mutex;
-    pthread_cond_t  cond;
-    int             req;
-    int             arg;
-} svc_request_t;
-
-//
-// variables
-//
-
-static pthread_mutex_t services_mutex = PTHREAD_MUTEX_INITIALIZER;
-static service_t       services_tbl[MAX_SERVICES];
-static char           *svcs[MAX_SERVICES];
-static int             max_svcs;
-static bool            start_autostart_services_req_flag;
-static svc_request_t   svc_request[MAX_SERVICES];
-
-//
-// prototypes
-//
-
-static void process_changed_svc_names(void);
-static void process_start_req(int id);
-static void process_stop_req(int id);
-static void process_stopped_callback(int id, int rc);
-static void run_svc(int id);
-static void get_list_of_svcs(bool *changed);
-static void start_autostart_services(void);
-static int alloc_service(char *name);
-static void free_service(int id);
-static bool is_name_in_svcs(char *name);
-static bool is_name_in_services(char *name);
-
-// - - - - - - - - - xxxxxxxxxxxxx routines  - - - - - - - - - - - - - 
-
-static void init_services(void)
-{
-    for (int i = 0; i < MAX_SERVICES; i++) {
-        pthread_mutex_init(&svc_request[i].mutex, NULL);
-        pthread_cond_init(&svc_request[i].cond, NULL);
-    }
-
-    request_start_all_autostart_services();
-
-    sdlx_create_detached_thread(services_monitor_thread, NULL);
-}
-
-static void acquire_services_lock(void)
-{
-    LOCK;
-}
-
-static void release_services_lock(void)
-{
-    UNLOCK;
-}
-
-static void request_start_all_autostart_services(void)
-{
-    LOCK;
-    start_autostart_services_req_flag = true;
-    UNLOCK;
-}
-
-// - - - - - - - - - xxxxxxxxxxxxx - - - - - - - - - - - - - - - - - - 
-
-static int services_monitor_thread(void *cx)
-{
-    bool changed;
-
-    while (true) {
-        LOCK;
-
-        get_list_of_svcs(&changed);
-        if (changed) {
-            process_changed_svc_names();
-        }
-
-        if (start_autostart_services_req_flag) {
-            start_autostart_services();
-            start_autostart_services_req_flag = false;
-        }
-
-        UNLOCK;
-
-        sleep(1);  // xxx how long to sleep?
-    }
-
-    return 0;
-}
-
-// - - - - - - - - - xxxxxxxxxxxxx - - - - - - - - - - - - - - - - - - 
-
-static void services(void)
-{
-    sdlx_event_t event;
-    int         id;
-    bool        done = false;
-    sdlx_loc_t  *loc;
-    double      row;
-
-    // xxx use MAX_SERVICES in these defines
-    #define EVID_SVC_START    100
-    #define EVID_SVC_STOP     200
-    #define EVID_SVC_RESTART  300
-
-    LOCK;
-
-    // handle the setting display
-    while (true) {
-        // init display and display title line
-        sdlx_display_init(BG_COLOR);
-        sdlx_print_init(DEFAULT_FONT, COLOR_WHITE, BG_COLOR);
-        sdlx_render_text_xyctr(sdlx_win_width/2, sdlx_char_height/2, "Services");
-
-        // display name and controls for each service
-        row = 2;
-        for (id = 0; id < MAX_SERVICES; id++) {
-            service_t *x = &services_tbl[id];
-
-            if (x->name == NULL) {
-                continue;
-            }
-        
-            sdlx_print_init_color(SERVICE_STATE_TO_COLOR(x->state), BG_COLOR);
-            sdlx_render_printf(0, ROW2Y(row), "%-s", x->name);
-
-            sdlx_print_init_color(COLOR_LIGHT_BLUE, BG_COLOR);
-            if (SERVICE_IS_STOPPED(x->state)) {
-                loc = sdlx_render_printf(COL2X(10), ROW2Y(row), "start");
-                sdlx_register_event(loc, EVID_SVC_START+id);
-            } else if (x->state == SERVICE_STATE_RUNNING) {
-                loc = sdlx_render_printf(COL2X(10), ROW2Y(row), "stop");
-                sdlx_register_event(loc, EVID_SVC_STOP+id);
-            }
-
-            row += 1.5;
-        }
-
-        // display the control event 'X' to exit this
-        sdlx_register_control_events(NULL, NULL, "X", BG_COLOR, 0, 0, EVID_QUIT);
-
-        // present the display
-        sdlx_display_present();
-
-        // wait for an event, with 100 ms timeout;
-        // if no event received then re-display
-        UNLOCK;
-        sdlx_get_event(100*MS, &event);
-        LOCK;
-        if (event.event_id == -1) {
-            continue;
-        }
-
-        // process the event
-        INFO("proc event_id %d\n", event.event_id);
-        switch (event.event_id) {
-        case EVID_SVC_START ... EVID_SVC_START + MAX_SERVICES - 1:
-            id = event.event_id - EVID_SVC_START;
-            process_start_req(id);
-            break;
-        case EVID_SVC_STOP ... EVID_SVC_STOP + MAX_SERVICES - 1:
-            id = event.event_id - EVID_SVC_STOP;
-            process_stop_req(id);
-            break;
-        case EVID_QUIT:
-            done = true;
-            break;
-        }
-
-        if (done) {
-            break;
-        }
-    }
-
-    UNLOCK;
-}
-
-// - - - - - - - - - xxxxxxxxxxxxx - - - - - - - - - - - - - - - - - - 
-
-// Function to add two timespec structures
-struct timespec timespec_add(struct timespec ts1, struct timespec ts2) 
-{
-    struct timespec result;
-
-    // Add nanoseconds
-    result.tv_nsec = ts1.tv_nsec + ts2.tv_nsec;
-    // Add seconds
-    result.tv_sec = ts1.tv_sec + ts2.tv_sec;
-
-    // Handle nanosecond overflow (if tv_nsec >= 1 second)
-    if (result.tv_nsec >= 1000000000) {
-        result.tv_sec += result.tv_nsec / 1000000000; // Add full seconds from nanoseconds
-        result.tv_nsec %= 1000000000; // Keep remaining nanoseconds
-    }
-
-    return result;
-}
-
-
-void svc_call(int id, int req, int arg)
-{
-    INFO("id=%d req=%d arg=%d\n", id, req, arg);
-
-    // acquire mutex
-    pthread_mutex_lock(&svc_request[id].mutex);
-
-    // set stop_request flag, and signal condition xxx comment
-    svc_request[id].req = req;
-    svc_request[id].arg = arg;
-    pthread_cond_signal(&svc_request[id].cond);
-
-    // release mutex
-    pthread_mutex_unlock(&svc_request[id].mutex);
-}
-
-void svc_wait(int id, int timeout_secs, int *req, int *arg)
-{
-    struct timespec ts_abstime, ts_now;
-    struct timespec ts_delta = { timeout_secs, 0 };
-    int             ret;
-
-    INFO("called id=%d timeout_secs=%d\n", id, timeout_secs);
-
-    // acquire mutex
-    pthread_mutex_lock(&svc_request[id].mutex);
-
-    // wait for xxx
-    while (svc_request[id].req == SVC_REQ_NONE) {
-        clock_gettime(CLOCK_REALTIME, &ts_now);
-        ts_abstime = timespec_add(ts_now, ts_delta);  // xxx dont need a routine, just add secs
-        ret = pthread_cond_timedwait(&svc_request[id].cond,
-                                     &svc_request[id].mutex,
-                                     &ts_abstime);
-        INFO("pthread_cond_timedwait = %d\n", ret);
-        if (ret == ETIMEDOUT) {
-            INFO("got ETIMEDOUT\n");
-            break;
-        } 
-    }
-
-    // xxxx
-    *req = svc_request[id].req;
-    *arg = svc_request[id].arg;
-    svc_request[id].req = SVC_REQ_NONE;
-    svc_request[id].arg = 0;
-    INFO("return req=%d arg=%d\n", *req, *arg);
-
-    // release mutex
-    pthread_mutex_unlock(&svc_request[id].mutex);
-}
-
-// - - - - - - - - - process event routines  - - - - - - - - - - - - - 
-
-// lock held by caller
-static void process_changed_svc_names(void)
-{
-    int id, i;
-
-    INFO("called\n");
-
-    // loop over all services;
-    // if not in list of svcs directories then stop and delete it
-    for (id = 0; id < MAX_SERVICES; id++) {
-        service_t *x = &services_tbl[id];
-        if (x->name == NULL) {
-            continue;
-        }
-        if (is_name_in_svcs(x->name) == false) {
-            if (x->state == SERVICE_STATE_RUNNING) {
-                x->state = SERVICE_STATE_STOPPING;
-                svc_call(id, SVC_REQ_STOP, 0);
-                x->delete_pending = true;
-            } else if (x->state == SERVICE_STATE_STOPPING) {
-                x->delete_pending = true;
-            } else {
-                free_service(id);
-            }
-        }
-    }
-
-    // loop over all names in svcs table;
-    // if not in services_tbl then add it
-    for (i = 0; i < max_svcs; i++) {
-        char *name = svcs[i];
-        if (is_name_in_services(name) == false) {
-            alloc_service(name);
-        }
-    }
-}
-
-// lock held by caller
-static void process_start_req(int id)
-{
-    service_t *x = &services_tbl[id];
-
-    INFO("called for id=%d name=%s\n", id, x->name);
-
-    if ((x->name == NULL) || !SERVICE_IS_STOPPED(x->state)) {
-        ERROR("id=%d name=%s state=%s\n", id, x->name, SERVICE_STATE_STR(x->state));
-        return;
-    }
-    
-    x->state = SERVICE_STATE_RUNNING;
-    svc_request[id].req = SVC_REQ_NONE;
-    svc_request[id].arg = 0;
-    run_svc(id);
-}
-
-// lock held by caller
-static void process_stop_req(int id)
-{
-    service_t *x = &services_tbl[id];
-
-    INFO("called for id=%d name=%s\n", id, x->name);
-
-    if (x->name == NULL || x->state != SERVICE_STATE_RUNNING) {
-        ERROR("id=%d name=%s state=%s\n", id, x->name, SERVICE_STATE_STR(x->state));
-        return;
-    }
-
-    x->state = SERVICE_STATE_STOPPING;
-    svc_call(id, SVC_REQ_STOP, 0);
-}
-
-static void process_stopped_callback(int id, int rc)
-{
-    service_t *x = &services_tbl[id];
-
-    LOCK;
-
-    INFO("called for id=%d name=%s rc=%d\n", id, x->name, rc);
-
-    if (x->name == NULL) {
-        ERROR("service id %d does not exist\n", id);
-        UNLOCK;
-        return;
-    }
-
-    x->state = (rc == 0 ? SERVICE_STATE_STOPPED : SERVICE_STATE_STOPPED_BY_ERROR);
-
-    if (x->delete_pending) {
-        x->delete_pending = false;
-        free_service(id);
-    }
-
-    UNLOCK;
-}   
-
-// - - - - - - - - - run the svc - - - - - - - - - - - - - - 
-
-static int service_thread(void *cx);
-
-// lock held by caller
-static void run_svc(int id)
-{
-    sdlx_create_detached_thread(service_thread, (void*)(long)id);
-}
-
-static int service_thread(void *cx)
-{
-    int id = (int)(long)cx;
-    service_t *x = &services_tbl[id];
-    int rc;
-
-    rc = run(x->name, id);
-
-    process_stopped_callback(id, rc);
-
-    return 0;
-}
-
-// - - - - - - - - - get list of svcs - - - - - - - - - - 
-
-static int compare(const void *a_arg, const void *b_arg)
-{
-    char *a = *(char**)a_arg;
-    char *b = *(char**)b_arg;
-    return strcmp(a,b);
-}
-
-// lock held by caller
-static void get_list_of_svcs(bool *changed)
-{
-    int            rc;
-    struct stat    statbuf;
-    DIR           *dir;
-    struct dirent *dirent;
-    char          *svcs_dir_path = "svcs";
-
-    static long svcs_dir_mtime;
-
-    // preset return flag
-    *changed = false;
-
-    // if svcs dir doesn't exist then return without changing list of svcs
-    rc = stat(svcs_dir_path, &statbuf);
-    if (rc != 0) {
-        return;
-    }
-
-    // if svcs dir has not changed then return
-    if (statbuf.st_mtime == svcs_dir_mtime) {
-        return;
-    }
-    svcs_dir_mtime = statbuf.st_mtime;
-
-    // free the current svcs names
-    for (int i = 0; i < max_svcs; i++) {
-        free(svcs[i]);
-        svcs[i] = NULL;
-    }
-    max_svcs = 0;
-
-    // make list of svcs subdirs
-    dir = opendir(svcs_dir_path);
-    if (dir == NULL) {
-        ERROR("opendir %s failed, %s\n", svcs_dir_path, strerror(errno));
-        return;
-    }
-    while ((dirent = readdir(dir)) != NULL) {
-        char *name = dirent->d_name;
-        int   type = dirent->d_type;
-        if (type == DT_DIR && name[0] != '.') {
-            svcs[max_svcs++] = strdup(name);
-        }
-    }
-    closedir(dir);
-
-    // sort the svcs names
-    qsort(svcs, max_svcs, sizeof(char*), compare);
-
-    // debug print the list of svcs
-    INFO("max_svcs = %d\n", max_svcs);
-    for (int i = 0; i < max_svcs; i++) {
-        INFO("svcs[%d] = %s\n", i, svcs[i]);
-    }
-
-    // return flag indicating that there may have been
-    // changes to the list of svc names
-    *changed = true;
-}
-
-// - - - - - - - - - support routines - - - - - - - - - - - - -
-
-static void stop_all_services(void)
-{
-    int id, duration_ms = 0;
-    bool all_stopped;
-
-    LOCK;
-
-    INFO("stopping all services\n");
-
-    for (id = 0; id < MAX_SERVICES; id++) {
-        service_t *x = &services_tbl[id];
-        if (x->name && x->state == SERVICE_STATE_RUNNING) {
-            svc_call(id, SVC_REQ_STOP, 0);
-        }
-    }
-
-    while (true) {
-        all_stopped = true;
-        for (id = 0; id < MAX_SERVICES; id++) {
-            service_t *x = &services_tbl[id];
-            if (x->name && !SERVICE_IS_STOPPED(x->state)) {
-                all_stopped = false;
-                break;
-            }
-        }
-
-        if (all_stopped) {
-            INFO("all services are stopped\n");
-            break;
-        }
-
-        if (duration_ms > 30000) {
-            ERROR("the following services have failed to stop ...\n");
-            for (id = 0; id < MAX_SERVICES; id++) {
-                service_t *x = &services_tbl[id];
-                if (x->name && !SERVICE_IS_STOPPED(x->state)) {
-                    ERROR("- %-12s %s\n", x->name, SERVICE_STATE_STR(x->state));
-                }
-            }
-            break;
-        }
-
-        UNLOCK;
-        usleep(100*MS);
-        LOCK;
-        duration_ms += 100;
-    }
-
-    UNLOCK;
-}
-
-// lock held by caller
-static void start_autostart_services(void)
-{
-    int id;
-    char svc_dir[100];
-
-    for (id = 0; id < MAX_SERVICES; id++) {
-        service_t *x = &services_tbl[id];
-        if (x->name == NULL) {
-            continue;
-        }
-
-        if (!SERVICE_IS_STOPPED(x->state)) {
-            continue;
-        }
-
-        sprintf(svc_dir, "svcs/%s", x->name);
-        if (!util_file_exists(svc_dir, "autostart")) {
-            continue;
-        }
-
-        INFO("autostarting service %s\n", x->name);
-        x->state = SERVICE_STATE_RUNNING;
-        svc_request[id].req = SVC_REQ_NONE;
-        svc_request[id].arg = 0;
-        run_svc(id);
-    }
-}
-
-// lock held by caller
-static int alloc_service(char *name)
-{
-    int id;
-
-    for (id = MAX_SERVICES-1; id > 0; id--) {
-        if (services_tbl[id].name == NULL && services_tbl[id-1].name != NULL) {
-            break;
-        }
-    }
-
-    if (services_tbl[id].name != NULL) {
-        return -1;
-    }
-
-    INFO("allocating %d\n", id);
-    service_t *x = &services_tbl[id];
-    memset(x, 0, sizeof(service_t));
-    x->name = strdup(name);
-
-    return id;
-}
-
-// lock held by caller
-static void free_service(int id)
-{
-    service_t *x = &services_tbl[id];
-
-    free(x->name);
-    x->name = NULL;
-    memset(x, 0, sizeof(service_t));
-}
-
-// lock held by caller
-static bool is_name_in_svcs(char *name)
-{
-    for (int i = 0; i < max_svcs; i++) {
-        if (strcmp(svcs[i], name) == 0) {
-            return true;
-        }
-    }
-
-    return false;
-}
-
-// lock held by caller
-static bool is_name_in_services(char *name)
-{
-    for (int id = 0; id < MAX_SERVICES; id++) {
-        service_t *x = &services_tbl[id];
-        if (x->name && strcmp(name, x->name) == 0) {
-            return true;
-        }
-    }
-
-    return false;
 }
 
 // -----------------  SETTINGS  -----------------------------------
@@ -1305,7 +666,7 @@ static void settings(void)
             }
             break; }
         case EVID_SERVICES:
-            services();
+            svcs_display(BG_COLOR);
             break;
 #ifdef ANDROID
         case EVID_RESET_APPS_AND_SVCS: {

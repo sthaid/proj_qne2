@@ -274,16 +274,6 @@ void sdlx_get_event(long timeout_us, sdlx_event_t *event);
 char *sdlx_get_input_str(char *prompt, bool numeric_keybd, int bg_color);
 
 // --------------------
-// xxxxxxxxxx
-// --------------------
-
-#define SVC_REQ_NONE 0
-#define SVC_REQ_STOP 1
-
-void svc_call(int id, int req, int arg);
-void svc_wait(int id, int timeout_secs, int *req, int *arg);
-
-// --------------------
 // not made available in picoc
 // --------------------
 

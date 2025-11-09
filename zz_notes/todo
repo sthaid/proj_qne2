@@ -1,3 +1,45 @@
+static void request_start_all_autostart_services(void);
+static void acquire_services_lock(void) __attribute__((unused));
+static void release_services_lock(void) __attribute__((unused));
+
+
+    svcs_init();
+    svcs_stop_all();
+    svcs_display
+x       svcs_acquire_mutex();
+x       svcs_release_mutex();
+x       svcs_start_all_autostart_services();
+
+xxxxxxxx
+
+getpagesize
+
+#if 0
+
+#define SVC_REQ_STATUS_IN_PROGRESS  -1
+#define SVC_REQ_STATUS_SUCCESS      0
+#define SVC_REQ_STATUS_FAILED       1
+#define SVC_REQ_STATUS_TIMEDOUT     2
+
+typedef struct {
+    int req;
+    int status;
+    char data[120];
+} svc_req_t;
+
+// called by clients (apps)
+// returns status
+void make_svc_req(char *svc_name, int timeout_secs, svc_req_t *req);
+- if it times out dont free?
+
+// called by svcs
+svc_req_t *svc_wait_for_req(char *svc_name, int timeout_secs);
+void svc_req_done(svc_req_t *req, int status);
+
+#endif
+
+xxxxxxxxxxxxxxxxxxxx
+
 eliminate polling for services when ezapp not running
 get lat/long on demand
 

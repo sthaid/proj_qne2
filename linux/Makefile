@@ -1,6 +1,7 @@
 
 SRCS :=  \
   ../src/main.c \
+  ../src/svcs.c \
   ../src/sdlx_misc.c \
   ../src/sdlx_video.c \
   ../src/sdlx_audio.c \

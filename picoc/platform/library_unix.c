@@ -1,6 +1,7 @@
 #include "../interpreter.h"
 #include <sdlx.h>
 #include <utils.h>
+#include <svcs.h>
 
 struct StdVararg
 {
@@ -1101,8 +1102,9 @@ void Util_unmap_file (struct ParseState *Parser, struct Value *ReturnValue,
 	struct Value **Param, int NumArgs)
 {
     char *addr = Param[0]->Val->Pointer;
+    int   len  = Param[2]->Val->Integer;
 
-    util_unmap_file(addr);
+    util_unmap_file(addr, len);
 }
 
 void Util_sync_file (struct ParseState *Parser, struct Value *ReturnValue,
@@ -1300,7 +1302,7 @@ struct LibraryFunction UtilsFunctions[] = {
     { Util_file_size,        "long util_file_size(char *dir, char *fn);" },
     // file map
     { Util_map_file,         "void *util_map_file(char *dir, char *file, int len, bool create_if_needed);" },
-    { Util_unmap_file,       "void util_unmap_file(void *addr);" },
+    { Util_unmap_file,       "void util_unmap_file(void *addr, int len);" },
     { Util_sync_file,        "void util_sync_file(void *addr, int len);" },
     // params get/set
     { Util_get_str_param,    "char *util_get_str_param(char *dir, char *name, char *default_value);" },
