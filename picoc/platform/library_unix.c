@@ -708,28 +708,6 @@ void Sdl_sensor_read_humidity (struct ParseState *Parser, struct Value *ReturnVa
     ReturnValue->Val->Integer = rc;
 }
 
-// xxx it may be better to move these from sdlx.h
-void Svc_call (struct ParseState *Parser, struct Value *ReturnValue,
-	struct Value **Param, int NumArgs)
-{
-    int id    = Param[0]->Val->Integer;
-    int req   = Param[1]->Val->Integer;
-    int arg   = Param[2]->Val->Integer;
-
-    svc_call(id, req, arg);
-}
-
-void Svc_wait (struct ParseState *Parser, struct Value *ReturnValue,
-	struct Value **Param, int NumArgs)
-{
-    int  id           = Param[0]->Val->Integer;
-    int  timeout_secs = Param[1]->Val->Integer;
-    int *req          = Param[2]->Val->Pointer;
-    int *arg          = Param[3]->Val->Pointer;
-
-    svc_wait(id, timeout_secs, req, arg);
-}
-
 //
 // SDL REGISTRATION
 //
@@ -836,9 +814,6 @@ struct LibraryFunction SdlFunctions[] = {
     { Sdl_sensor_read_pressure,         "int sdlx_sensor_read_pressure(double *millibars);" },
     { Sdl_sensor_read_temperature,      "int sdlx_sensor_read_temperature(double *degrees_c);" },
     { Sdl_sensor_read_humidity,         "int sdlx_sensor_read_humidity(double *percent);" },
-
-    { Svc_call,                         "void svc_call(int id, int req, void *arg); " },
-    { Svc_wait,                         "void svc_wait(int id, int timeout_secs, int *req, int *arg); " },
 
     { NULL, NULL } };
 
@@ -1280,6 +1255,7 @@ void Util_write_png_file(struct ParseState *Parser, struct Value *ReturnValue,
 
     ReturnValue->Val->Integer = rc;
 }
+
 //
 // UTILS REGISTRATION
 //
@@ -1344,6 +1320,109 @@ typedef struct { \n\
 } json_value_t; \n\
 ";
 
+// -----------------  SVCS PLATFORM ROUTINES  --------------------------
+
+//
+// routines called by apps
+//
+
+void Svc_issue_req(struct ParseState *Parser, struct Value *ReturnValue,
+        struct Value **Param, int NumArgs)
+{
+    char      *svc_name = Param[0]->Val->Pointer;
+    svc_req_t *req      = Param[1]->Val->Pointer;
+
+    svc_issue_req(svc_name, req);
+}
+
+void Svc_is_req_complete(struct ParseState *Parser, struct Value *ReturnValue,
+        struct Value **Param, int NumArgs)
+{
+    svc_req_t *req = Param[0]->Val->Pointer;
+    bool is_complete;
+
+    is_complete = svc_is_req_complete(req);
+    ReturnValue->Val->Integer = is_complete;
+}
+
+void Svc_wait_for_req_complete(struct ParseState *Parser, struct Value *ReturnValue,
+        struct Value **Param, int NumArgs)
+{
+    svc_req_t *req          = Param[0]->Val->Pointer;
+    int        timeout_secs = Param[1]->Val->Integer;
+
+    svc_wait_for_req_complete(req, timeout_secs);
+}
+
+//
+// routines called by svcs
+//
+
+void Svc_wait_for_req(struct ParseState *Parser, struct Value *ReturnValue,
+        struct Value **Param, int NumArgs)
+{
+    char      *svc_name             = Param[0]->Val->Pointer;
+    svc_req_t **req                 = Param[1]->Val->Pointer;
+    int        timeout_abstime_secs = Param[2]->Val->Integer;
+
+    svc_wait_for_req(svc_name, req, timeout_abstime_secs);
+}
+
+void Svc_req_completed(struct ParseState *Parser, struct Value *ReturnValue,
+        struct Value **Param, int NumArgs)
+{
+    svc_req_t *req         = Param[0]->Val->Pointer;
+    int        comp_status = Param[1]->Val->Integer;
+
+    svc_req_completed(req, comp_status);
+}
+
+//
+// SVCS REGISTRATION
+//
+
+void SvcsSetupFunction(Picoc *pc)
+{
+}
+
+struct LibraryFunction SvcsFunctions[] = {
+    // routines called by apps
+    { Svc_issue_req,             "void svc_issue_req(char *svc_name, svc_req_t *req);" },
+    { Svc_is_req_complete,       "bool svc_is_req_complete(svc_req_t *req);" },
+    { Svc_wait_for_req_complete, "void svc_wait_for_req_complete(svc_req_t *req, int timeout_secs);" },
+
+    // routines called by svcs
+    { Svc_wait_for_req,          "void svc_wait_for_req(char *svc_name, svc_req_t **req, int timeout_abstime_secs);" },
+    { Svc_req_completed,         "void svc_req_completed(svc_req_t *req, int comp_status);" },
+
+    { NULL, NULL } };
+
+const char SvcsDefs[] = "\
+// common values for svc_req_t req \n\
+#define SVC_REQ_STOP 1 \n\
+\n\
+// values for svc_req_t state \n\
+#define SVC_REQ_STATE_NOT_ISSUED        0 \n\
+#define SVC_REQ_STATE_QUEUED            1 \n\
+#define SVC_REQ_STATE_IN_PROGRESS       2 \n\
+#define SVC_REQ_STATE_COMPLETE          3 \n\
+\n\
+// values for svc_req_t comp_status \n\
+#define SVC_REQ_COMP_STATUS_NOT_COMPLETE          0 \n\
+#define SVC_REQ_COMP_STATUS_OK                    1 \n\
+#define SVC_REQ_COMP_STATUS_ERROR                 2 \n\
+#define SVC_REQ_COMP_STATUS_ERROR_QUEUE_FULL      3 \n\
+#define SVC_REQ_COMP_STATUS_ERROR_INVALID_REQ     4 \n\
+#define SVC_REQ_COMP_STATUS_ERROR_INVLD_SVC_NAME  5 \n\
+\n\
+typedef struct { \n\
+    int  req; \n\
+    int  state; \n\
+    int  comp_status; \n\
+    char data[100]; \n\
+} svc_req_t; \n\
+";
+
 // -----------------  PLATFORM INIT PROC  -------------------------------
 
 void PlatformLibraryInit(Picoc *pc)
@@ -1361,4 +1440,11 @@ void PlatformLibraryInit(Picoc *pc)
         UtilsSetupFunction,
         UtilsFunctions, 
         UtilsDefs);
+
+    IncludeRegister(
+        pc, 
+        "svcs.h", 
+        SvcsSetupFunction,
+        SvcsFunctions, 
+        SvcsDefs);
 }

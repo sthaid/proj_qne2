@@ -31,7 +31,7 @@
 #define SERVICE_IS_STOPPED(state)  ((state) == SERVICE_STATE_STOPPED || \
                                     (state) == SERVICE_STATE_STOPPED_BY_ERROR)
 
-#define MAX_SVCS 20
+#define MAX_SVCS 10
 #define MAX_SVC_REQ_QUEUE 5
 
 #define MS  1000L
