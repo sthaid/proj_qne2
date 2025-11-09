@@ -7,9 +7,10 @@
 
 // variables
 char *progname;
+char *data_dir;
     
 // prototypes
-int download_city_and_town_locations(char *id);
+//xxx int download_city_and_town_locations(char *id);
 
 // -----------------  MAIN  ------------------------------------------
     
@@ -19,13 +20,18 @@ int main(int argc, char **argv)
     sdlx_event_t event;
     bool         done = false;
 
-    // get arg values
+    // save args
+    if (argc != 2) {
+        printf("ERROR: data_dir arg expected\n");
+        return 1;
+    }
     progname = argv[0];
-    printf("INFO %s: starting\n", progname);
+    data_dir = argv[1];
+    printf("INFO %s: starting, data_dir=%s\n", progname, data_dir);
 
     // xxx
-    download_city_and_town_locations("us");
-    return 1;
+    //download_city_and_town_locations("us");
+    //return 1;
 
     // init sdl video subsystem
     rc = sdlx_init(SUBSYS_VIDEO);
@@ -67,6 +73,7 @@ int main(int argc, char **argv)
     return 0;
 }
 
+#if 0  // xxx in the svc
 // -----------------  DOWNLOAD CITY & TOWN LOCATIONS  ----------------
 
 int read_and_parse_json_file(char *filename);
@@ -186,3 +193,4 @@ error:
     util_json_free(root);
     return -1;
 }
+#endif

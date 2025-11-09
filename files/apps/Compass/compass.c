@@ -8,6 +8,7 @@
 
 // variables
 static char *progname;
+static char *data_dir;
 
 // prototypes
 double smooth(double newval);
@@ -24,9 +25,14 @@ int main(int argc, char **argv)
     double          heading = 0;
     bool            quit = false;
 
-    // save arg values
+    // save args
+    if (argc != 2) {
+        printf("ERROR: data_dir arg expected\n");
+        return 1;
+    }
     progname = argv[0];
-    printf("INFO %s: starting\n", progname);
+    data_dir = argv[1];
+    printf("INFO %s: starting, data_dir=%s\n", progname, data_dir);
 
     // init sdl
     rc = sdlx_init(SUBSYS_VIDEO | SUBSYS_SENSOR);
@@ -37,7 +43,7 @@ int main(int argc, char **argv)
 
     // read the compass image pixels from file, and
     // create compass image texture
-    rc = util_read_png_file(progname, "compass.png", &pixels, &w, &h);
+    rc = util_read_png_file(data_dir, "compass.png", &pixels, &w, &h);
     if (rc != 0) {
         printf("ERROR %s failed to decode png file %s\n", progname, "compass.png");
         goto cleanup_and_return;

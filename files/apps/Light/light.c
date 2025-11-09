@@ -10,6 +10,7 @@
 
 // variables
 char *progname;
+char *data_dir;
     
 // -----------------  MAIN  ------------------------------------------
     
@@ -20,9 +21,14 @@ int main(int argc, char **argv)
     sdlx_event_t event;
     int rc;
 
-    // get arg values
+    // save args
+    if (argc != 2) {
+        printf("ERROR: data_dir arg expected\n");
+        return 1;
+    }
     progname = argv[0];
-    printf("INFO %s: starting\n", progname);
+    data_dir = argv[1];
+    printf("INFO %s: starting, data_dir=%s\n", progname, data_dir);
 
     // init sdl video subsystem
     rc = sdlx_init(SUBSYS_VIDEO);
@@ -32,7 +38,7 @@ int main(int argc, char **argv)
     }
 
     // get color from param store; set to COLOR_WHITE if not in params
-    color = util_get_int_param(progname, "color", COLOR_WHITE);
+    color = util_get_int_param(data_dir, "color", COLOR_WHITE);
 
     // runtime loop
     while (!done) {
@@ -54,11 +60,11 @@ int main(int argc, char **argv)
         switch (event.event_id) {
         case EVID_SET_COLOR_WHITE:
             color = COLOR_WHITE;
-            util_set_int_param(progname, "color", color);
+            util_set_int_param(data_dir, "color", color);
             break;
         case EVID_SET_COLOR_RED:
             color = COLOR_RED;
-            util_set_int_param(progname, "color", color);
+            util_set_int_param(data_dir, "color", color);
             break;
         case EVID_QUIT:
             done = true;

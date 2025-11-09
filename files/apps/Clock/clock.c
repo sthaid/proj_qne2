@@ -40,9 +40,14 @@ int main(int argc, char **argv)
     struct tm       tm;
     char            sunrise_calc[50], sunset_calc[50], midday_calc[50];
 
-    // save arg values
+    // save args
+    if (argc != 2) {
+        printf("ERROR: data_dir arg expected\n");
+        return 1;
+    }
     progname = argv[0];
-    printf("INFO %s: starting\n", progname);
+    data_dir = argv[1];
+    printf("INFO %s: starting, data_dir=%s\n", progname, data_dir);
 
     // Get sunrise / sunset times from https://sunrise-sunset.org/api.
     // The purpose of this is to test that the sunrise_sunset_calc code 

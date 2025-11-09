@@ -6,6 +6,7 @@
 
 // variables
 char *progname;
+char *data_dir;
     
 // -----------------  MAIN  ------------------------------------------
     
@@ -15,9 +16,14 @@ int main(int argc, char **argv)
     sdlx_event_t event;
     bool         done = false;
 
-    // get arg values
+    // save args
+    if (argc != 2) {
+        printf("ERROR: data_dir arg expected\n");
+        return 1;
+    }
     progname = argv[0];
-    printf("INFO %s: starting\n", progname);
+    data_dir = argv[1];
+    printf("INFO %s: starting, data_dir=%s\n", progname, data_dir);
 
     // init sdl video subsystem
     rc = sdlx_init(SUBSYS_VIDEO);

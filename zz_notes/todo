@@ -1,3 +1,27 @@
+    // save args
+    if (argc != 2) {
+        printf("ERROR: data_dir arg expected\n");
+        return 1;
+    }
+    progname = argv[0];
+    data_dir = argv[1];
+    printf("INFO %s: starting, data_dir=%s\n", progname, data_dir);
+
+
+drwxrwxr-x 2 haid haid 4.0K Nov  4 07:59 Clock
+drwxrwxr-x 2 haid haid 4.0K Nov  4 08:00 Compass
+drwxrwxr-x 3 haid haid 4.0K Nov  4 07:56 HexCalc
+drwxrwxr-x 2 haid haid 4.0K Nov  4 08:01 Light
+drwxrwxr-x 3 haid haid 4.0K Nov  6 08:01 Location
+drwxrwxr-x 2 haid haid 4.0K Nov  4 08:00 Morse                 k
+drwxrwxr-x 2 haid haid 4.0K Nov  9 14:24 Reversi               k
+drwxrwxr-x 2 haid haid 4.0K Nov  9 13:32 Template              k
+drwxrwxr-x 2 haid haid 4.0K Nov  4 15:36 Test                  k
+
+
+xxxxxxxxxxxxxxxxxxxxxx
+
+
 static void request_start_all_autostart_services(void);
 static void acquire_services_lock(void) __attribute__((unused));
 static void release_services_lock(void) __attribute__((unused));

@@ -67,8 +67,13 @@ int main(int argc, char **argv)
     int rc;
 
     // save args
+    if (argc != 2) {
+        printf("ERROR: data_dir arg expected\n");
+        return 1;
+    }
     progname = argv[0];
-    printf("INFO %s: starting\n", progname);
+    data_dir = argv[1];
+    printf("INFO %s: starting, data_dir=%s\n", progname, data_dir);
 
     // init sdl
     rc = sdlx_init(SUBSYS_VIDEO | SUBSYS_AUDIO | SUBSYS_SENSOR);
@@ -85,13 +90,13 @@ int main(int argc, char **argv)
     // test calling a routine that is defined in another file
     test1_proc();
 
-    // test reading a file in the 'progname' dir
+    // test reading a file in the 'data_dir' dir
     int file_len;
-    char *file_content = util_read_file(progname, "common.h", &file_len);
+    char *file_content = util_read_file(data_dir, "common.h", &file_len);
     if (file_content == NULL) {
-        printf("ERROR %s: failed to read file common.h\n", progname);
+        printf("ERROR %s: failed to read file common.h\n", data_dir);
     } else {
-        printf("INFO %s: read file common.h okay, file_len = %d\n", progname, file_len);
+        printf("INFO %s: read file common.h okay, file_len = %d\n", data_dir, file_len);
     }
 
     // call handler routine for the current page
@@ -485,7 +490,7 @@ static void page_5_draw(void)
         return;
     }
 
-    ret = util_write_png_file(progname, "test5.png", pixels, w_pixels, h_pixels);
+    ret = util_write_png_file(data_dir, "test5.png", pixels, w_pixels, h_pixels);
     if (ret != 0) {
         printf("ERROR %s: failed to write test5.png\n", progname);
         free(pixels);
@@ -497,7 +502,7 @@ static void page_5_draw(void)
     // read the png file created above
     // create a texture from the pixels, and
     // display the texture rotated 180 degrees
-    ret = util_read_png_file(progname, "test5.png", &pixels, &w_pixels, &h_pixels);
+    ret = util_read_png_file(data_dir, "test5.png", &pixels, &w_pixels, &h_pixels);
     if (ret != 0) {
         printf("ERROR %s: failed to read test5.png\n", progname);
         return;
@@ -702,15 +707,15 @@ static void page_7_process_event(sdlx_event_t *ev)
 
     switch (ev->event_id) {
     case EVID_AUDIO_PLAY_TONE:
-        sdlx_audio_create_test_file(progname, "audio_test.raw", 10, 1000);
-        rc = sdlx_audio_play(progname, "audio_test.raw");
+        sdlx_audio_create_test_file(data_dir, "audio_test.raw", 10, 1000);
+        rc = sdlx_audio_play(data_dir, "audio_test.raw");
         if (rc != 0) {
             printf("ERROR %s: sdlx_audio_play audio_test.raw failed\n", progname);
         }
-        util_delete_file(progname, "audio_test.raw");
+        util_delete_file(data_dir, "audio_test.raw");
         break;
     case EVID_AUDIO_PLAY_RECORDING:
-        rc = sdlx_audio_play(progname, "recording.raw");
+        rc = sdlx_audio_play(data_dir, "recording.raw");
         if (rc != 0) {
             printf("ERROR %s: sdlx_audio_play recording.raw failed\n", progname);
         }
@@ -745,7 +750,7 @@ static void page_7_process_event(sdlx_event_t *ev)
         }
 
         // 30 sec max, 3 sec auto stop, new recording
-        rc = sdlx_audio_record(progname, "recording.raw", 30, 3, false);
+        rc = sdlx_audio_record(data_dir, "recording.raw", 30, 3, false);
         if (rc != 0) {
             printf("ERROR %s: sdlx_audio_record failed\n", progname);
         }
@@ -758,7 +763,7 @@ static void page_7_process_event(sdlx_event_t *ev)
         }
 
         // 30 sec max, 3 sec auto stop, append
-        rc = sdlx_audio_record(progname, "recording.raw", 30, 3, true);
+        rc = sdlx_audio_record(data_dir, "recording.raw", 30, 3, true);
         if (rc != 0) {
             printf("ERROR %s: sdlx_audio_record append failed\n", progname);
         }

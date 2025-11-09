@@ -35,8 +35,9 @@ typedef struct {
     int max;
 } possible_moves_t;
 
-// program name from argv[0]
+// program name and data_dir form argv
 char *progname;
+char *data_dir;
 
 // this routine utilizes the Alpha-beta pruning algorithm to 
 // determine the CPU move

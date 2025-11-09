@@ -27,6 +27,7 @@
 
 // variables
 static char  *progname;
+static char  *data_dir;
 static int    max_words;
 static char **words;
     
@@ -46,16 +47,21 @@ int main(int argc, char **argv)
     sdlx_tone_t        tones[2000];
     char               random_words[200] = "";
 
-    // get arg values
+    // save args
+    if (argc != 2) {
+        printf("ERROR: data_dir arg expected\n");
+        return 1;
+    }
     progname = argv[0];
-    printf("INFO %s: starting\n", progname);
+    data_dir = argv[1];
+    printf("INFO %s: starting, data_dir=%s\n", progname, data_dir);
 
     // seen random number generator so that different random words are 
     // chosen on repeated runs of this program
     srandom(time(NULL));
 
     // get words-per-minute (wpm) from param store; set to default 5 if not in params
-    wpm = util_get_int_param(progname, "wpm", 5);
+    wpm = util_get_int_param(data_dir, "wpm", 5);
 
     // read word list, sets global variables word_list and max_word_list
     rc = read_word_list();
@@ -150,13 +156,13 @@ int main(int argc, char **argv)
         case EVID_WPM_INC:
             if (wpm < 20) {
                 wpm++;
-                util_set_int_param(progname, "wpm", wpm);
+                util_set_int_param(data_dir, "wpm", wpm);
             }
             break;
         case EVID_WPM_DEC:
             if (wpm > 5) {
                 wpm--;
-                util_set_int_param(progname, "wpm", wpm);
+                util_set_int_param(data_dir, "wpm", wpm);
             }
             break;
         case EVID_QUIT:
@@ -184,9 +190,9 @@ static int read_word_list(void)
     char *words_file, *s, *p;
 
     // read words file
-    words_file = util_read_file(progname, "words", &file_len);
+    words_file = util_read_file(data_dir, "words", &file_len);
     if (words_file == NULL) {
-        printf("ERROR %s: failed to read %s/%s\n", progname, progname, "words");
+        printf("ERROR %s: failed to read %s/%s\n", progname, data_dir, "words");
         return -1;
     }
 

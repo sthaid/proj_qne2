@@ -49,9 +49,14 @@ int main(int argc, char **argv)
     board_t board;
     char    eval_str[100];
 
-    // save arg values
-    progname  = argv[0];
-    printf("INFO %s: starting\n", progname);
+   // save args
+    if (argc != 2) {
+        printf("ERROR: data_dir arg expected\n");
+        return 1;
+    }
+    progname = argv[0];
+    data_dir = argv[1];
+    printf("INFO %s: starting, data_dir=%s\n", progname, data_dir);
 
     // init variables
     game_state = GAME_STATE_READY;
@@ -128,11 +133,11 @@ int main(int argc, char **argv)
         } else if (event.event_id == EVID_PLAYER_BLACK_SELECT) {
             board.player_black++;
             if (board.player_black > CPU(6)) board.player_black = HUMAN;  // xxx 3 on Android
-            util_set_int_param(progname, "player_black", board.player_black);
+            util_set_int_param(data_dir, "player_black", board.player_black);
         } else if (event.event_id == EVID_PLAYER_WHITE_SELECT) {
             board.player_white++;
             if (board.player_white > CPU(6)) board.player_white = HUMAN;  // xxx 3 on Android
-            util_set_int_param(progname, "player_white", board.player_white);
+            util_set_int_param(data_dir, "player_white", board.player_white);
         } else if (event.event_id == EVID_GAME_START) {
             game_state = GAME_STATE_ACTIVE;
         } else if (game_state == GAME_STATE_ACTIVE && 
@@ -171,8 +176,8 @@ static void game_init(board_t *b)
     b->black_cnt      = 2;
     b->white_cnt      = 2;
     b->whose_turn     = BLACK;
-    b->player_black   = util_get_int_param(progname, "player_black", HUMAN);
-    b->player_white   = util_get_int_param(progname, "player_white", CPU(2));
+    b->player_black   = util_get_int_param(data_dir, "player_black", HUMAN);
+    b->player_white   = util_get_int_param(data_dir, "player_white", CPU(2));
 }
 
 static bool is_game_over(board_t *b)
