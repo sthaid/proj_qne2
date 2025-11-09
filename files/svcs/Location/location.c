@@ -1,11 +1,13 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdbool.h>
-#include <math.h>
 #include <string.h>
+#include <time.h>
+#include <math.h>
 
 #include <sdlx.h>
 #include <utils.h>
+#include <svcs.h>
 
 #include "svcs/Location/location.h"
 
@@ -23,6 +25,7 @@ typedef struct {
 
 // variables
 char   *progname;
+char   *data_dir;
 loc_t  *loc;
 int     max_loc;
 
@@ -35,21 +38,20 @@ int download_country_info(char *id);
 
 int main(int argc, char **argv)
 {
-    int id, req, arg;
     bool done = false;
     char name[MAX_NAME];
     double miles;
+    time_t tnow;
+    svc_req_t *req;
 
     // save args
     if (argc != 2) {
-        printf("ERROR: args expected: id\n");
+        printf("ERROR: data_dir arg expected\n");
         return 1;
     }
     progname = argv[0];
-    sscanf(argv[1], "%d", &id);
-
-    // print starting msg
-    printf("INFO %s: starting, id=%d\n", progname, id);
+    data_dir = argv[1];
+    printf("INFO %s: starting, data_dir=%s\n", progname, data_dir);
 
     // read location data
     read_location_data();
@@ -60,10 +62,16 @@ int main(int argc, char **argv)
         find_closest_location(name, &miles);
 
         // wait for up to 3600 secs for a request
-        svc_wait(id, 3600, &req, &arg);
+        // if no req received within timeout then continue
+        tnow = time(NULL);
+        svc_wait_for_req(progname, &req, tnow+3600); //xxx use abstime
+        if (req == NULL) {
+            printf("INFO %s: no req\n", progname);
+            continue;
+        }
 
         // xxx comment
-        switch (req) {
+        switch (req->req) {
         case SVC_REQ_STOP:
             done = true;
             break;
@@ -95,18 +103,18 @@ void read_location_data(void)
     max_loc = 0;
 
     // catenate the *.loc files
-    sprintf(cmd, "cat %s/*.loc > %s/all_loc", progname, progname);
+    sprintf(cmd, "cat %s/*.loc > %s/all_loc", data_dir, data_dir);
     system(cmd);
 
     // read the catenated file
-    loc = util_read_file(progname, "all_loc", &len);
+    loc = util_read_file(data_dir, "all_loc", &len);
     if (loc == NULL) {
         printf("ERROR %s: failed to read all_loc\n", progname);
         return;
     }
 
     // delete all_loc file
-    util_delete_file(progname, "all_loc");
+    util_delete_file(data_dir, "all_loc");
 
     // set max_loc
     if ((len % sizeof(loc_t)) != 0) {
@@ -197,7 +205,7 @@ int download_country_info(char *id)
     sprintf(zip_filename, "%s.zip", id);
 
     // create output file
-    sprintf(out_filename, "%s/%s.loc", progname, id);
+    sprintf(out_filename, "%s/%s.loc", data_dir, id);
     fp_out = fopen(out_filename, "wb");
     if (fp_out == NULL) {
         printf("ERROR %s: failed to create %s\n", progname, out_filename);
@@ -205,9 +213,9 @@ int download_country_info(char *id)
     }
 
     // download zip file containing city/town location and names
-    util_delete_file(progname, zip_filename);
+    util_delete_file(data_dir, zip_filename);
     sprintf(cmd, "curl --silent --max-time 10 --output %s/%s.zip https://www.geoapify.com/data-share/localities/%s.zip",
-            progname, id,  id);
+            data_dir, id,  id);
     ret = system(cmd);
     if (ret != 0) {
         printf("ERROR %s: '%s' failed, ret=%d\n", progname, cmd, ret);
@@ -215,7 +223,7 @@ int download_country_info(char *id)
     }
     
     // unzip
-    sprintf(cmd, "unzip -o -d %s %s/%s.zip", progname, progname, id);
+    sprintf(cmd, "unzip -o -d %s %s/%s.zip", data_dir, data_dir, id);
     ret = system(cmd);
     if (ret != 0) {
         printf("ERROR %s: '%s' failed, ret=%d\n", progname, cmd, ret);
@@ -224,13 +232,13 @@ int download_country_info(char *id)
 
     // parse the json files to obtain city/town/village names and latitude/longitude;
     // these will be written to the file associated with 'fp_out'
-    sprintf(json_filename, "%s/%s/%s", progname, id, "place_city.ndjson");
+    sprintf(json_filename, "%s/%s/%s", data_dir, id, "place_city.ndjson");
     read_and_parse_json_file(json_filename, fp_out);
 
-    sprintf(json_filename, "%s/%s/%s", progname, id, "place-town.ndjson");
+    sprintf(json_filename, "%s/%s/%s", data_dir, id, "place-town.ndjson");
     read_and_parse_json_file(json_filename, fp_out);
 
-    sprintf(json_filename, "%s/%s/%s", progname, id, "place-village.ndjson");
+    sprintf(json_filename, "%s/%s/%s", data_dir, id, "place-village.ndjson");
     read_and_parse_json_file(json_filename, fp_out);
 
     // set ret to success
@@ -238,8 +246,8 @@ int download_country_info(char *id)
 
 done:
     // cleanup
-    util_delete_file(progname, zip_filename);
-    util_delete_dir(progname, id);
+    util_delete_file(data_dir, zip_filename);
+    util_delete_dir(data_dir, id);
     if (fp_out) {
         fclose(fp_out);
     }

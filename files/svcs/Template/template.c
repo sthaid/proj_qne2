@@ -21,7 +21,7 @@ int main(int argc, char **argv)
     }
     progname = argv[0];
     data_dir = argv[1];
-    printf("INFO %s: data_dir=%s\n", progname, data_dir);
+    printf("INFO %s: starting, data_dir=%s\n", progname, data_dir);
 
     // service runtime loop
     while (!done) {
