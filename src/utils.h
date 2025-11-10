@@ -27,7 +27,7 @@ void util_delete_dir(char *dir, char *dir_to_delete);
 
 // -----------------  FILE MAP -------------------------------
 
-void *util_map_file(char *dir, char *file, int len, bool create_if_needed);
+void *util_map_file(char *dir, char *file, int len, bool create_if_needed, bool read_only);
 void util_unmap_file(void *addr, int len);
 void util_sync_file(void *addr, int len);
 

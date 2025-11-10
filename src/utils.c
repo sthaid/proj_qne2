@@ -6,6 +6,8 @@
 #include "../cJSON/cJSON.h"
 #include "../lodepng/lodepng.h"
 
+#define PAGE_SIZE (getpagesize())
+
 // ----------------- TIME --------------------
 
 long util_microsec_timer(void)
@@ -182,9 +184,7 @@ void util_delete_dir(char *dir, char *dir_to_delete)
 
 // -----------------  FILE MAP -------------------------------
 
-#define PAGE_SIZE 0x1000    // xxx 0x4000  // 16k  need to support 16k too
-
-void *util_map_file(char *dir, char *file, int len_arg, bool create_if_needed)
+void *util_map_file(char *dir, char *file, int len_arg, bool create_if_needed, bool read_only)
 {
     char   path[100];
     int    fd, rc, file_len, len;
@@ -192,6 +192,8 @@ void *util_map_file(char *dir, char *file, int len_arg, bool create_if_needed)
     void  *addr = NULL;
     struct stat statbuf;
     char   *zero;
+
+// xxx dont allow create and read_only both true
 
     // round len up to multiple of pagesize
     len = (len_arg + PAGE_SIZE - 1) & ~(PAGE_SIZE-1);
@@ -241,12 +243,14 @@ void *util_map_file(char *dir, char *file, int len_arg, bool create_if_needed)
 
     // map the file
     INFO("mapping %s len=%d\n", path, len);
-    fd = open(path, O_RDWR);
+    fd = open(path, read_only ? O_RDONLY : O_RDWR);
     if (fd < 0) {
         ERROR("failed to open %s, %s\n", path, strerror(errno));
         goto done;  
     }
-    addr = mmap(NULL, len, PROT_READ|PROT_WRITE, MAP_SHARED, fd, 0);
+    addr = mmap(NULL, len, 
+                read_only ? PROT_READ : PROT_READ|PROT_WRITE, 
+                MAP_SHARED, fd, 0);
     if (addr == NULL) {
         ERROR("mmap %s failed, %s\n", path, strerror(errno));
         close(fd);

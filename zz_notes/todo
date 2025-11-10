@@ -8,10 +8,10 @@
     printf("INFO %s: starting, data_dir=%s\n", progname, data_dir);
 
 
-drwxrwxr-x 2 haid haid 4.0K Nov  4 07:59 Clock
-drwxrwxr-x 2 haid haid 4.0K Nov  4 08:00 Compass
-drwxrwxr-x 3 haid haid 4.0K Nov  4 07:56 HexCalc
-drwxrwxr-x 2 haid haid 4.0K Nov  4 08:01 Light
+drwxrwxr-x 2 haid haid 4.0K Nov  4 07:59 Clock                 k
+drwxrwxr-x 2 haid haid 4.0K Nov  4 08:00 Compass               k
+drwxrwxr-x 3 haid haid 4.0K Nov  4 07:56 HexCalc               k
+drwxrwxr-x 2 haid haid 4.0K Nov  4 08:01 Light                 k
 drwxrwxr-x 3 haid haid 4.0K Nov  6 08:01 Location
 drwxrwxr-x 2 haid haid 4.0K Nov  4 08:00 Morse                 k
 drwxrwxr-x 2 haid haid 4.0K Nov  9 14:24 Reversi               k
