@@ -72,7 +72,7 @@ int main(int argc, char **argv)
     }
 
     // xxx
-    hour = time(NULL) / 3600 + 1;
+    hour = time(NULL) / 3600; //xxx + 1;
 
     // service runtime loop
     while (true) {
@@ -82,7 +82,8 @@ int main(int argc, char **argv)
         // if req recvd then process the req
         if (req != NULL) {
             if (req->req == SVC_REQ_STOP) {
-                break;
+                svc_req_completed(req, SVC_REQ_COMP_STATUS_OK);
+                break;  // xxx process this in process_req
             }
             process_req(req);
         }
@@ -151,15 +152,20 @@ void process_req(svc_req_t *req)
     switch (req->req) {
     case SVC_LOCATION_REQ_GET_LOC_INFO:
         //find_closest_loc_data(name, &miles);
+        svc_req_completed(req, SVC_REQ_COMP_STATUS_OK);
         break;
     case SVC_LOCATION_REQ_ADD_COUNTRY_INFO:
         //download_country_info("us");
+        svc_req_completed(req, SVC_REQ_COMP_STATUS_OK);
         break;
     case SVC_LOCATION_REQ_DEL_COUNTRY_INFO:
+        svc_req_completed(req, SVC_REQ_COMP_STATUS_OK);
         break;
     case SVC_LOCATION_REQ_LIST_COUNTRY_INFO:
+        svc_req_completed(req, SVC_REQ_COMP_STATUS_OK);
         break;
     default:
+        svc_req_completed(req, SVC_REQ_COMP_STATUS_ERROR_INVALID_REQ);
         // xxx ERROR
     }
 }

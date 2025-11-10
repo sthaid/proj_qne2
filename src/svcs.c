@@ -276,6 +276,9 @@ void svc_issue_req(char *svc_name, svc_req_t *req)
 {
     int id, i;
 
+    // xxx fix prints
+    INFO("svc_name = %s req = %d\n", svc_name, req->req);
+
     // get svc id for the svc_name
     id = svc_name_to_id(svc_name);
     if (id == -1) {
@@ -340,11 +343,13 @@ void svc_wait_for_req_complete(svc_req_t *req, int timeout_secs)
 // routines called by svcs
 //
 
-void svc_wait_for_req(char *svc_name, svc_req_t **req, int timeout_abstime_secs)  // XXX use abstime
+void svc_wait_for_req(char *svc_name, svc_req_t **req, int timeout_abstime_secs)
 {
     struct timespec ts = {timeout_abstime_secs, 0 };
     int             ret;
     int             id;
+
+    INFO("svc_name = %s timeout_abstime_secs = %d\n", svc_name, timeout_abstime_secs);
 
     // get svc id for the svc_name
     id = svc_name_to_id(svc_name);

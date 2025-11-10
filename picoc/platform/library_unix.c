@@ -1075,7 +1075,7 @@ void Util_unmap_file (struct ParseState *Parser, struct Value *ReturnValue,
 	struct Value **Param, int NumArgs)
 {
     char *addr = Param[0]->Val->Pointer;
-    int   len  = Param[2]->Val->Integer;
+    int   len  = Param[1]->Val->Integer;
 
     util_unmap_file(addr, len);
 }
