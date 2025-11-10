@@ -1,5 +1,7 @@
 #include <stdio.h>
 #include <stdbool.h>
+#include <stdlib.h>
+#include <string.h>
 #include <math.h>
 
 #include <utils.h>
@@ -8,36 +10,38 @@
 
 // -----------------  INIT LOC DATA  --------------------------------
 
-void init_loc_data(void)
+int init_loc_data(void)
 {
     char cmd[200];
     int  len;
 
     // init number of loc to 0
-    max_loc = 0;
+    max_loc_data = 0;
 
     // catenate the *.loc files
     sprintf(cmd, "cat %s/*.loc > %s/all_loc", data_dir, data_dir);
     system(cmd);
 
     // read the catenated file
-    loc = util_read_file(data_dir, "all_loc", &len);
-    if (loc == NULL) {
+    loc_data = util_read_file(data_dir, "all_loc", &len);
+    if (loc_data == NULL) {
         printf("ERROR %s: failed to read all_loc\n", progname);
-        return;
+        return -1;
     }
 
     // delete all_loc file
     util_delete_file(data_dir, "all_loc");
 
-    // set max_loc
-    if ((len % sizeof(loc_t)) != 0) {
-        // xxx ret error
+    // set max_loc_data
+    if ((len % sizeof(loc_data_t)) != 0) {
         printf("ERROR %s: invalid len %d of file all_loc\n", progname, len);
-        return;
+        return -1;
     }
-    max_loc = len / sizeof(loc_t);
-    printf("INFO %s: max_loc = %d\n", progname, max_loc);
+    max_loc_data = len / sizeof(loc_data_t);
+    printf("INFO %s: max_loc_data = %d\n", progname, max_loc_data);
+
+    // return success
+    return 0;
 }
 
 // -----------------  FIND CLOSEST LOC DATA  ------------------------
@@ -63,8 +67,8 @@ void find_closest_loc_data(double latitude, double longitude, char *name, double
     closest_name[0] = '\0';
 
     // loop over all locations, and find the closest
-    for (int i = 0; i < max_loc; i++) {
-        loc_t *x = &loc[i];
+    for (int i = 0; i < max_loc_data; i++) {
+        loc_data_t *x = &loc_data[i];
 
         delta_lat = fabs(latitude - x->latitude);
         if (delta_lat > 0.5) {
@@ -202,13 +206,13 @@ int read_and_parse_json_file(char *json_filename, FILE *fp_out)
             latitude.type == JSON_TYPE_NUMBER &&
             longitude.type == JSON_TYPE_NUMBER)
         {
-            loc_t x;
+            loc_data_t x;
             x.latitude = latitude.u.number;
             x.longitude = longitude.u.number;
             strncpy(x.name, name.u.string, MAX_NAME);
             x.name[MAX_NAME-1] = '\0';
 
-            fwrite(&x, sizeof(loc_t), 1, fp_out);
+            fwrite(&x, sizeof(loc_data_t), 1, fp_out);
             success_cnt++;
         } else {
             skip_cnt++;

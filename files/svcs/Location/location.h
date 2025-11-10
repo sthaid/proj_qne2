@@ -6,7 +6,6 @@
 #define SVC_LOCATION_REQ_DEL_COUNTRY_INFO   12
 #define SVC_LOCATION_REQ_LIST_COUNTRY_INFO  13
 
-#define MAX_NAME            32
 #define LOC_HIST_FILE_MAGIC 0x55aa5501
 #define LOC_HIST_FILENAME   "loc_hist"
 #define MAX_LOC_HIST        1000

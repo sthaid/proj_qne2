@@ -3,6 +3,12 @@
 
 // private header file, do not include in client app
 
+// xxx maybe rename this file OR some other solution fro these 2 vars
+char         *progname;
+char         *data_dir;
+
+#define MAX_NAME 32
+
 typedef struct {
     double latitude;
     double longitude;

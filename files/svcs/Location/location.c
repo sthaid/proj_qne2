@@ -9,8 +9,8 @@
 #include <utils.h>
 #include <svcs.h>
 
-#include "svcs/Location/location.h"
 #include "svcs/Location/loc_data.h"
+#include "svcs/Location/location.h"
 
 // defines
 #define BOLTON_MASS_LATITUDE     42.4334
@@ -24,9 +24,7 @@ typedef struct {
 } loc_t;
 
 // variables
-char         *progname;
-char         *data_dir;
-loc_hist_t   *loc_hist;
+loc_hist_t *loc_hist;
 
 // prototypes
 void add_entry_to_loc_hist(time_t t, double latitude, double longitude, char *name, double miles);
