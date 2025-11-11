@@ -7,7 +7,7 @@
 char         *progname;
 char         *data_dir;
 
-#define MAX_NAME 32
+#define MAX_NAME 32  // xxx fix
 
 typedef struct {
     double latitude;

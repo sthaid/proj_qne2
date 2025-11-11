@@ -32,10 +32,8 @@ void process_req(svc_req_t *req);
 // xxx todo
 // - improve picoc to use 64bit time_t
 //   signed int time_t overflows in year 2038
-// - update svc_wait_for_req to take 64 bit time
 // - check sizeof native android time_t
 // - support NAN in picoc
-// - support popen either in utils or cstdlib
 
 // -----------------  MAIN  -----------------------------------------
 
@@ -59,19 +57,21 @@ int main(int argc, char **argv)
     // read location data
     rc = init_loc_data();
     if (rc != 0) {
-        // xxx ERROR
+        printf("ERROR: %s failed to read location data\n", progname);
+        return 1;
     }
 
     // map the loc_hist file
-    // xxx if it was created then init the magic
-    // xxx or eliminte magic
     loc_hist = util_map_file(data_dir, LOC_HIST_FILENAME, sizeof(loc_hist_t), true, false, &created);
     if (loc_hist == NULL) {
-        // xxx ERROR
+        printf("ERROR: %s failed to map %s\n", progname, LOC_HIST_FILENAME);
+        return 1;
     }
 
-    // xxx
-    abstime = time(NULL) / 60 * 60;
+    // set absolute time at which svc_wait_for_req will timeout;
+    // this time is rounded down to the prior hour so that the first
+    // call to svc_wait_for_req will timeout immedeately
+    abstime = time(NULL) / 3600 * 3600;
 
     // service runtime loop
     while (!end_program) {
@@ -96,7 +96,7 @@ int main(int argc, char **argv)
             }
 
             // increment abstime
-            abstime += 60;
+            abstime += 3600;
             continue;
         }
 
@@ -136,7 +136,7 @@ void add_entry_to_loc_hist(time_t t, double latitude, double longitude, char *na
 
     loc_hist->count++;
 
-    // xxx sync
+    util_sync_file(loc_hist, sizeof(loc_hist_t));
 }
 
 char *most_recent_loc_hist_name(void)
@@ -157,10 +157,22 @@ void process_req(svc_req_t *req)
         svc_req_completed(req, SVC_REQ_COMP_STATUS_OK);
         end_program = true;
         break;
-    case SVC_LOCATION_REQ_GET_LOC_INFO:
-        //find_closest_loc_data(name, &miles);
+    case SVC_LOCATION_REQ_GET_LOC_INFO: {
+        double              latitude, longitude, miles;
+        char                name[MAX_NAME];
+        req_get_loc_info_t *x = (req_get_loc_info_t*)req->data;
+
+        util_get_location(&latitude, &longitude, NULL);
+        find_closest_loc_data(latitude, longitude, name, &miles);
+
+        x->out.t          = time(NULL);
+        x->out.latitude   = latitude;
+        x->out.longitude  = longitude;
+        x->out.miles      = miles;
+        strcpy(x->out.name, name);
+
         svc_req_completed(req, SVC_REQ_COMP_STATUS_OK);
-        break;
+        break; }
     case SVC_LOCATION_REQ_ADD_COUNTRY_INFO:
         //download_country_info("us");
         svc_req_completed(req, SVC_REQ_COMP_STATUS_OK);

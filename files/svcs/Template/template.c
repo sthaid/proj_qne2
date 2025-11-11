@@ -33,7 +33,7 @@ int main(int argc, char **argv)
     data_dir = argv[1];
     printf("INFO %s: starting, data_dir=%s\n", progname, data_dir);
 
-    // set absolute time at whcih svc_wiat_for_req will timeout;
+    // set absolute time at which svc_wait_for_req will timeout;
     // this time is rounded down to the prior minute so that the first
     // call to svc_wait_for_req will timeout immedeately
     abstime = time(NULL) / 60 * 60;

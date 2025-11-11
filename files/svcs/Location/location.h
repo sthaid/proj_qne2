@@ -11,15 +11,19 @@
 #define MAX_LOC_HIST        1000
 
 typedef struct {
-    int magic;
     int count;
+    int pad;
     struct loc_hist_entry_s {
         unsigned long t;
         double        latitude;
         double        longitude;
-        char          name[MAX_NAME];
         double        miles;
+        char          name[MAX_NAME];
     } loc[MAX_LOC_HIST];
 } loc_hist_t;
+
+typedef struct {
+    struct loc_hist_entry_s out;
+} req_get_loc_info_t;
 
 #endif
