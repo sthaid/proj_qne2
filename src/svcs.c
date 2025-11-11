@@ -272,7 +272,7 @@ void svcs_stop_all(void)
 // routines called by apps
 //
 
-void svc_issue_req(char *svc_name, svc_req_t *req)
+int svc_issue_req(char *svc_name, svc_req_t *req)
 {
     int id, i;
 
@@ -283,8 +283,8 @@ void svc_issue_req(char *svc_name, svc_req_t *req)
     id = svc_name_to_id(svc_name);
     if (id == -1) {
         ERROR("svc_name %s not found\n", svc_name);
-        svc_req_completed(req, SVC_REQ_COMP_STATUS_ERROR_INVLD_SVC_NAME);
-        return;
+        svc_req_completed(req, SVC_REQ_COMP_STATUS_ERROR_SVC_NOT_FOUND);
+        return SVC_ISSUE_REQ_ERROR_SVC_NOT_FOUND;
     }
     svc_t *x = &svcs[id];
     INFO("name=%s id=%d req=%d\n", x->name, id, req->req);
@@ -304,18 +304,22 @@ void svc_issue_req(char *svc_name, svc_req_t *req)
         ERROR("svc %s req queu is full\n", x->name);
         svc_req_completed(req, SVC_REQ_COMP_STATUS_ERROR_QUEUE_FULL);
         pthread_mutex_unlock(&x->mutex);
-        return;
+        return SVC_ISSUE_REQ_ERROR_QUEUE_FULL;
     }
         
     // queue the req
     x->req[i] = req;
     req->state = SVC_REQ_STATE_QUEUED;
+    req->comp_status = SVC_REQ_COMP_STATUS_NOT_COMPLETE;
 
     // signal the condition, to wake the svc
     pthread_cond_signal(&x->cond);
 
     // release mutex
     pthread_mutex_unlock(&x->mutex);
+
+    // success
+    return SVC_ISSUE_REQ_SUCCESS;
 }
 
 bool svc_is_req_complete(svc_req_t *req)
@@ -343,23 +347,23 @@ void svc_wait_for_req_complete(svc_req_t *req, int timeout_secs)
 // routines called by svcs
 //
 
-void svc_wait_for_req(char *svc_name, svc_req_t **req, int timeout_abstime_secs)
+int svc_wait_for_req(char *svc_name, svc_req_t **req, long timeout_abstime_secs)
 {
     struct timespec ts = {timeout_abstime_secs, 0 };
     int             ret;
     int             id;
 
-    INFO("svc_name = %s timeout_abstime_secs = %d\n", svc_name, timeout_abstime_secs);
-
+    INFO("svc_name=%s timeout_abstime_secs=%ld time_until_timeout=%ld\n", 
+         svc_name, timeout_abstime_secs, timeout_abstime_secs-time(NULL));
+ 
     // get svc id for the svc_name
     id = svc_name_to_id(svc_name);
     if (id == -1) {
         ERROR("svc_name %s not found\n", svc_name);
         *req = NULL;
-        return;
+        return SVC_WAIT_FOR_REQ_ERROR_SVC_NOT_FOUND;
     }
     svc_t *x = &svcs[id];
-    INFO("name=%s id=%d\n", x->name, id);
 
     // acquire mutex
     pthread_mutex_lock(&x->mutex);
@@ -368,13 +372,15 @@ void svc_wait_for_req(char *svc_name, svc_req_t **req, int timeout_abstime_secs)
     while (x->req[0] == NULL) {
         ret = pthread_cond_timedwait(&x->cond, &x->mutex, &ts);
         if (ret == ETIMEDOUT) {
-            INFO("got ETIMEDOUT\n");
+            INFO("pthread_cond_timedwait timedout\n");
             *req = NULL;
-            return;
+            pthread_mutex_unlock(&x->mutex);
+            return SVC_WAIT_FOR_REQ_ERROR_TIMEDOUT;
         } else if (ret != 0) {
-            ERROR("got ret %d\n", ret);
+            INFO("pthread_cond_timedwait ret=%d\n", ret);
             *req = NULL;
-            return;
+            pthread_mutex_unlock(&x->mutex);
+            return SVC_WAIT_FOR_REQ_ERROR;
         }
     }
 
@@ -388,6 +394,9 @@ void svc_wait_for_req(char *svc_name, svc_req_t **req, int timeout_abstime_secs)
 
     // release mutex
     pthread_mutex_unlock(&x->mutex);
+
+    // success, req is being returned
+    return SVC_WAIT_FOR_REQ_SUCCESS;
 }
 
 void svc_req_completed(svc_req_t *req, int comp_status)

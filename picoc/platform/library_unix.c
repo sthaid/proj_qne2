@@ -1065,9 +1065,10 @@ void Util_map_file (struct ParseState *Parser, struct Value *ReturnValue,
     int   len              = Param[2]->Val->Integer;
     bool  create_if_needed = Param[3]->Val->Integer;
     bool  read_only        = Param[4]->Val->Integer;
+    int   *created_flag    = Param[5]->Val->Pointer;
     void *addr;
 
-    addr = util_map_file(dir, file, len, create_if_needed, read_only);
+    addr = util_map_file(dir, file, len, create_if_needed, read_only, created_flag);
     ReturnValue->Val->Pointer = addr;
 }
 
@@ -1275,7 +1276,7 @@ struct LibraryFunction UtilsFunctions[] = {
     { Util_file_mtime,       "long util_file_mtime(char *dir, char *fn);" },
     { Util_file_size,        "long util_file_size(char *dir, char *fn);" },
     // file map
-    { Util_map_file,         "void *util_map_file(char *dir, char *file, int len, bool create_if_needed, bool read_only);" },
+    { Util_map_file,         "void *util_map_file(char *dir, char *file, int len, bool create_if_needed, bool read_only, int *created_flag);" },
     { Util_unmap_file,       "void util_unmap_file(void *addr, int len);" },
     { Util_sync_file,        "void util_sync_file(void *addr, int len);" },
     // params get/set
@@ -1329,8 +1330,10 @@ void Svc_issue_req(struct ParseState *Parser, struct Value *ReturnValue,
 {
     char      *svc_name = Param[0]->Val->Pointer;
     svc_req_t *req      = Param[1]->Val->Pointer;
+    int        ret;
 
-    svc_issue_req(svc_name, req);
+    ret = svc_issue_req(svc_name, req);
+    ReturnValue->Val->Integer = ret;
 }
 
 void Svc_is_req_complete(struct ParseState *Parser, struct Value *ReturnValue,
@@ -1359,11 +1362,13 @@ void Svc_wait_for_req_complete(struct ParseState *Parser, struct Value *ReturnVa
 void Svc_wait_for_req(struct ParseState *Parser, struct Value *ReturnValue,
         struct Value **Param, int NumArgs)
 {
-    char      *svc_name             = Param[0]->Val->Pointer;
-    svc_req_t **req                 = Param[1]->Val->Pointer;
-    int        timeout_abstime_secs = Param[2]->Val->Integer;
+    char       *svc_name             = Param[0]->Val->Pointer;
+    svc_req_t **req                  = Param[1]->Val->Pointer;
+    long        timeout_abstime_secs = Param[2]->Val->LongInteger;
+    int         ret;
 
-    svc_wait_for_req(svc_name, req, timeout_abstime_secs);
+    ret = svc_wait_for_req(svc_name, req, timeout_abstime_secs);
+    ReturnValue->Val->Integer = ret;
 }
 
 void Svc_req_completed(struct ParseState *Parser, struct Value *ReturnValue,
@@ -1385,12 +1390,12 @@ void SvcsSetupFunction(Picoc *pc)
 
 struct LibraryFunction SvcsFunctions[] = {
     // routines called by apps
-    { Svc_issue_req,             "void svc_issue_req(char *svc_name, svc_req_t *req);" },
+    { Svc_issue_req,             "int svc_issue_req(char *svc_name, svc_req_t *req);" },
     { Svc_is_req_complete,       "bool svc_is_req_complete(svc_req_t *req);" },
     { Svc_wait_for_req_complete, "void svc_wait_for_req_complete(svc_req_t *req, int timeout_secs);" },
 
     // routines called by svcs
-    { Svc_wait_for_req,          "void svc_wait_for_req(char *svc_name, svc_req_t **req, int timeout_abstime_secs);" },
+    { Svc_wait_for_req,          "int svc_wait_for_req(char *svc_name, svc_req_t **req, long timeout_abstime_secs);" },
     { Svc_req_completed,         "void svc_req_completed(svc_req_t *req, int comp_status);" },
 
     { NULL, NULL } };
@@ -1411,7 +1416,18 @@ const char SvcsDefs[] = "\
 #define SVC_REQ_COMP_STATUS_ERROR                 2 \n\
 #define SVC_REQ_COMP_STATUS_ERROR_QUEUE_FULL      3 \n\
 #define SVC_REQ_COMP_STATUS_ERROR_INVALID_REQ     4 \n\
-#define SVC_REQ_COMP_STATUS_ERROR_INVLD_SVC_NAME  5 \n\
+#define SVC_REQ_COMP_STATUS_ERROR_SVC_NOT_FOUND   5 \n\
+\n\
+// values returned by svc_issue_req \n\
+#define SVC_ISSUE_REQ_SUCCESS              0 \n\
+#define SVC_ISSUE_REQ_ERROR_SVC_NOT_FOUND  1 \n\
+#define SVC_ISSUE_REQ_ERROR_QUEUE_FULL     2 \n\
+\n\
+// values returned by svc_wait_for_req \n\
+#define SVC_WAIT_FOR_REQ_SUCCESS               0 \n\
+#define SVC_WAIT_FOR_REQ_ERROR_SVC_NOT_FOUND   1 \n\
+#define SVC_WAIT_FOR_REQ_ERROR_TIMEDOUT        2 \n\
+#define SVC_WAIT_FOR_REQ_ERROR                 3 \n\
 \n\
 typedef struct { \n\
     int  req; \n\

@@ -794,6 +794,28 @@ void StdioVsscanf(struct ParseState *Parser, struct Value *ReturnValue,
         Param[0]->Val->Pointer, Param[1]->Val->Pointer, Param[2]->Val->Pointer);
 }
 
+// EZAPP add popen & pclose
+void StdioPopen(struct ParseState *Parser, struct Value *ReturnValue,
+    struct Value **Param, int NumArgs)
+{
+    char *cmd  = Param[0]->Val->Pointer;
+    char *type = Param[1]->Val->Pointer;
+    FILE *fp;
+
+    fp = popen(cmd, type);
+    ReturnValue->Val->Pointer = fp;
+}
+
+void StdioPclose(struct ParseState *Parser, struct Value *ReturnValue,
+    struct Value **Param, int NumArgs)
+{
+    FILE *fp = Param[0]->Val->Pointer;
+    int rc;
+
+    rc = pclose(fp);
+    ReturnValue->Val->Integer = rc;
+}
+
 /* handy structure definitions */
 const char StdioDefs[] = "\
 typedef struct __va_listStruct va_list; \
@@ -850,6 +872,8 @@ struct LibraryFunction StdioFunctions[] =
     {StdioVscanf, "int vscanf(char *, va_list);"},
     {StdioVfscanf, "int vfscanf(FILE *, char *, va_list);"},
     {StdioVsscanf, "int vsscanf(char *, char *, va_list);"},
+    {StdioPopen, "FILE *popen(char *cmd, char *type);"},
+    {StdioPclose, "int pclose(FILE *stream);"},
     {NULL, NULL}
 };
 

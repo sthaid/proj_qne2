@@ -184,7 +184,8 @@ void util_delete_dir(char *dir, char *dir_to_delete)
 
 // -----------------  FILE MAP -------------------------------
 
-void *util_map_file(char *dir, char *file, int len_arg, bool create_if_needed, bool read_only)
+void *util_map_file(char *dir, char *file, int len_arg, bool create_if_needed, 
+                    bool read_only, int *created_flag)
 {
     char   path[100];
     int    fd, rc, file_len, len;
@@ -193,10 +194,17 @@ void *util_map_file(char *dir, char *file, int len_arg, bool create_if_needed, b
     struct stat statbuf;
     char   *zero;
 
-// xxx dont allow create and read_only both true
+    // do not allow create_if_needed and read_only both true
+    if (create_if_needed && read_only) {
+        ERROR("create_if_needed and read_only can not both be set\n");
+        goto done;  
+    }
 
     // round len up to multiple of pagesize
     len = (len_arg + PAGE_SIZE - 1) & ~(PAGE_SIZE-1);
+
+    // preset 'created_flag' return to false
+    *created_flag = false;
 
     // print message
     sprintf(path, "%s/%s", dir, file);
@@ -212,6 +220,7 @@ void *util_map_file(char *dir, char *file, int len_arg, bool create_if_needed, b
     //   if create flag is set
     //     unlink the file
     //     create the file with the proper length
+    //     set 'created_flag'
     //   else
     //     return error
     //   endif
@@ -222,7 +231,7 @@ void *util_map_file(char *dir, char *file, int len_arg, bool create_if_needed, b
             unlink(path);
             fd = open(path, O_CREAT|O_EXCL|O_RDWR, 0666);
             if (fd < 0) {
-                ERROR("failed to open/create %s, %s\n", path, strerror(errno));
+                ERROR("failed to create %s, %s\n", path, strerror(errno));
                 goto done;  
             }
             zero = calloc(len, 1);
@@ -234,6 +243,7 @@ void *util_map_file(char *dir, char *file, int len_arg, bool create_if_needed, b
                 goto done;  
             }
             close(fd);
+            *created_flag = true;
         } else {
             ERROR("file doesnt exist or has wrong len, file_exists=%d file_len=%d len=%d\n", 
                    file_exists, file_len, len);

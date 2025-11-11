@@ -45,7 +45,7 @@ int main(int argc, char **argv)
 {
     char          name[MAX_NAME];
     double        latitude, longitude, miles;
-    unsigned long hour;
+    long          abstime;
     svc_req_t    *req;
     int           rc;
 
@@ -72,12 +72,14 @@ int main(int argc, char **argv)
     }
 
     // xxx
-    hour = time(NULL) / 3600; //xxx + 1;
+    abstime = time(NULL) / 60 * 60;
 
     // service runtime loop
     while (true) {
-        // wait for req, or for current time to exceed hour
-        svc_wait_for_req(progname, &req, hour*3600);
+        // wait for req, or for current time to exceed abstime
+        printf("NOW = %ld   wait until=%ld   delta= %ld\n",
+            time(NULL),  abstime,  abstime - time(NULL));
+        rc = svc_wait_for_req(progname, &req, abstime);
 
         // if req recvd then process the req
         if (req != NULL) {
@@ -88,13 +90,15 @@ int main(int argc, char **argv)
             process_req(req);
         }
 
-        // if current time is greater than hour then
+        // if current time is greater than abstime then
         // - find location in database that is closest to current lat/long;
         // - if name is different than most recent entry in loc_file
         //    then add new entry to loc file, 
-        // - increment hour
+        // - increment abstime
         // endif
-        if (time(NULL) > hour * 3600) {
+        else if (time(NULL) >=  abstime - 3) {
+            printf("XXXXXXXXX in next abstime\n");
+
             // find location in database that is closest to current lat/long;
             util_get_location(&latitude, &longitude, NULL);  // xxx check for no lat/long
             find_closest_loc_data(latitude, longitude, name, &miles);  // xxx dont overflow name 
@@ -105,8 +109,8 @@ int main(int argc, char **argv)
                 add_entry_to_loc_hist(time(NULL), latitude, longitude, name, miles);
             }
 
-            // increment hour
-            hour++;
+            // increment abstime
+            abstime += 60;
         }
     }
 
