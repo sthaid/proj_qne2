@@ -1430,9 +1430,9 @@ const char SvcsDefs[] = "\
 #define SVC_WAIT_FOR_REQ_ERROR                 3 \n\
 \n\
 typedef struct { \n\
-    int  req; \n\
     int  state; \n\
     int  comp_status; \n\
+    int  req; \n\
     char data[100]; \n\
 } svc_req_t; \n\
 ";

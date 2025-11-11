@@ -4,6 +4,7 @@
 #include <string.h>
 #include <time.h>
 #include <math.h>
+#include <unistd.h>
 
 #include <sdlx.h>
 #include <utils.h>
@@ -11,10 +12,6 @@
 
 #include "svcs/Location/loc_data.h"
 #include "svcs/Location/location.h"
-
-// defines
-#define BOLTON_MASS_LATITUDE     42.4334
-#define BOLTON_MASS_LONGITUDE   -71.6078
 
 // typedefs
 typedef struct {
@@ -25,6 +22,7 @@ typedef struct {
 
 // variables
 loc_hist_t *loc_hist;
+bool end_program = false;
 
 // prototypes
 void add_entry_to_loc_hist(time_t t, double latitude, double longitude, char *name, double miles);
@@ -47,7 +45,7 @@ int main(int argc, char **argv)
     double        latitude, longitude, miles;
     long          abstime;
     svc_req_t    *req;
-    int           rc;
+    int           rc, created;
 
     // save args
     if (argc != 2) {
@@ -66,7 +64,8 @@ int main(int argc, char **argv)
 
     // map the loc_hist file
     // xxx if it was created then init the magic
-    loc_hist = util_map_file(data_dir, LOC_HIST_FILENAME, sizeof(loc_hist_t), true, false);
+    // xxx or eliminte magic
+    loc_hist = util_map_file(data_dir, LOC_HIST_FILENAME, sizeof(loc_hist_t), true, false, &created);
     if (loc_hist == NULL) {
         // xxx ERROR
     }
@@ -75,30 +74,17 @@ int main(int argc, char **argv)
     abstime = time(NULL) / 60 * 60;
 
     // service runtime loop
-    while (true) {
-        // wait for req, or for current time to exceed abstime
-        printf("NOW = %ld   wait until=%ld   delta= %ld\n",
-            time(NULL),  abstime,  abstime - time(NULL));
+    while (!end_program) {
+        // wait for req or timeout
         rc = svc_wait_for_req(progname, &req, abstime);
 
-        // if req recvd then process the req
-        if (req != NULL) {
-            if (req->req == SVC_REQ_STOP) {
-                svc_req_completed(req, SVC_REQ_COMP_STATUS_OK);
-                break;  // xxx process this in process_req
-            }
-            process_req(req);
-        }
-
-        // if current time is greater than abstime then
+        // if svc_wait_for_req timedout
         // - find location in database that is closest to current lat/long;
         // - if name is different than most recent entry in loc_file
         //    then add new entry to loc file, 
         // - increment abstime
         // endif
-        else if (time(NULL) >=  abstime - 3) {
-            printf("XXXXXXXXX in next abstime\n");
-
+        if (rc == SVC_WAIT_FOR_REQ_ERROR_TIMEDOUT) {
             // find location in database that is closest to current lat/long;
             util_get_location(&latitude, &longitude, NULL);  // xxx check for no lat/long
             find_closest_loc_data(latitude, longitude, name, &miles);  // xxx dont overflow name 
@@ -111,6 +97,19 @@ int main(int argc, char **argv)
 
             // increment abstime
             abstime += 60;
+            continue;
+        }
+
+        // if svc_wait_for_req had some error other than the timeout handled above,
+        // then short sleep and contune; perhaps the error will clear up
+        if (rc != SVC_WAIT_FOR_REQ_SUCCESS) {
+            sleep(10);
+            continue;
+        }
+
+        // if req was recvd then process the req
+        if (req != NULL) {
+            process_req(req);
         }
     }
 
@@ -154,6 +153,10 @@ char *most_recent_loc_hist_name(void)
 void process_req(svc_req_t *req)
 {
     switch (req->req) {
+    case SVC_REQ_STOP:
+        svc_req_completed(req, SVC_REQ_COMP_STATUS_OK);
+        end_program = true;
+        break;
     case SVC_LOCATION_REQ_GET_LOC_INFO:
         //find_closest_loc_data(name, &miles);
         svc_req_completed(req, SVC_REQ_COMP_STATUS_OK);
@@ -169,8 +172,9 @@ void process_req(svc_req_t *req)
         svc_req_completed(req, SVC_REQ_COMP_STATUS_OK);
         break;
     default:
+        printf("ERROR %s: req %d is invalid\n", progname, req->req);
         svc_req_completed(req, SVC_REQ_COMP_STATUS_ERROR_INVALID_REQ);
-        // xxx ERROR
+        break;
     }
 }
 
