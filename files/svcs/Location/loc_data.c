@@ -7,23 +7,33 @@
 #include <utils.h>
 
 #include "svcs/Location/location.h"
-#include "svcs/Location/loc_data.h"
+#include "svcs/Location/common.h"
 
-// -----------------  INIT LOC DATA  --------------------------------
+typedef struct {
+    double latitude;
+    double longitude;
+    char   name[MAX_NAME];
+} loc_data_t;
 
-int init_loc_data(void)
+static loc_data_t *loc_data;
+static int         max_loc_data;
+
+// -----------------  READ LOC DATA  --------------------------------
+
+int read_loc_data(void)
 {
     char cmd[200];
     int  len;
 
-    // init number of loc to 0
-    max_loc_data = 0;
+    // if loc data had previously been initialized, 
+    // this call will free the prior loc_data and set max_loc_data to 0
+    free_loc_data();
 
     // catenate the *.loc files
     sprintf(cmd, "cat %s/*.loc > %s/all_loc", data_dir, data_dir);
     system(cmd);
 
-    // read the catenated file
+    // read the catenated file to variable 'loc_data'
     loc_data = util_read_file(data_dir, "all_loc", &len);
     if (loc_data == NULL) {
         printf("ERROR %s: failed to read all_loc\n", progname);
@@ -36,6 +46,7 @@ int init_loc_data(void)
     // set max_loc_data
     if ((len % sizeof(loc_data_t)) != 0) {
         printf("ERROR %s: invalid len %d of file all_loc\n", progname, len);
+        free_loc_data();
         return -1;
     }
     max_loc_data = len / sizeof(loc_data_t);
@@ -43,6 +54,13 @@ int init_loc_data(void)
 
     // return success
     return 0;
+}
+
+void free_loc_data(void)
+{
+    free(loc_data);
+    loc_data = NULL;
+    max_loc_data = 0;
 }
 
 // -----------------  FIND CLOSEST LOC DATA  ------------------------

@@ -11,14 +11,7 @@
 #include <svcs.h>
 
 #include "svcs/Location/location.h"
-#include "svcs/Location/loc_data.h"
-
-// typedefs
-typedef struct {
-    double latitude;
-    double longitude;
-    char   name[MAX_NAME];
-} loc_t;
+#include "svcs/Location/common.h"
 
 // variables
 loc_hist_t *loc_hist;
@@ -37,7 +30,7 @@ int main(int argc, char **argv)
     double        latitude, longitude, miles;
     long          abstime;
     svc_req_t    *req;
-    int           rc, created;
+    int           rc;
 
     // save args
     if (argc != 2) {
@@ -49,7 +42,7 @@ int main(int argc, char **argv)
     printf("INFO %s: starting, data_dir=%s\n", progname, data_dir);
 
     // read location data
-    rc = init_loc_data();
+    rc = read_loc_data();
     if (rc != 0) {
         printf("ERROR: %s failed to read location data\n", progname);
         return 1;
@@ -58,7 +51,8 @@ int main(int argc, char **argv)
     // map the loc_hist file
     // - create_if_needed = true
     // - read_only = false
-    loc_hist = util_map_file(data_dir, LOC_HIST_FILENAME, sizeof(loc_hist_t), true, false, &created);
+    // - created (return flag) = NULL
+    loc_hist = util_map_file(data_dir, LOC_HIST_FILENAME, sizeof(loc_hist_t), true, false, NULL);
     if (loc_hist == NULL) {
         printf("ERROR: %s failed to map %s\n", progname, LOC_HIST_FILENAME);
         return 1;
@@ -73,6 +67,13 @@ int main(int argc, char **argv)
     while (!end_program) {
         // wait for req or timeout
         rc = svc_wait_for_req(progname, &req, abstime);
+
+        // if an unexpected error is returned, then delay and try again
+        if (rc != 0 && rc != SVC_WAIT_FOR_REQ_ERROR_TIMEDOUT) {
+            printf("ERROR %s: svc_wait_for_req returned unexpected error %d\n", progname, rc);
+            sleep(1);
+            continue;
+        }
 
         // if svc_wait_for_req timedout
         // - find location in database that is closest to current lat/long;
@@ -96,13 +97,6 @@ int main(int argc, char **argv)
             continue;
         }
 
-        // if svc_wait_for_req had some error other than the timeout handled above,
-        // then short sleep and contune; perhaps the error will clear up
-        if (rc != SVC_WAIT_FOR_REQ_SUCCESS) {
-            sleep(10);
-            continue;
-        }
-
         // if req was recvd then process the req
         if (req != NULL) {
             process_req(req);
@@ -110,7 +104,7 @@ int main(int argc, char **argv)
     }
 
     // cleanup and end program
-    free(loc_data);
+    free_loc_data();
     util_unmap_file(loc_hist, sizeof(loc_hist_t));
     printf("INFO %s: terminating\n", progname);
     return 0;
@@ -150,40 +144,33 @@ void process_req(svc_req_t *req)
 {
     switch (req->req) {
     case SVC_REQ_STOP:
-        svc_req_completed(req, SVC_REQ_COMP_STATUS_OK);
+        svc_req_completed(req, SVC_REQ_STATUS_OK);
         end_program = true;
         break;
     case SVC_LOCATION_REQ_GET_LOC_INFO: {
-        double              latitude, longitude, miles;
-        char                name[MAX_NAME];
-        req_get_loc_info_t  x;
+        double latitude, longitude, miles;
+        char   name[MAX_NAME];
 
         util_get_location(&latitude, &longitude, NULL);
         find_closest_loc_data(latitude, longitude, name, &miles);
 
-        x.out.t          = time(NULL);
-        x.out.latitude   = latitude;
-        x.out.longitude  = longitude;
-        x.out.miles      = miles;
-        strcpy(x.out.name, name);
+        sprintf(req->data, "%0.4f %0.4f %0.1f %s", latitude, longitude, miles, name);
 
-        memcpy(req->data, &x, sizeof(x));
-
-        svc_req_completed(req, SVC_REQ_COMP_STATUS_OK);
+        svc_req_completed(req, SVC_REQ_STATUS_OK);
         break; }
     case SVC_LOCATION_REQ_ADD_COUNTRY_INFO:
         //download_country_info("us");
-        svc_req_completed(req, SVC_REQ_COMP_STATUS_OK);
+        svc_req_completed(req, SVC_REQ_STATUS_OK);
         break;
     case SVC_LOCATION_REQ_DEL_COUNTRY_INFO:
-        svc_req_completed(req, SVC_REQ_COMP_STATUS_OK);
+        svc_req_completed(req, SVC_REQ_STATUS_OK);
         break;
     case SVC_LOCATION_REQ_LIST_COUNTRY_INFO:
-        svc_req_completed(req, SVC_REQ_COMP_STATUS_OK);
+        svc_req_completed(req, SVC_REQ_STATUS_OK);
         break;
     default:
         printf("ERROR %s: req %d is invalid\n", progname, req->req);
-        svc_req_completed(req, SVC_REQ_COMP_STATUS_ERROR_INVALID_REQ);
+        svc_req_completed(req, SVC_REQ_STATUS_ERROR_INVALID_REQ);
         break;
     }
 }

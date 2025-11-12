@@ -6,7 +6,6 @@
 #define SVC_LOCATION_REQ_DEL_COUNTRY_INFO   12
 #define SVC_LOCATION_REQ_LIST_COUNTRY_INFO  13
 
-#define LOC_HIST_FILE_MAGIC 0x55aa5501
 #define LOC_HIST_FILENAME   "loc_hist"
 #define MAX_LOC_HIST        1000
 
@@ -23,9 +22,5 @@ typedef struct {
         char          name[MAX_NAME];
     } loc[MAX_LOC_HIST];
 } loc_hist_t;
-
-typedef struct {
-    struct loc_hist_entry_s out;
-} req_get_loc_info_t;
 
 #endif

@@ -204,7 +204,9 @@ void *util_map_file(char *dir, char *file, int len_arg, bool create_if_needed,
     len = (len_arg + PAGE_SIZE - 1) & ~(PAGE_SIZE-1);
 
     // preset 'created_flag' return to false
-    *created_flag = false;
+    if (created_flag != NULL) {
+        *created_flag = false;
+    }
 
     // print message
     sprintf(path, "%s/%s", dir, file);
@@ -243,7 +245,9 @@ void *util_map_file(char *dir, char *file, int len_arg, bool create_if_needed,
                 goto done;  
             }
             close(fd);
-            *created_flag = true;
+            if (created_flag != NULL) {
+                *created_flag = true;
+            }
         } else {
             ERROR("file doesnt exist or has wrong len, file_exists=%d file_len=%d len=%d\n", 
                    file_exists, file_len, len);

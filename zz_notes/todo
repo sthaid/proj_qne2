@@ -23,6 +23,10 @@ how to load locations for the service
     //printf("x.z=%d x.b=%d\n", x->a, x->b);
 
 
+other apps
+- tennis
+- tilt
+
 --- done ---
 Template service
 Template app, => hello.c

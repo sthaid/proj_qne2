@@ -15,20 +15,6 @@ void svcs_display(int bg_color);
 // common values for svc_req_t req
 #define SVC_REQ_STOP 1
 
-// values for svc_req_t state
-#define SVC_REQ_STATE_NOT_ISSUED        0
-#define SVC_REQ_STATE_QUEUED            1
-#define SVC_REQ_STATE_IN_PROGRESS       2
-#define SVC_REQ_STATE_COMPLETE          3
-
-// values for svc_req_t comp_status
-#define SVC_REQ_COMP_STATUS_NOT_COMPLETE         0
-#define SVC_REQ_COMP_STATUS_OK                   1
-#define SVC_REQ_COMP_STATUS_ERROR                2
-#define SVC_REQ_COMP_STATUS_ERROR_QUEUE_FULL     3
-#define SVC_REQ_COMP_STATUS_ERROR_INVALID_REQ    4
-#define SVC_REQ_COMP_STATUS_ERROR_SVC_NOT_FOUND  5
-
 // values returned by svc_issue_req
 #define SVC_ISSUE_REQ_SUCCESS              0
 #define SVC_ISSUE_REQ_ERROR_SVC_NOT_FOUND  1
@@ -38,12 +24,19 @@ void svcs_display(int bg_color);
 #define SVC_WAIT_FOR_REQ_SUCCESS               0
 #define SVC_WAIT_FOR_REQ_ERROR_SVC_NOT_FOUND   1
 #define SVC_WAIT_FOR_REQ_ERROR_TIMEDOUT        2
-#define SVC_WAIT_FOR_REQ_ERROR                 3
+#define SVC_WAIT_FOR_REQ_ERROR_OTHER           3
+
+// values for svc_req_t status
+#define SVC_REQ_STATUS_NOT_COMPLETE         0
+#define SVC_REQ_STATUS_OK                   1
+#define SVC_REQ_STATUS_ERROR_QUEUE_FULL     2
+#define SVC_REQ_STATUS_ERROR_INVALID_REQ    3
+#define SVC_REQ_STATUS_ERROR_SVC_NOT_FOUND  4
+#define SVC_REQ_STATUS_ERROR_OTHER          5
 
 typedef struct {
-    int  state;
-    int  comp_status;
     int  req;
+    int  status;
     char data[100];
 } svc_req_t;
 
