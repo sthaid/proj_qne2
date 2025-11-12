@@ -10,6 +10,8 @@
 #define LOC_HIST_FILENAME   "loc_hist"
 #define MAX_LOC_HIST        1000
 
+#define MAX_NAME 32
+
 typedef struct {
     int count;
     int pad;

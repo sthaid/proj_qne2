@@ -10,8 +10,8 @@
 #include <utils.h>
 #include <svcs.h>
 
-#include "svcs/Location/loc_data.h"
 #include "svcs/Location/location.h"
+#include "svcs/Location/loc_data.h"
 
 // typedefs
 typedef struct {
@@ -28,12 +28,6 @@ bool end_program = false;
 void add_entry_to_loc_hist(time_t t, double latitude, double longitude, char *name, double miles);
 char *most_recent_loc_hist_name(void);
 void process_req(svc_req_t *req);
-
-// xxx todo
-// - improve picoc to use 64bit time_t
-//   signed int time_t overflows in year 2038
-// - check sizeof native android time_t
-// - support NAN in picoc
 
 // -----------------  MAIN  -----------------------------------------
 
@@ -62,6 +56,8 @@ int main(int argc, char **argv)
     }
 
     // map the loc_hist file
+    // - create_if_needed = true
+    // - read_only = false
     loc_hist = util_map_file(data_dir, LOC_HIST_FILENAME, sizeof(loc_hist_t), true, false, &created);
     if (loc_hist == NULL) {
         printf("ERROR: %s failed to map %s\n", progname, LOC_HIST_FILENAME);
@@ -87,7 +83,7 @@ int main(int argc, char **argv)
         if (rc == SVC_WAIT_FOR_REQ_ERROR_TIMEDOUT) {
             // find location in database that is closest to current lat/long;
             util_get_location(&latitude, &longitude, NULL);  // xxx check for no lat/long
-            find_closest_loc_data(latitude, longitude, name, &miles);  // xxx dont overflow name 
+            find_closest_loc_data(latitude, longitude, name, &miles);
 
             // if name is different than most recent entry in loc_file
             // then add new entry to loc file, 
@@ -160,16 +156,18 @@ void process_req(svc_req_t *req)
     case SVC_LOCATION_REQ_GET_LOC_INFO: {
         double              latitude, longitude, miles;
         char                name[MAX_NAME];
-        req_get_loc_info_t *x = (req_get_loc_info_t*)req->data;
+        req_get_loc_info_t  x;
 
         util_get_location(&latitude, &longitude, NULL);
         find_closest_loc_data(latitude, longitude, name, &miles);
 
-        x->out.t          = time(NULL);
-        x->out.latitude   = latitude;
-        x->out.longitude  = longitude;
-        x->out.miles      = miles;
-        strcpy(x->out.name, name);
+        x.out.t          = time(NULL);
+        x.out.latitude   = latitude;
+        x.out.longitude  = longitude;
+        x.out.miles      = miles;
+        strcpy(x.out.name, name);
+
+        memcpy(req->data, &x, sizeof(x));
 
         svc_req_completed(req, SVC_REQ_COMP_STATUS_OK);
         break; }

@@ -10,6 +10,19 @@ how to load locations for the service
   - get list of downloaded locations
   - delete downloaded location file
 
+
+// xxx todo 
+// - improve picoc to use 64bit time_t
+//   signed int time_t overflows in year 2038
+// - check sizeof native android time_t
+// - support NAN in picoc
+
+// picoc cant do this
+    //struct_t *x;
+    //x = (struct_t*)data;
+    //printf("x.z=%d x.b=%d\n", x->a, x->b);
+
+
 --- done ---
 Template service
 Template app, => hello.c

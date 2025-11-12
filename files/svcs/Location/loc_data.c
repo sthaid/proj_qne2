@@ -6,6 +6,7 @@
 
 #include <utils.h>
 
+#include "svcs/Location/location.h"
 #include "svcs/Location/loc_data.h"
 
 // -----------------  INIT LOC DATA  --------------------------------

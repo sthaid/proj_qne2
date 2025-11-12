@@ -1,17 +1,21 @@
 #include <stdio.h>
 #include <stdbool.h>
 #include <stdlib.h>
+#include <time.h>
+#include <string.h>
 
 #include <sdlx.h>
 #include <utils.h>
+#include <svcs.h>
+
+#include "svcs/Location/location.h"
 
 // variables
 char *progname;
 char *data_dir;
-    
-// prototypes
-//xxx int download_city_and_town_locations(char *id);
 
+loc_hist_t *loc_hist;
+    
 // -----------------  MAIN  ------------------------------------------
     
 int main(int argc, char **argv)
@@ -19,6 +23,7 @@ int main(int argc, char **argv)
     int          rc;
     sdlx_event_t event;
     bool         done = false;
+    int          created;
 
     // save args
     if (argc != 2) {
@@ -29,15 +34,47 @@ int main(int argc, char **argv)
     data_dir = argv[1];
     printf("INFO %s: starting, data_dir=%s\n", progname, data_dir);
 
-    // xxx
-    //download_city_and_town_locations("us");
-    //return 1;
-
     // init sdl video subsystem
     rc = sdlx_init(SUBSYS_VIDEO);
     if (rc != 0) {
         printf("ERROR %s: sdlx_init failed\n", progname);
         return 1;
+    }
+
+    // map location history file
+    // xxx allow created to be NULL
+    // - create_if_needed = false
+    // - read_only = true 
+    loc_hist = util_map_file("svcs/Location", LOC_HIST_FILENAME, sizeof(loc_hist_t), false, true, &created);
+    if (loc_hist == NULL) {
+        printf("ERROR: %s failed to map %s\n", progname, LOC_HIST_FILENAME);
+        return 1; 
+    }
+
+    // xxx temp
+    svc_req_t *req;
+
+    req = calloc(1, sizeof(svc_req_t));
+    req->req = SVC_LOCATION_REQ_GET_LOC_INFO;
+    svc_issue_req("Location", req);
+    svc_wait_for_req_complete(req, 10);
+
+
+    if (req->comp_status != SVC_REQ_COMP_STATUS_OK) {
+        printf("ERROR %s: req comp_status = %d\n", progname, req->comp_status);
+    } else {
+        req_get_loc_info_t x;
+        memcpy(&x, req->data, sizeof(x));
+        time_t t = x.out.t;
+        struct tm tm;
+        localtime_r(&t, &tm);
+        printf("INFO %s: t=%02d:%02d lat/long=%0.3f,%0.3f miles=%0.3f name=%s\n",
+              progname,
+              tm.tm_hour, tm.tm_min, 
+              x.out.latitude,
+              x.out.longitude,
+              x.out.miles,
+              x.out.name);
     }
 
     // runtime loop
@@ -49,9 +86,8 @@ int main(int argc, char **argv)
         // - end program
         sdlx_register_control_events(NULL, NULL, "X", COLOR_BLACK, 0, 0, EVID_QUIT);
 
-        // xxx
-        // display 'Location' at center of display
-        sdlx_render_printf_xyctr(sdlx_win_width/2, sdlx_win_height/2, "Location");
+        // xxx display location info
+        sdlx_render_printf_xyctr(sdlx_win_width/2, sdlx_win_height/2, "xxx Location");
 
         // present the display
         sdlx_display_present();
@@ -72,125 +108,3 @@ int main(int argc, char **argv)
     printf("INFO %s: terminating\n", progname);
     return 0;
 }
-
-#if 0  // xxx in the svc
-// -----------------  DOWNLOAD CITY & TOWN LOCATIONS  ----------------
-
-int read_and_parse_json_file(char *filename);
-
-int download_city_and_town_locations(char *id)
-{
-    //char         cmd[100], dirname[100], *filename, *end_ptr;
-    //void        *root = NULL;
-    //char        *str = NULL, *str_orig;
-    //int          ret, len, success_cnt=0, skip_cnt=0;
-    //json_value_t name, latitude, longitude;
-    int ret;
-    char cmd[100], filename[100];
-
-    goto skip;
-
-    // download zip file containing city/town location and names
-    // xxx allow replace
-    sprintf(cmd, "curl -o %s/%s.zip https://www.geoapify.com/data-share/localities/%s.zip",
-            progname, id, id);
-    ret = system(cmd);
-    if (ret != 0) {
-        printf("ERROR %s: '%s' failed, ret=%d\n", progname, cmd, ret);
-        return -1;
-    }
-    
-    // unzip
-    sprintf(cmd, "unzip %s/%s.zip", progname, id);
-    ret = system(cmd);
-    if (ret != 0) {
-        printf("ERROR %s: '%s' failed, ret=%d\n", progname, cmd, ret);
-        return -1;
-    }
-
-skip:
-    sprintf(filename, "%s/%s/%s", progname, id, "place_city.ndjson");
-    ret = read_and_parse_json_file(filename);
-
-    sprintf(filename, "%s/%s/%s", progname, id, "place-town.ndjson");
-    ret = read_and_parse_json_file(filename);
-
-    sprintf(filename, "%s/%s/%s", progname, id, "place-village.ndjson");
-    ret = read_and_parse_json_file(filename);
-
-    // xxx remove files
-
-    return ret;
-}
-
-int read_and_parse_json_file(char *filename)
-{
-    char         *end_ptr;
-    void         *root = NULL;
-    char         *str = NULL, *str_orig = NULL;
-    int           len, success_cnt=0, skip_cnt=0;
-    json_value_t  name, display_name, latitude, longitude;
-
-    printf("INFO %s: read_and_parse_json_file starting for %s\n", progname, filename);
-
-    // xxx
-    str_orig = util_read_file(".", filename, &len);
-    if (str_orig == NULL) {
-        printf("ERROR %s: failed read file %s\n", progname, filename);
-        goto error;
-    }
-
-    // parse json
-    str = str_orig;
-    while (true) {
-        root = util_json_parse(str, &end_ptr); //xxx get rid of const
-        if (root == NULL) {
-            printf("ERROR %s: util_json_parse failed\n", progname);
-            goto error;
-        }
-
-        name         = *util_json_get_value(root, "name", NULL);
-        display_name = *util_json_get_value(root, "display_name", NULL);
-        latitude     = *util_json_get_value(root, "location", "0", NULL);
-        longitude    = *util_json_get_value(root, "location", "1", NULL);
-
-        if (name.type == JSON_TYPE_STRING &&
-            display_name.type == JSON_TYPE_STRING &&
-            latitude.type == JSON_TYPE_NUMBER &&
-            longitude.type == JSON_TYPE_NUMBER)
-        {
-            printf("%f %f '%s' '%s'\n", latitude.u.number, longitude.u.number, name.u.string, display_name.u.string);
-            success_cnt++;
-        } else {
-            //printf("ERROR %s: skipping - name,lat,long type = %d %d %d\n",
-            //       progname, name.type, latitude.type, longitude.type); //xxx
-            skip_cnt++;
-        }
-
-        util_json_free(root);
-        root = NULL;
-
-        str = end_ptr;
-        while (*str != '{' && *str != '\0') {
-            str++;
-        }
-        if (*str == '\0') {
-            break;
-        }
-    }
-
-    printf("INFO %s: read_and_parse_json_file successes=%d skips=%d\n", 
-           progname, success_cnt, skip_cnt);
-
-    // free allocated str, and return succss
-    free(str_orig);
-    util_json_free(root);
-    return 0;
-
-    // error return
-error:
-    free(str_orig);
-    util_json_free(root);
-    return -1;
-}
-#endif

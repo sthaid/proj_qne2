@@ -6,7 +6,7 @@ LOCAL_MODULE := main
 
 # Add your application source files here...
 LOCAL_SRC_FILES :=  \
-  src/main.c src/utils.c src/logging.c \
+  src/main.c src/utils.c src/logging.c src/svcs.c \
   src/sdlx_misc.c src/sdlx_video.c src/sdlx_audio.c src/sdlx_sensor.c src/sdlx_event.c \
   src/utils_location.cpp \
   cJSON/cJSON.c \

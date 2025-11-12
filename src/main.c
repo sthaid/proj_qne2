@@ -84,6 +84,7 @@ extern int picoc_ezapp(char *args);
 static int init(void);
 static void cleanup(void);
 static void sigusr2_hndlr(int signum);
+static void print_type_sizes(void);
 #ifdef ANDROID  // xxx get rid of some ifdefs
 static void create_files(int action);
 #endif
@@ -178,6 +179,9 @@ static int init(void)
     // init services, this will xxx
     svcs_init();
 
+    // print type sizes
+    print_type_sizes();
+
     // success
     return 0;
 }
@@ -215,6 +219,23 @@ static void create_files(int action)
 static void sigusr2_hndlr(int signum)
 {
     // nothing needed here
+}
+
+static void print_type_sizes(void)
+{
+    INFO("type sizes ...\n");
+    INFO("  sizoef(char)   = %zd", sizeof(char));
+    INFO("  sizoef(short)  = %zd", sizeof(short));
+    INFO("  sizoef(int)    = %zd", sizeof(int));
+    INFO("  sizoef(long)   = %zd", sizeof(long));
+    INFO("  sizoef(size_t) = %zd", sizeof(size_t));
+    INFO("  sizoef(off_t)  = %zd", sizeof(off_t));
+    INFO("  sizoef(time_t) = %zd", sizeof(time_t));
+    INFO("  sizoef(clock_t)= %zd", sizeof(clock_t));
+    INFO("  sizoef(float)  = %zd", sizeof(float));
+    INFO("  sizoef(double) = %zd", sizeof(double));
+    INFO("  sizeof(1)      = %zd", sizeof(1));
+    INFO("  sizeof(1L)     = %zd", sizeof(1L));
 }
 
 // -----------------  PROCESSING  ------------------------------------
