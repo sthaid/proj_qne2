@@ -48,7 +48,7 @@ int main(int argc, char **argv)
         // register control events to
         // - set color either to white or red, or
         // - end program
-        sdlx_register_control_events("W", "R", "X", COLOR_BLACK, EVID_SET_COLOR_WHITE, EVID_SET_COLOR_RED, EVID_QUIT);
+        sdlx_register_control_events("W", "R", "X", COLOR_BLACK, color, EVID_SET_COLOR_WHITE, EVID_SET_COLOR_RED, EVID_QUIT);
 
         // present the display
         sdlx_display_present();

@@ -479,56 +479,46 @@ static sdlx_loc_t *render_text(bool xy_is_ctr, int x, int y, char * str)
     return &loc;
 }
 
-// xxx explain str
-void sdlx_render_multiline_text(int y_top, int y_display_begin, int y_display_end, char * str)
+// note: each line may have embedded newline chars
+void sdlx_render_multiline_text(int y_top, int y_display_begin, int y_display_end, char **lines, int num_lines)
 {
-    char line[1000], *p;
-    int len;
     int y = y_top;
+    int n = 0, k = 0, len;
+    char *ptr;
+    char str[200];
 
-    while (str[0]) {
-        // get line
-        p = strchr(str, '\n');
-        len = (p == NULL ? strlen(str) : p-str);
-        memcpy(line, str, len);
-        line[len] = '\0';
-        //printf("LINE '%s'\n", line);
-
+    while (n < num_lines) {
         // if y pos of line is below the bottom of the
         // display region then break
         if (y > y_display_end - sdlx_char_height) {
             break;
         }
 
-        // if y loc of line is at or below the begining of the display
-        // region then render the line
-        if (y >= y_display_begin && len > 0) {
-            render_text(false, 0, y, line);
+        // extract str from the line currently being processed
+        ptr = strchr(&lines[n][k], '\n');
+        if (ptr) {
+            len = ptr - &lines[n][k];
+            memcpy(str, &lines[n][k], len);
+            str[len] = '\0';
+        } else {
+            strcpy(str, &lines[n][k]);
+            len = strlen(str);
         }
 
-        // advance y and str to the next line
-        y += sdlx_char_height;
-        str += len;
-        if (str[0] == '\n') str++;
-    }
-}
-
-void sdlx_render_multiline_text_2(int y_top, int y_display_begin, int y_display_end, char **lines, int n)
-{
-    int i;
-    int y = y_top;
-
-    for (i = 0; i < n; i++) {
-        // if y pos of line is below the bottom of the
-        // display region then break
-        if (y > y_display_end - sdlx_char_height) {
-            break;
+        // advance k and n
+        k += len;
+        if (lines[n][k] == '\n') {
+            k++;
+        }
+        if (lines[n][k] == '\0') {
+            k = 0;
+            n++;
         }
 
         // if y loc of line is at or below the begining of the display
         // region then render the line
-        if (y >= y_display_begin && lines[i][0] != '\0') {
-            render_text(false, 0, y, lines[i]);
+        if (y >= y_display_begin && str[0] != '\0') {
+            render_text(false, 0, y, str);
         }
 
         // advance y for the next line
@@ -1100,6 +1090,8 @@ unsigned char *sdlx_read_display_pixels(int x, int y, int w, int h, int *w_pixel
 }
 
 // -----------------  PLOTTING  ----------------------------------------- 
+
+// xxx either test and improve this, or delete it
 
 typedef struct {
     char   title[64];

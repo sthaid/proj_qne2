@@ -114,7 +114,7 @@ static int run_curl(char *url, char *filename)
 
 static void *get_json_root(char *filename)
 {
-    char *str;
+    char *str, *end_ptr;
     void *root;
     int   len;
 
@@ -124,7 +124,7 @@ static void *get_json_root(char *filename)
         return NULL;
     }
 
-    root = util_json_parse(str);
+    root = util_json_parse(str, &end_ptr);
     if (root == NULL) {
         printf("ERROR %s: failed to parse json\n", progname);
         free(str);

@@ -110,8 +110,7 @@ sdlx_loc_t *sdlx_render_text(int x, int y, char *str);
 sdlx_loc_t *sdlx_render_printf(int x, int y, char *fmt, ...) __attribute__ ((format (printf, 3, 4)));
 sdlx_loc_t *sdlx_render_text_xyctr(int x, int y, char *str);
 sdlx_loc_t *sdlx_render_printf_xyctr(int x, int y, char *fmt, ...) __attribute__ ((format (printf, 3, 4)));
-void sdlx_render_multiline_text(int y_top, int y_display_begin, int y_display_end, char * str);
-void sdlx_render_multiline_text_2(int y_top, int y_display_begin, int y_display_end, char **lines, int n);
+void sdlx_render_multiline_text(int y_top, int y_display_begin, int y_display_end, char **lines, int n);
 
 // render rectangle, lines, circles, points
 void sdlx_render_rect(int x, int y, int w, int h, int line_width, int color);
@@ -266,8 +265,9 @@ typedef struct {
 
 // event registration and query
 void sdlx_register_event(sdlx_loc_t *loc, int event_id);
-void sdlx_register_control_events(char *evstr1, char *evstr2, char *evstr3, int bg_color, // xxx fg
-                                 int evid1, int evid2, int evid3);
+void sdlx_register_control_events(char *evstr1, char *evstr2, char *evstr3, 
+                                  int fg_color, int bg_color,
+                                  int evid1, int evid2, int evid3);
 void sdlx_get_event(long timeout_us, sdlx_event_t *event);
 
 // get string, from virtual keyboard when on Android

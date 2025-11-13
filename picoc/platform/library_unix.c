@@ -74,12 +74,13 @@ void Sdl_register_control_events (struct ParseState *Parser, struct Value *Retur
     char *evstr1   = (char*)Param[0]->Val->Pointer;
     char *evstr2   = (char*)Param[1]->Val->Pointer;
     char *evstr3   = (char*)Param[2]->Val->Pointer;
-    int   bg_color = Param[3]->Val->Integer;
-    int   evid1    = Param[4]->Val->Integer;
-    int   evid2    = Param[5]->Val->Integer;
-    int   evid3    = Param[6]->Val->Integer;
+    int   fg_color = Param[3]->Val->Integer;
+    int   bg_color = Param[4]->Val->Integer;
+    int   evid1    = Param[5]->Val->Integer;
+    int   evid2    = Param[6]->Val->Integer;
+    int   evid3    = Param[7]->Val->Integer;
 
-    sdlx_register_control_events(evstr1, evstr2, evstr3, bg_color, evid1, evid2, evid3);
+    sdlx_register_control_events(evstr1, evstr2, evstr3, fg_color, bg_color, evid1, evid2, evid3);
 }
 
 void Sdl_get_event (struct ParseState *Parser, struct Value *ReturnValue,
@@ -252,24 +253,13 @@ void Sdl_render_printf_xyctr (struct ParseState *Parser, struct Value *ReturnVal
 void Sdl_render_multiline_text (struct ParseState *Parser, struct Value *ReturnValue,
 	struct Value **Param, int NumArgs)
 {
-    int   y_top           = Param[0]->Val->Integer;
-    int   y_display_begin = Param[1]->Val->Integer;
-    int   y_display_end   = Param[2]->Val->Integer;
-    char *str             = Param[3]->Val->Pointer;
-
-    sdlx_render_multiline_text(y_top, y_display_begin, y_display_end, str);
-}
-
-void Sdl_render_multiline_text_2 (struct ParseState *Parser, struct Value *ReturnValue,
-	struct Value **Param, int NumArgs)
-{
     int    y_top           = Param[0]->Val->Integer;
     int    y_display_begin = Param[1]->Val->Integer;
     int    y_display_end   = Param[2]->Val->Integer;
     char **lines           = Param[3]->Val->Pointer;
     int    n               = Param[4]->Val->Integer;
 
-    sdlx_render_multiline_text_2(y_top, y_display_begin, y_display_end, lines, n);
+    sdlx_render_multiline_text(y_top, y_display_begin, y_display_end, lines, n);
 }
 
 //
@@ -738,7 +728,7 @@ struct LibraryFunction SdlFunctions[] = {
     // event registration and query
     { Sdl_register_event,  "void sdlx_register_event(sdlx_loc_t *loc, int event_id);" },
     { Sdl_register_control_events, 
-                           "void sdlx_register_control_events(char *evstr1, char *evstr2, char *evstr3, int bg_color, int evid1, int evid2, int evid3); " },
+                           "void sdlx_register_control_events(char *evstr1, char *evstr2, char *evstr3, int fg_color, int bg_color, int evid1, int evid2, int evid3); " },
     { Sdl_get_event,       "void sdlx_get_event(long timeout_us, sdlx_event_t *event);" },
 
     // create colors
@@ -756,8 +746,7 @@ struct LibraryFunction SdlFunctions[] = {
     { Sdl_render_printf,           "sdlx_loc_t *sdlx_render_printf(int x, int y, char *fmt, ...);" },
     { Sdl_render_text_xyctr,       "sdlx_loc_t *sdlx_render_text_xyctr(int x, int y, char *str);" },
     { Sdl_render_printf_xyctr,     "sdlx_loc_t *sdlx_render_printf_xyctr(int x, int y, char *fmt, ...);" },
-    { Sdl_render_multiline_text,   "void sdlx_render_multiline_text(int y_top, int y_display_begin, int y_display_end, char * str);" },
-    { Sdl_render_multiline_text_2, "void sdlx_render_multiline_text_2(int y_top, int y_display_begin, int y_display_end, char **lines, int n);" },
+    { Sdl_render_multiline_text,   "void sdlx_render_multiline_text(int y_top, int y_display_begin, int y_display_end, char **lines, int n);" },
 
     // render rectangle, lines, circles, points
     { Sdl_render_rect,     "void sdlx_render_rect(int x, int y, int w, int h, int line_width, int color);" },

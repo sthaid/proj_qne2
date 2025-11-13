@@ -264,10 +264,10 @@ static void processing(void)
 
         // register for screen bottom control events
         if (LAST_PAGE > 0) {
-            sdlx_register_control_events("<", ">", "X", BG_COLOR,
+            sdlx_register_control_events("<", ">", "X", COLOR_WHITE, BG_COLOR,
                                         EVID_PAGE_DECREMENT, EVID_PAGE_INCREMENT, EVID_MINIMIZE);
         } else {
-            sdlx_register_control_events(NULL, NULL, "X", BG_COLOR, 0, 0, EVID_MINIMIZE);
+            sdlx_register_control_events(NULL, NULL, "X", COLOR_WHITE, BG_COLOR, 0, 0, EVID_MINIMIZE);
         }
 
         // update the display
@@ -636,7 +636,7 @@ static void settings(void)
         }
 
         // display the control event 'X' to exit this screen
-        sdlx_register_control_events(NULL, NULL, "X", BG_COLOR, 0, 0, EVID_QUIT);
+        sdlx_register_control_events(NULL, NULL, "X", COLOR_WHITE, BG_COLOR, 0, 0, EVID_QUIT);
 
         // present the display
         sdlx_display_present();
@@ -728,8 +728,9 @@ static void copyright(void)
         sdlx_display_init(BG_COLOR);
         sdlx_print_init(SMALLEST_FONT, COLOR_WHITE, BG_COLOR);
         sdlx_register_event(NULL, EVID_MOTION);
-        sdlx_render_multiline_text(y_top, y_display_begin, y_display_end, str);
-        sdlx_register_control_events(NULL, NULL, "X", BG_COLOR, 0, 0, EVID_QUIT);
+        char *lines[1] = { str };
+        sdlx_render_multiline_text(y_top, y_display_begin, y_display_end, lines, 1);
+        sdlx_register_control_events(NULL, NULL, "X", COLOR_WHITE, BG_COLOR, 0, 0, EVID_QUIT);
         sdlx_display_present();
 
         sdlx_get_event(-1, &event);

@@ -95,13 +95,17 @@ void sdlx_register_event(sdlx_loc_t *loc, int event_id)
         loc2.y -= delta/2;
     }
 
+    // xxx temporary
+    sdlx_render_rect(loc2.x, loc2.y, loc2.w, loc2.h, 1, COLOR_WHITE);
+
     event_tbl[max_event].loc = loc2;
     event_tbl[max_event].event_id  = event_id; 
     max_event++;
 }
 
-void sdlx_register_control_events(char *evstr1, char *evstr2, char *evstr3, int bg_color,
-                                 int evid1, int evid2, int evid3)
+void sdlx_register_control_events(char *evstr1, char *evstr2, char *evstr3, 
+                                  int fg_color, int bg_color,
+                                  int evid1, int evid2, int evid3)
 {
     sdlx_loc_t *loc;
     int i, x, y;
@@ -119,7 +123,7 @@ void sdlx_register_control_events(char *evstr1, char *evstr2, char *evstr3, int 
 
     sdlx_print_save(&print_state);
 
-    sdlx_print_init(LARGE_FONT, COLOR_WHITE, bg_color);
+    sdlx_print_init(DEFAULT_FONT, fg_color, bg_color);
 
     for (i = 0; i < 3; i++) {
         if (evstr[i] == NULL) {
@@ -127,7 +131,7 @@ void sdlx_register_control_events(char *evstr1, char *evstr2, char *evstr3, int 
         }
 
         x = (sdlx_win_width/3/2) + i * (sdlx_win_width/3);
-        y = sdlx_win_height - sdlx_char_height/2;
+        y = sdlx_win_height - 75;
         loc = sdlx_render_text_xyctr(x, y, evstr[i]);
         sdlx_register_event(loc, evid[i]);
     }

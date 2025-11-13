@@ -42,7 +42,7 @@ int main(int argc, char **argv)
 
         // register control event to
         // - end program
-        sdlx_register_control_events(NULL, NULL, "X", COLOR_BLACK, 0, 0, EVID_QUIT);
+        sdlx_register_control_events(NULL, NULL, "X", COLOR_WHITE, COLOR_BLACK, 0, 0, EVID_QUIT);
 
         // display 'Hello' at center of display
         sdlx_render_printf_xyctr(sdlx_win_width/2, sdlx_win_height/2, "Hello");

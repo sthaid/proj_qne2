@@ -77,7 +77,7 @@ int main(int argc, char **argv)
         sdlx_display_init(COLOR_BLACK);
 
         // register control event to end program
-        sdlx_register_control_events("stg", NULL, "X", COLOR_BLACK, EVID_SETTINGS, 0, EVID_QUIT);
+        sdlx_register_control_events("stg", NULL, "X", COLOR_WHITE, COLOR_BLACK, EVID_SETTINGS, 0, EVID_QUIT);
 
         // get the current time
         t = time(NULL);
@@ -163,20 +163,23 @@ static void settings(void)
     bool done = false;
     sdlx_event_t event;
     int y_top, y_bottom;
+    char *lines[1];
+
+    // xxx improve this text
+    lines[0] =
+"The sunrise & sunset times are\n\
+verified by comparison with\n\
+https://sunrise-sunset.org/api\n";
 
     while (!done) {
         sdlx_display_init(COLOR_BLACK);
         sdlx_print_init(SMALL_FONT, COLOR_WHITE, COLOR_BLACK);
 
-        sdlx_register_control_events(NULL, NULL, "X", COLOR_BLACK, 0, 0, EVID_QUIT);
+        sdlx_register_control_events(NULL, NULL, "X", COLOR_WHITE, COLOR_BLACK, 0, 0, EVID_QUIT);
 
         y_top = ROW2Y(2);
         y_bottom = ROW2Y(5);
-// xxx improve this text
-        sdlx_render_multiline_text(y_top, y_top, y_bottom, 
-"The sunrise & sunset times are\n\
-verified by comparison with\n\
-https://sunrise-sunset.org/api\n");
+        sdlx_render_multiline_text(y_top, y_top, y_bottom, lines, 1);
 
         sdlx_display_present();
 

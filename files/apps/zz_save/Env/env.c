@@ -153,7 +153,7 @@ int main(int argc, char **argv)
         // register control events
         // 'X' - end prorgram
         sdlx_register_control_events(NULL, NULL, "X", 
-                                    COLOR_BLACK,
+                                    COLOR_WHITE, COLOR_BLACK,
                                     0, 0, EVID_QUIT);
         sdlx_register_event(NULL, EVID_MOTION);
 

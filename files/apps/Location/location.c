@@ -16,6 +16,12 @@ char *data_dir;
 
 loc_hist_t *loc_hist;
     
+// Bolton
+// 6/5/2025 23:00 EST
+// -42.1234 -130.1234
+//
+// 123456789 123456789
+
 // -----------------  MAIN  ------------------------------------------
     
 int main(int argc, char **argv)
@@ -70,7 +76,7 @@ int main(int argc, char **argv)
 
         // register control event to
         // - end program
-        sdlx_register_control_events(NULL, NULL, "X", COLOR_BLACK, 0, 0, EVID_QUIT);
+        sdlx_register_control_events(NULL, NULL, "X", COLOR_WHITE, COLOR_BLACK, 0, 0, EVID_QUIT);
 
         // xxx display location info
         sdlx_render_printf_xyctr(sdlx_win_width/2, sdlx_win_height/2, "xxx Location");

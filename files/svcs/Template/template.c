@@ -59,8 +59,7 @@ int main(int argc, char **argv)
 
         // if req was recvd then process the req
         if (req != NULL) {
-            printf("TEMPLETE  %p  %d  %p  %p  %p\n", req, req->req, 
-                 &req->state, &req->comp_status, &req->req);
+            printf("INFO %s: req=%p req->req=%d req->status=%d\n", progname, req, req->req, req->status);
             process_req(req);
         }
     }
@@ -77,12 +76,12 @@ void process_req(svc_req_t *req)
     // process the request
     switch (req->req) {
     case SVC_REQ_STOP:
-        svc_req_completed(req, SVC_REQ_COMP_STATUS_OK);
+        svc_req_completed(req, SVC_REQ_STATUS_OK);
         end_program = true;
         break;
     default:
         printf("ERROR %s: req %d is invalid\n", progname, req->req);
-        svc_req_completed(req, SVC_REQ_COMP_STATUS_ERROR_INVALID_REQ);
+        svc_req_completed(req, SVC_REQ_STATUS_ERROR_INVALID_REQ);
         break;
     }
 }

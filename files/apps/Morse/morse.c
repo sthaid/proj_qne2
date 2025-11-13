@@ -91,9 +91,9 @@ int main(int argc, char **argv)
         // - '>' start playing 10 random morse code words
         // - 'C' cancel playing morse code
         if (state.state == AUDIO_STATE_IDLE) {
-            sdlx_register_control_events(">", NULL, "X", COLOR_BLACK, EVID_START, 0, EVID_QUIT);
+            sdlx_register_control_events(">", NULL, "X", COLOR_WHITE, COLOR_BLACK, EVID_START, 0, EVID_QUIT);
         } else {
-            sdlx_register_control_events("C", NULL, "X", COLOR_BLACK, EVID_CANCEL, 0, EVID_QUIT);
+            sdlx_register_control_events("C", NULL, "X", COLOR_WHITE, COLOR_BLACK, EVID_CANCEL, 0, EVID_QUIT);
         }
 
         // display state, either Ready or Running
@@ -121,8 +121,8 @@ int main(int argc, char **argv)
         if (state.state == AUDIO_STATE_IDLE) {
             int y_top = ROW2Y(7);
             int y_bottom = ROW2Y(17);
-            sdlx_render_multiline_text(y_top, y_top, y_bottom, random_words);
-            // xxx display duration
+            char *lines[1] = {random_words};
+            sdlx_render_multiline_text(y_top, y_top, y_bottom, lines, 1);
         }
 
         // present the display

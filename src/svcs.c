@@ -182,7 +182,7 @@ void svcs_display(int bg_color)
         }
 
         // display the control event 'X' to exit this
-        sdlx_register_control_events(NULL, NULL, "X", bg_color, 0, 0, EVID_QUIT);
+        sdlx_register_control_events(NULL, NULL, "X", COLOR_WHITE, bg_color, 0, 0, EVID_QUIT);  // xxx arg for COLOR_WHITE?
 
         // present the display
         sdlx_display_present();

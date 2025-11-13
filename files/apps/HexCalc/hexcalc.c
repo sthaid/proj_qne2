@@ -109,7 +109,7 @@ int main(int argc, char **argv)
         sdlx_display_init(BACKGROUND_COLOR);
 
         // register control event to end program
-        sdlx_register_control_events(NULL, NULL, "X", COLOR_BLACK, 0, 0, EVID_QUIT);  // xxx colors
+        sdlx_register_control_events(NULL, NULL, "X", BUTTON_COLOR_TEXT, BACKGROUND_COLOR, 0, 0, EVID_QUIT);
 
         // display calculator buttons, which will also register the button events
         for (int row = 0; row < MAX_BUTTON_ROW; row++) {

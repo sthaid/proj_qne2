@@ -165,7 +165,7 @@ static void page_hndlr()
         // "<" - previous page
         // ">" - next page
         // 'X' - end prorgram
-        sdlx_register_control_events("<", ">", "X", COLOR_BLACK,
+        sdlx_register_control_events("<", ">", "X", COLOR_WHITE, COLOR_BLACK,
                                     EVID_PREV_PAGE, EVID_NEXT_PAGE, EVID_QUIT);
 
         // register swipe events, also used to change page
@@ -322,45 +322,28 @@ static void page_2_draw(void)
 
 // -----------------  PAGE 3: MULTI LINE TEXT  ----------------
 
-// This tests both
-// - sdlx_render_multiline_text, and
-// - sdlx_render_multiline_text_2
-// on alternate entering of this page.
-
 static double y_top;
 static int y_display_begin;
 static int y_display_end;
-static char lines[2000];
-static char *lines_2[100];
-static bool test_v1;
+static char *lines[100];
 
 static void page_3_init(void)
 {
-    char *p = lines;
     for (int i = 0; i < 100; i++) {
-        p += sprintf(p, "Line %d\n", i);
-    }
-
-    for (int i = 0; i < 100; i++) {
-        lines_2[i] = malloc(20);
-        sprintf(lines_2[i], "Line-V2 %d", i);
+        lines[i] = malloc(50);
+        sprintf(lines[i], "Line %d\nHello World\n", i);
     }
 
     y_top = ROW2Y(2); 
     y_display_begin = ROW2Y(2);
     y_display_end = sdlx_win_height-3*sdlx_char_height;
-    test_v1 = !test_v1;
 }
 
 static void page_3_draw(void)
 {
     sdlx_register_event(NULL, EVID_MOTION);
 
-    if (test_v1) {
-        sdlx_render_multiline_text(y_top, y_display_begin, y_display_end, lines);
-    } else {
-        sdlx_render_multiline_text_2(y_top, y_display_begin, y_display_end, lines_2, 100);
-    }
+    sdlx_render_multiline_text(y_top, y_display_begin, y_display_end, lines, 100);
 }
 
 static void page_3_process_event(sdlx_event_t *event)
@@ -376,8 +359,8 @@ static void page_3_process_event(sdlx_event_t *event)
 static void page_3_exit(void)
 {
     for (int i = 0; i < 100; i++) {
-        free(lines_2[i]);
-        lines_2[i] = NULL;
+        free(lines[i]);
+        lines[i] = NULL;
     }
 }
 
@@ -882,7 +865,7 @@ static void page_8_init(void)
 static void page_8_draw(void)
 {
     sdlx_print_init(SMALL_FONT, COLOR_WHITE, COLOR_BLACK);
-    sdlx_render_multiline_text_2(y_top, y_display_begin, y_display_end, sit_lines, max_sit);
+    sdlx_render_multiline_text(y_top, y_display_begin, y_display_end, sit_lines, max_sit);
 }
 
 static void page_8_exit(void)
