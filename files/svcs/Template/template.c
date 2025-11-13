@@ -43,17 +43,17 @@ int main(int argc, char **argv)
         // wait for req or timeout
         rc = svc_wait_for_req(progname, &req, abstime); //xxx use abstime
 
-        // if scv_wait_for_req timedout then do periodic processing
-        if (rc == SVC_WAIT_FOR_REQ_ERROR_TIMEDOUT) {
-            printf("INFO %s: do some processing\n", progname);
-            abstime += 60;
+        // if an unexpected error is returned, then delay and try again
+        if (rc != 0 && rc != SVC_WAIT_FOR_REQ_ERROR_TIMEDOUT) {
+            printf("ERROR %s: svc_wait_for_req returned unexpected error %d\n", progname, rc);
+            sleep(1);
             continue;
         }
 
-        // if svc_wait_for_req had some error other than the timeout handled above,
-        // then short sleep and contune; perhaps the error will clear up
-        if (rc != SVC_WAIT_FOR_REQ_SUCCESS) {
-            sleep(10);
+        // if scv_wait_for_req timedout then do periodic svc processing
+        if (rc == SVC_WAIT_FOR_REQ_ERROR_TIMEDOUT) {
+            printf("INFO %s: do some processing\n", progname);
+            abstime += 60;
             continue;
         }
 
