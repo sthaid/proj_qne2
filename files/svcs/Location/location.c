@@ -178,13 +178,17 @@ void create_loc_data_str(time_t t, double latitude, double longitude, char *name
     strftime(time_str, sizeof(time_str), "%b %d %Y %H:%M %Z", tm);
 
     // sprint location info to str
-    sprintf(data_str, "%s\n%s\n%0.4f %0.4f\n", name, time_str, latitude, longitude);
+    sprintf(data_str, "%s\n%s\n%0.4f %0.4f\n\n", name, time_str, latitude, longitude);
 }
 
 void add_simulated_entries_to_loc_hist(void)
 {
     double latitude, longitude, miles;
     char name[MAX_NAME];
+    time_t t;
+
+    t = time(NULL) - 30 * 86400;
+    t = t / 3600 * 3600;
 
     for (int i = 0; i < 20; i++) {
         // get random location in Massachusett
@@ -195,7 +199,10 @@ void add_simulated_entries_to_loc_hist(void)
         find_closest_loc_data(latitude, longitude, name, &miles);
 
         // add to loc_hist file
-        add_entry_to_loc_hist(time(NULL), latitude, longitude, name, miles);
+        add_entry_to_loc_hist(t, latitude, longitude, name, miles);
+
+        // advance time one hour
+        t += 3600;
     }
 }
 

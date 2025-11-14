@@ -45,12 +45,13 @@ int main(int argc, char **argv)
 
     double y_top;
     int y_display_begin;
-    //int y_display_end;
+    int y_display_end;
 
     time_t time_now;
     time_t time_last_get_loc_info;
 
-    char *curr_loc[1] = {NULL};
+    char *loc_curr_lines[1] = {NULL};
+    char *loc_hist_lines[MAX_LOC_HIST];
 
     // save args
     if (argc != 2) {
@@ -69,9 +70,9 @@ int main(int argc, char **argv)
     }
 
     // init
-    y_top = ROW2Y(5);
+    y_top = ROW2Y(5); // xxx adjust
     y_display_begin = ROW2Y(5);
-    //y_display_end = sdlx_win_height-2*sdlx_char_height;  // need a define or routine for this ?
+    y_display_end = sdlx_win_height-2*sdlx_char_height;  // need a define or routine for this ?
 
     // map location history file
     // - create_if_needed = false
@@ -94,13 +95,22 @@ int main(int argc, char **argv)
 
         // get and display current location
         time_now = time(NULL);
-        if (curr_loc[0] == NULL || time_now - time_last_get_loc_info > 60) {
-            curr_loc[0] = svc_make_req("Location", SVC_LOCATION_REQ_GET_LOC_INFO, NULL, 5);
+        if (loc_curr_lines[0] == NULL || time_now - time_last_get_loc_info > 60) {
+            loc_curr_lines[0] = svc_make_req("Location", SVC_LOCATION_REQ_GET_LOC_INFO, NULL, 5);
             time_last_get_loc_info = time_now;
         }
-        if (curr_loc[0] != NULL) {
-            sdlx_render_multiline_text(Y_CURR_LOC, Y_CURR_LOC, Y_CURR_LOC+3*sdlx_char_height, curr_loc, 1);
+        if (loc_curr_lines[0] != NULL) {
+            sdlx_render_multiline_text(Y_CURR_LOC, Y_CURR_LOC, Y_CURR_LOC+3*sdlx_char_height, loc_curr_lines, 1);
         }
+
+        // display the location history
+        // xxx reverse
+        // xxx simulated data should have different times
+        int count = loc_hist->count;
+        for (int i = 0; i < count; i++) {
+            loc_hist_lines[i] = loc_hist->loc[count-1-i].data_str;
+        }
+        sdlx_render_multiline_text(y_top, y_display_begin, y_display_end, loc_hist_lines, loc_hist->count);
 
         // register for events
         sdlx_register_event(NULL, EVID_MOTION);
@@ -123,7 +133,7 @@ int main(int argc, char **argv)
             settings();
             break;
         case EVID_GOTO_TOP:
-            //todo
+            y_top = ROW2Y(5); // xxx adjust AND needs define
             break;
         case EVID_MOTION:
             y_top += event.u.motion.yrel;
