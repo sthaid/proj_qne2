@@ -10,12 +10,24 @@
 
 #include "svcs/Location/location.h"
 
+// defines
+#define EVID_SETTINGS  10
+#define EVID_GOTO_TOP  11
+
+#define SEC 1000000
+
+#define Y_CURR_LOC 50  // xxx check in clock
+
 // variables
 char *progname;
 char *data_dir;
-
-loc_hist_t *loc_hist;
     
+// prototypes
+// xxx move to svcs
+char *svc_make_req(char *svc_name, int req_id, char *data_in, int timeout_secs);
+void settings(void);
+
+// NOTES
 // Bolton
 // 6/5/2025 23:00 EST
 // -42.1234 -130.1234
@@ -29,6 +41,16 @@ int main(int argc, char **argv)
     int          rc;
     sdlx_event_t event;
     bool         done = false;
+    loc_hist_t *loc_hist;
+
+    double y_top;
+    int y_display_begin;
+    //int y_display_end;
+
+    time_t time_now;
+    time_t time_last_get_loc_info;
+
+    char *curr_loc[1] = {NULL};
 
     // save args
     if (argc != 2) {
@@ -46,6 +68,11 @@ int main(int argc, char **argv)
         return 1;
     }
 
+    // init
+    y_top = ROW2Y(5);
+    y_display_begin = ROW2Y(5);
+    //y_display_end = sdlx_win_height-2*sdlx_char_height;  // need a define or routine for this ?
+
     // map location history file
     // - create_if_needed = false
     // - read_only = true 
@@ -56,41 +83,54 @@ int main(int argc, char **argv)
         return 1; 
     }
 
-    // xxx temp
-    svc_req_t *req;
-    req = calloc(1, sizeof(svc_req_t));
-    req->req = SVC_LOCATION_REQ_GET_LOC_INFO;
-    svc_issue_req("Location", req);
-    svc_wait_for_req_complete(req, 10);
-    if (req->status != SVC_REQ_STATUS_OK) {
-        printf("ERROR %s: req status = %d\n", progname, req->status);
-    } else {
-        printf("INFO %s: %s\n", progname, req->data);
-    }
-    free(req);  // xxx where to free
+    // if location history file was created, and test mode is enabled then
+    // add simulated entries to the loc hist file
+    // xxx ^^^ this is for the service
 
     // runtime loop
     while (!done) {
         // init the backbuffer
         sdlx_display_init(COLOR_BLACK);
 
-        // register control event to
-        // - end program
-        sdlx_register_control_events(NULL, NULL, "X", COLOR_WHITE, COLOR_BLACK, 0, 0, EVID_QUIT);
+        // get and display current location
+        time_now = time(NULL);
+        if (curr_loc[0] == NULL || time_now - time_last_get_loc_info > 60) {
+            curr_loc[0] = svc_make_req("Location", SVC_LOCATION_REQ_GET_LOC_INFO, NULL, 5);
+            time_last_get_loc_info = time_now;
+        }
+        if (curr_loc[0] != NULL) {
+            sdlx_render_multiline_text(Y_CURR_LOC, Y_CURR_LOC, Y_CURR_LOC+3*sdlx_char_height, curr_loc, 1);
+        }
 
-        // xxx display location info
-        sdlx_render_printf_xyctr(sdlx_win_width/2, sdlx_win_height/2, "xxx Location");
+        // register for events
+        sdlx_register_event(NULL, EVID_MOTION);
+        sdlx_register_control_events("stg", "top", "X", 
+                                     COLOR_WHITE, COLOR_BLACK, 
+                                     EVID_SETTINGS, EVID_GOTO_TOP, EVID_QUIT);
 
         // present the display
         sdlx_display_present();
 
-        // wait for event, with infinite timeout
-        sdlx_get_event(-1, &event);
+        // wait for event, with 10 second timeout
+        sdlx_get_event(10*SEC, &event);
 
         // process events
         switch (event.event_id) {
         case EVID_QUIT:
             done = true;
+            break;
+        case EVID_SETTINGS:
+            settings();
+            break;
+        case EVID_GOTO_TOP:
+            //todo
+            break;
+        case EVID_MOTION:
+            y_top += event.u.motion.yrel;
+            if (y_top >= y_display_begin) {
+                y_top = y_display_begin;
+            }
+            //y_top += xxx;
             break;
         }
     }
@@ -99,4 +139,43 @@ int main(int argc, char **argv)
     sdlx_quit(SUBSYS_VIDEO);
     printf("INFO %s: terminating\n", progname);
     return 0;
+}
+
+// -----------------  SETTINGS  ----------------------------------------
+
+void settings(void)
+{
+}
+
+// -----------------  UTILS     ----------------------------------------
+
+// xxx move to svcs
+char *svc_make_req(char *svc_name, int req_id, char *data_in, int timeout_secs)
+{
+    svc_req_t *req;
+    static char data_out[MAX_SVC_REQ_DATA];
+
+    req = calloc(1, sizeof(svc_req_t));
+    req->req = req_id;
+    if (data_in) {
+        strncpy(req->data, data_in, MAX_SVC_REQ_DATA);
+        req->data[MAX_SVC_REQ_DATA-1] = '\0';
+    }
+
+    svc_issue_req(svc_name, req);
+    svc_wait_for_req_complete(req, timeout_secs);
+
+    if (req->status != SVC_REQ_STATUS_OK) {
+        // xxx print
+        printf("ERROR %s: svc_make_req failed, req->status = %d\n", progname, req->status);
+        return NULL;
+    }
+
+    strncpy(data_out, req->data, MAX_SVC_REQ_DATA);
+    data_out[MAX_SVC_REQ_DATA-1] = '\0';
+    printf("xxxxxxx data out '%s'\n", data_out);
+
+    free(req);
+
+    return data_out;
 }

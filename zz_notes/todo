@@ -1,3 +1,9 @@
+location app
+- current loc
+- history
+- stgs
+xxxxxxxx
+
 get lat/long on demand
 
 Location app can call Location service to get ptr to data file

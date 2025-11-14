@@ -15,12 +15,16 @@
 
 // variables
 loc_hist_t *loc_hist;
-bool end_program = false;
+bool        end_program = false;
+bool        test_loc_hist = true;
 
 // prototypes
 void add_entry_to_loc_hist(time_t t, double latitude, double longitude, char *name, double miles);
 char *most_recent_loc_hist_name(void);
+void create_loc_data_str(time_t t, double latitude, double longitude, char *name, double miles, char *data_str);
+void add_simulated_entries_to_loc_hist(void);
 void process_req(svc_req_t *req);
+double rand_double(void);
 
 // -----------------  MAIN  -----------------------------------------
 
@@ -31,6 +35,7 @@ int main(int argc, char **argv)
     long          abstime;
     svc_req_t    *req;
     int           rc;
+    int           created;
 
     // save args
     if (argc != 2) {
@@ -52,10 +57,16 @@ int main(int argc, char **argv)
     // - create_if_needed = true
     // - read_only = false
     // - created (return flag) = NULL
-    loc_hist = util_map_file(data_dir, LOC_HIST_FILENAME, sizeof(loc_hist_t), true, false, NULL);
+    loc_hist = util_map_file(data_dir, LOC_HIST_FILENAME, sizeof(loc_hist_t), true, false, &created);
     if (loc_hist == NULL) {
         printf("ERROR: %s failed to map %s\n", progname, LOC_HIST_FILENAME);
         return 1;
+    }
+
+    // when test_mode is enabled and the loc_hist file was just created,
+    // add simulated entries to the loc_hist file
+    if (test_loc_hist && created) {
+        add_simulated_entries_to_loc_hist();
     }
 
     // set absolute time at which svc_wait_for_req will timeout;
@@ -92,7 +103,7 @@ int main(int argc, char **argv)
                 add_entry_to_loc_hist(time(NULL), latitude, longitude, name, miles);
             }
 
-            // increment abstime
+            // update abstime to next hour
             abstime += 3600;
             continue;
         }
@@ -110,35 +121,85 @@ int main(int argc, char **argv)
     return 0;
 }
 
-// -----------------  LOC_HIST FILE: UPDATE & QUERY  ----------------
+// -----------------  LOC_HIST SUPPORT  -----------------------------
+
+
+
 
 void add_entry_to_loc_hist(time_t t, double latitude, double longitude, char *name, double miles)
 {
-    struct loc_hist_entry_s *x;
-
-    x = &loc_hist->loc[loc_hist->count % MAX_LOC_HIST];
-
-    x->t          = t;
-    x->latitude   = latitude;
-    x->longitude  = longitude;
-    strcpy(x->name, name);
-    x->miles      = miles;
+    create_loc_data_str(t, latitude, longitude, name, miles,
+                        loc_hist->loc[loc_hist->count].data_str);
 
     loc_hist->count++;
 
     util_sync_file(loc_hist, sizeof(loc_hist_t));
+
+    // xxx handle file full
 }
 
 char *most_recent_loc_hist_name(void)
 {
+    static char name[MAX_NAME];
+    char *ptr, *data_str;
+
     if (loc_hist->count == 0) {
         return "";
-    } else {
-        return loc_hist->loc[(loc_hist->count-1) % MAX_LOC_HIST].name;
-    }    
+    }
+
+    data_str = loc_hist->loc[loc_hist->count-1].data_str;
+
+    ptr = strchr(data_str, '\n');
+    if (ptr == NULL) {
+        printf("ERROR %s: newline char not found in data_str '%s'\n", progname, data_str);
+        return "";
+    }
+
+    memcpy(name, data_str, ptr-data_str);
+    name[ptr-data_str] = '\0';
+
+    printf("INFO %s: most recent name = '%s'\n", progname, name);
+    return name;
 }
 
-// -----------------  PROCESS REQ FROM CLIENT APP  ------------------
+void create_loc_data_str(time_t t, double latitude, double longitude, char *name, double miles, char *data_str)
+{
+    struct tm *tm;
+    char time_str[50];
+
+    // Bolton
+    // --------------------
+    // 06/05/2025 23:00 EST
+    // Jun 5 2025 23:00 EST
+    // -42.1234 -130.1234
+
+    // create time string
+    tm = localtime(&t);
+    strftime(time_str, sizeof(time_str), "%b %d %Y %H:%M %Z", tm);
+
+    // sprint location info to str
+    sprintf(data_str, "%s\n%s\n%0.4f %0.4f\n", name, time_str, latitude, longitude);
+}
+
+void add_simulated_entries_to_loc_hist(void)
+{
+    double latitude, longitude, miles;
+    char name[MAX_NAME];
+
+    for (int i = 0; i < 20; i++) {
+        // get random location in Massachusett
+        latitude  = 41.23 + (42.88 - 41.23) * rand_double();
+        longitude = -(69.93 + (73.50 - 69.93) * rand_double());
+
+        // find closest location from loc_data
+        find_closest_loc_data(latitude, longitude, name, &miles);
+
+        // add to loc_hist file
+        add_entry_to_loc_hist(time(NULL), latitude, longitude, name, miles);
+    }
+}
+
+// -----------------  PROCESS REQ SUPPORT  --------------------------
 
 void process_req(svc_req_t *req)
 {
@@ -149,12 +210,11 @@ void process_req(svc_req_t *req)
         break;
     case SVC_LOCATION_REQ_GET_LOC_INFO: {
         double latitude, longitude, miles;
-        char   name[MAX_NAME];
+        char name[MAX_NAME];
 
         util_get_location(&latitude, &longitude, NULL);
         find_closest_loc_data(latitude, longitude, name, &miles);
-
-        sprintf(req->data, "%0.4f %0.4f %0.1f %s", latitude, longitude, miles, name);
+        create_loc_data_str(time(NULL), latitude, longitude, name, miles, req->data);
 
         svc_req_completed(req, SVC_REQ_STATUS_OK);
         break; }
@@ -175,3 +235,13 @@ void process_req(svc_req_t *req)
     }
 }
 
+// -----------------  MISC UTILS  -----------------------------------
+
+double rand_double(void)
+{
+    double rand;
+
+    rand = (double)random() / 0x7fffffff;
+    printf("%f\n", rand);
+    return rand;
+}

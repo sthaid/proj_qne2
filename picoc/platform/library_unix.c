@@ -1392,18 +1392,18 @@ struct LibraryFunction SvcsFunctions[] = {
 const char SvcsDefs[] = "\
 // common values for svc_req_t req \n\
 #define SVC_REQ_STOP 1 \n\
- \n\
+\n\
 // values returned by svc_issue_req \n\
 #define SVC_ISSUE_REQ_SUCCESS              0 \n\
 #define SVC_ISSUE_REQ_ERROR_SVC_NOT_FOUND  1 \n\
 #define SVC_ISSUE_REQ_ERROR_QUEUE_FULL     2 \n\
- \n\
+\n\
 // values returned by svc_wait_for_req \n\
 #define SVC_WAIT_FOR_REQ_SUCCESS               0 \n\
 #define SVC_WAIT_FOR_REQ_ERROR_SVC_NOT_FOUND   1 \n\
 #define SVC_WAIT_FOR_REQ_ERROR_TIMEDOUT        2 \n\
 #define SVC_WAIT_FOR_REQ_ERROR_OTHER           3 \n\
- \n\
+\n\
 // values for svc_req_t status \n\
 #define SVC_REQ_STATUS_NOT_COMPLETE         0 \n\
 #define SVC_REQ_STATUS_OK                   1 \n\
@@ -1411,11 +1411,14 @@ const char SvcsDefs[] = "\
 #define SVC_REQ_STATUS_ERROR_INVALID_REQ    3 \n\
 #define SVC_REQ_STATUS_ERROR_SVC_NOT_FOUND  4 \n\
 #define SVC_REQ_STATUS_ERROR_OTHER          5 \n\
- \n\
+\n\
+// sizeof of req->data \n\
+#define MAX_SVC_REQ_DATA 100 \n\
+\n\
 typedef struct { \n\
     int  req; \n\
     int  status; \n\
-    char data[100]; \n\
+    char data[MAX_SVC_REQ_DATA]; \n\
 } svc_req_t; \n\
 ";
 

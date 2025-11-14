@@ -15,11 +15,7 @@ typedef struct {
     int count;
     int pad;
     struct loc_hist_entry_s {
-        unsigned long t;
-        double        latitude;
-        double        longitude;
-        double        miles;
-        char          name[MAX_NAME];
+        char data_str[100];
     } loc[MAX_LOC_HIST];
 } loc_hist_t;
 

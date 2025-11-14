@@ -34,10 +34,13 @@ void svcs_display(int bg_color);
 #define SVC_REQ_STATUS_ERROR_SVC_NOT_FOUND  4
 #define SVC_REQ_STATUS_ERROR_OTHER          5
 
+// sizeof of req->data
+#define MAX_SVC_REQ_DATA 100
+
 typedef struct {
     int  req;
     int  status;
-    char data[100];
+    char data[MAX_SVC_REQ_DATA];
 } svc_req_t;
 
 // routines called by apps
