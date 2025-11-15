@@ -92,6 +92,18 @@ void Sdl_get_event (struct ParseState *Parser, struct Value *ReturnValue,
     sdlx_get_event(timeout_us, event);
 }
 
+void Sdl_get_input_str (struct ParseState *Parser, struct Value *ReturnValue,
+	struct Value **Param, int NumArgs)
+{
+    char *prompt        = Param[0]->Val->Pointer;
+    bool  numeric_keybd = Param[1]->Val->Integer;
+    int   bg_color      = Param[2]->Val->Integer;
+    char *input_str;
+
+    input_str = sdlx_get_input_str(prompt, numeric_keybd, bg_color);
+    ReturnValue->Val->Pointer = input_str;
+}
+
 //
 // create colors
 //
@@ -730,6 +742,7 @@ struct LibraryFunction SdlFunctions[] = {
     { Sdl_register_control_events, 
                            "void sdlx_register_control_events(char *evstr1, char *evstr2, char *evstr3, int fg_color, int bg_color, int evid1, int evid2, int evid3); " },
     { Sdl_get_event,       "void sdlx_get_event(long timeout_us, sdlx_event_t *event);" },
+    { Sdl_get_input_str,   "char *sdlx_get_input_str(char *prompt, bool numeric_keybd, int bg_color);" },
 
     // create colors
     { Sdl_create_color,    "int sdlx_create_color(int r, int g, int b, int a);" },
@@ -1043,6 +1056,19 @@ void Util_file_size (struct ParseState *Parser, struct Value *ReturnValue,
 }
 
 //
+// utils directory routines
+//
+
+void Util_delete_dir (struct ParseState *Parser, struct Value *ReturnValue,
+	struct Value **Param, int NumArgs)
+{
+    char *dir            = Param[0]->Val->Pointer;
+    char *dir_to_delete  = Param[1]->Val->Pointer;
+
+    util_delete_dir(dir, dir_to_delete);
+}
+
+//
 // utils file map routines
 //
 
@@ -1264,6 +1290,8 @@ struct LibraryFunction UtilsFunctions[] = {
     { Util_file_exists,      "bool util_file_exists(char *dir, char *fn);" },
     { Util_file_mtime,       "long util_file_mtime(char *dir, char *fn);" },
     { Util_file_size,        "long util_file_size(char *dir, char *fn);" },
+    // directory utils
+    { Util_delete_dir,       "void util_delete_dir(char *dir, char *dir_to_delete);" },
     // file map
     { Util_map_file,         "void *util_map_file(char *dir, char *file, int len, bool create_if_needed, bool read_only, int *created_flag);" },
     { Util_unmap_file,       "void util_unmap_file(void *addr, int len);" },

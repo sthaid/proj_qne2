@@ -34,6 +34,9 @@ void settings(void);
 //
 // 123456789 123456789
 
+
+// xxx
+// - Name Not Found
 // -----------------  MAIN  ------------------------------------------
     
 int main(int argc, char **argv)
@@ -48,10 +51,13 @@ int main(int argc, char **argv)
     int y_display_end;
 
     time_t time_now;
-    time_t time_last_get_loc_info;
+    time_t time_last_get_loc_info = 0;
 
-    char *loc_curr_lines[1] = {NULL};
+    char loc_curr[MAX_SVC_REQ_DATA] = "Not Initialized";
+    char *loc_curr_lines[1] = {loc_curr};
     char *loc_hist_lines[MAX_LOC_HIST];
+
+    bool settings_changed = false;
 
     // save args
     if (argc != 2) {
@@ -95,17 +101,20 @@ int main(int argc, char **argv)
 
         // get and display current location
         time_now = time(NULL);
-        if (loc_curr_lines[0] == NULL || time_now - time_last_get_loc_info > 60) {
-            loc_curr_lines[0] = svc_make_req("Location", SVC_LOCATION_REQ_GET_LOC_INFO, NULL, 5);
+        if (time_now - time_last_get_loc_info > 60 || settings_changed) {
+            char *response = svc_make_req("Location", SVC_LOCATION_REQ_GET_LOC_INFO, NULL, 5);
+            if (response == NULL) {
+                strcpy(loc_curr, "Loc Svc Error");
+            } else {
+                strncpy(loc_curr, response, MAX_SVC_REQ_DATA);
+                loc_curr[MAX_SVC_REQ_DATA-1] = '\0';
+            }
             time_last_get_loc_info = time_now;
+            settings_changed = false;
         }
-        if (loc_curr_lines[0] != NULL) {
-            sdlx_render_multiline_text(Y_CURR_LOC, Y_CURR_LOC, Y_CURR_LOC+3*sdlx_char_height, loc_curr_lines, 1);
-        }
+        sdlx_render_multiline_text(Y_CURR_LOC, Y_CURR_LOC, Y_CURR_LOC+3*sdlx_char_height, loc_curr_lines, 1);
 
         // display the location history
-        // xxx reverse
-        // xxx simulated data should have different times
         int count = loc_hist->count;
         for (int i = 0; i < count; i++) {
             loc_hist_lines[i] = loc_hist->loc[count-1-i].data_str;
@@ -131,6 +140,8 @@ int main(int argc, char **argv)
             break;
         case EVID_SETTINGS:
             settings();
+            settings_changed = true;
+            y_top = ROW2Y(5); // xxx adjust AND needs define
             break;
         case EVID_GOTO_TOP:
             y_top = ROW2Y(5); // xxx adjust AND needs define
@@ -153,8 +164,135 @@ int main(int argc, char **argv)
 
 // -----------------  SETTINGS  ----------------------------------------
 
+#define EVID_DEL_COUNTRY 20  // through 24
+#define EVID_ADD_COUNTRY 30
+
+#define MAX_COUNTRIES 5
+
+char countries[MAX_COUNTRIES][3];
+int  max_countries;
+
+void get_countries(void);
+
 void settings(void)
 {
+    bool done = false;
+    sdlx_loc_t *loc;
+    sdlx_event_t event;
+
+    while (!done) {
+        // init the backbuffer
+        sdlx_display_init(COLOR_BLACK);
+
+        // get list of countries
+        get_countries();
+
+        // display list of countries, with DEL event for each
+        for (int i = 0; i < max_countries; i++) {
+            sdlx_render_printf(0, ROW2Y(i+1), "%s", countries[i]);
+
+            sdlx_print_init_color(COLOR_LIGHT_BLUE, COLOR_BLACK);
+            loc = sdlx_render_printf(COL2X(10), ROW2Y(i+1), "%s", "DEL");
+            sdlx_register_event(loc, EVID_DEL_COUNTRY+i);
+            sdlx_print_init_color(COLOR_WHITE, COLOR_BLACK);
+        }
+
+        // register for Download Country event
+        sdlx_print_init_color(COLOR_LIGHT_BLUE, COLOR_BLACK);
+        loc = sdlx_render_printf(0, ROW2Y(10), "%s", "Download Country");
+        sdlx_print_init_color(COLOR_WHITE, COLOR_BLACK);
+        sdlx_register_event(loc, EVID_ADD_COUNTRY);
+
+        // register for quit event
+        sdlx_register_control_events(NULL, NULL, "X", 
+                                     COLOR_WHITE, COLOR_BLACK, 
+                                     0, 0, EVID_QUIT);
+
+        // present the display
+        sdlx_display_present();
+
+        // wait for event, infinite timeout
+        sdlx_get_event(-1, &event);
+
+        // process events
+        switch (event.event_id) {
+        case EVID_QUIT:
+            done = true;
+            break;
+
+        case EVID_ADD_COUNTRY: {
+            char *response, *country_code;
+
+            // xxx fg color too?
+            // xxx also multi line prompt, with notice about time
+            // xxx force ctry code to lowercase
+            country_code = sdlx_get_input_str("2 Char Country Code?", false, COLOR_BLACK);
+            if (country_code == NULL) {
+                break;
+            }
+            printf("COUNTRY CODE '%s'\n", country_code);
+
+            printf("INFO %s: downloading %s\n", progname, country_code);
+            response = svc_make_req("Location",      
+                                    SVC_LOCATION_REQ_ADD_COUNTRY_INFO,
+                                    country_code,
+                                    60);    // timeout_secs  xxx how long
+            if (response == NULL) {
+                printf("ERROR %s: SVC_LOCATION_REQ_ADD_COUNTRY_INFO '%s' failed\n", progname, country_code);
+            }
+            break; }
+
+        case EVID_DEL_COUNTRY+0:
+        case EVID_DEL_COUNTRY+1:
+        case EVID_DEL_COUNTRY+2:
+        case EVID_DEL_COUNTRY+3:
+        case EVID_DEL_COUNTRY+4: {
+            int idx = event.event_id - EVID_DEL_COUNTRY;
+            char *response;
+
+            printf("INFO %s: deleteing %s\n", progname, countries[idx]);
+            response = svc_make_req("Location",      
+                                    SVC_LOCATION_REQ_DEL_COUNTRY_INFO,
+                                    countries[idx],
+                                    5);    // timeout_secs
+            if (response == NULL) {
+                printf("ERROR %s: SVC_LOCATION_REQ_DEL_COUNTRY_INFO '%s' failed\n", progname, countries[idx]);
+            }
+            break; }
+        }
+    }
+}
+
+void get_countries(void)
+{
+    char *response, *p;
+
+    memset(countries, 0, sizeof(countries));
+    max_countries = 0;
+
+    response = svc_make_req("Location",      
+                            SVC_LOCATION_REQ_LIST_COUNTRY_INFO,
+                            NULL,  // data_in = NULL
+                            5);    // timeout_secs
+    if (response == NULL) {
+        printf("ERROR %s: SVC_LOCATION_REQ_LIST_COUNTRY_INFO failed\n", progname);
+    }
+
+    while (true) {
+        p = strchr(response, '\n');
+        if (p == NULL) {
+            break;
+        }
+
+        *p = '\0';
+        snprintf(countries[max_countries], sizeof(countries[max_countries]), "%s", response);
+        max_countries++;
+        response = p + 1;
+
+        if (max_countries == MAX_COUNTRIES) {
+            break;
+        }
+    }
 }
 
 // -----------------  UTILS     ----------------------------------------
@@ -166,18 +304,18 @@ char *svc_make_req(char *svc_name, int req_id, char *data_in, int timeout_secs)
     static char data_out[MAX_SVC_REQ_DATA];
 
     req = calloc(1, sizeof(svc_req_t));
+
     req->req = req_id;
     if (data_in) {
         strncpy(req->data, data_in, MAX_SVC_REQ_DATA);
         req->data[MAX_SVC_REQ_DATA-1] = '\0';
     }
-
     svc_issue_req(svc_name, req);
     svc_wait_for_req_complete(req, timeout_secs);
 
     if (req->status != SVC_REQ_STATUS_OK) {
-        // xxx print
-        printf("ERROR %s: svc_make_req failed, req->status = %d\n", progname, req->status);
+        printf("ERROR %s: svc_make_req failed, req->req=%d req->status=%d\n", 
+               progname, req->req, req->status);
         return NULL;
     }
 
@@ -189,3 +327,4 @@ char *svc_make_req(char *svc_name, int req_id, char *data_in, int timeout_secs)
 
     return data_out;
 }
+

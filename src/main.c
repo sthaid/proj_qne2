@@ -70,7 +70,7 @@ static pthread_t   server_tid;
 static void processing(void);
 
 static int server_thread(void *cx);
-static int waiter_thread(void *cx);
+//static int waiter_thread(void *cx); // xxx interfers with system()
 static void kill_child_processes(pid_t pid);
 
 //
@@ -153,7 +153,7 @@ static int init(void)
 
     // create server threads
     sdlx_create_detached_thread(server_thread, NULL);
-    sdlx_create_detached_thread(waiter_thread, NULL);
+    //sdlx_create_detached_thread(waiter_thread, NULL);
 
     // init sdl xxx move
     sdlx_init(SUBSYS_VIDEO | SUBSYS_AUDIO | SUBSYS_SENSOR);
@@ -916,6 +916,7 @@ static void process_req_using_android_sh(int sockfd, char *cmd)
     exit(1);
 }
 
+#if 0
 static int waiter_thread(void *cx)
 {
     pid_t pid;
@@ -937,6 +938,7 @@ static int waiter_thread(void *cx)
 
     return 0;
 }
+#endif
 
 static void kill_child_processes(pid_t pid)
 {

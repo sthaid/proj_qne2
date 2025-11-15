@@ -123,9 +123,6 @@ int main(int argc, char **argv)
 
 // -----------------  LOC_HIST SUPPORT  -----------------------------
 
-
-
-
 void add_entry_to_loc_hist(time_t t, double latitude, double longitude, char *name, double miles)
 {
     create_loc_data_str(t, latitude, longitude, name, miles,
@@ -219,22 +216,57 @@ void process_req(svc_req_t *req)
         double latitude, longitude, miles;
         char name[MAX_NAME];
 
+        printf("SVC GOT SVC_LOCATION_REQ_GET_LOC_INFO\n");
+
         util_get_location(&latitude, &longitude, NULL);
         find_closest_loc_data(latitude, longitude, name, &miles);
         create_loc_data_str(time(NULL), latitude, longitude, name, miles, req->data);
 
         svc_req_completed(req, SVC_REQ_STATUS_OK);
         break; }
-    case SVC_LOCATION_REQ_ADD_COUNTRY_INFO:
-        //download_country_info("us");
+    case SVC_LOCATION_REQ_ADD_COUNTRY_INFO: {
+        char *country_code = req->data;
+
+        printf("SVC GOT SVC_LOCATION_REQ_ADD_COUNTRY_INFO '%s'\n", country_code);
+        download_country_loc_data(country_code);
+        read_loc_data();
         svc_req_completed(req, SVC_REQ_STATUS_OK);
-        break;
-    case SVC_LOCATION_REQ_DEL_COUNTRY_INFO:
+        break; }
+    case SVC_LOCATION_REQ_DEL_COUNTRY_INFO: {
+        char filename[120];
+
+        printf("SVC GOT SVC_LOCATION_REQ_DEL_COUNTRY_INFO\n");
+        sprintf(filename, "%s.loc", req->data);
+        printf("INFO %s: deleting %s\n", progname, filename);
+        util_delete_file(data_dir, filename);
+        read_loc_data();
         svc_req_completed(req, SVC_REQ_STATUS_OK);
-        break;
-    case SVC_LOCATION_REQ_LIST_COUNTRY_INFO:
+
+        break; }
+    case SVC_LOCATION_REQ_LIST_COUNTRY_INFO: {
+        FILE *fp;
+        char *p, *p2, s[100], cmd[100];
+
+        printf("SVC GOT SVC_LOCATION_REQ_LIST_COUNTRY_INFO\n");
+        sprintf(cmd, "cd %s; ls -1 *.loc", data_dir);
+        fp = popen(cmd, "r");
+        if (fp == NULL) {
+            strcpy(req->data, "No Country Info");
+            svc_req_completed(req, SVC_REQ_STATUS_OK);
+            break;
+        }
+        p = req->data;
+        while (fgets(s, sizeof(s), fp) != NULL) {
+            p2 = strstr(s, ".loc");
+            if (p2) {
+                *p2 = '\0';
+                p += sprintf(p, "%s\n", s);
+            }
+        }
+        pclose(fp);
+
         svc_req_completed(req, SVC_REQ_STATUS_OK);
-        break;
+        break; }
     default:
         printf("ERROR %s: req %d is invalid\n", progname, req->req);
         svc_req_completed(req, SVC_REQ_STATUS_ERROR_INVALID_REQ);
