@@ -342,6 +342,37 @@ void svc_wait_for_req_complete(svc_req_t *req, int timeout_secs)
     }
 }
 
+char *svc_make_req(char *svc_name, int req_id, char *data_in, int timeout_secs)
+{
+    svc_req_t *req;
+    static char data_out[MAX_SVC_REQ_DATA];
+
+    req = calloc(1, sizeof(svc_req_t));
+
+    req->req = req_id;
+    if (data_in) {
+        strncpy(req->data, data_in, MAX_SVC_REQ_DATA);
+        req->data[MAX_SVC_REQ_DATA-1] = '\0';
+    }
+    svc_issue_req(svc_name, req);
+    svc_wait_for_req_complete(req, timeout_secs);
+
+    if (req->status != SVC_REQ_STATUS_OK) {
+        ERROR("svc_make_req failed, svc_name=%s req_id=%d status=%d\n", svc_name, req_id, req->status);
+        if (req->status != SVC_REQ_STATUS_NOT_COMPLETE) {
+            free(req);
+        }
+        return NULL;
+    }
+
+    strncpy(data_out, req->data, MAX_SVC_REQ_DATA);
+    data_out[MAX_SVC_REQ_DATA-1] = '\0';
+
+    free(req);
+
+    return data_out;
+}
+
 //
 // routines called by svcs
 //

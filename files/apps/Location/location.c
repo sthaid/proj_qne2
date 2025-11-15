@@ -23,20 +23,13 @@ char *progname;
 char *data_dir;
     
 // prototypes
-// xxx move to svcs
-char *svc_make_req(char *svc_name, int req_id, char *data_in, int timeout_secs);
 void settings(void);
 
-// NOTES
+// NOTES  xxx del
 // Bolton
 // 6/5/2025 23:00 EST
 // -42.1234 -130.1234
-//
-// 123456789 123456789
 
-
-// xxx
-// - Name Not Found
 // -----------------  MAIN  ------------------------------------------
     
 int main(int argc, char **argv)
@@ -187,21 +180,25 @@ void settings(void)
         // get list of countries
         get_countries();
 
+        // register for Download Country event
+        if (max_countries < 5) {
+            sdlx_print_init_color(COLOR_LIGHT_BLUE, COLOR_BLACK);
+            loc = sdlx_render_printf(0, ROW2Y(1), "%s", "Download Country");
+            sdlx_print_init_color(COLOR_WHITE, COLOR_BLACK);
+            sdlx_register_event(loc, EVID_ADD_COUNTRY);
+        }
+
         // display list of countries, with DEL event for each
         for (int i = 0; i < max_countries; i++) {
-            sdlx_render_printf(0, ROW2Y(i+1), "%s", countries[i]);
+            int y = ROW2Y(3+1.5*i);
+
+            sdlx_render_printf(0, y, "%s", countries[i]);
 
             sdlx_print_init_color(COLOR_LIGHT_BLUE, COLOR_BLACK);
-            loc = sdlx_render_printf(COL2X(10), ROW2Y(i+1), "%s", "DEL");
+            loc = sdlx_render_printf(COL2X(10), y, "%s", "DEL");
             sdlx_register_event(loc, EVID_DEL_COUNTRY+i);
             sdlx_print_init_color(COLOR_WHITE, COLOR_BLACK);
         }
-
-        // register for Download Country event
-        sdlx_print_init_color(COLOR_LIGHT_BLUE, COLOR_BLACK);
-        loc = sdlx_render_printf(0, ROW2Y(10), "%s", "Download Country");
-        sdlx_print_init_color(COLOR_WHITE, COLOR_BLACK);
-        sdlx_register_event(loc, EVID_ADD_COUNTRY);
 
         // register for quit event
         sdlx_register_control_events(NULL, NULL, "X", 
@@ -294,37 +291,3 @@ void get_countries(void)
         }
     }
 }
-
-// -----------------  UTILS     ----------------------------------------
-
-// xxx move to svcs
-char *svc_make_req(char *svc_name, int req_id, char *data_in, int timeout_secs)
-{
-    svc_req_t *req;
-    static char data_out[MAX_SVC_REQ_DATA];
-
-    req = calloc(1, sizeof(svc_req_t));
-
-    req->req = req_id;
-    if (data_in) {
-        strncpy(req->data, data_in, MAX_SVC_REQ_DATA);
-        req->data[MAX_SVC_REQ_DATA-1] = '\0';
-    }
-    svc_issue_req(svc_name, req);
-    svc_wait_for_req_complete(req, timeout_secs);
-
-    if (req->status != SVC_REQ_STATUS_OK) {
-        printf("ERROR %s: svc_make_req failed, req->req=%d req->status=%d\n", 
-               progname, req->req, req->status);
-        return NULL;
-    }
-
-    strncpy(data_out, req->data, MAX_SVC_REQ_DATA);
-    data_out[MAX_SVC_REQ_DATA-1] = '\0';
-    printf("xxxxxxx data out '%s'\n", data_out);
-
-    free(req);
-
-    return data_out;
-}
-

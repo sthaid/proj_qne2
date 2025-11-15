@@ -5,6 +5,7 @@
 #include <time.h>
 #include <math.h>
 #include <unistd.h>
+#include <ctype.h>
 
 #include <sdlx.h>
 #include <utils.h>
@@ -23,8 +24,8 @@ void add_entry_to_loc_hist(time_t t, double latitude, double longitude, char *na
 char *most_recent_loc_hist_name(void);
 void create_loc_data_str(time_t t, double latitude, double longitude, char *name, double miles, char *data_str);
 void add_simulated_entries_to_loc_hist(void);
-void process_req(svc_req_t *req);
 double rand_double(void);
+void process_req(svc_req_t *req);
 
 // -----------------  MAIN  -----------------------------------------
 
@@ -99,7 +100,9 @@ int main(int argc, char **argv)
 
             // if name is different than most recent entry in loc_file
             // then add new entry to loc file, 
-            if (strcmp(most_recent_loc_hist_name(), name) != 0) {
+            if (strcmp(name, "Not Found") != 0 &&
+                strcmp(most_recent_loc_hist_name(), name) != 0)
+            {
                 add_entry_to_loc_hist(time(NULL), latitude, longitude, name, miles);
             }
 
@@ -203,6 +206,15 @@ void add_simulated_entries_to_loc_hist(void)
     }
 }
 
+double rand_double(void)
+{
+    double rand;
+
+    rand = (double)random() / 0x7fffffff;
+    printf("%f\n", rand);
+    return rand;
+}
+
 // -----------------  PROCESS REQ SUPPORT  --------------------------
 
 void process_req(svc_req_t *req)
@@ -216,18 +228,24 @@ void process_req(svc_req_t *req)
         double latitude, longitude, miles;
         char name[MAX_NAME];
 
-        printf("SVC GOT SVC_LOCATION_REQ_GET_LOC_INFO\n");
-
         util_get_location(&latitude, &longitude, NULL);
         find_closest_loc_data(latitude, longitude, name, &miles);
         create_loc_data_str(time(NULL), latitude, longitude, name, miles, req->data);
-
         svc_req_completed(req, SVC_REQ_STATUS_OK);
         break; }
     case SVC_LOCATION_REQ_ADD_COUNTRY_INFO: {
         char *country_code = req->data;
 
-        printf("SVC GOT SVC_LOCATION_REQ_ADD_COUNTRY_INFO '%s'\n", country_code);
+        if (strlen(country_code) != 2) {
+            printf("ERROR %s: invalid country code '%s', len must be 2\n", progname, country_code);
+            svc_req_completed(req, SVC_REQ_STATUS_ERROR);
+            break;
+        }
+
+        for (int i = 0; i < strlen(country_code); i++) {
+            country_code[i] = tolower(country_code[i]);
+        }
+            
         download_country_loc_data(country_code);
         read_loc_data();
         svc_req_completed(req, SVC_REQ_STATUS_OK);
@@ -235,19 +253,15 @@ void process_req(svc_req_t *req)
     case SVC_LOCATION_REQ_DEL_COUNTRY_INFO: {
         char filename[120];
 
-        printf("SVC GOT SVC_LOCATION_REQ_DEL_COUNTRY_INFO\n");
         sprintf(filename, "%s.loc", req->data);
-        printf("INFO %s: deleting %s\n", progname, filename);
         util_delete_file(data_dir, filename);
         read_loc_data();
         svc_req_completed(req, SVC_REQ_STATUS_OK);
-
         break; }
     case SVC_LOCATION_REQ_LIST_COUNTRY_INFO: {
         FILE *fp;
         char *p, *p2, s[100], cmd[100];
 
-        printf("SVC GOT SVC_LOCATION_REQ_LIST_COUNTRY_INFO\n");
         sprintf(cmd, "cd %s; ls -1 *.loc", data_dir);
         fp = popen(cmd, "r");
         if (fp == NULL) {
@@ -264,7 +278,6 @@ void process_req(svc_req_t *req)
             }
         }
         pclose(fp);
-
         svc_req_completed(req, SVC_REQ_STATUS_OK);
         break; }
     default:
@@ -272,15 +285,4 @@ void process_req(svc_req_t *req)
         svc_req_completed(req, SVC_REQ_STATUS_ERROR_INVALID_REQ);
         break;
     }
-}
-
-// -----------------  MISC UTILS  -----------------------------------
-
-double rand_double(void)
-{
-    double rand;
-
-    rand = (double)random() / 0x7fffffff;
-    printf("%f\n", rand);
-    return rand;
 }

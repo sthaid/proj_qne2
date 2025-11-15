@@ -1372,6 +1372,19 @@ void Svc_wait_for_req_complete(struct ParseState *Parser, struct Value *ReturnVa
     svc_wait_for_req_complete(req, timeout_secs);
 }
 
+void Svc_make_req(struct ParseState *Parser, struct Value *ReturnValue,
+        struct Value **Param, int NumArgs)
+{
+    char *svc_name     = Param[0]->Val->Pointer;
+    int   req_id       = Param[1]->Val->Integer;
+    char *data_in      = Param[2]->Val->Pointer;
+    int   timeout_secs = Param[3]->Val->Integer;
+    char *data_out;
+
+    data_out = svc_make_req(svc_name, req_id, data_in, timeout_secs);
+    ReturnValue->Val->Pointer = data_out;
+}
+
 //
 // routines called by svcs
 //
@@ -1410,6 +1423,7 @@ struct LibraryFunction SvcsFunctions[] = {
     { Svc_issue_req,             "int svc_issue_req(char *svc_name, svc_req_t *req);" },
     { Svc_is_req_complete,       "bool svc_is_req_complete(svc_req_t *req);" },
     { Svc_wait_for_req_complete, "void svc_wait_for_req_complete(svc_req_t *req, int timeout_secs);" },
+    { Svc_make_req,              "char *svc_make_req(char *svc_name, int req_id, char *data_in, int timeout_secs);" },
 
     // routines called by svcs
     { Svc_wait_for_req,          "int svc_wait_for_req(char *svc_name, svc_req_t **req, long timeout_abstime_secs);" },

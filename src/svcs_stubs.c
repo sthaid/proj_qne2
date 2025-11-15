@@ -13,7 +13,7 @@
 
 int svc_issue_req(char *svc_name, svc_req_t *req)
 {
-    ERROR("STUB svc_name %s not found\n", svc_name);
+    ERROR("STUB svc_issue_req: svc_name %s not found\n", svc_name);
     svc_req_completed(req, SVC_REQ_STATUS_ERROR_SVC_NOT_FOUND);
     return SVC_ISSUE_REQ_ERROR_SVC_NOT_FOUND;
 }
@@ -25,18 +25,14 @@ bool svc_is_req_complete(svc_req_t *req)
 
 void svc_wait_for_req_complete(svc_req_t *req, int timeout_secs)
 {
-    long start_us;
+    sleep(timeout_secs);
+}
 
-    start_us = util_microsec_timer();
-    while (true) {
-        if (req->status != SVC_REQ_STATUS_NOT_COMPLETE) {
-            break;
-        }
-        if (util_microsec_timer() - start_us > timeout_secs * SEC) {
-            break;
-        }
-        usleep(100*MS);
-    }
+char *svc_make_req(char *svc_name, int req_id, char *data_in, int timeout_secs)
+{
+    ERROR("STUB svc_make_req: svc_name %s not found\n", svc_name);
+    sleep(timeout_secs);
+    return NULL;
 }
 
 //
@@ -45,7 +41,7 @@ void svc_wait_for_req_complete(svc_req_t *req, int timeout_secs)
 
 int svc_wait_for_req(char *svc_name, svc_req_t **req, long timeout_abstime_secs)
 {
-    ERROR("STUB svc_name %s not found\n", svc_name);
+    ERROR("STUB svc_wait_for_req: svc_name %s not found\n", svc_name);
     *req = NULL;
     return SVC_WAIT_FOR_REQ_ERROR_SVC_NOT_FOUND;
 }

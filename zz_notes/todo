@@ -1,3 +1,30 @@
+main screen layout
+stg screen layout
+
+xxx issues
+
+problem with sprintf cmd
+
+what should MAX_LOC_HIST be
+
+fix lat/long so it is on demand  OR at least not so often
+
+
+check on battery usage
+
+---- coding done ----
+
+limit downloads to 5 countries               <=======
+
+move svc_req to svcs,c                        DONE
+
+don't add Not Found to loc_hist               DONE
+
+xxxxxxxxxxxx
+xxxxxxxxxxxx
+xxxxxxxxxxxx
+xxxxxxxxxxxx
+
 location app
 - current loc
 - history
