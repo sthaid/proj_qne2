@@ -167,15 +167,14 @@ void create_loc_data_str(time_t t, double latitude, double longitude, char *name
     struct tm *tm;
     char time_str[50];
 
-    // Bolton
-    // --------------------
-    // 06/05/2025 23:00 EST
-    // Jun 5 2025 23:00 EST
-    // -42.1234 -130.1234
+    // example:
+    //   Bolton
+    //   Jun 5 25 23:00 EST
+    //   -42.1234 -130.1234
 
     // create time string
     tm = localtime(&t);
-    strftime(time_str, sizeof(time_str), "%b %d %Y %H:%M %Z", tm);
+    strftime(time_str, sizeof(time_str), "%b %d %y %H:%M %Z", tm);
 
     // sprint location info to str
     sprintf(data_str, "%s\n%s\n%0.4f %0.4f\n\n", name, time_str, latitude, longitude);

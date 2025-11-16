@@ -10,49 +10,52 @@
 
 #include "svcs/Location/location.h"
 
+//
 // defines
+//
+
 #define EVID_SETTINGS  10
 #define EVID_GOTO_TOP  11
 
 #define SEC 1000000
 
-#define Y_CURR_LOC 50  // xxx check in clock
+#define Y_TOP_OF_DISPLAY 50
 
+//
 // variables
+//
+
 char *progname;
 char *data_dir;
+int   y_history_top_reset;
     
+//
 // prototypes
-void settings(void);
+//
 
-// NOTES  xxx del
-// Bolton
-// 6/5/2025 23:00 EST
-// -42.1234 -130.1234
+void settings(void);
 
 // -----------------  MAIN  ------------------------------------------
     
 int main(int argc, char **argv)
 {
-    int          rc;
+    int          rc, y;
     sdlx_event_t event;
     bool         done = false;
-    loc_hist_t *loc_hist;
+    loc_hist_t  *loc_hist;
 
-    double y_top;
-    int y_display_begin;
-    int y_display_end;
+    double       y_history_top;
+    int          y_history_display_begin;
+    int          y_history_display_end;
 
-    time_t time_now;
-    time_t time_last_get_loc_info = 0;
+    time_t       time_now;
+    time_t       time_last_get_loc_info = 0;
 
-    char loc_curr[MAX_SVC_REQ_DATA] = "Not Initialized";
-    char *loc_curr_lines[1] = {loc_curr};
-    char *loc_hist_lines[MAX_LOC_HIST];
+    char         loc_curr[MAX_SVC_REQ_DATA] = "Not Initialized";
+    char        *loc_curr_lines[1] = {loc_curr};
+    char        *loc_hist_lines[MAX_LOC_HIST];
 
-    bool settings_changed = false;
-
-    char req_data[MAX_SVC_REQ_DATA];
+    bool         settings_changed = false;
 
     // save args
     if (argc != 2) {
@@ -70,11 +73,6 @@ int main(int argc, char **argv)
         return 1;
     }
 
-    // init
-    y_top = ROW2Y(5); // xxx adjust
-    y_display_begin = ROW2Y(5);
-    y_display_end = sdlx_win_height-2*sdlx_char_height;  // need a define or routine for this ?
-
     // map location history file
     // - create_if_needed = false
     // - read_only = true 
@@ -85,18 +83,16 @@ int main(int argc, char **argv)
         return 1; 
     }
 
-    // if location history file was created, and test mode is enabled then
-    // add simulated entries to the loc hist file
-    // xxx ^^^ this is for the service
-
     // runtime loop
     while (!done) {
         // init the backbuffer
         sdlx_display_init(COLOR_BLACK);
 
-        // get and display current location
+        // get current location
         time_now = time(NULL);
         if (time_now - time_last_get_loc_info > 60 || settings_changed) {
+            char req_data[MAX_SVC_REQ_DATA];
+
             memset(req_data, 0, sizeof(req_data));
             rc = svc_make_req("Location", SVC_LOCATION_REQ_GET_LOC_INFO, req_data, sizeof(req_data), 5);
             if (rc != 0) {
@@ -108,14 +104,38 @@ int main(int argc, char **argv)
             time_last_get_loc_info = time_now;
             settings_changed = false;
         }
-        sdlx_render_multiline_text(Y_CURR_LOC, Y_CURR_LOC, Y_CURR_LOC+3*sdlx_char_height, loc_curr_lines, 1);
+
+        // display current location
+        // - display "Current"
+        y = Y_TOP_OF_DISPLAY;
+        sdlx_render_text_xyctr(sdlx_win_width/2, y+sdlx_char_height/2, "Currnet");
+        y += sdlx_char_height;
+        // - display the current location
+        sdlx_render_multiline_text(y, y, y+3*sdlx_char_height, loc_curr_lines, 1);
+        y += 3.5 * sdlx_char_height;
+
+        // display rectangle to separate the Current and History areas
+        sdlx_render_fill_rect(0, y, sdlx_win_width, 10, COLOR_BLUE);
+        y += 0.5 * sdlx_char_height;
 
         // display the location history
+        // - display "History"
+        sdlx_render_text_xyctr(sdlx_win_width/2, y+sdlx_char_height/2, "History");
+        y += sdlx_char_height;
+        // - init variables used to display and scroll the history display
+        if (y_history_top_reset == 0) {
+            y_history_top_reset     = y;
+            y_history_top           = y_history_top_reset;
+            y_history_display_begin = y_history_top_reset;
+            y_history_display_end   = sdlx_win_height-2*sdlx_char_height;  // need a define or routine for this ?
+        }
+        // - display the history, starting at most recent
         int count = loc_hist->count;
         for (int i = 0; i < count; i++) {
             loc_hist_lines[i] = loc_hist->loc[count-1-i].data_str;
         }
-        sdlx_render_multiline_text(y_top, y_display_begin, y_display_end, loc_hist_lines, loc_hist->count);
+        sdlx_render_multiline_text(y_history_top, y_history_display_begin, y_history_display_end, 
+                                   loc_hist_lines, loc_hist->count);
 
         // register for events
         sdlx_register_event(NULL, EVID_MOTION);
@@ -137,17 +157,16 @@ int main(int argc, char **argv)
         case EVID_SETTINGS:
             settings();
             settings_changed = true;
-            y_top = ROW2Y(5); // xxx adjust AND needs define
+            y_history_top = y_history_top_reset;
             break;
         case EVID_GOTO_TOP:
-            y_top = ROW2Y(5); // xxx adjust AND needs define
+            y_history_top = y_history_top_reset;
             break;
         case EVID_MOTION:
-            y_top += event.u.motion.yrel;
-            if (y_top >= y_display_begin) {
-                y_top = y_display_begin;
+            y_history_top += event.u.motion.yrel;
+            if (y_history_top >= y_history_display_begin) {
+                y_history_top = y_history_display_begin;
             }
-            //y_top += xxx;
             break;
         }
     }
