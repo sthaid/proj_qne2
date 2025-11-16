@@ -108,7 +108,7 @@ int main(int argc, char **argv)
         // display current location
         // - display "Current"
         y = Y_TOP_OF_DISPLAY;
-        sdlx_render_text_xyctr(sdlx_win_width/2, y+sdlx_char_height/2, "Currnet");
+        sdlx_render_text_xyctr(sdlx_win_width/2, y+sdlx_char_height/2, "Current");
         y += sdlx_char_height;
         // - display the current location
         sdlx_render_multiline_text(y, y, y+3*sdlx_char_height, loc_curr_lines, 1);
