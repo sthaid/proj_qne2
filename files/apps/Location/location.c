@@ -52,6 +52,8 @@ int main(int argc, char **argv)
 
     bool settings_changed = false;
 
+    char req_data[MAX_SVC_REQ_DATA];
+
     // save args
     if (argc != 2) {
         printf("ERROR: data_dir arg expected\n");
@@ -95,11 +97,12 @@ int main(int argc, char **argv)
         // get and display current location
         time_now = time(NULL);
         if (time_now - time_last_get_loc_info > 60 || settings_changed) {
-            char *response = svc_make_req("Location", SVC_LOCATION_REQ_GET_LOC_INFO, NULL, 5);
-            if (response == NULL) {
+            memset(req_data, 0, sizeof(req_data));
+            rc = svc_make_req("Location", SVC_LOCATION_REQ_GET_LOC_INFO, req_data, sizeof(req_data));
+            if (rc != 0) {
                 strcpy(loc_curr, "Loc Svc Error");
             } else {
-                strncpy(loc_curr, response, MAX_SVC_REQ_DATA);
+                strncpy(loc_curr, req_data, MAX_SVC_REQ_DATA);
                 loc_curr[MAX_SVC_REQ_DATA-1] = '\0';
             }
             time_last_get_loc_info = time_now;
@@ -169,9 +172,10 @@ void get_countries(void);
 
 void settings(void)
 {
-    bool done = false;
-    sdlx_loc_t *loc;
+    bool         done = false;
+    sdlx_loc_t  *loc;
     sdlx_event_t event;
+    int          rc;
 
     while (!done) {
         // init the backbuffer
@@ -218,7 +222,7 @@ void settings(void)
             break;
 
         case EVID_ADD_COUNTRY: {
-            char *response, *country_code;
+            char *country_code;
 
             // xxx fg color too?
             // xxx also multi line prompt, with notice about time
@@ -227,15 +231,14 @@ void settings(void)
             if (country_code == NULL) {
                 break;
             }
-            printf("COUNTRY CODE '%s'\n", country_code);
+            printf("INFO %s: country_code '%s'\n", progname, country_code);
 
-            printf("INFO %s: downloading %s\n", progname, country_code);
-            response = svc_make_req("Location",      
-                                    SVC_LOCATION_REQ_ADD_COUNTRY_INFO,
-                                    country_code,
-                                    60);    // timeout_secs  xxx how long
-            if (response == NULL) {
-                printf("ERROR %s: SVC_LOCATION_REQ_ADD_COUNTRY_INFO '%s' failed\n", progname, country_code);
+            rc = svc_make_req("Location",      
+                              SVC_LOCATION_REQ_ADD_COUNTRY_INFO,
+                              country_code, strlen(country_code)+1);
+            if (rc != 0) {
+                printf("ERROR %s: SVC_LOCATION_REQ_ADD_COUNTRY_INFO '%s' failed, rc=%d\n", 
+                       progname, country_code, rc);
             }
             break; }
 
@@ -245,15 +248,14 @@ void settings(void)
         case EVID_DEL_COUNTRY+3:
         case EVID_DEL_COUNTRY+4: {
             int idx = event.event_id - EVID_DEL_COUNTRY;
-            char *response;
 
             printf("INFO %s: deleteing %s\n", progname, countries[idx]);
-            response = svc_make_req("Location",      
-                                    SVC_LOCATION_REQ_DEL_COUNTRY_INFO,
-                                    countries[idx],
-                                    5);    // timeout_secs
-            if (response == NULL) {
-                printf("ERROR %s: SVC_LOCATION_REQ_DEL_COUNTRY_INFO '%s' failed\n", progname, countries[idx]);
+            rc = svc_make_req("Location",      
+                              SVC_LOCATION_REQ_DEL_COUNTRY_INFO,
+                              countries[idx], strlen(countries[idx])+1);
+            if (rc != 0) {
+                printf("ERROR %s: SVC_LOCATION_REQ_DEL_COUNTRY_INFO '%s' failed, rc=%d\n", 
+                       progname, countries[idx], rc);
             }
             break; }
         }
@@ -262,29 +264,31 @@ void settings(void)
 
 void get_countries(void)
 {
-    char *response, *p;
+    char *p, *p1;
+    int   rc;
+    char  req_data[MAX_SVC_REQ_DATA];
 
     memset(countries, 0, sizeof(countries));
     max_countries = 0;
 
-    response = svc_make_req("Location",      
-                            SVC_LOCATION_REQ_LIST_COUNTRY_INFO,
-                            NULL,  // data_in = NULL
-                            5);    // timeout_secs
-    if (response == NULL) {
-        printf("ERROR %s: SVC_LOCATION_REQ_LIST_COUNTRY_INFO failed\n", progname);
+    rc = svc_make_req("Location",      
+                      SVC_LOCATION_REQ_LIST_COUNTRY_INFO,
+                      req_data, sizeof(req_data));
+    if (rc != 0) {
+        printf("ERROR %s: SVC_LOCATION_REQ_LIST_COUNTRY_INFO failed, rc=%d\n", progname, rc);
     }
 
+    p = req_data;
     while (true) {
-        p = strchr(response, '\n');
-        if (p == NULL) {
+        p1 = strchr(p, '\n');
+        if (p1 == NULL) {
             break;
         }
 
-        *p = '\0';
-        snprintf(countries[max_countries], sizeof(countries[max_countries]), "%s", response);
+        *p1 = '\0';
+        snprintf(countries[max_countries], sizeof(countries[max_countries]), "%s", p);  // xxx fix
         max_countries++;
-        response = p + 1;
+        p = p1 + 1;
 
         if (max_countries == MAX_COUNTRIES) {
             break;

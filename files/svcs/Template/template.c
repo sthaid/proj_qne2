@@ -10,7 +10,7 @@
 char *progname;
 char *data_dir;
 
-// flag set when SVC_REQ_STOP received
+// flag set when SVC_REQ_ID_STOP received
 bool end_program = false;
 
 // prototypes
@@ -44,14 +44,14 @@ int main(int argc, char **argv)
         rc = svc_wait_for_req(progname, &req, abstime); //xxx use abstime
 
         // if an unexpected error is returned, then delay and try again
-        if (rc != 0 && rc != SVC_WAIT_FOR_REQ_ERROR_TIMEDOUT) {
+        if (rc != 0 && rc != SVC_REQ_WAIT_ERROR_TIMEDOUT) {
             printf("ERROR %s: svc_wait_for_req returned unexpected error %d\n", progname, rc);
             sleep(1);
             continue;
         }
 
         // if scv_wait_for_req timedout then do periodic svc processing
-        if (rc == SVC_WAIT_FOR_REQ_ERROR_TIMEDOUT) {
+        if (rc == SVC_REQ_WAIT_ERROR_TIMEDOUT) {
             printf("INFO %s: do some processing\n", progname);
             abstime += 60;
             continue;
@@ -59,7 +59,7 @@ int main(int argc, char **argv)
 
         // if req was recvd then process the req
         if (req != NULL) {
-            printf("INFO %s: req=%p req->req=%d req->status=%d\n", progname, req, req->req, req->status);
+            printf("INFO %s: req=%p req->req_id=%d\n", progname, req, req->req_id);
             process_req(req);
         }
     }
@@ -71,17 +71,17 @@ int main(int argc, char **argv)
 
 void process_req(svc_req_t *req)
 {
-    printf("INFO %s: got req %d\n", progname, req->req);
+    printf("INFO %s: got req_id %d\n", progname, req->req_id);
 
     // process the request
-    switch (req->req) {
-    case SVC_REQ_STOP:
-        svc_req_completed(req, SVC_REQ_STATUS_OK);
+    switch (req->req_id) {
+    case SVC_REQ_ID_STOP:
+        svc_req_completed(req, SVC_REQ_OK);
         end_program = true;
         break;
     default:
-        printf("ERROR %s: req %d is invalid\n", progname, req->req);
-        svc_req_completed(req, SVC_REQ_STATUS_ERROR_INVALID_REQ);
+        printf("ERROR %s: req %d is invalid\n", progname, req->req_id);
+        svc_req_completed(req, SVC_REQ_ERROR_INVALID_REQ);
         break;
     }
 }
