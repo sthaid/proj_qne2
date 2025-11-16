@@ -8,7 +8,7 @@
 // routines called by apps
 //
 
-int svc_make_req(char *svc_name, int req_id, char *req_data, int req_data_len)
+int svc_make_req(char *svc_name, int req_id, char *req_data, int req_data_len, int timeout_secs)
 {
     ERROR("STUB svc_make_req: svc_name=%s req_id=%d\n", svc_name, req_id);
     sleep(1);

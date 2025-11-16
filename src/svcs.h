@@ -41,7 +41,7 @@ typedef struct {
 } svc_req_t;
 
 // routines called by apps
-int svc_make_req(char *svc_name, int req_id, char *req_data, int req_data_len);
+int svc_make_req(char *svc_name, int req_id, char *req_data, int req_data_len, int timeout_secs);
 
 // routines called by svcs
 int svc_wait_for_req(char *svc_name, svc_req_t **req, long timeout_abstime_secs);

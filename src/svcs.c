@@ -226,7 +226,8 @@ void svcs_stop_all(void)
     for (id = 0; id < max_svcs; id++) {
         svc_t *x = &svcs[id];
         if (x->state == SERVICE_STATE_RUNNING) {
-            svc_make_req(svcs[id].name, SVC_REQ_ID_STOP, NULL, 0);
+            x->state = SERVICE_STATE_STOPPING;
+            svc_make_req(svcs[id].name, SVC_REQ_ID_STOP, NULL, 0, 5);
         }
     }
 
@@ -267,7 +268,7 @@ void svcs_stop_all(void)
 // routines called by apps
 //
 
-int svc_make_req(char *svc_name, int req_id, char *req_data, int req_data_len)
+int svc_make_req(char *svc_name, int req_id, char *req_data, int req_data_len, int timeout_secs)
 {
     #define TIMEOUT_USEC (20L * SEC)  // xxx needs arg
 
@@ -294,7 +295,9 @@ int svc_make_req(char *svc_name, int req_id, char *req_data, int req_data_len)
 
     // check that the svc is active
     x = &svcs[svc_id];
-    if (x->state != SERVICE_STATE_RUNNING) {
+    if (req_id == SVC_REQ_ID_STOP && x->state == SERVICE_STATE_STOPPING) {
+        // okay
+    } else if (x->state != SERVICE_STATE_RUNNING) {
         ERROR("service %s not running\n", svc_name);
         return SVC_REQ_ERROR_SVC_NOT_RUNNING;
     }
@@ -339,12 +342,12 @@ int svc_make_req(char *svc_name, int req_id, char *req_data, int req_data_len)
         if (req->completed) {
             break;
         }
-        if (util_microsec_timer() - start_us > TIMEOUT_USEC) {
+        if (util_microsec_timer() - start_us > (timeout_secs * SEC)) {
             break;
         }
         usleep(100*MS);
     }
-    INFO("duration = %ld secs\n", (util_microsec_timer() - start_us) / 1000000);
+    INFO("duration = %ld secs\n", (util_microsec_timer() - start_us) / SEC);
 
     // prepare to return req_status and req_data
     req_status = req->status;
@@ -454,7 +457,7 @@ static void process_svc_stop_req(int id)
     }
 
     x->state = SERVICE_STATE_STOPPING;
-    svc_make_req(x->name, SVC_REQ_ID_STOP, NULL, 0);
+    svc_make_req(x->name, SVC_REQ_ID_STOP, NULL, 0, 5);
 }
 
 static void process_svc_stopped_callback(int id, int rc)

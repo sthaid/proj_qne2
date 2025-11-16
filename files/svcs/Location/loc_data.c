@@ -4,6 +4,7 @@
 #include <string.h>
 #include <math.h>
 #include <errno.h>
+#include <ctype.h>
 
 #include <utils.h>
 
@@ -133,14 +134,14 @@ int read_and_parse_json_file(char *json_filename, FILE *fp_out);
 int download_country_loc_data(char *id_arg)
 {
     int ret = -1;
-    char cmd[200], json_filename[100], out_filename[100], zip_filename[100], char id[3];
+    char cmd[200], json_filename[100], out_filename[100], zip_filename[100], id[3];
     FILE *fp_out = NULL;
 
     // verify 
-    strncpy(id, id_arg, sizoef(id));
+    strncpy(id, id_arg, sizeof(id));
     id[sizeof(id)-1] = '\0';
     if (strlen(id) != 2 || !islower(id[0]) || !islower(id[1])) {
-        printf("ERROR %s: invalid 2 char country id code '%s'\n", id);
+        printf("ERROR %s: invalid 2 char country id code '%s'\n", progname, id);
         return ret;
     }
 
@@ -170,7 +171,7 @@ int download_country_loc_data(char *id_arg)
     sprintf(cmd, "unzip -o -d %s %s/%s.zip", data_dir, data_dir, id);
     ret = system(cmd);
     if (ret != 0) {
-        printf("ERROR %s: '%s' failed, ret=%d\n", progname, cmd, ret);
+        printf("ERROR %s: '%s' failed, ret=%d, %s\n", progname, cmd, ret, strerror(errno));
         goto done;
     }
 

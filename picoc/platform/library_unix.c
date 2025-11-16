@@ -1349,9 +1349,10 @@ void Svc_make_req(struct ParseState *Parser, struct Value *ReturnValue,
     int   req_id       = Param[1]->Val->Integer;
     char *req_data     = Param[2]->Val->Pointer;
     int   req_data_len = Param[3]->Val->Integer;
+    int   timeout_secs = Param[4]->Val->Integer;
     int   ret;
 
-    ret = svc_make_req(svc_name, req_id, req_data, req_data_len);
+    ret = svc_make_req(svc_name, req_id, req_data, req_data_len, timeout_secs);
     ReturnValue->Val->Integer = ret;
 }
 
@@ -1390,7 +1391,7 @@ void SvcsSetupFunction(Picoc *pc)
 
 struct LibraryFunction SvcsFunctions[] = {
     // routines called by apps
-    { Svc_make_req,              "int svc_make_req(char *svc_name, int req_id, char *req_data, int req_data_len);" },
+    { Svc_make_req,              "int svc_make_req(char *svc_name, int req_id, char *req_data, int req_data_len, int timeout_secs);" },
 
     // routines called by svcs
     { Svc_wait_for_req,          "int svc_wait_for_req(char *svc_name, svc_req_t **req, long timeout_abstime_secs);" },

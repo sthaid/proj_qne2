@@ -98,7 +98,7 @@ int main(int argc, char **argv)
         time_now = time(NULL);
         if (time_now - time_last_get_loc_info > 60 || settings_changed) {
             memset(req_data, 0, sizeof(req_data));
-            rc = svc_make_req("Location", SVC_LOCATION_REQ_GET_LOC_INFO, req_data, sizeof(req_data));
+            rc = svc_make_req("Location", SVC_LOCATION_REQ_GET_LOC_INFO, req_data, sizeof(req_data), 5);
             if (rc != 0) {
                 strcpy(loc_curr, "Loc Svc Error");
             } else {
@@ -235,7 +235,8 @@ void settings(void)
 
             rc = svc_make_req("Location",      
                               SVC_LOCATION_REQ_ADD_COUNTRY_INFO,
-                              country_code, strlen(country_code)+1);
+                              country_code, strlen(country_code)+1, 
+                              20);  // 20 sec timeout
             if (rc != 0) {
                 printf("ERROR %s: SVC_LOCATION_REQ_ADD_COUNTRY_INFO '%s' failed, rc=%d\n", 
                        progname, country_code, rc);
@@ -252,7 +253,8 @@ void settings(void)
             printf("INFO %s: deleteing %s\n", progname, countries[idx]);
             rc = svc_make_req("Location",      
                               SVC_LOCATION_REQ_DEL_COUNTRY_INFO,
-                              countries[idx], strlen(countries[idx])+1);
+                              countries[idx], strlen(countries[idx])+1,
+                              5);  // 5 sec timeout
             if (rc != 0) {
                 printf("ERROR %s: SVC_LOCATION_REQ_DEL_COUNTRY_INFO '%s' failed, rc=%d\n", 
                        progname, countries[idx], rc);
@@ -273,7 +275,8 @@ void get_countries(void)
 
     rc = svc_make_req("Location",      
                       SVC_LOCATION_REQ_LIST_COUNTRY_INFO,
-                      req_data, sizeof(req_data));
+                      req_data, sizeof(req_data),
+                      5);  // 5 sec timeout
     if (rc != 0) {
         printf("ERROR %s: SVC_LOCATION_REQ_LIST_COUNTRY_INFO failed, rc=%d\n", progname, rc);
     }
