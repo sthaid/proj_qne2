@@ -269,7 +269,7 @@ void svcs_stop_all(void)
 
 int svc_make_req(char *svc_name, int req_id, char *req_data, int req_data_len)
 {
-    #define TIMEOUT_USEC (10L * SEC)
+    #define TIMEOUT_USEC (20L * SEC)  // xxx needs arg
 
     int        svc_id, i, req_status;
     svc_t     *x;
@@ -344,6 +344,7 @@ int svc_make_req(char *svc_name, int req_id, char *req_data, int req_data_len)
         }
         usleep(100*MS);
     }
+    INFO("duration = %ld secs\n", (util_microsec_timer() - start_us) / 1000000);
 
     // prepare to return req_status and req_data
     req_status = req->status;

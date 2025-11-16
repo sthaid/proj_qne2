@@ -130,11 +130,19 @@ void find_closest_loc_data(double latitude, double longitude, char *name, double
 
 int read_and_parse_json_file(char *json_filename, FILE *fp_out);
 
-int download_country_loc_data(char *id)
+int download_country_loc_data(char *id_arg)
 {
     int ret = -1;
-    char cmd[200], json_filename[100], out_filename[100], zip_filename[100];
+    char cmd[200], json_filename[100], out_filename[100], zip_filename[100], char id[3];
     FILE *fp_out = NULL;
+
+    // verify 
+    strncpy(id, id_arg, sizoef(id));
+    id[sizeof(id)-1] = '\0';
+    if (strlen(id) != 2 || !islower(id[0]) || !islower(id[1])) {
+        printf("ERROR %s: invalid 2 char country id code '%s'\n", id);
+        return ret;
+    }
 
     // init
     sprintf(zip_filename, "%s.zip", id);
@@ -182,8 +190,10 @@ int download_country_loc_data(char *id)
 
 done:
     // cleanup
-    util_delete_file(data_dir, zip_filename);
-    util_delete_dir(data_dir, id);
+    if (strcmp(data_dir, "svcs/Location") == 0 && strlen(id) == 2) {
+        util_delete_file(data_dir, zip_filename);
+        util_delete_dir(data_dir, id);
+    }
     if (fp_out) {
         fclose(fp_out);
     }
