@@ -411,7 +411,8 @@ int StdioBasePrintf(struct ParseState *Parser, FILE *Stream, char *StrOut,
     }
 
     /* null-terminate */
-    if (SOStream.StrOutPtr != NULL && SOStream.StrOutLen > 0)
+    // EZAPP null terminate strings when StrOutLen is -1; such as from sprintf
+    if (SOStream.StrOutPtr != NULL && (SOStream.StrOutLen > 0 || SOStream.StrOutLen == -1))
         *SOStream.StrOutPtr = '\0';
 
     return SOStream.CharCount;

@@ -3,11 +3,11 @@
 -------------
 
 cscope
-cleanup save files
-gitignore
 picoc sprintf
 location items
 
+cleanup save files   DONE
+gitignore            DONE
 
 --------------
 ---- apps ----
