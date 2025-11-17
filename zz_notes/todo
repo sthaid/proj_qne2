@@ -3,24 +3,30 @@
 --------------
 
 Location 
-- add clear option            <===
-- remove unit test            <===
-- display miles for current loc            <===
+- add clear option                            <===
+- remove unit test                            <===
+- display miles for current loc, and altitude  <===
 - MAX_LOC_HIST
 - is the 5 country limit enforced well enough
 - add elevation to current display, along with miles
 
 calculater
-- 32 bit hex display width
+- 32 bit hex display width  <===========
 - >> and / ops on 64 bit with msb set
 
 clock
-- fix clock program to handle case whre location is not immedeately avialable
-- recheck sunrise and sunset
+- fix clock program to handle case whre location
+  is not immedeately avialable
+- recheck sunrise and sunset     <==========
 
 reversi
 - add undo
 - edge heuristic
+
+weather app
+- get forecast
+- parse
+- weather icons, are they in the forecast
 
 new apps
 - steps,  needs a service too
@@ -28,7 +34,7 @@ new apps
 - quantum
 - tennis
 - music, with color organ
-- weather
+- weather                    <==========
 - memo
 - prime number benchmark
 - tick tack toe
@@ -39,7 +45,7 @@ new apps
 ---------------
 
 picoc
-- snprintf            <===
+- snprintf            <============
 - expressions
 
 picoc issues
@@ -83,7 +89,10 @@ lat/long
 ---- audio ----
 ---------------
 
-add mixer for mp3 file support
+add mixer for mp3 file support     <=========
+- does this support wav and mp3
+- get test audio files, from robot project, or 
+  from elsewhere
 
 recording
 - is volume control or adjustment needed
