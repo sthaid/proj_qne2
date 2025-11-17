@@ -1,129 +1,194 @@
-main screen layout
-stg screen layout
+--------------
+---- apps ----
+--------------
+
+Location 
+- add clear option            <===
+- remove unit test            <===
+- display miles for current loc            <===
+- MAX_LOC_HIST
+- is the 5 country limit enforced well enough
+- add elevation to current display, along with miles
+
+calculater
+- 32 bit hex display width
+- >> and / ops on 64 bit with msb set
+
+clock
+- fix clock program to handle case whre location is not immedeately avialable
+- recheck sunrise and sunset
+
+reversi
+- add undo
+- edge heuristic
+
+new apps
+- steps,  needs a service too
+- tilt
+- quantum
+- tennis
+- music, with color organ
+- weather
+- memo
+- prime number benchmark
+- tick tack toe
+- blackjack
+
+---------------
+---- picoc ----
+---------------
+
+picoc
+- snprintf            <===
+- expressions
+
+picoc issues
+- support NAN in picoc  ??
+- picoc cant do this
+    struct_t *x;
+    x = (struct_t*)data;
+    printf("x.z=%d x.b=%d\n", x->a, x->b);
+- unsigned expressions,  and expression test
+  - picoc variable types are not being propogated to expression
+  - write tester for expressions
+- fix expression issues, so clock and calc both work
+- review diffs, and notes for other issues
+- 64 to 32 bit assignement ?
+- picoc improvements
+  - identify problems
+    - const not allowed
+    - location of defines
+    - struct declaration and init
+    - problem when declaring static structures
+    - expressions that evaluate to long need to be cast
+  - document the limitations
+  - try to fix some of them
+    - try to get NAN working in picoc
+- misc
+  - fix the assignment problem
+  - fix picoc 64 bit problem
+  - fix print 'u' 
+  - make list of problems, and a demo program
+
+------------------
+---- lat/long ----
+------------------
+
+lat/long
+- get on demand, not always,  or not so often
+- zero values
+- get initial location when ezapp starts
+
+---------------
+---- audio ----
+---------------
+
+add mixer for mp3 file support
+
+recording
+- is volume control or adjustment needed
+
+--------------------
+---- sdlx video ----
+--------------------
+
+sdlx
+- should textures have a bg color
+- make pixels unsigned int, add pixel_t
+
+plot apis,
+- improve them
+- write an app that uses them, maybe steps
+
+--------------------
+---- devel tool ----
+--------------------
+
+fix ezsh for vi and cmd recall, and running vi
+
+fix waiter_thread
+
+--------------
+---- misc ----
+--------------
 
 xxx issues
 
-problem with sprintf cmd
+start app in background
+- when booting and when installing
+   - check into auto start   SampleForegroundService
+- what are the 4 pillars of Android called
 
-what should MAX_LOC_HIST be
+battery usage
+- adjust compass app interval, to trade off jitter for battery life
 
-fix lat/long so it is on demand  OR at least not so often
+remove templates from layout and svcs
 
+misc:
+- main: test reinit option,  does it reset data files?
+- cscope_init, minus the sdl
+- ezput all
+- what happens to main sdl thread when paused, is it blocked on the event,
+   - is renderer being cleared
+- need to handle ondestroy to kill off the android services
+  - and also just kill off the pthreads when exitting
+- does sdl main keep running when AP is paused?
+  - when foreground is enabled
+  - if so, a pthread can be created
+- update permission comments from here
+    https://wiki.libsdl.org/SDL3/SDL_RequestAndroidPermission
+- eval sdl routines for sdl3 port error checking
+- eval sdl use of rint or nearbyint
+- launcher icon
+- running from git env on Windows OS
 
-check on battery usage
+add networking support for apps, and add test in unit_test
+  - util_net_connect
+  - util_net_disconnect
+  - util_net_send
+  - util_net_recv
 
----- coding done ----
+--------------------
+---- publishing ----
+--------------------
 
-limit downloads to 5 countries               <=======
+review copyrights and credits
+- update clock Attribution Info
 
-move svc_req to svcs,c                        DONE
+repo
+- rename to ezApp
+- cleanup save files
+- compress all commits (rebase)
 
-don't add Not Found to loc_hist               DONE
+publishing
+- icon
+- release build
+- documentation
+- demo on how to add an app
+- replace qne with ezApp
 
-xxxxxxxxxxxx
-xxxxxxxxxxxx
-xxxxxxxxxxxx
-xxxxxxxxxxxx
+android build concerns
+- update sdkmanager packages 
+- continue to undersand, and document, the sdk version numbers
+  - why is NDK 27 used, and not 29?
 
-location app
-- current loc
-- history
-- stgs
-xxxxxxxx
+-----------------------
+---- documentation ----
+-----------------------
 
-get lat/long on demand
+doxygen
 
-Location app can call Location service to get ptr to data file
+Readme files for each APP, and top level
 
-how to load locations for the service
-- app can call to request that
-- app calls
-  - get loc file
-  - download more locations
-  - get list of downloaded locations
-  - delete downloaded location file
+=====================================================================
+=====================================================================
+====================  BACKUP  =======================================
+=====================================================================
+=====================================================================
 
-
-// xxx todo 
-// - improve picoc to use 64bit time_t
-//   signed int time_t overflows in year 2038
-// - check sizeof native android time_t
-// - support NAN in picoc
-
-// picoc cant do this
-    //struct_t *x;
-    //x = (struct_t*)data;
-    //printf("x.z=%d x.b=%d\n", x->a, x->b);
-
-
-other apps
-- tennis
-- tilt
-
---- done ---
-Template service
-Template app, => hello.c
-redo file mapping, make less complicated
-
-       --connect-timeout <seconds>
-max-time
---silent
-
-
-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-
-cleanup
-- src/main.c
-  lots of cleanup
-- src/sdlx.h
-  are these defined in the right placej
-
-Location App
-- download database
-- time how long init takes
-- look at databases from other countries, do they use ASCII
-
-
-usage: gzip [-19cdfkt] [FILE...]
-
-Compress files. With no files, compresses stdin to stdout.
-On success, the input files are removed and replaced by new
-files with the .gz suffix.
-
--c	Output to stdout
--d	Decompress (act as gunzip)
--f	Force: allow overwrite of output file
--k	Keep input files (default is to remove)
--t	Test integrity
--#	Compression level 1-9 (1:fastest, 6:default, 9:best)
-
-
-
-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-
-{"name":"Abbott",
- "display_name":"Abbott, Hill County, Texas, United States",
- "address":
-    {"city":"Abbott","county":"Hill County","state":"Texas","ISO3166-2-lvl4":"US-TX","country":"United States","country_code":"us"},
- "population":356,
- "osm_type":
- "relation",
- "osm_id":3488445,
- "type":"administrative",
- "location":[-97.08708306334233,31.889930149999998],
- "bbox":[-97.0931242,31.8771025,-97.0646171,31.9028973],
- "inferred_type":"city"}
-
-
----------
-
-improve service stop req
-
-get lat/long 
-- only on demand
-- hourly in service
+===============================================================
+===================  LAT/LONG TO CITY  ========================
+===============================================================
 
 get lat/long info by city
 - https://www.geoapify.com/us-zip-codes-to-download-for-free/
@@ -136,217 +201,9 @@ get lat/long info by city
      credit OpenStreetMap and its contributors. If you alter or build upon our data,
      you may distribute the result only under the same license.
 
-service
-- save location and altitude hourly
-- save steps hourly
-
--------------
-
-Picoc -
-- picoc variable types are not being propogated to expression
-- write tester for expressions
-
-cleanup this file
-
-update clock Attribution Info
-
-lat/long to city
-- https://simplemaps.com/data/us-cities
-  Use of the free database in production requires that you link back to:
-    https://simplemaps.com/data/us-cities.
-- https://www.reddit.com/r/BusinessIntelligence/comments/ds2pcb/finding_cityzip_with_latitude_and_longitude/
-- https://latlongdata.com/latitude-longitude-lookup/
-- Haversine
-- Geohash
-  - A notable C geohash library available on GitHub is yinqiwen/geohash-int.
-  - https://github.com/simplegeo/libgeohash/blob/master/geohash.c
-- zip code databas
-   https://simplemaps.com/data/us-zips
-
-start the app automaticlly
-
-get lat/long on demand, and not always
-
-expr eval
-- test
-- fix issues, so clock and calc both work
-
-start app in background
-- when booting and when installing
-- what are the 4 pillars of Android called
-
-location
-- just enable on demand
-- fix clock program to handle case whre location is not immedeately avialable
-- get initial location when ezapp starts
-
-service
-- save location and altitude hourly
-- save steps hourly
-- also save steps when the Steps app is running,  this can be the job of the App and not the service ?
-
-Apps
-- Weather
-- Location
-- Steps
-- Tennis
-- Tilt
-
-Location App
-- get database of locations for zip codes
-
-You can download a free zip code database from sites like Zip Code Download, Simplemaps.com, or Geoapify. For official data, the U.S. Census Bureau provides ZIP Code Tabulation Areas (ZCTAs) through its data portal. The free versions are suitable for many personal projects but may lack specific data like demographics or the most up-to-date PO box and business zip codes, which are often in paid versions.
-
-
-Free database sources
-Zip Code Download: Offers free zip code databases, but warns that professional or business use requires the more accurate, paid subscription for up-to-date data.
-Simplemaps.com: Provides a free basic version of its database, while a paid "Pro" or "Comprehensive" version includes more detailed data for business, PO boxes, and military codes.
-Geoapify: Offers free zip code data in JSON and GeoJSON formats, including geographic boundaries, and is available under an open government license.
-Census Bureau data
-U.S. Census Bureau: Provides ZIP Code Tabulation Areas (ZCTAs) through its data portal, which are approximate representations of USPS ZIP Code service areas used for statistical purposes.
-data.census.gov: The Census Bureau's official data portal allows you to find and download statistical data by ZIP Code. You can filter for ZIP Code Tabulation Areas to find relevant information.
-
-=========
-PICOC 
-========
-
-refresh picoc code                                 IN PORG
-learn how the test suite works                     DONE
-write a test program for integer expressions       STARTEd
-
-========
-CALCULATOR
-========
-
-test in 32 and 64 bit modes                        NEAR DONE
-
-=======
-apps
-=======
-- Location lat,long,alt,, with Altitude history, and location lookup history
-    - Altitude - with history
-- Memo
-- Weather
-- Tennis
-- Hexcalc                     NEAR DONE
-
-texture bg color
-
-use flexible colors for control events, and default to light blue
-
-make pixels unsigned int
-
-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-
-{"results":{
-"sunrise":"11:06:47 AM",
-"sunset":"9:54:52 PM",
-"solar_noon":"4:30:49 PM","day_length":"10:48:05","civil_twilight_begin":"10:39:38 AM","civil_twilight_end":"10:22:01 PM","nautical_twilight_begin":"10:06:51 AM","nautical_twilight_end":"10:54:48 PM","astronomical_twilight_begin":"9:34:18 AM","astronomical_twilight_end":"11:27:21 PM"},"status":"OK","tzid":"UTC"}
-
-https://sunrise-sunset.org/api
-https://api.sunrise-sunset.org/json?lat=36.7201600&lng=-4.4203400
-https://api.sunrise-sunset.org/json?lat=42.4334&lng=-71.6078
-https://api.sunrise-sunset.org/json?lat=42.4334&lng=-71.6078&formatted=0
-https://api.sunrise-sunset.org/json?lat=42.4334&lng=-71.6078@formatted=1
-{"results":{
-   "sunrise":"11:06:47 AM",
-   "sunset":"9:54:52 PM",
-   "solar_noon":"4:30:49 PM",
-   "day_length":"10:48:05","civil_twilight_begin":"10:39:38 AM","civil_twilight_end":"10:22:01 PM","nautical_twilight_begin":"10:06:51 AM","nautical_twilight_end":"10:54:48 PM","astronomical_twilight_begin":"9:34:18 AM","astronomical_twilight_end":"11:27:21 PM"},"status":"OK","tzid":"UTC"}
-
-find free/other weather icons
-otpimize for batter life
-- collect lat/long/alt once per hour
-- compass jtter
-wake app services at startup
-
-apps -
-- clock app - sunrise/sunset/midday, also diplay dat and time
-- HexCalc app
-- weather app
-- tennis app
-- illum app
-- update compass app for jitte level
-- hello world app
-
-fix picoc
-- nan
-- 64 to 32 bit assignement
-
-
-
-xxxxxxxx
-
-add clock app
-
-simple app - flashlight
-
-update jpeg_pixels to split a png file or a jpeg file
-
-add fg_color to sdl_register_control_events
-
-weather app
-- download from stock the weather symbols
-
-picoc improvements
-- identify problems
-  - const not allowed
-  - location of defines
-  - struct declaration and init
-  - problem when declaring static structures
-  - expressions that evaluate to long need to be cast
-- document the limitations
-- try to fix some of them
-  - try to get NAN working in picoc
-
-cancel stock.adobe.com before Nov 10, if desired
-
-add test page for weather.gov to Test  OR just add the weather app
-
-fix ezsh for vi and cmd recall
-
-have program start automatically,  
-- 4 pillars of android?
-
-sensors and location
-- freq of location service
-- 10 minute cycle in sensor service
-- add lat long alt to sensors
-
-is any improvement to weather.gov needed
-
-why did curl fail in the Sensors Service
-- try testing it in a loop, and do retry if it fails
-- dont use -s
-- may want to retry
-
-finish plot programs
-- weather
-- steps
-- lat/long/alt
-
-add more weather sensors
-
-add primes benchmark  to Test
-
-MAYBE LATER 
-- fresh start with new repo
-- remove curl.out when done with it
-
-------------
---- done ---
-------------
-
-
-=====================================================================
-REVIEW THIS SECTION
-=====================================================================
-
-boot start the service
-   - check into auto start   SampleForegroundService
+===============================================================
+===================  WEATHER.GOV  =============================
+===============================================================
 
 example using api.weather.gov to get temeprature at latitude longitude
 curl "https://api.weather.gov/points/38.8894,-77.0352" -H "User-Agent: my-weather-app (myemail@example.com)"
@@ -355,49 +212,16 @@ curl "https://api.weather.gov/points/38.8894,-77.0352" -H "User-Agent: steven-ha
 curl "https://api.weather.gov/points/38.8894,-77.0352" -H "User-Agent: steven-haid-app (stevenhaid@gmail.com)"
 curl "https://api.weather.gov/points/42.4334,-71.6078" -H "User-Agent: steven-haid-app (stevenhaid@gmail.com)"
 
-42.4334,-71.6078
+BOLTON: 42.4334,-71.6078
 
-simulated sensor values
-capture data differently
-use localtime
+https://www.weather.gov/documentation/services-web-api#:~:text=All%20of%20the%20information%20presented,to%20use%20for%20any%20purpose.
+https://api.weather.gov/
+https://api.weather.gov/points/{latitude},{longitude}
+https://api.weather.gov/points/41.0,90.1
 
-sensor mutex
-add option to clear apps and files, what about restarting a service
-add plot routine
-rename env to sensors
-
-apps/Env: utc=09/21/25 18:00:00) pressure=0  step_count=34294
-
-Apps
-- env
-- hex_calc
-- compass
-- clock
-- level
-- morse_code
-- pong
-- steps
-- flashlight  (white or red)
-- lat/long/elevation
-
-add app for pressure and maybe temperature/ humidity
-move services to within settings
-change color for devel mode, or use title line
-logging display
-
-picoc
-- why doesn't it have an 'open' call;  try adding that
-- picoc return value - probably okay
-
-ezput all
-
-what happens to main sdl thread when paused, is it blocked on the event,
-- is renderer being cleared
-
-need to handle ondestroy to kill off the android services
-- and also just kill off the pthreads when exitting
-
----------------
+===============================================================
+===================  COMPASS  =================================
+===============================================================
 
 maybe add these to sdl_sensor comments ...
 
@@ -406,187 +230,9 @@ https://www.google.com/search?q=how+to+caclulate+magnetic+heading+from+magnetic+
 
 https://www.google.com/search?q=how+to+combine+magnetic+field+and+roll%2Fpitch+data+to+obtain+heading&oq=how+to+combine+magnetic+field+and+roll%2Fpitch+data+to+obtain+heading&gs_lcrp=EgZjaHJvbWUyBggAEEUYOTIHCAEQIRiPAjIHCAIQIRiPAtIBCTE5NjAyajBqOagCBrACAfEFcKSM7Wr74wU&sourceid=chrome&ie=UTF-8
 
-does sdl main keep running when AP is paused?
-- when foreground is enabled
-- if so, a pthread can be created
-
-update permission comments from here
-https://wiki.libsdl.org/SDL3/SDL_RequestAndroidPermission
-
-check on POST_NOTIFICATION permission
-- what if it is not set in the app setup?
-
-destroy flag is not being cleared in Myervice
-
-permissions
-foreground service
-sensor api, and updates to test pgm
-calling java routines, pass param and return value  test.cpp name
-
-restrict event id for user
-move KEYBD event id
-update logging to use the different SDL levels
-
-primes benchmark
-
-fix some picoc issues
-- printing
-- setting 64 bit value
-
-recording static
-
-comment on the purpose of the Makefile and Font file in the apps subdirs
-
-android build files need updating
-
-should SDL logging be used instead, or in addition to mine?
-
-try doxygen
-
-updaes to picoc ...
-
-is recording volume control needed
-
-do more code cleanups
-- code cleanup
-- SDL
-   - eval all routines for error checking
-   - eval use of rint / nearbyint
-
-sensors
-- decode magnetometer and tilt in Test page9
-
-recording:
-- adjust audio recording level
-- record append
-- auto quiet stop
-
-test case for swipe and motion
-
-QUERY info on using java:
-"on android using sdl3 how to get phone ip address"
-
-how to start program when booting
-
-SENSORS
-- lat/long
-- flashlight
-- acceleration
-
-APPS
-- unit_test            almost done
-- reversi              almost done
-   - add undo, and keep undo available when game is over
-   - edge heuristic improvement
-- primes               started
-- sensors
-  - compass
-  - level
-  - step counter
-  - lat/long/elevation
-- clock
-- flashlight app
-- morse_code
-- tic tack toe
-- blackjack
-- pong
-- whack a mole
-
-PICOC
-- fix picoc problems and document the restrictions
-  - fix the assignment problem
-  - fix picoc 64 bit problem
-  - fix print 'u' 
-  - make list of problems, and a demo program
-  - report to developers
-
-BUILD
-- create launcher icon
-
-CODE CLEANUP
-- resolve xxx issues
-- recheck diff of Android files with .orig
-
-AUDIO
-- recording:
-  - adjust audio recording level
-  - record append
-  - auto quiet stop
-
-EZTOOL on windows
-
-NEW FEATURES
-- event handling to locate an eventposition by registering the whole screen
-- playing music files:
-  - add SDL_mixer to play mp3 files
-  - copyright free music - https://freepd.com/
-- update morse code unit test to include numbers
-- supply common API for registering the bottom line
-  - < > X  -- OR -- other choices
-- should support for finger events be added
-- developer mode
-  - display git version and program version
-  - display IP addr when devel mode is enabled, and port
-  - add param for developer mode port
-  - settings menu, finish this up, and check order
-    - copyright
-      - assets file for copyright
-  - version.c, put this in startup line, include build data time and git commit
-  - add devel mode port, and print ipaddr:port
-- add networking support for apps, and add test in unit_test
-  - util_net_connect
-  - util_net_disconnect
-  - util_net_send
-  - util_net_recv
-- keyboard events, for testing on linux
-
-BUGS
-- unit_test page3 multi line test, scrolling issue  FIXED I THINK
-- swipe up causes crash in menu - RETEST
-- add pthread_create_detached
-
-ANDROID
-- update sdkmanager packages 
-- continue to undersand, and document, the sdk version numbers
-  - why is NDK 27 used, and not 29?
-- end program problem on android
-
-GENRAL CLEANUP
-- review this file
-- notes file
-- try using SDL link, update bashrc_haid
-- finish rename from qne2 to ezapp, - search for qne
-- recreate the repo
-- include version.c info in STARTING line and Settings
-- code optimization
-  - try using -O2 in the linux builds of the linux ezApp and the apps, and picoc
-  - can the Android app be -O2 optimized
-
-GET READY TO PUBLISH
-- readme files
-- a simple demo to illustrate the process of adding an app
-
-QUESTIONS
-- where are MOTION and SWIPE events being used
-
---------------
----- later ---
---------------
-
-add auto start service when phone boots
-
-code formatting
-- replace 'xxx * s' with 'xxx *s'
-- replace qne, with 'ez'
-- make a new repo
-- limit use of int32_t
-
-test with both windows and linux developer 
-- is windows crlf a problem
-
-=======================================
-SAMPLES
-=======================================
+===============================================================
+===================  JAVA SAMPLES  ============================
+===============================================================
 
 public class MainActivity extends AppCompatActivity {
 
@@ -640,46 +286,44 @@ public class MainActivity extends AppCompatActivity {
     }
 }
 
-====================================================
-DOC
-====================================================
+===============================================================
+===================  LODEPNG  =================================
+===============================================================
 
 lodepng: https://github.com/lvandeve/lodepng
 
+===============================================================
+===================  IMAGES  ==================================
+===============================================================
+
 doc file for images
 - explain imagegick
-- go through example of how compass was done
-   stock
-   checkered background  means png is available with the checkered area being transparent, alpha=0
-   resize, so that file is not bigger than neccessary
-   read file
-   creat texture
-   render texture
 
-define extensions
-- audio               .audio     xxx do these all have magic values
-- sdlx_pixel_t        .image
-- history             .dat
+stock.adobe.com
 
 sudo apt install imagemagick
 convert input.png -resize 500x300 output.png
 convert input.jpg -scale 50% output.png
 identify -format "%w x %h\n" t1out.png
 convert AdobeStock_1094425893.png -resize 1000x1000 ../../files/apps/Compass/compass.png
-
 https://stock.adobe.com/
+
+===============================================================
+===================  ANDROID  =================================
+===============================================================
 
 gradle.properties
 android.useAndroidX=true
+
+===============================================================
+===================  cJSON  ===================================
+===============================================================
 
 cJSON
 sudo apt  install libcjson-dev
 /usr/include/cjson/cJSON.h
 https://github.com/DaveGamble/cJSON
 
-references
-https://github.com/json-c/json-c
-https://www.weather.gov/documentation/services-web-api#:~:text=All%20of%20the%20information%20presented,to%20use%20for%20any%20purpose.
-https://api.weather.gov/
-https://api.weather.gov/points/{latitude},{longitude}
-https://api.weather.gov/points/41.0,90.1
+Alternate Package:
+  https://github.com/json-c/json-c  
+
