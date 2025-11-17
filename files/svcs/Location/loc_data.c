@@ -167,7 +167,6 @@ int download_country_loc_data(char *id_arg)
     }
     
     // unzip
-    memset(cmd, 0, sizeof(cmd)); // xxx fails in picoc,  why?
     sprintf(cmd, "unzip -o -d %s %s/%s.zip", data_dir, data_dir, id);
     ret = system(cmd);
     if (ret != 0) {

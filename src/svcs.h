@@ -31,7 +31,7 @@ void svcs_display(int bg_color);
 #define SVC_REQ_WAIT_ERROR_TIMEDOUT        2
 
 // sizeof of req->data
-#define MAX_SVC_REQ_DATA 100
+#define MAX_SVC_REQ_DATA 200
 
 typedef struct {
     int  req_id;

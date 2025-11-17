@@ -17,14 +17,16 @@
 // variables
 loc_hist_t *loc_hist;
 bool        end_program = false;
-bool        test_loc_hist = true;
+bool        test_loc_hist = false;
 
 // prototypes
-void add_entry_to_loc_hist(time_t t, double latitude, double longitude, char *name, double miles);
+void add_entry_to_loc_hist(time_t t, double latitude, double longitude, char *name);
 char *most_recent_loc_hist_name(void);
-void create_loc_data_str(time_t t, double latitude, double longitude, char *name, double miles, char *data_str);
+void create_loc_data_str(time_t t, double latitude, double longitude, double elevation,
+                         char *name, double miles, bool extra, char *data_str);
 void add_simulated_entries_to_loc_hist(void);
 double rand_double(void);
+void clear_loc_history(void);
 void process_req(svc_req_t *req);
 
 // -----------------  MAIN  -----------------------------------------
@@ -103,7 +105,7 @@ int main(int argc, char **argv)
             if (strcmp(name, "Not Found") != 0 &&
                 strcmp(most_recent_loc_hist_name(), name) != 0)
             {
-                add_entry_to_loc_hist(time(NULL), latitude, longitude, name, miles);
+                add_entry_to_loc_hist(time(NULL), latitude, longitude, name);
             }
 
             // update abstime to next hour
@@ -126,10 +128,13 @@ int main(int argc, char **argv)
 
 // -----------------  LOC_HIST SUPPORT  -----------------------------
 
-void add_entry_to_loc_hist(time_t t, double latitude, double longitude, char *name, double miles)
+void add_entry_to_loc_hist(time_t t, double latitude, double longitude, char *name)
 {
-    create_loc_data_str(t, latitude, longitude, name, miles,
-                        loc_hist->loc[loc_hist->count].data_str);
+    double miles = 0;       // not included in loc hist file
+    double elevation = 0;   // not included in loc hist file
+
+    create_loc_data_str(t, latitude, longitude, elevation, name, miles,
+                        false, loc_hist->loc[loc_hist->count].data_str);
 
     loc_hist->count++;
 
@@ -162,22 +167,33 @@ char *most_recent_loc_hist_name(void)
     return name;
 }
 
-void create_loc_data_str(time_t t, double latitude, double longitude, char *name, double miles, char *data_str)
+#define METERS_TO_FEET 3.28084
+
+void create_loc_data_str(time_t t, double latitude, double longitude, double elevation, 
+                         char *name, double miles, bool extra, char *data_str)
 {
     struct tm *tm;
     char time_str[50];
+    char *p;
 
     // example:
     //   Bolton
     //   Jun 5 25 23:00 EST
     //   -42.1234 -130.1234
+    // extra line:
+    //   el 300 ft, 1.1 mi       elevation, and distance to published lat/long
 
     // create time string
     tm = localtime(&t);
     strftime(time_str, sizeof(time_str), "%b %d %y %H:%M %Z", tm);
 
     // sprint location info to str
-    sprintf(data_str, "%s\n%s\n%0.4f %0.4f\n\n", name, time_str, latitude, longitude);
+    p = data_str;
+    p += sprintf(p, "%s\n%s\n%0.4f %0.4f\n", name, time_str, latitude, longitude);
+    if (extra) {
+        p += sprintf(p, "el %0.0f ft, %0.1f miles\n", elevation * METERS_TO_FEET, miles);
+    }
+    p += sprintf(p, "\n");
 }
 
 void add_simulated_entries_to_loc_hist(void)
@@ -198,7 +214,7 @@ void add_simulated_entries_to_loc_hist(void)
         find_closest_loc_data(latitude, longitude, name, &miles);
 
         // add to loc_hist file
-        add_entry_to_loc_hist(t, latitude, longitude, name, miles);
+        add_entry_to_loc_hist(t, latitude, longitude, name);
 
         // advance time one hour
         t += 3600;
@@ -214,6 +230,13 @@ double rand_double(void)
     return rand;
 }
 
+void clear_loc_history(void)
+{
+    loc_hist->count++;
+    memset(loc_hist, 0, sizeof(loc_hist_t));
+    util_sync_file(loc_hist, sizeof(loc_hist_t));
+}
+
 // -----------------  PROCESS REQ SUPPORT  --------------------------
 
 void process_req(svc_req_t *req)
@@ -224,12 +247,13 @@ void process_req(svc_req_t *req)
         end_program = true;
         break;
     case SVC_LOCATION_REQ_GET_LOC_INFO: {
-        double latitude, longitude, miles;
+        double latitude, longitude, elevation, miles;
         char name[MAX_NAME];
 
-        util_get_location(&latitude, &longitude, NULL);
+        util_get_location(&latitude, &longitude, &elevation);
         find_closest_loc_data(latitude, longitude, name, &miles);
-        create_loc_data_str(time(NULL), latitude, longitude, name, miles, req->data); // xxx check req_data_len
+        create_loc_data_str(time(NULL), latitude, longitude, elevation,
+                            name, miles, true, req->data); // xxx check req_data_len
         svc_req_completed(req, SVC_REQ_OK);
         break; }
     case SVC_LOCATION_REQ_ADD_COUNTRY_INFO: {
@@ -250,7 +274,7 @@ void process_req(svc_req_t *req)
         svc_req_completed(req, SVC_REQ_OK);
         break; }
     case SVC_LOCATION_REQ_DEL_COUNTRY_INFO: {
-        char filename[120];
+        char filename[220];
 
         sprintf(filename, "%s.loc", req->data);
         util_delete_file(data_dir, filename);
@@ -277,6 +301,10 @@ void process_req(svc_req_t *req)
             }
         }
         pclose(fp);
+        svc_req_completed(req, SVC_REQ_OK);
+        break; }
+    case SVC_LOCATION_REQ_CLEAR_HISTORY: {
+        clear_loc_history();
         svc_req_completed(req, SVC_REQ_OK);
         break; }
     default:

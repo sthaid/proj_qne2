@@ -111,8 +111,8 @@ int main(int argc, char **argv)
         sdlx_render_text_xyctr(sdlx_win_width/2, y+sdlx_char_height/2, "Current");
         y += sdlx_char_height;
         // - display the current location
-        sdlx_render_multiline_text(y, y, y+3*sdlx_char_height, loc_curr_lines, 1);
-        y += 3.5 * sdlx_char_height;
+        sdlx_render_multiline_text(y, y, y+4*sdlx_char_height, loc_curr_lines, 1);
+        y += 4.5 * sdlx_char_height;
 
         // display rectangle to separate the Current and History areas
         sdlx_render_fill_rect(0, y, sdlx_win_width, 10, COLOR_BLUE);
@@ -179,8 +179,9 @@ int main(int argc, char **argv)
 
 // -----------------  SETTINGS  ----------------------------------------
 
-#define EVID_DEL_COUNTRY 20  // through 24
-#define EVID_ADD_COUNTRY 30
+#define EVID_DEL_COUNTRY   20  // through 24
+#define EVID_ADD_COUNTRY   30
+#define EVID_CLEAR_HISTORY 31
 
 #define MAX_COUNTRIES 5
 
@@ -203,17 +204,22 @@ void settings(void)
         // get list of countries
         get_countries();
 
-        // register for Download Country event
+        // register for Download Country event, and Clear History event
+        sdlx_print_init_color(COLOR_LIGHT_BLUE, COLOR_BLACK);
+
+        loc = sdlx_render_printf(0, ROW2Y(1), "%s", "Clear History");
+        sdlx_register_event(loc, EVID_CLEAR_HISTORY);
+
         if (max_countries < 5) {
-            sdlx_print_init_color(COLOR_LIGHT_BLUE, COLOR_BLACK);
-            loc = sdlx_render_printf(0, ROW2Y(1), "%s", "Download Country");
-            sdlx_print_init_color(COLOR_WHITE, COLOR_BLACK);
+            loc = sdlx_render_printf(0, ROW2Y(3), "%s", "Download Country");
             sdlx_register_event(loc, EVID_ADD_COUNTRY);
         }
 
+        sdlx_print_init_color(COLOR_WHITE, COLOR_BLACK);
+
         // display list of countries, with DEL event for each
         for (int i = 0; i < max_countries; i++) {
-            int y = ROW2Y(3+1.5*i);
+            int y = ROW2Y(5+2*i);
 
             sdlx_render_printf(0, y, "%s", countries[i]);
 
@@ -277,6 +283,17 @@ void settings(void)
             if (rc != 0) {
                 printf("ERROR %s: SVC_LOCATION_REQ_DEL_COUNTRY_INFO '%s' failed, rc=%d\n", 
                        progname, countries[idx], rc);
+            }
+            break; }
+
+        case EVID_CLEAR_HISTORY: {
+            printf("INFO %s: clearing history\n", progname);
+            rc = svc_make_req("Location",      
+                              SVC_LOCATION_REQ_CLEAR_HISTORY,
+                              NULL, 0,
+                              5);  // 5 sec timeout
+            if (rc != 0) {
+                printf("ERROR %s: SVC_LOCATION_REQ_CLEAR_HISTORY failed, rc=%d\n", progname, rc);
             }
             break; }
         }
