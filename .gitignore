@@ -1,4 +1,4 @@
-
+# misc
 *.orig
 *.tar.gz
 *.tar
@@ -7,18 +7,18 @@
 cscope.out
 tags
 
-src/version.h
-
 bin/ezsh
-
-picoc/my_tests
-
 linux/ezApp
-
 android/SDL3-3.2.20
 android/SDL
 android/setup_files/orig
 
-files/apps_data
-files/svcs_data
-files/params
+# picoc tests
+picoc/my_tests
+
+# version file
+src/version.h
+
+# under files dir
+params
+files/svcs/Location/loc_hist
