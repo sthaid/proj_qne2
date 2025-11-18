@@ -191,7 +191,7 @@ void create_loc_data_str(time_t t, double latitude, double longitude, double ele
     p = data_str;
     p += sprintf(p, "%s\n%s\n%0.4f %0.4f\n", name, time_str, latitude, longitude);
     if (extra) {
-        p += sprintf(p, "el %0.0f ft, %0.1f miles\n", elevation * METERS_TO_FEET, miles);
+        p += sprintf(p, "el %0.0f ft, %0.1f mi\n", elevation * METERS_TO_FEET, miles);
     }
     p += sprintf(p, "\n");
 }

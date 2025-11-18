@@ -2,42 +2,36 @@
 ---- now ----
 -------------
 
+adb shell
+   TERM=xterm-256color
+
 cscope
 location items
 
-cleanup save files   DONE
-gitignore            DONE
-picoc sprintf        DONE
+picoc tests
 
 --------------
 ---- apps ----
 --------------
 
-Location 
-- add clear option                            <===
-- remove unit test                            <===
-- display miles for current loc, and altitude  <===
-- MAX_LOC_HIST
-- is the 5 country limit enforced well enough
-- add elevation to current display, along with miles
-
 calculater
-- 32 bit hex display width  <===========
-- >> and / ops on 64 bit with msb set
-
-clock
-- fix clock program to handle case whre location
-  is not immedeately avialable
-- recheck sunrise and sunset     <==========
-
-reversi
-- add undo
-- edge heuristic
+- >> and / ops on 64 bit with msb set   <==============
 
 weather app
 - get forecast
 - parse
 - weather icons, are they in the forecast
+
+Location 
+- add option to disable and enable the svc from adding loc history <======
+
+clock
+- fix clock program to handle case whre location
+  is not immedeately avialable
+
+reversi
+- add undo
+- edge heuristic
 
 new apps
 - steps,  needs a service too
@@ -56,7 +50,7 @@ new apps
 ---------------
 
 picoc
-- snprintf            <============
+- snprintf            <============  probably done
 - expressions
 
 picoc issues

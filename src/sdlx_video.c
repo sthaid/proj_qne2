@@ -26,7 +26,7 @@
 #define DEFAULT_FONT  20
 
 #define MIN_FONT_PTSIZE  10
-#define MAX_FONT_PTSIZE  200
+#define MAX_FONT_PTSIZE  400
 
 #define ONE_MS 1000
 #define TEN_MS 10000
