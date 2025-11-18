@@ -71,7 +71,7 @@ static void processing(void);
 
 static int server_thread(void *cx);
 //static int waiter_thread(void *cx); // xxx interfers with system()
-static void kill_child_processes(pid_t pid);
+//static void kill_child_processes(pid_t pid);
 
 //
 // routines to launch a C program using picoc interpreter
@@ -194,7 +194,7 @@ static void cleanup(void)
 
     // xxx free svc_call allocations
 
-    kill_child_processes(getpid());
+    //kill_child_processes(getpid());
 
     sdlx_quit(SUBSYS_VIDEO | SUBSYS_AUDIO | SUBSYS_SENSOR);
 }
@@ -760,7 +760,7 @@ static void copyright(void)
 #define MAX_PID_TBL 20
 
 static int process_req_thread(void *cx);
-static void process_req_using_android_sh(int sockfd, char *cmd);
+//static void process_req_using_android_sh(int sockfd, char *cmd);
 
 static int server_thread(void *cx)
 {
@@ -770,10 +770,10 @@ static int server_thread(void *cx)
     // save server thread id in global, so that signals can be sent to this thread
     server_tid = pthread_self();
 
-    sleep(5); //xxx
-    double lat, lng, alt;
-    util_get_location(&lat, &lng, &alt);  // return 9999 if not bound
-    INFO("XXXXXXXXXXXXXXX %f %f %f\n", lat, lng, alt);
+//  sleep(5); //xxx
+//  double lat, lng, alt;
+//  util_get_location(&lat, &lng, &alt);  // return 9999 if not bound
+//  INFO("XXXXXXXXXXXXXXX %f %f %f\n", lat, lng, alt);
 
 again:
     // wait for developer mode to be enabled
@@ -844,7 +844,7 @@ again:
     close(listen_sockfd);
 
     // kill all child processes
-    kill_child_processes(getpid());
+    //kill_child_processes(getpid());
 
     // goto top to reinit server_thread
     goto again;
@@ -857,6 +857,69 @@ again:
 static int process_req_thread(void *cx)
 {
     int sockfd = (int)(long)cx;
+    char password[100], password_okay[100], storage_path_copy[100], type_and_cmdline[1000];
+    int ret;
+
+    ret = read(sockfd, password, sizeof(password));
+    if (ret != sizeof(password)) {
+        ERROR("failed to read password, ret=%d, %s\n", ret, strerror(errno));
+        close(sockfd);
+        return 0;
+    }
+    password[sizeof(password)-1] = '\0';
+    INFO("GOT PASSWORD '%s'\n", password);
+
+    if (strcmp(password, "secret") != 0) {
+        ERROR("INVALID PASSWORD '%s'\n", password);
+        close(sockfd);
+        return 0;
+    }
+
+    strncpy(password_okay, "password okay", sizeof(password_okay));
+    ret = write(sockfd, password_okay, sizeof(password_okay));
+    if (ret != sizeof(password_okay)) {
+        ERROR("failed to ack password\n");
+        close(sockfd);
+        return 0;
+    }
+
+    strncpy(storage_path_copy, storage_path, sizeof(storage_path_copy));
+    ret = write(sockfd, storage_path_copy, sizeof(storage_path_copy));
+    if (ret != sizeof(storage_path_copy)) {
+        ERROR("failed to send storage_path\n");
+        close(sockfd);
+        return 0;
+    }
+
+again:
+    // read type_and_cmdline
+    ret = read(sockfd, type_and_cmdline, sizeof(type_and_cmdline));
+    INFO("GOT: '%s'\n", type_and_cmdline);
+
+    char *cmdline;
+    int type;
+    type = type_and_cmdline[0];
+    cmdline = &type_and_cmdline[2];
+    INFO("TYPE %c - cmdline '%s'\n", type, cmdline);
+
+    // verify type
+
+    // execute cmdline
+    FILE *fp;
+    char s[200];
+    fp = popen(cmdline, "r");
+    while (fgets(s, sizeof(s), fp) != NULL) {
+        printf("XXX - %s\n", s);
+    }
+    pclose(fp);
+
+    goto again;
+
+    close(sockfd);
+    return 0;
+}
+
+#if 0
     pid_t pid;
 
     char cmd[1000], *p;
@@ -888,8 +951,9 @@ static int process_req_thread(void *cx)
     // parent is done with sockfd
     close(sockfd);
     return 0;
-}
+#endif
 
+#if 0
 static void process_req_using_android_sh(int sockfd, char *cmd)
 {
     char *argv[10];
@@ -915,6 +979,7 @@ static void process_req_using_android_sh(int sockfd, char *cmd)
     // not reached
     exit(1);
 }
+#endif
 
 #if 0
 static int waiter_thread(void *cx)
@@ -940,6 +1005,7 @@ static int waiter_thread(void *cx)
 }
 #endif
 
+#if 0
 static void kill_child_processes(pid_t pid)
 {
     FILE *fp;
@@ -988,3 +1054,4 @@ static void kill_child_processes(pid_t pid)
         }
     }
 }
+#endif

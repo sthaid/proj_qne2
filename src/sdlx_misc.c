@@ -106,7 +106,6 @@ char *sdlx_get_storage_path(void)
 
     if (storage_path_buff[0] == '\0') {
         getcwd(storage_path_buff, sizeof(storage_path_buff));
-        strcat(storage_path_buff, "/files");
     }
 
     return storage_path_buff;
