@@ -854,9 +854,128 @@ again:
     return 0;
 }
 
+int put_fmt(FILE *fp, char *fmt, ...)
+{
+    va_list ap;
+    int rc;
+
+    va_start(ap, fmt);
+
+    rc = vfprintf(fp, fmt, ap);
+    if (rc < 0) {
+        return -1;
+    }
+
+    rc = fflush(fp);
+    if (rc == EOF) {
+        return -1;
+    }
+
+    va_end(ap);
+
+    return 0;
+}
+
+char *get_str(FILE *fp, char *s, int s_len)
+{
+    char *p;
+    int len;
+
+    s[0] = '\0';
+
+    p = fgets(s, s_len, fp);
+    if (p == NULL) {
+        printf("ERROR: get failed\n");
+        return NULL;
+    }
+
+    len = strlen(s);
+    if (len > 0 && s[len-1] == '\n') {
+        s[len-1] = '\0';
+    }
+
+    return s;
+}
+
 static int process_req_thread(void *cx)
 {
     int sockfd = (int)(long)cx;
+    FILE *sockfp;
+    char password[100];
+    char *p;
+
+    sockfp = fdopen(sockfd, "w+");
+    printf("PROCESS REQ STARTING %p\n", sockfp);
+    // xxx check
+    
+    p = get_str(sockfp, password, sizeof(password));
+    if (p == NULL) {
+        ERROR("get_str password failed\n");
+        goto done;
+    }
+    printf("GOT PASSWD %s\n", password);
+
+    if (strcmp(password, "secret") == 0) {
+        printf("OK\n");
+        put_fmt(sockfp, "%s\n", "password okay");
+    } else {
+        printf("NOTOK\n");
+        put_fmt(sockfp, "%s\n", "password invalid");
+        goto done;
+    }
+
+    put_fmt(sockfp, "%s\n", storage_path);
+
+    while (true) {
+        char  run_cmdline[1000];
+        char *p, *cmdline = run_cmdline+4;
+        FILE *fp;
+        char  s[200];
+
+        p = get_str(sockfp, run_cmdline, sizeof(run_cmdline));
+        if (p == NULL) {
+            printf("EOD\n");
+            goto done;
+        }
+        printf("RUNLINE: '%s'\n", run_cmdline);
+
+        fp = popen(cmdline, "r");
+        while (get_str(fp, s, sizeof(s)) != NULL) {
+            printf("XXX - %s\n", s);
+            put_fmt(sockfp, "%s\n", s);
+        }
+        pclose(fp);
+        put_fmt(sockfp, "END_OF_DATA\n");
+    }
+
+
+done:
+    fclose(sockfp);
+    return 0;
+}
+
+#if 0
+    char *s = fgets(password, sizeof(password), sockfp);
+    printf("GOT password = '%s'  s=%p\n", password, s);
+
+    if (strcmp(password, "secret") != 0) {
+        ERROR("INVALID PASSWORD '%s'\n", password);
+        //close(sockfd);
+        //return 0;
+    }
+
+    printf("SENDING OKAY\n");
+    fputs("password okay\n", sockfp);
+    fflush(sockfp);
+
+    printf("SLEEP\n");
+    sleep(5);
+
+    printf("CLOSE\n");
+    fclose(sockfp);
+#endif
+
+#if 0
     char password[100], password_okay[100], storage_path_copy[100], type_and_cmdline[1000];
     int ret;
 
@@ -869,11 +988,6 @@ static int process_req_thread(void *cx)
     password[sizeof(password)-1] = '\0';
     INFO("GOT PASSWORD '%s'\n", password);
 
-    if (strcmp(password, "secret") != 0) {
-        ERROR("INVALID PASSWORD '%s'\n", password);
-        close(sockfd);
-        return 0;
-    }
 
     strncpy(password_okay, "password okay", sizeof(password_okay));
     ret = write(sockfd, password_okay, sizeof(password_okay));
@@ -905,19 +1019,11 @@ again:
     // verify type
 
     // execute cmdline
-    FILE *fp;
-    char s[200];
-    fp = popen(cmdline, "r");
-    while (fgets(s, sizeof(s), fp) != NULL) {
-        printf("XXX - %s\n", s);
-    }
-    pclose(fp);
 
     goto again;
 
     close(sockfd);
-    return 0;
-}
+#endif
 
 #if 0
     pid_t pid;

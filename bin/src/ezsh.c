@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdbool.h>
 #include <stdlib.h>
+#include <stdarg.h>
 #include <unistd.h>
 #include <string.h>
 #include <libgen.h>
@@ -14,84 +15,68 @@
 #include <readline/readline.h>
 #include <readline/history.h>
 
-#define PASSWORD_OKAY "password okay"
-
-char *prompt = "ezsh> ";
-
+// info from ez.cfg
 char ipaddr[100];
 int  port;
 char password[100];
 
+
+char *prompt = "ezsh> ";  // include cwd
 char cwd[100];
+int sockfd;  // private
+FILE *sockfp;
 
-int sockfd;
-
+// prototypes
 void remove_leading_spaces(char *s);
 void read_ez_cfg(void);
-void read_working_dir(void);
 void connect_to_android(void);
-void run_r_type_cmd_on_android(char *cmdline, char **data, int *data_len);
+void run_cmd_on_android(char *cmdline);
 
-// --------------------------------------------------------------------------
+// xxx todo
+// - cd and pwd cmds
+//   - prepend the current cd value
+// - q cmd
+// - ls alias
+// - END_OF_DATA marker
+// - copy file to/from android
+// - setting for password, require it be changed , use change_me
+// - vi cmd
+// - clean up code and comments
+// -  use strings of either size 100 or 1000
+
+// xxx done
+// - hist
+
+// -----------------  MAIN  -------------------------------------------------
 
 int main(int argc, char **argv)
 {
-    char *cmdline, *cmdline_copy;
-    char *cmd, *args[20], *data=NULL;
-    int   max_args, data_len;
+    char *cmdline;
 
-    // read ez.cfg file
+    // read ez.cfg file, to get ipaddr, port, and password
     read_ez_cfg();
 
-    // connect to android, and validata password
+    // connect to android: also validates password and gets curr-working-dir
     connect_to_android();
-
-    // read working dir from android
-    read_working_dir();
-    printf("CWD '%s'\n", cwd);
 
     // runtime loop
     while (true) {
-        // issue prompt, and read input line
+        // read cmdline
         cmdline = readline(prompt);
         if (cmdline == NULL) {
             break;
         }
-        printf("GOT '%s'\n", cmdline);
-
-        // remove leading spaces
         remove_leading_spaces(cmdline);
-        printf("REMOVED '%s'\n", cmdline);
-
-        // if line is blank then continue
         if (cmdline[0] == '\0') {
-            printf("blank\n");
             continue;
         }
+        add_history(cmdline);
 
-        // make copy of input line, and tokenize
-        cmdline_copy = strdup(cmdline);
-        cmd = strtok(cmdline_copy, " ");
-        max_args = 0;
-        char *p;
-        while ((p = strtok(NULL, " "))) {
-            args[max_args++] = p;
-        }
-
-        printf("STRTOK cmd=%s max_args=%d - ", cmd, max_args);
-        for (int i = 0; i < max_args; i++) printf(" '%s' ", args[i]);
-        printf("\n");
-
-        // process the input line
-
-        run_r_type_cmd_on_android(cmdline, &data, &data_len);
-        fwrite(data, 1, data_len, stdout);
-        free(data);
-        data = NULL;
+        // process the cmdline
+        run_cmd_on_android(cmdline);
 
         // free cmdline
         free(cmdline);
-        free(cmdline_copy);
     }
 }
 
@@ -135,15 +120,47 @@ void remove_leading_spaces(char *s)
     memcpy(s, p, len+1);
 }
 
-void read_working_dir(void)
+void put_fmt(FILE *fp, char *fmt, ...)
 {
-    int ret;
+    va_list ap;
+    int rc;
 
-    ret = read(sockfd, cwd, sizeof(cwd));
-    if (ret != sizeof(cwd)) {
-        printf("ERROR: failed to read ezApp working dir\n");
+    va_start(ap, fmt);
+
+    rc = vfprintf(fp, fmt, ap);
+    if (rc < 0) {
+        printf("ERROR: vfprintf failed\n");
         exit(1);
     }
+
+    rc = fflush(fp);
+    if (rc == EOF) {
+        printf("ERROR: fflush failed\n");
+        exit(1);
+    }
+
+    va_end(ap);
+}
+
+char *get_str(FILE *fp, char *s, int s_len)
+{
+    char *p;
+    int len;
+
+    s[0] = '\0';
+
+    p = fgets(s, s_len, fp);
+    if (p == NULL) {
+        printf("ERROR: get failed\n");
+        exit(1);
+    }
+
+    len = strlen(s);
+    if (len > 0 && s[len-1] == '\n') {
+        s[len-1] = '\0';
+    }
+
+    return s;
 }
 
 // -----------------  CONNECT TO ANDROID  -----------------------------------
@@ -153,7 +170,7 @@ void connect_to_android(void)
     int                ret;
     struct sockaddr_in addr;
     socklen_t          addrlen;
-    char               password_response[100];
+    char               response[100];
 
     // create socket
     sockfd = socket(AF_INET, SOCK_STREAM, 0);
@@ -173,25 +190,41 @@ void connect_to_android(void)
         exit(1);
     }
 
-    // send password to android
-    ret = write(sockfd, password, sizeof(password));
-    printf("PASSWD SEND ret %d\n", ret);
-    if (ret != sizeof(password)) {
-        printf("ERROR: invalid password\n");
-        exit(1);
+    // create fp for socket fd
+    sockfp = fdopen(sockfd, "w+");
+
+    // send password, and get response
+    put_fmt(sockfp, "%s\n", password);
+    get_str(sockfp, response, sizeof(response));
+    if (strcmp(response, "password okay") != 0) {
+        printf("ERROR: password invalid\n");
+        exit(1);   
     }
 
-    // read password validation response from android
-    ret = read(sockfd, password_response, sizeof(password_response));
-    printf("PASSWD RESP = '%s'\n", password_response);
-    if (ret != sizeof(password_response) || strcmp(password_response, PASSWORD_OKAY) != 0) {
-        printf("ERROR: invalid password\n");
-        exit(1);
-    }
+    // get the ezApp current working dir
+    get_str(sockfp, cwd, sizeof(cwd));
+    printf("cwd = '%s'\n", cwd);
 }
 
-void run_r_type_cmd_on_android(char *cmdline, char **data, int *data_len)
+// -----------------  RUN CMD ON ANDROID  -----------------------------------
+
+void run_cmd_on_android(char *cmdline)
 {
+    char s[200];
+    char *p;
+
+    put_fmt(sockfp, "run %s\n", cmdline);
+
+    while (true) {
+        get_str(sockfp, s, sizeof(s));
+
+        printf("%s\n", s);
+        if ((p = strstr(s, "END_OF_DATA"))) {
+            break;
+        }
+    }
+
+#if 0
     char cmdline_buff[1000];
     int ret;
 
@@ -208,6 +241,7 @@ void run_r_type_cmd_on_android(char *cmdline, char **data, int *data_len)
     // read cmd exit_status and data_len from android
 
     // alloc and read data from android
+#endif
 }
 
 #if 0
