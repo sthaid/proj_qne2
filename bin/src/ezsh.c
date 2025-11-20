@@ -250,12 +250,13 @@ int run_special_cmd(char *cmdline)
         printf("%s\n", cwd);
     } else if (strcmp(cmd, "cp_to_android") == 0) {
         // arg1: pathname on devel sys
-        // arg2: dest dir on devel android (optional)
+        // arg2: dest dir on android (optional)
         //cp_to_android(arg1);  
     } else if (strcmp(cmd, "cp_to_devel") == 0) {
         // arg1: pathname on android
         // arg2: dest dir on devel sys (optional)
         //cp_to_android(arg1);  
+    } else if (strcmp(cmd, "vi") == 0) {
     } else {
         printf("xxx run_special returning -1\n");
         return -1;
