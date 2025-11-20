@@ -21,8 +21,8 @@ int  port;
 char password[100];
 
 
-char *prompt = "ezsh> ";  // include cwd
 char cwd[100];
+char cwd_initial[100];
 int sockfd;  // private
 FILE *sockfp;
 
@@ -30,7 +30,10 @@ FILE *sockfp;
 void remove_leading_spaces(char *s);
 void read_ez_cfg(void);
 void connect_to_android(void);
-void run_cmd_on_android(char *cmdline);
+
+int run_special_cmd(char *cmdline);
+
+int run_cmd_on_android(char *cmdline);
 
 // xxx todo
 // - cd and pwd cmds
@@ -52,6 +55,7 @@ void run_cmd_on_android(char *cmdline);
 int main(int argc, char **argv)
 {
     char *cmdline;
+    int   rc;
 
     // read ez.cfg file, to get ipaddr, port, and password
     read_ez_cfg();
@@ -62,6 +66,10 @@ int main(int argc, char **argv)
     // runtime loop
     while (true) {
         // read cmdline
+        char prompt[100], cwd_copy[100];
+        strcpy(cwd_copy, cwd);
+        snprintf(prompt, sizeof(prompt), "ezsh %s> ", basename(cwd_copy));
+
         cmdline = readline(prompt);
         if (cmdline == NULL) {
             break;
@@ -73,7 +81,12 @@ int main(int argc, char **argv)
         add_history(cmdline);
 
         // process the cmdline
-        run_cmd_on_android(cmdline);
+        rc = run_special_cmd(cmdline);
+        if (rc == -1) {
+            char cmdline2[200];
+            sprintf(cmdline2, "cd %s; %s", cwd, cmdline);
+            run_cmd_on_android(cmdline2);
+        }
 
         // free cmdline
         free(cmdline);
@@ -167,7 +180,7 @@ char *get_str(FILE *fp, char *s, int s_len)
 
 void connect_to_android(void)
 {
-    int                ret;
+    int                ret, len;
     struct sockaddr_in addr;
     socklen_t          addrlen;
     char               response[100];
@@ -203,15 +216,123 @@ void connect_to_android(void)
 
     // get the ezApp current working dir
     get_str(sockfp, cwd, sizeof(cwd));
+
     printf("cwd = '%s'\n", cwd);
+    len = strlen(cwd);
+    if (len == 0) {
+        strcpy(cwd, "/");
+    } else if (cwd[len-1] != '/') {
+        strcat(cwd, "/");
+    }
+    printf("cwd updated = '%s'\n", cwd);
+
+    strcpy(cwd_initial, cwd);
+}
+
+// -----------------  RUN SPECIAL CMD  --------------------------------------
+
+void proc_cd(char *path);
+
+int run_special_cmd(char *cmdline)
+{
+    char cmd[100], arg1[100], arg2[100];
+
+    cmd[0] = arg1[0] = arg2[0] = '\0';
+    sscanf(cmdline, "%s %s %s", cmd, arg1, arg2);
+    if (cmd[0] == '\0') {
+        printf("ERROR: run_special_cmd cmdline arg invalid\n");
+        exit(1);   
+    }
+
+    if (strcmp(cmd, "cd") == 0) {
+        proc_cd(arg1);
+    } else if (strcmp(cmd, "pwd") == 0) {
+        printf("%s\n", cwd);
+    } else if (strcmp(cmd, "cp_to_android") == 0) {
+        // arg1: pathname on devel sys
+        // arg2: dest dir on devel android (optional)
+        //cp_to_android(arg1);  
+    } else if (strcmp(cmd, "cp_to_devel") == 0) {
+        // arg1: pathname on android
+        // arg2: dest dir on devel sys (optional)
+        //cp_to_android(arg1);  
+    } else {
+        printf("xxx run_special returning -1\n");
+        return -1;
+    }
+
+    return 0;
+}
+
+// xxx cwd must always end in '/'
+void proc_cd(char *path)
+{
+    int len;
+    char new_cwd[100];
+    char *token;
+
+    len = strlen(cwd);
+    if (cwd[0] != '/' || cwd[len-1] != '/') {
+        printf("ERROR: invalid cwd '%s'\n", cwd);
+        exit(1);
+    }
+
+    strcpy(new_cwd, cwd);
+
+    if (path[0] == '\0') {
+        strcpy(new_cwd, cwd_initial);
+    } else if (path[0] == '/') {
+        strcpy(new_cwd, path);
+    } else {
+        len = strlen(path);
+        if (path[len-1] != '/') {
+            strcat(path, "/");
+        }
+
+        while ((token = strtok(path, "/"))) {
+            path = NULL;
+            if (strcmp(token, ".") == 0) {
+                // do nothing
+            } else if (strcmp(token, "..") == 0) {
+                if (strcmp(new_cwd, "/") != 0) {
+                    int idx = strlen(new_cwd) - 2;
+                    while (new_cwd[idx] != '/') idx--;
+                    new_cwd[idx+1] = '\0';
+                }
+            } else {
+                strcat(new_cwd, token);
+                strcat(new_cwd, "/");
+            }
+        }
+    }
+
+    // xxx validate new_cwd
+    len = strlen(new_cwd);
+    if (new_cwd[len-1] != '/') {
+        printf("ADDING TERM slash\n");
+        strcat(new_cwd, "/");
+    }
+
+    char cmd[200];
+    sprintf(cmd, "dir_exists %s", new_cwd);
+    int status = run_cmd_on_android(cmd);
+    printf("GOT STATUS %d %s\n", status, (status ? strerror(status) : ""));
+
+    // update cwd
+    if (status == 0) {
+        strcpy(cwd, new_cwd);
+        printf("new cwd = %s\n", cwd);
+    }
 }
 
 // -----------------  RUN CMD ON ANDROID  -----------------------------------
 
-void run_cmd_on_android(char *cmdline)
+int run_cmd_on_android(char *cmdline)
 {
     char s[200];
     char *p;
+
+    printf("RUN_CMD_ON_ANDROID: '%s'\n", cmdline);
 
     put_fmt(sockfp, "run %s\n", cmdline);
 
@@ -219,7 +340,11 @@ void run_cmd_on_android(char *cmdline)
         get_str(sockfp, s, sizeof(s));
 
         printf("%s\n", s);
-        if ((p = strstr(s, "END_OF_DATA"))) {
+        if ((p = strstr(s, "END_OF_DATA "))) {
+            int status = 0;
+            sscanf(p+12, "%d", &status);
+            printf("got eod status %d\n", status);
+            return status;
             break;
         }
     }

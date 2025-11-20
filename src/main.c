@@ -932,6 +932,8 @@ static int process_req_thread(void *cx)
         FILE *fp;
         char  s[200];
 
+        // xxx check for 'run'
+
         p = get_str(sockfp, run_cmdline, sizeof(run_cmdline));
         if (p == NULL) {
             printf("EOD\n");
@@ -939,13 +941,22 @@ static int process_req_thread(void *cx)
         }
         printf("RUNLINE: '%s'\n", run_cmdline);
 
-        fp = popen(cmdline, "r");
-        while (get_str(fp, s, sizeof(s)) != NULL) {
-            printf("XXX - %s\n", s);
-            put_fmt(sockfp, "%s\n", s);
+        int status = 0;
+        if (strncmp(cmdline, "dir_exists ", 11) == 0) {
+            DIR *dir = opendir(cmdline+11);
+            status = (dir != NULL ? 0 : errno);
+            if (dir) {
+                closedir(dir);
+            }
+        } else {
+            fp = popen(cmdline, "r");
+            while (get_str(fp, s, sizeof(s)) != NULL) {
+                printf("XXX - %s\n", s);
+                put_fmt(sockfp, "%s\n", s);
+            }
+            pclose(fp);
         }
-        pclose(fp);
-        put_fmt(sockfp, "END_OF_DATA\n");
+        put_fmt(sockfp, "END_OF_DATA %d\n", status);
     }
 
 
