@@ -65,12 +65,19 @@ char *util_time2str(char * str, long us, int gmt, int display_ms, int display_da
 
 // -----------------  FILE READ/WRITE  -----------------------
 
+// xxx maybe separating dir is too confusing
+// xxx maybe a concat util instead
 int util_write_file(char *dir, char *fn, void *buf, int len)
 {
     int fd, ret;
     char path[200];
 
-    sprintf(path, "%s/%s", dir, fn);
+    if (fn) {
+        sprintf(path, "%s/%s", dir, fn);
+    } else {
+        sprintf(path, "%s", dir);
+    }
+    printf("WRITE FILE '%s'\n", path);
 
     fd = open(path, O_CREAT | O_TRUNC | O_WRONLY, 0666);
     if (fd < 0) {

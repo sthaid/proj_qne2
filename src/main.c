@@ -885,7 +885,7 @@ char *get_str(FILE *fp, char *s, int s_len)
 
     p = fgets(s, s_len, fp);
     if (p == NULL) {
-        printf("ERROR: get failed\n");
+        printf("ERROR: get failed - eof=%d error=%d\n", feof(fp), ferror(fp));
         return NULL;
     }
 
@@ -927,38 +927,66 @@ static int process_req_thread(void *cx)
     put_fmt(sockfp, "%s\n", storage_path);
 
     while (true) {
-        char  run_cmdline[1000];
-        char *p, *cmdline = run_cmdline+4;
-        FILE *fp;
-        char  s[200];
+        char str[1000];
+        int  status = 7; //xxx
 
-        // xxx check for 'run'
-
-        p = get_str(sockfp, run_cmdline, sizeof(run_cmdline));
-        if (p == NULL) {
+        get_str(sockfp, str, sizeof(str));
+        if (strcmp(str, "run") != 0) {
             printf("EOD\n");
             goto done;
         }
-        printf("RUNLINE: '%s'\n", run_cmdline);
+        printf("STR '%s'\n", str);
 
-        int status = 0;
-        if (strncmp(cmdline, "dir_exists ", 11) == 0) {
-            DIR *dir = opendir(cmdline+11);
+        get_str(sockfp, str, sizeof(str));
+        printf("STR '%s'\n", str);
+
+        if (strncmp(str, "dir_exists ", 11) == 0) {
+            DIR *dir = opendir(str+11);
             status = (dir != NULL ? 0 : errno);
+            printf("dir_exists status %d\n", status);
             if (dir) {
                 closedir(dir);
             }
-        } else {
-            fp = popen(cmdline, "r");
-            while (get_str(fp, s, sizeof(s)) != NULL) {
-                printf("XXX - %s\n", s);
-                put_fmt(sockfp, "%s\n", s);
-            }
-            pclose(fp);
-        }
-        put_fmt(sockfp, "END_OF_DATA %d\n", status);
-    }
+        } else if (strncmp(str, "cpta ", 5) == 0) {
+            char *dest_path = str+5;
+            int   buf_len=0, rc;
+            char *buf, *buf_len_str;
 
+            strtok(str, " ");
+            dest_path = strtok(NULL, " ");
+            buf_len_str = strtok(NULL, " ");
+            printf("XXXX %s %s\n", dest_path, buf_len_str);
+            sscanf(buf_len_str, "%d", &buf_len);
+            printf("GOT buf_len %d\n", buf_len);
+
+            if (buf_len == 0) {
+                status = EINVAL;
+            } else {
+                buf = calloc(buf_len, 1);        // nmemb=buf_len, size=1
+                fread(buf, 1, buf_len, sockfp);  // size=1, nmemb=buf_len
+                rc = util_write_file(dest_path, NULL, buf, buf_len); //xxx fix util_write_file
+                status = (rc == 0 ? 0 : errno != 0 ? errno : EINVAL);
+                printf("cpta %s len=%d status=%d\n", dest_path, buf_len, status);
+                free(buf);
+            }
+        } else {
+            FILE *fp;
+            printf("calling popen '%s'\n", str);
+            fp = popen(str, "r");
+            if (fp == NULL) {
+                printf("popen '%s' failed\n", str);
+                status = (errno ? errno : EINVAL);
+            } else {
+                while (get_str(fp, str, sizeof(str)) != NULL) {
+                    printf("XXX - %s\n", str);
+                    put_fmt(sockfp, "%s\n", str);
+                }
+                status = pclose(fp);
+                printf("status %d\n", status);
+            }
+        }
+        put_fmt(sockfp, "CMD_COMPLETE %d\n", status);
+    }
 
 done:
     fclose(sockfp);

@@ -6,8 +6,10 @@
 #include <string.h>
 #include <libgen.h>
 #include <errno.h>
+#include <fcntl.h>
 
 #include <sys/types.h>  // xxx all needed?
+#include <sys/stat.h>  // xxx all needed?
 #include <sys/socket.h>
 #include <netinet/in.h> 
 #include <arpa/inet.h>
@@ -33,13 +35,14 @@ void connect_to_android(void);
 
 int run_special_cmd(char *cmdline);
 
-int run_cmd_on_android(char *cmdline);
+int run_cmd_on_android(char *cmdline, char *data_out, int data_out_len);
 
 // xxx todo
-// - cd and pwd cmds
-//   - prepend the current cd value
+// - status and errno returns
+// - cpta cpfa cmds
 // - q cmd
-// - ls alias
+// - include alias in .ezrc file, also ipconfig & password
+//    - ls alias
 // - END_OF_DATA marker
 // - copy file to/from android
 // - setting for password, require it be changed , use change_me
@@ -49,6 +52,8 @@ int run_cmd_on_android(char *cmdline);
 
 // xxx done
 // - hist
+// - cd and pwd cmds
+//   - prepend the current cd value
 
 // -----------------  MAIN  -------------------------------------------------
 
@@ -85,7 +90,7 @@ int main(int argc, char **argv)
         if (rc == -1) {
             char cmdline2[200];
             sprintf(cmdline2, "cd %s; %s", cwd, cmdline);
-            run_cmd_on_android(cmdline2);
+            run_cmd_on_android(cmdline2, NULL, 0);
         }
 
         // free cmdline
@@ -232,6 +237,8 @@ void connect_to_android(void)
 // -----------------  RUN SPECIAL CMD  --------------------------------------
 
 void proc_cd(char *path);
+void proc_copy_file_to_android(char *src_path, char *dest_dir);
+void *read_file(char *fn, int *len_ret);
 
 int run_special_cmd(char *cmdline)
 {
@@ -243,16 +250,17 @@ int run_special_cmd(char *cmdline)
         printf("ERROR: run_special_cmd cmdline arg invalid\n");
         exit(1);   
     }
+    printf("cmd=%s arg1=%s arg2=%s\n", cmd, arg1, arg2);
 
     if (strcmp(cmd, "cd") == 0) {
         proc_cd(arg1);
     } else if (strcmp(cmd, "pwd") == 0) {
         printf("%s\n", cwd);
-    } else if (strcmp(cmd, "cp_to_android") == 0) {
+    } else if (strcmp(cmd, "cpta") == 0) {
         // arg1: pathname on devel sys
         // arg2: dest dir on android (optional)
-        //cp_to_android(arg1);  
-    } else if (strcmp(cmd, "cp_to_devel") == 0) {
+        proc_copy_file_to_android(arg1, arg2);  
+    } else if (strcmp(cmd, "cpfa") == 0) {
         // arg1: pathname on android
         // arg2: dest dir on devel sys (optional)
         //cp_to_android(arg1);  
@@ -263,6 +271,31 @@ int run_special_cmd(char *cmdline)
     }
 
     return 0;
+}
+
+void proc_copy_file_to_android(char *src_path, char *dest_dir)
+{
+    char dest_path[200];
+    char cmd[1000];
+    char *data_out;
+    int data_out_len;
+
+    // construct dest_path
+    strcpy(dest_path, cwd);
+    if (dest_dir[0] != 0) {
+        strcat(dest_path, dest_dir);
+        strcat(dest_path, "/");
+        // xxx what if dest_dir ended in / already
+    }
+    strcat(dest_path, src_path);  // xxx need basename
+
+    // read src_filename
+    data_out = read_file(src_path, &data_out_len);
+
+    // run 'cpta' on android
+    sprintf(cmd, "cpta %s %d", dest_path, data_out_len);
+    run_cmd_on_android(cmd, data_out, data_out_len);
+    free(data_out);
 }
 
 // xxx cwd must always end in '/'
@@ -316,7 +349,7 @@ void proc_cd(char *path)
 
     char cmd[200];
     sprintf(cmd, "dir_exists %s", new_cwd);
-    int status = run_cmd_on_android(cmd);
+    int status = run_cmd_on_android(cmd, NULL, 0);
     printf("GOT STATUS %d %s\n", status, (status ? strerror(status) : ""));
 
     // update cwd
@@ -326,24 +359,72 @@ void proc_cd(char *path)
     }
 }
 
+void *read_file(char *fn, int *len_ret)
+{
+    int fd, ret;
+    struct stat statbuf;
+    char *buf;
+
+    ret = stat(fn, &statbuf);
+    if (ret < 0) {
+        return NULL;
+    }
+    
+    buf = malloc(statbuf.st_size);
+    if (buf == NULL) {
+        return NULL;
+    }
+    
+    fd = open(fn, O_RDONLY);
+    if (fd < 0) {
+        free(buf);
+        return NULL;
+    }
+
+    ret = read(fd, buf, statbuf.st_size);
+    if (ret != statbuf.st_size) {
+        free(buf);
+        return NULL;
+    }
+
+    close(fd);
+
+    *len_ret = statbuf.st_size;
+    return buf;
+}
+
 // -----------------  RUN CMD ON ANDROID  -----------------------------------
 
-int run_cmd_on_android(char *cmdline)
+// xxx
+// - send and recv binary data
+// - status and errno returns
+
+int run_cmd_on_android(char *cmdline, char *data_out, int data_out_len)
 {
     char s[200];
     char *p;
+    int rc;
 
     printf("RUN_CMD_ON_ANDROID: '%s'\n", cmdline);
 
-    put_fmt(sockfp, "run %s\n", cmdline);
+    put_fmt(sockfp, "run\n");
+    put_fmt(sockfp, "%s\n", cmdline);
+
+    if (data_out) {
+        rc = fwrite(data_out, 1, data_out_len, sockfp);
+        if (rc != data_out_len) {
+            printf("ERROR: fwrite failed, %s\n", strerror(errno));
+            exit(1);
+        }
+    }
 
     while (true) {
         get_str(sockfp, s, sizeof(s));
 
         printf("%s\n", s);
-        if ((p = strstr(s, "END_OF_DATA "))) {
-            int status = 0;
-            sscanf(p+12, "%d", &status);
+        if ((p = strstr(s, "CMD_COMPLETE "))) {
+            int status = 999;
+            sscanf(p+13, "%d", &status);
             printf("got eod status %d\n", status);
             return status;
             break;
