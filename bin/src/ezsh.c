@@ -60,6 +60,7 @@ int write_file(char *fn, void *buf, int len);
 
 void read_ez_cfg(void);
 void connect_to_android(void);
+void substitue_alias(char *cmdline);
 
 int main(int argc, char **argv) // ok
 {
@@ -92,6 +93,9 @@ int main(int argc, char **argv) // ok
             break;
         }
         add_history(cmdline);
+
+        // substitue alias
+        substitue_alias(cmdline);
 
         // process the cmdline
         rc = run_special_cmd(cmdline);
@@ -186,6 +190,36 @@ void connect_to_android(void) // ok
 
     // save initial cwd
     strcpy(cwd_initial, cwd);
+}
+
+struct {
+    char *cmd;
+    char *alias;
+} alias_tbl[] = {
+    { "ls",  "ls -l" }
+        };
+#define MAX_ALIAS_TBL (sizeof(alias_tbl) / sizeof(alias_tbl[0]))
+
+void substitue_alias(char *cmdline)  // XXX
+{
+    char *p, temp[1000];
+    int   i;
+
+    p = strchr(cmdline, ' ');
+    if (p) *p = '\0';
+
+    for (i = 0; i < MAX_ALIAS_TBL; i++) {
+        if (strcmp(cmdline, alias_tbl[i].cmd) == 0) {
+            if (p) *p = ' ';
+            strcpy(temp, cmdline+strlen(alias_tbl[i].cmd));
+            strcpy(cmdline, alias_tbl[i].alias);
+            strcat(cmdline, temp);
+            printf("XXX '%s'\n", cmdline);
+            return;
+        }
+    }
+
+    if (p) *p = ' ';
 }
 
 // -----------------  RUN SPECIAL CMD  --------------------------------------
