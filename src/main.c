@@ -959,22 +959,13 @@ static int process_req_thread(void *cx)
         get_str(sockfp, str, sizeof(str));
 
         // the following cmdline are handled by this code;
-        // - dir_exists : check if directory exists, arg=dir_path
         // - put        : create/update file on android device, arg=file_path
         // - get        : get file contents, arg=file_path
         // otherwise the cmdline is passed to popen for the 
         // android shell to process
         //
         // status return is either a negative errno, or a positive exit code
-        if (strncmp(str, "dir_exists ", 11) == 0) {
-            DIR *dir;
-
-            dir = opendir(str+11);
-            status = (dir != NULL ? 0 : errno != 0 ? -errno : -EINVAL);
-            if (dir) {
-                closedir(dir);
-            }
-        } else if (strncmp(str, "put ", 4) == 0) {
+        if (strncmp(str, "put ", 4) == 0) {
             char  file_path[200];
             char *data;
             int   data_len, rc;

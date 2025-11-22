@@ -8,8 +8,8 @@ if [ "$parent_dir" != apps -a "$parent_dir" != svcs ]; then
 fi
 
 # if no args provided then 
-#   set filename_lsit to all files in this directory, 
-#   plus layout file when in subdir of apps
+#   set filename_list to all files in this directory, 
+#   plus layout file when in subdir of apps  xxx or svcs file
 # else
 #   else the filename_list are the args
 # endif
