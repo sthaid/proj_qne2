@@ -18,9 +18,9 @@
 #include <readline/history.h>
 
 // xxx todo
+// - rename ez.cfg file ?
 // - string array sizes
 // - status and errno returns
-// - cpta cpfa cmds
 // - q cmd
 // - include alias in .ezrc file, also ipconfig & password
 //    - ls alias
@@ -32,16 +32,28 @@
 // -  use strings of either size 100 or 1000
 
 //
+// typedefs
+//
+
+typedef struct {
+    char *cmd;
+    char *alias;
+} alias_t;
+
+//
 // variables
 //
 
-char  ipaddr[100];
-int   port;
-char  password[100];
+char    ipaddr[100];
+int     port;
+char    password[100];
 
-char  cwd[100];
-char  cwd_initial[100];
-FILE *sockfp;
+char    cwd[100];
+char    cwd_initial[100];
+FILE   *sockfp;
+
+alias_t alias_tbl[50];
+int     max_alias;
 
 //
 // prototypes
@@ -50,9 +62,9 @@ FILE *sockfp;
 int run_special_cmd(char *cmdline);
 int run_cmd_on_android(char *cmdline, char *data_out, int data_out_len, char **data_in, int *data_in_len);
 
+void sanitize(char *s);
 void put_fmt(FILE *fp, char *fmt, ...);
 char *get_str(FILE *fp, char *s, int s_len);
-void remove_leading_spaces(char *s);
 void *read_file(char *fn, int *len_ret);
 int write_file(char *fn, void *buf, int len);
 
@@ -85,7 +97,7 @@ int main(int argc, char **argv) // ok
         if (cmdline == NULL) {
             break;
         }
-        remove_leading_spaces(cmdline);
+        sanitize(cmdline);
         if (cmdline[0] == '\0') {
             continue;
         }
@@ -110,13 +122,11 @@ int main(int argc, char **argv) // ok
     }
 }
 
-void read_ez_cfg(void) // XXX
+void read_ez_cfg(void)
 {
     char  self_path[100], ez_cfg_path[100], *self_dir, s[100];
     FILE *fp;
-    int   cnt;
 
-// XXX include alias and reformat
     // get path to ez.cfg file
     readlink("/proc/self/exe", self_path, sizeof(self_path));
     self_dir = dirname(self_path);
@@ -129,16 +139,60 @@ void read_ez_cfg(void) // XXX
         exit(1);
     }
 
-    // read the ipaddr:port and password, which must be on the first line of ez.cfg
-    fgets(s, sizeof(s), fp);
-    cnt = sscanf(s, "%s %d %s", ipaddr, &port, password);
-    if (cnt != 3) {
-        printf("ERROR: invalid ez.cfg, format: <android_ip_addr> <ezApp_port> <ezApp_password>\n");
-        exit(1);
+    // read and process lines from ez.cfg file
+    while (fgets(s, sizeof(s), fp) != NULL) {
+        // remove leading and trailing spaces and trailing newline
+        sanitize(s);
+
+        // skip blank lines and lines begining with '#'
+        if (s[0] == '\0' || s[0] == '#') {
+            continue;
+        }
+
+        // tokenize line
+        char *id = strtok(s, " ");
+        char *val = strtok(NULL, " ");
+        char *rest = strtok(NULL, "");
+
+        // must have at least id and val
+        if (id == NULL || val == NULL) {
+            continue;
+        }
+
+        // parse the line
+        if (strcmp(id, "ipaddr") == 0) {
+            strcpy(ipaddr, val);
+        } else if (strcmp(id, "port") == 0) {
+            sscanf(val, "%d", &port);
+        } else if (strcmp(id, "password") == 0) {
+            strcpy(password, val);
+        } else if (strcmp(id, "alias") == 0) {
+            if (rest == NULL) {
+                continue;
+            }
+            sanitize(rest);
+            alias_tbl[max_alias].cmd = strdup(val);
+            alias_tbl[max_alias].alias = strdup(rest);
+            max_alias++;
+        } 
     }
 
-    // close ez.cfg
+    // close fp
     fclose(fp);
+
+    // verify ipaddr, port and password are set
+    if (ipaddr[0] == '\0') {
+        printf("ERROR: ippadr needed in ez.cfg\n");
+        exit(1);
+    }
+    if (port == 0) {
+        printf("ERROR: port needed in ez.cfg\n");
+        exit(1);
+    }
+    if (password[0] == '\0') {
+        printf("ERROR: password needed in ez.cfg\n");
+        exit(1);
+    }
 }
 
 void connect_to_android(void) // ok
@@ -192,15 +246,7 @@ void connect_to_android(void) // ok
     strcpy(cwd_initial, cwd);
 }
 
-struct {
-    char *cmd;
-    char *alias;
-} alias_tbl[] = {
-    { "ls",  "ls -l" }
-        };
-#define MAX_ALIAS_TBL (sizeof(alias_tbl) / sizeof(alias_tbl[0]))
-
-void substitue_alias(char *cmdline)  // XXX
+void substitue_alias(char *cmdline)
 {
     char *p, temp[1000];
     int   i;
@@ -208,13 +254,12 @@ void substitue_alias(char *cmdline)  // XXX
     p = strchr(cmdline, ' ');
     if (p) *p = '\0';
 
-    for (i = 0; i < MAX_ALIAS_TBL; i++) {
+    for (i = 0; i < max_alias; i++) {
         if (strcmp(cmdline, alias_tbl[i].cmd) == 0) {
             if (p) *p = ' ';
             strcpy(temp, cmdline+strlen(alias_tbl[i].cmd));
             strcpy(cmdline, alias_tbl[i].alias);
             strcat(cmdline, temp);
-            printf("XXX '%s'\n", cmdline);
             return;
         }
     }
@@ -245,7 +290,7 @@ int run_special_cmd(char *cmdline)  // XXX
         special_cmd_cd(arg1);
     } else if (strcmp(cmd, "pwd") == 0) {
         printf("%s\n", cwd);
-    } else if (strcmp(cmd, "cpta") == 0) {
+    } else if (strcmp(cmd, "put") == 0) {
         char *src_path, dest_path[200], temp[200];
         char *src_file_name;
 
@@ -272,7 +317,7 @@ int run_special_cmd(char *cmdline)  // XXX
         }
         
         special_cmd_copy_file_to_android(src_path, dest_path);
-    } else if (strcmp(cmd, "cpfa") == 0) {
+    } else if (strcmp(cmd, "get") == 0) {
         char src_path[200], dest_path[200], temp[200];
         char *src_file_name;
 
@@ -314,7 +359,7 @@ void special_cmd_copy_file_to_android(char *src_path, char *dest_path)  // ok
     int   data_len;
 
     // xxx comment out print
-    printf("cpta %s %s\n", src_path, dest_path);
+    printf("put %s %s\n", src_path, dest_path);
 
     // read src_path file
     data = read_file(src_path, &data_len);
@@ -323,8 +368,8 @@ void special_cmd_copy_file_to_android(char *src_path, char *dest_path)  // ok
         return;
     }
 
-    // run 'cpta' on android
-    sprintf(cmdline, "cpta %s", dest_path);
+    // run 'put' on android
+    sprintf(cmdline, "put %s", dest_path);
     run_cmd_on_android(cmdline, data, data_len, NULL, 0);
 
     // free data
@@ -338,10 +383,10 @@ void special_cmd_copy_file_from_android(char *src_path, char *dest_path)  // ok
     int   data_len = 0, rc;
 
     // xxx comment out
-    printf("cpfa %s %s\n", src_path, dest_path);
+    printf("get %s %s\n", src_path, dest_path);
 
-    // run 'cpfa' on android
-    sprintf(cmd, "cpfa %s", src_path);
+    // run 'get' on android
+    sprintf(cmd, "get %s", src_path);
     run_cmd_on_android(cmd, NULL, 0, &data, &data_len);
     if (data == NULL) {
         printf("ERROR: file data not recvd from android\n");
@@ -524,14 +569,34 @@ int run_cmd_on_android(char *cmdline, char *data_out, int data_out_len,  // ok
 
 // -----------------  UTILS  ----------------------------------------
 
-void remove_leading_spaces(char *s)  // ok
+void sanitize(char *s)  // ok
 {
     char *p = s;
     int   len;
 
-    while (*p == ' ') p++;
+    // return if s is NULL
+    if (s == NULL) {
+        return;
+    }
+
+    // remove leading spaces
+    while (*p == ' ') {
+        p++;
+    }
     len = strlen(p);
-    memcpy(s, p, len+1);
+    memmove(s, p, len+1);
+
+    // if length of s is 0 then return
+    if (len == 0) {
+        return;
+    }
+
+    // remove trailing spaces and newline chars
+    p = &s[len-1];
+    while (p >= s && (*p == ' ' || *p == '\n')) {
+        *p = '\0';
+        p--;
+    }
 }
 
 void put_fmt(FILE *fp, char *fmt, ...)  // ok

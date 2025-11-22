@@ -106,7 +106,7 @@ void *util_read_file(char *dir, char *fn, int *len_ret)
     } else {
         sprintf(path, "%s", dir);
     }
-    printf("WRITE FILE '%s'\n", path);
+    printf("READ FILE '%s'\n", path);
 
     *len_ret = 0;
 

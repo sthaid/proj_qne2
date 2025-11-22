@@ -885,7 +885,9 @@ char *get_str(FILE *fp, char *s, int s_len)
 
     p = fgets(s, s_len, fp);
     if (p == NULL) {
-        printf("ERROR: get failed - eof=%d error=%d\n", feof(fp), ferror(fp));
+        if (!feof(fp)) {
+            printf("ERROR: get failed - error=%d\n", ferror(fp));
+        }
         return NULL;
     }
 
@@ -938,8 +940,8 @@ static int process_req_thread(void *cx)
 
         // the following cmdline are handled by this code;
         // - dir_exists : check if directory exists, arg=dir_path
-        // - cpta       : create/update file on android device, arg=file_path
-        // - cpfa       : get file contents, arg=file_path
+        // - put        : create/update file on android device, arg=file_path
+        // - get        : get file contents, arg=file_path
         // otherwise the cmdline is passed to popen for the 
         // android shell to process
         //
@@ -952,13 +954,13 @@ static int process_req_thread(void *cx)
             if (dir) {
                 closedir(dir);
             }
-        } else if (strncmp(str, "cpta ", 5) == 0) {
+        } else if (strncmp(str, "put ", 4) == 0) {
             char  file_path[200];
             char *data;
             int   data_len, rc;
 
             // save file_path
-            strcpy(file_path, str+5);
+            strcpy(file_path, str+4);
 
             // get data_len
             get_str(sockfp, str, sizeof(str));
@@ -982,13 +984,13 @@ static int process_req_thread(void *cx)
 
             // free allocated data
             free(data);
-        } else if (strncmp(str, "cpfa ", 5) == 0) {
+        } else if (strncmp(str, "get ", 4) == 0) {
             char  file_path[200];
             char *data;
             int   data_len, rc;
 
             // save file_path
-            strcpy(file_path, str+5);
+            strcpy(file_path, str+4);
 
             // read android file
             data = util_read_file(file_path, NULL, &data_len);
