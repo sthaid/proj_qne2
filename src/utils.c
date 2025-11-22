@@ -101,7 +101,14 @@ void *util_read_file(char *dir, char *fn, int *len_ret)
     char *buf;
     char path[200];
 
-    sprintf(path, "%s/%s", dir, fn);
+    if (fn) {
+        sprintf(path, "%s/%s", dir, fn);
+    } else {
+        sprintf(path, "%s", dir);
+    }
+    printf("WRITE FILE '%s'\n", path);
+
+    *len_ret = 0;
 
     ret = stat(path, &statbuf);
     if (ret < 0) {

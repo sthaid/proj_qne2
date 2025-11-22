@@ -899,92 +899,140 @@ char *get_str(FILE *fp, char *s, int s_len)
 
 static int process_req_thread(void *cx)
 {
-    int sockfd = (int)(long)cx;
+    int   sockfd = (int)(long)cx;
     FILE *sockfp;
-    char password[100];
-    char *p;
+    char  password[100];
 
+    // get fp for socket
     sockfp = fdopen(sockfd, "w+");
-    printf("PROCESS REQ STARTING %p\n", sockfp);
-    // xxx check
     
-    p = get_str(sockfp, password, sizeof(password));
-    if (p == NULL) {
-        ERROR("get_str password failed\n");
-        goto done;
-    }
-    printf("GOT PASSWD %s\n", password);
+    // read password from socket
+    password[0] = '\0';
+    get_str(sockfp, password, sizeof(password));
 
-    if (strcmp(password, "secret") == 0) {
-        printf("OK\n");
+    // validate password
+    if (strcmp(password, "secret") == 0) {  // xxx get from param
         put_fmt(sockfp, "%s\n", "password okay");
     } else {
-        printf("NOTOK\n");
         put_fmt(sockfp, "%s\n", "password invalid");
         goto done;
     }
 
+    // put storage_path to socket
     put_fmt(sockfp, "%s\n", storage_path);
 
+    // process cmds
     while (true) {
         char str[1000];
-        int  status = 7; //xxx
+        int  status=99;
 
+        // read from socket, 'run' expected
         get_str(sockfp, str, sizeof(str));
         if (strcmp(str, "run") != 0) {
-            printf("EOD\n");
+            ERROR("'run' expected\n");
             goto done;
         }
-        printf("STR '%s'\n", str);
 
+        // read cmdline from socket
         get_str(sockfp, str, sizeof(str));
-        printf("STR '%s'\n", str);
 
+        // the following cmdline are handled by this code;
+        // - dir_exists : check if directory exists, arg=dir_path
+        // - cpta       : create/update file on android device, arg=file_path
+        // - cpfa       : get file contents, arg=file_path
+        // otherwise the cmdline is passed to popen for the 
+        // android shell to process
+        //
+        // status return is either a negative errno, or a positive exit code
         if (strncmp(str, "dir_exists ", 11) == 0) {
-            DIR *dir = opendir(str+11);
-            status = (dir != NULL ? 0 : errno);
-            printf("dir_exists status %d\n", status);
+            DIR *dir;
+
+            dir = opendir(str+11);
+            status = (dir != NULL ? 0 : errno != 0 ? -errno : -EINVAL);
             if (dir) {
                 closedir(dir);
             }
         } else if (strncmp(str, "cpta ", 5) == 0) {
-            char *dest_path = str+5;
-            int   buf_len=0, rc;
-            char *buf, *buf_len_str;
+            char  file_path[200];
+            char *data;
+            int   data_len, rc;
 
-            strtok(str, " ");
-            dest_path = strtok(NULL, " ");
-            buf_len_str = strtok(NULL, " ");
-            printf("XXXX %s %s\n", dest_path, buf_len_str);
-            sscanf(buf_len_str, "%d", &buf_len);
-            printf("GOT buf_len %d\n", buf_len);
+            // save file_path
+            strcpy(file_path, str+5);
 
-            if (buf_len == 0) {
-                status = EINVAL;
+            // get data_len
+            get_str(sockfp, str, sizeof(str));
+            if (sscanf(str, "data_len %d", &data_len) != 1) {
+                ERROR("failed to get data_len\n");
+                goto done;
+            }
+
+            // read data from socket
+            data = calloc(data_len, 1);             // nmemb=data_len, size=1
+            rc = fread(data, 1, data_len, sockfp);  // size=1, nmemb=data_len
+            if (rc != data_len) {
+                ERROR("failed to read data from socket\n");
+                free(data);
+                goto done;
+            }
+
+            // write data to android file
+            rc = util_write_file(file_path, NULL, data, data_len); //xxx fix util_write_file
+            status = (rc == 0 ? 0 : errno != 0 ? -errno : -EINVAL);
+
+            // free allocated data
+            free(data);
+        } else if (strncmp(str, "cpfa ", 5) == 0) {
+            char  file_path[200];
+            char *data;
+            int   data_len, rc;
+
+            // save file_path
+            strcpy(file_path, str+5);
+
+            // read android file
+            data = util_read_file(file_path, NULL, &data_len);
+            if (data == NULL) {
+                // failed to read file
+                status = (errno != 0 ? -errno : -EINVAL);
+                put_fmt(sockfp, "data_len %d\n", 0);
             } else {
-                buf = calloc(buf_len, 1);        // nmemb=buf_len, size=1
-                fread(buf, 1, buf_len, sockfp);  // size=1, nmemb=buf_len
-                rc = util_write_file(dest_path, NULL, buf, buf_len); //xxx fix util_write_file
-                status = (rc == 0 ? 0 : errno != 0 ? errno : EINVAL);
-                printf("cpta %s len=%d status=%d\n", dest_path, buf_len, status);
-                free(buf);
+                // write data_len to socket
+                put_fmt(sockfp, "data_len %d\n", data_len);
+
+                // write data to socket
+                rc = fwrite(data, 1, data_len, sockfp);  // size=1, nmemb=data_len
+                if (rc != data_len) {
+                    ERROR("failed to write data to socket\n");
+                    free(data);
+                    goto done;
+                }
+
+                // free data
+                free(data);
+
+                // success
+                status = 0;
             }
         } else {
             FILE *fp;
-            printf("calling popen '%s'\n", str);
+            int rc;
+
             fp = popen(str, "r");
             if (fp == NULL) {
-                printf("popen '%s' failed\n", str);
-                status = (errno ? errno : EINVAL);
+                status = (errno != 0 ? -errno : -EINVAL);
+                ERROR("popen '%s' failed, %s\n", str, strerror(errno));
             } else {
                 while (get_str(fp, str, sizeof(str)) != NULL) {
-                    printf("XXX - %s\n", str);
                     put_fmt(sockfp, "%s\n", str);
                 }
-                status = pclose(fp);
-                printf("status %d\n", status);
+                rc = pclose(fp);
+                status = WEXITSTATUS(rc);
+                INFO("pclose_rc=%d, WEXITSTATUS=%d\n", rc, status);
             }
         }
+
+        // all cmds termintate with CMD_COMPLETE <status>
         put_fmt(sockfp, "CMD_COMPLETE %d\n", status);
     }
 
