@@ -18,6 +18,7 @@
 #include <readline/history.h>
 
 // xxx todo
+// - add aliases cmd
 // - rename ez.cfg file ?
 // - string array sizes
 // - status and errno returns

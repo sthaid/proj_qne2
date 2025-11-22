@@ -26,6 +26,7 @@
 #endif
 
 #define DEFAULT_DEVEL_PORT 9000   // IANA registered port range 1024 - 49151
+#define DEFAULT_DEVEL_PASSWORD "secret"
 
 #define LAST_PAGE ((max_apps - 1) / 18)
 
@@ -53,6 +54,7 @@
 typedef struct {
     bool devel_mode;
     int  devel_port;
+    char devel_password[50];
 } params_t;
 
 //
@@ -127,6 +129,7 @@ static int init(void)
     // get params, if they don't exist, set to default value
     params.devel_mode = util_get_int_param(".", "devel_mode", 0);
     params.devel_port = util_get_int_param(".", "devel_port", DEFAULT_DEVEL_PORT);
+    strcpy(params.devel_password, util_get_str_param(".", "devel_password", DEFAULT_DEVEL_PASSWORD));
 
     // xxx temporary for development
     //params.devel_mode = 1;
@@ -575,17 +578,17 @@ static void settings(void)
     long        msg_time = 0;
     char       *ipaddr;
 
-    #define EVID_COPYRIGHT   1001
-    #define EVID_DEVEL_MODE  1002
-    #define EVID_DEVEL_PORT  1003
-    #define EVID_SERVICES    1004
+    #define EVID_COPYRIGHT       1001
+    #define EVID_DEVEL_MODE      1002
+    #define EVID_DEVEL_PORT      1003
+    #define EVID_DEVEL_PASSWORD  1004
+    #define EVID_SERVICES        1005
 #ifdef ANDROID
-    #define EVID_RESET_APPS_AND_SVCS  1005
+    #define EVID_RESET_APPS_AND_SVCS  1006
 #endif
 
     // get this device ipaddr
     ipaddr = util_get_ipaddr();
-    INFO("SETTINGS %s:%d\n", ipaddr, params.devel_port);
 
     // handle the setting display
     while (true) {
@@ -614,8 +617,12 @@ static void settings(void)
         loc = sdlx_render_printf(0, ROW2Y(9), "Devel_Port = %d", params.devel_port);
         sdlx_register_event(loc, EVID_DEVEL_PORT);
 
+        // display Devel_Password
+        loc = sdlx_render_printf(0, ROW2Y(11), "Devel_Password");
+        sdlx_register_event(loc, EVID_DEVEL_PASSWORD);
+
         // display Services
-        loc = sdlx_render_printf(0, ROW2Y(11), "Services");
+        loc = sdlx_render_printf(0, ROW2Y(13), "Services");
         sdlx_register_event(loc, EVID_SERVICES);
 
 #ifdef ANDROID
@@ -674,6 +681,19 @@ static void settings(void)
                     INFO("sending SIGUSR2 to server_thread\n");
                     pthread_kill(server_tid, SIGUSR2);
                 }
+            }
+            break; }
+        case EVID_DEVEL_PASSWORD: {
+            char *str; 
+            str = sdlx_get_input_str("Password?", false, BG_COLOR);
+            if (strlen(str) >= 4) {
+                strcpy(params.devel_password, str);
+                util_set_str_param(".", "devel_password", str);
+                msg = "Password changed";
+                msg_time = util_microsec_timer();
+            } else {
+                msg = "Password too short";
+                msg_time = util_microsec_timer();
             }
             break; }
         case EVID_SERVICES:
@@ -913,7 +933,7 @@ static int process_req_thread(void *cx)
     get_str(sockfp, password, sizeof(password));
 
     // validate password
-    if (strcmp(password, "secret") == 0) {  // xxx get from param
+    if (strcmp(password, params.devel_password) == 0) {  // xxx get from param
         put_fmt(sockfp, "%s\n", "password okay");
     } else {
         put_fmt(sockfp, "%s\n", "password invalid");
