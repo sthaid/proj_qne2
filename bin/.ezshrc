@@ -1,5 +1,5 @@
-ipaddr      192.168.1.122
-#ipaddr      192.168.1.243
+#ipaddr      192.168.1.122
+ipaddr      192.168.1.243
 port        9000
 password    secret
 
