@@ -45,7 +45,7 @@ typedef struct {
 // variables
 //
 
-// these are obtained from the ez.cfg file
+// these are obtained from the .ezshrc file
 char    ipaddr[200];
 int     port;
 char    password[200];
@@ -64,7 +64,7 @@ FILE   *sockfp;
 //
 
 // main
-void read_ez_cfg(void);
+void read_ezshrc(void);
 void connect_to_android(void);
 void substitue_alias(char *cmdline);
 int run_cmd(char *cmdline);
@@ -101,8 +101,8 @@ int main(int argc, char **argv)
         exit(1);
     }
 
-    // read ez.cfg file, to get ipaddr, port, password, and cmd aliases
-    read_ez_cfg();
+    // read ezshrc file, to get ipaddr, port, password, and cmd aliases
+    read_ezshrc();
 
     // connect to android: also validates password and gets curr-working-dir (cwd)
     connect_to_android();
@@ -150,25 +150,25 @@ int main(int argc, char **argv)
     }
 }
 
-void read_ez_cfg(void)
+void read_ezshrc(void)
 {
-    char  self_path[200], ez_cfg_path[200], *self_dir, s[200];
+    char  self_path[200], ezshrc_path[200], *self_dir, s[200];
     FILE *fp;
     int   line_num=0;
 
-    // get path to ez.cfg file
+    // get path to .ezshrc file
     readlink("/proc/self/exe", self_path, sizeof(self_path));
     self_dir = dirname(self_path);
-    sprintf(ez_cfg_path, "%s/ez.cfg", self_dir);
+    sprintf(ezshrc_path, "%s/.ezshrc", self_dir);
 
-    // open ez.cfg file
-    fp = fopen(ez_cfg_path, "r");
+    // open .ezshrc file
+    fp = fopen(ezshrc_path, "r");
     if (fp == NULL) {
-        printf("ERROR: failed to open %s\n", ez_cfg_path);
+        printf("ERROR: failed to open %s\n", ezshrc_path);
         exit(1);
     }
 
-    // read and process lines from ez.cfg file
+    // read and process lines from .ezshrc file
     while (fgets(s, sizeof(s), fp) != NULL) {
         line_num++;
 
@@ -199,11 +199,11 @@ void read_ez_cfg(void)
             strcpy(password, val);
         } else if (strcmp(id, "alias") == 0) {
             if (max_alias == MAX_ALIAS) {
-                printf("ERROR: alias tbl is full, ez.cfg line %d\n", line_num);
+                printf("ERROR: alias tbl is full, .ezshrc line %d\n", line_num);
                 continue;
             }
             if (rest == NULL) {
-                printf("ERROR: invalid alias, ez.cfg line %d\n", line_num);
+                printf("ERROR: invalid alias, .ezshrc line %d\n", line_num);
                 continue;
             }
             sanitize(rest);
@@ -218,15 +218,15 @@ void read_ez_cfg(void)
 
     // verify ipaddr, port and password are set
     if (ipaddr[0] == '\0') {
-        printf("ERROR: ippadr needed in ez.cfg\n");
+        printf("ERROR: ippadr needed in .ezshrc\n");
         exit(1);
     }
     if (port == 0) {
-        printf("ERROR: port needed in ez.cfg\n");
+        printf("ERROR: port needed in .ezshrc\n");
         exit(1);
     }
     if (password[0] == '\0') {
-        printf("ERROR: password needed in ez.cfg\n");
+        printf("ERROR: password needed in .ezshrc\n");
         exit(1);
     }
 }

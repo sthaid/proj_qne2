@@ -618,7 +618,7 @@ static void settings(void)
 
 #ifdef ANDROID
         // display Reset_Apps_And_svcs
-        loc = sdlx_render_printf(0, ROW2Y(13), "Reset_Apps_And_Svcs");
+        loc = sdlx_render_printf(0, ROW2Y(15), "Reset_Apps_And_Svcs");
         sdlx_register_event(loc, EVID_RESET_APPS_AND_SVCS);
 #endif
 

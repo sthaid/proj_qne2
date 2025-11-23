@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# xxx this should get ipaddr from ez.cfg
+# xxx this should get ipaddr from .ezshrc
 
 # Enable developer mode by tapping build number 8 times.
 # 
