@@ -70,10 +70,7 @@ static pthread_t   server_tid;
 //
 
 static void processing(void);
-
-static int server_thread(void *cx);
-//static int waiter_thread(void *cx); // xxx interfers with system()
-//static void kill_child_processes(pid_t pid);
+static int devel_mode_server_thread(void *cx);
 
 //
 // routines to launch a C program using picoc interpreter
@@ -131,10 +128,6 @@ static int init(void)
     params.devel_port = util_get_int_param(".", "devel_port", DEFAULT_DEVEL_PORT);
     strcpy(params.devel_password, util_get_str_param(".", "devel_password", DEFAULT_DEVEL_PASSWORD));
 
-    // xxx temporary for development
-    //params.devel_mode = 1;
-    //util_set_int_param(".", "devel_mode", 1);
-
 #ifdef ANDROID
     // copy asset files to the working directory
     sdlx_copy_asset_file("files.tar", ".");
@@ -147,16 +140,15 @@ static int init(void)
     }
 #endif
 
-    // allocate SIGUSR2, this signal is sent to the server_thread
+    // allocate SIGUSR2, this signal is sent to the devel_mode_server_thread
     // when developer mode is disabled or developer mode port is changed
     struct sigaction action;
     memset(&action, 0, sizeof(action));
     action.sa_handler = sigusr2_hndlr;
     sigaction(SIGUSR2, &action, NULL);
 
-    // create server threads
-    sdlx_create_detached_thread(server_thread, NULL);
-    //sdlx_create_detached_thread(waiter_thread, NULL);
+    // create devel mode server thread
+    sdlx_create_detached_thread(devel_mode_server_thread, NULL);
 
     // init sdl xxx move
     sdlx_init(SUBSYS_VIDEO | SUBSYS_AUDIO | SUBSYS_SENSOR);
@@ -189,15 +181,14 @@ static int init(void)
     return 0;
 }
 
+// xxx is this ever called
 static void cleanup(void)
 {
     INFO("TERMINATING\n");
 
     svcs_stop_all();
 
-    // xxx free svc_call allocations
-
-    //kill_child_processes(getpid());
+    // xxx free svc_call allocations ?
 
     sdlx_quit(SUBSYS_VIDEO | SUBSYS_AUDIO | SUBSYS_SENSOR);
 }
@@ -661,11 +652,12 @@ static void settings(void)
         case EVID_COPYRIGHT:
             copyright();
             break;
+        // xxx add case for credits
         case EVID_DEVEL_MODE:
             params.devel_mode = (params.devel_mode ? 0 : 1);
             util_set_int_param(".", "devel_mode", params.devel_mode);
             if (!params.devel_mode) {
-                INFO("sending SIGUSR2 to server_thread\n");
+                INFO("sending SIGUSR2 to devel_mode_server_thread\n");
                 pthread_kill(server_tid, SIGUSR2);
             }
             break;
@@ -678,7 +670,7 @@ static void settings(void)
                 params.devel_port = port;
                 util_set_int_param(".", "devel_port", port);
                 if (params.devel_mode) {
-                    INFO("sending SIGUSR2 to server_thread\n");
+                    INFO("sending SIGUSR2 to devel_mode_server_thread\n");
                     pthread_kill(server_tid, SIGUSR2);
                 }
             }
@@ -706,6 +698,7 @@ static void settings(void)
             if (strcasecmp(str, "y") != 0) {
                 break;
             }
+            // xxx this did not work, maybe issue with log_fifo?
             create_files(CREATE_FILES_RESET);
             msg = "Apps/Svcs are reset";
             msg_time = util_microsec_timer();
@@ -775,25 +768,19 @@ static void copyright(void)
     free(str);
 }
 
-// ----------------- SERVER ----------------------------
+// ----------------- DEVEL MODE SERVER  ----------------
 
 #define MAX_PID_TBL 20
 
 static int process_req_thread(void *cx);
-//static void process_req_using_android_sh(int sockfd, char *cmd);
 
-static int server_thread(void *cx)
+static int devel_mode_server_thread(void *cx)
 {
     struct sockaddr_in server_address;
     int                listen_sockfd, ret;
 
     // save server thread id in global, so that signals can be sent to this thread
     server_tid = pthread_self();
-
-//  sleep(5); //xxx
-//  double lat, lng, alt;
-//  util_get_location(&lat, &lng, &alt);  // return 9999 if not bound
-//  INFO("XXXXXXXXXXXXXXX %f %f %f\n", lat, lng, alt);
 
 again:
     // wait for developer mode to be enabled
@@ -863,14 +850,11 @@ again:
     // close listen socket
     close(listen_sockfd);
 
-    // kill all child processes
-    //kill_child_processes(getpid());
-
-    // goto top to reinit server_thread
+    // goto top to reinit devel_mode_server_thread
     goto again;
 
     // not reached
-    INFO("SERVER_THREAD TERMINATING\n");
+    INFO("DEVEL_MODE_SERVER_THREAD TERMINATING\n");
     return 0;
 }
 
@@ -923,7 +907,7 @@ static int process_req_thread(void *cx)
 {
     int   sockfd = (int)(long)cx;
     FILE *sockfp;
-    char  password[100];
+    char  password[200];
 
     // get fp for socket
     sockfp = fdopen(sockfd, "w+");
@@ -948,8 +932,12 @@ static int process_req_thread(void *cx)
         char str[1000];
         int  status=99;
 
-        // read from socket, 'run' expected
-        get_str(sockfp, str, sizeof(str));
+        // read from socket
+        // - if socket has been closed on other end then goto done
+        // - else verify 'run' is received
+        if (get_str(sockfp, str, sizeof(str)) == NULL) {
+            goto done;
+        }
         if (strcmp(str, "run") != 0) {
             ERROR("'run' expected\n");
             goto done;
@@ -1053,211 +1041,3 @@ done:
     fclose(sockfp);
     return 0;
 }
-
-#if 0
-    char *s = fgets(password, sizeof(password), sockfp);
-    printf("GOT password = '%s'  s=%p\n", password, s);
-
-    if (strcmp(password, "secret") != 0) {
-        ERROR("INVALID PASSWORD '%s'\n", password);
-        //close(sockfd);
-        //return 0;
-    }
-
-    printf("SENDING OKAY\n");
-    fputs("password okay\n", sockfp);
-    fflush(sockfp);
-
-    printf("SLEEP\n");
-    sleep(5);
-
-    printf("CLOSE\n");
-    fclose(sockfp);
-#endif
-
-#if 0
-    char password[100], password_okay[100], storage_path_copy[100], type_and_cmdline[1000];
-    int ret;
-
-    ret = read(sockfd, password, sizeof(password));
-    if (ret != sizeof(password)) {
-        ERROR("failed to read password, ret=%d, %s\n", ret, strerror(errno));
-        close(sockfd);
-        return 0;
-    }
-    password[sizeof(password)-1] = '\0';
-    INFO("GOT PASSWORD '%s'\n", password);
-
-
-    strncpy(password_okay, "password okay", sizeof(password_okay));
-    ret = write(sockfd, password_okay, sizeof(password_okay));
-    if (ret != sizeof(password_okay)) {
-        ERROR("failed to ack password\n");
-        close(sockfd);
-        return 0;
-    }
-
-    strncpy(storage_path_copy, storage_path, sizeof(storage_path_copy));
-    ret = write(sockfd, storage_path_copy, sizeof(storage_path_copy));
-    if (ret != sizeof(storage_path_copy)) {
-        ERROR("failed to send storage_path\n");
-        close(sockfd);
-        return 0;
-    }
-
-again:
-    // read type_and_cmdline
-    ret = read(sockfd, type_and_cmdline, sizeof(type_and_cmdline));
-    INFO("GOT: '%s'\n", type_and_cmdline);
-
-    char *cmdline;
-    int type;
-    type = type_and_cmdline[0];
-    cmdline = &type_and_cmdline[2];
-    INFO("TYPE %c - cmdline '%s'\n", type, cmdline);
-
-    // verify type
-
-    // execute cmdline
-
-    goto again;
-
-    close(sockfd);
-#endif
-
-#if 0
-    pid_t pid;
-
-    char cmd[1000], *p;
-
-    // read first line from sockfd, this contains the cmd to execute
-    p = cmd;
-    while (true) {
-        char ch;
-        int ret;
-        ret = read(sockfd, &ch, 1);
-        if (ret != 1) {
-            ERROR("failed to read ch from sockfd %d, %s\n", sockfd, strerror(errno));
-            close(sockfd);
-            return 0;
-        }
-        if (ch == '\n') {
-            break;
-        }
-        *p++ = ch;
-    }
-    *p = '\0';
-
-    // fork and exec /bin/sh, to execute cmd
-    if ((pid = fork()) == 0) {
-        process_req_using_android_sh(sockfd, cmd);
-    }
-    INFO("created pid %d, cmd='%s'\n", pid, cmd);
-
-    // parent is done with sockfd
-    close(sockfd);
-    return 0;
-#endif
-
-#if 0
-static void process_req_using_android_sh(int sockfd, char *cmd)
-{
-    char *argv[10];
-    char cmd2[1100];
-
-    // execute the cmd
-    close(0);
-    close(1);
-    close(2);
-
-    dup2(sockfd, 0);
-    dup2(sockfd, 1);
-    dup2(sockfd, 2);
-
-    sprintf(cmd2, "cd %s; %s", storage_path, cmd);
-    argv[0] = "/bin/sh";
-    argv[1] = "-c";
-    argv[2] = cmd2;
-    argv[3] = NULL;
-
-    execv("/bin/sh", argv);
-
-    // not reached
-    exit(1);
-}
-#endif
-
-#if 0
-static int waiter_thread(void *cx)
-{
-    pid_t pid;
-
-    while (true) {
-        // wait for a process to terminate
-        pid = wait(NULL);
-
-        // it is normal for the above call to wait to return an
-        // error when there are no child processes
-        if (pid == -1) {
-            if (errno != ECHILD) {
-                ERROR("wait failed, %s\n", strerror(errno));
-            }
-            sleep(1);
-            continue;
-        }
-    }
-
-    return 0;
-}
-#endif
-
-#if 0
-static void kill_child_processes(pid_t pid)
-{
-    FILE *fp;
-    pid_t child_pid;
-    char cmd[100], s[100];
-
-    // use ps to get the child pid(s)
-    sprintf(cmd, "ps -o pid= --ppid %d", pid);
-    fp = popen(cmd, "r");
-    while (fgets(s, sizeof(s), fp) != NULL) {
-        if (sscanf(s, "%d", &child_pid) == 1) {
-            kill_child_processes(child_pid);
-        }
-    }
-    pclose(fp);
-
-    // dont kill self
-    if (pid != getpid()) {
-        char cmdline_path[50], cmdline[80];
-        int  fd, len, i;
-        bool got_cmdline = false;
-
-        // debug print the cmdline of pid that is about to be killed
-        memset(cmdline, 0, sizeof(cmdline));
-        sprintf(cmdline_path, "/proc/%d/cmdline", pid);
-        fd = open(cmdline_path, O_RDONLY);
-        if (fd >= 0) {
-            len = read(fd, cmdline, sizeof(cmdline)-1);
-            if (len > 0) {
-                for (i = 0; i < len; i++) {
-                    if (cmdline[i] == '\0') cmdline[i] = ' ';
-                }
-                got_cmdline = true;
-            } else {
-                sprintf(cmdline, "failed read %s", cmdline_path);
-            }
-            close(fd);
-        } else {
-            sprintf(cmdline, "failed open %s", cmdline_path);
-        }
-
-        // kill pid
-        if (got_cmdline) {
-            INFO("killing pid=%d: %s\n", pid, cmdline);
-            kill(pid,SIGKILL);
-        }
-    }
-}
-#endif

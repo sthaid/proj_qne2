@@ -65,6 +65,22 @@ char *util_time2str(char * str, long us, int gmt, int display_ms, int display_da
 
 // -----------------  FILE READ/WRITE  -----------------------
 
+static char *concat(char *s1, char *s2, char *result)
+{
+    if (s1 && s2) {
+        sprintf(result, "%s/%s", s1, s2); 
+    } else if (s1) {
+        strcpy(result, s1);
+    } else if (s2) {
+        strcpy(result, s2);
+    } else {
+        ERROR("both s1 and s2 are null\n");
+        result[0] = '\0';
+    }
+
+    return result;
+}
+
 // xxx maybe separating dir is too confusing
 // xxx maybe a concat util instead
 int util_write_file(char *dir, char *fn, void *buf, int len)
@@ -72,12 +88,8 @@ int util_write_file(char *dir, char *fn, void *buf, int len)
     int fd, ret;
     char path[200];
 
-    if (fn) {
-        sprintf(path, "%s/%s", dir, fn);
-    } else {
-        sprintf(path, "%s", dir);
-    }
-    printf("WRITE FILE '%s'\n", path);
+    concat(dir, fn, path);
+    INFO("writing file %s\n", path);
 
     fd = open(path, O_CREAT | O_TRUNC | O_WRONLY, 0666);
     if (fd < 0) {
@@ -93,7 +105,8 @@ int util_write_file(char *dir, char *fn, void *buf, int len)
     return 0;
 }
 
-// xxx comment on extra byte
+// note: an extra '\0' byte is added to the end of the data buffer;
+//       this extra char is not included in len_ret
 void *util_read_file(char *dir, char *fn, int *len_ret)
 {
     int fd, ret;
@@ -101,12 +114,8 @@ void *util_read_file(char *dir, char *fn, int *len_ret)
     char *buf;
     char path[200];
 
-    if (fn) {
-        sprintf(path, "%s/%s", dir, fn);
-    } else {
-        sprintf(path, "%s", dir);
-    }
-    printf("READ FILE '%s'\n", path);
+    concat(dir, fn, path);
+    INFO("reading file %s\n", path);
 
     *len_ret = 0;
 
@@ -144,8 +153,9 @@ void util_delete_file(char *dir, char *fn)
 {
     char path[200];
 
-    sprintf(path, "%s/%s", dir, fn);
+    concat(dir, fn, path);
     INFO("deleting file %s\n", path);
+
     unlink(path);
 }
 
@@ -155,7 +165,7 @@ bool util_file_exists(char *dir, char *fn)
     struct stat statbuf;
     int rc;
 
-    sprintf(path, "%s/%s", dir, fn);
+    concat(dir, fn, path);
 
     rc = stat(path, &statbuf);
     return rc == 0;
@@ -167,7 +177,7 @@ long util_file_mtime(char *dir, char *fn)
     struct stat statbuf;
     int rc;
 
-    sprintf(path, "%s/%s", dir, fn);
+    concat(dir, fn, path);
 
     rc = stat(path, &statbuf);
     return (rc == 0 ? statbuf.st_mtime : 0);
@@ -179,7 +189,7 @@ long util_file_size(char *dir, char *fn)
     struct stat statbuf;
     int rc;
 
-    sprintf(path, "%s/%s", dir, fn);
+    concat(dir, fn, path);
 
     rc = stat(path, &statbuf);
     return (rc == 0 ? statbuf.st_size : 0);
@@ -189,10 +199,12 @@ long util_file_size(char *dir, char *fn)
 
 void util_delete_dir(char *dir, char *dir_to_delete)
 {
-    char cmd[200];
+    char path[200], cmd[220];
 
-    INFO("deleting dir %s/%s\n", dir, dir_to_delete);
-    sprintf(cmd, "rm -rf %s/%s", dir, dir_to_delete);
+    concat(dir, dir_to_delete, path);
+    INFO("deleting dir %s\n", path);
+
+    sprintf(cmd, "rm -rf %s", path);
     system(cmd);
 }
 
@@ -207,6 +219,9 @@ void *util_map_file(char *dir, char *file, int len_arg, bool create_if_needed,
     void  *addr = NULL;
     struct stat statbuf;
     char   *zero;
+
+    concat(dir, file, path);
+    INFO("mapping file %s\n", path);
 
     // do not allow create_if_needed and read_only both true
     if (create_if_needed && read_only) {
@@ -223,7 +238,6 @@ void *util_map_file(char *dir, char *file, int len_arg, bool create_if_needed,
     }
 
     // print message
-    sprintf(path, "%s/%s", dir, file);
     INFO("mapping %s len_arg=0x%x adjusted_len=0x%x create_if_needed=%d\n", path, len_arg, len, create_if_needed);
 
     // stat the file to determine if it exists, and its length
@@ -709,7 +723,8 @@ int util_read_png_file(char *dir, char *filename, unsigned char **pixels, int *w
     char path[200];
     int rc;
 
-    sprintf(path, "%s/%s", dir, filename);
+    concat(dir, filename, path);
+    INFO("reading png file %s\n", path);
 
     rc = lodepng_decode32_file(pixels, (unsigned int*)w, (unsigned int*)h, path);
     if (rc != 0) {
@@ -725,7 +740,8 @@ int util_write_png_file(char *dir, char *filename, unsigned char *pixels, int w,
     char path[200];
     int rc;
 
-    sprintf(path, "%s/%s", dir, filename);
+    concat(dir, filename, path);
+    INFO("writing png file %s\n", path);
 
     rc = lodepng_encode32_file(path, pixels, w, h);
     if (rc != 0) {

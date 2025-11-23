@@ -8,8 +8,8 @@
 #include <errno.h>
 #include <fcntl.h>
 
-#include <sys/types.h>  // xxx all needed?
-#include <sys/stat.h>  // xxx all needed?
+#include <sys/types.h>
+#include <sys/stat.h>
 #include <sys/socket.h>
 #include <netinet/in.h> 
 #include <arpa/inet.h>
@@ -18,28 +18,19 @@
 #include <readline/history.h>
 
 // xxx todo
-// - add aliases cmd
-// - rename ez.cfg file ?
-// - string array sizes
-// - status and errno returns
-// - q cmd
-// - include alias in .ezrc file, also ipconfig & password
-//    - ls alias
-// - END_OF_DATA marker
-// - copy file to/from android
-// - setting for password, require it be changed , use change_me
 // - vi cmd
-// - clean up code and comments
-// -  use strings of either size 100 or 1000
+// - test WEXITSTATUS on android
 
 // NOTES:
-// - status returns
+// - status returns xxx
 
 //
 // defines
 //
 
 #define NOT_A_SPECIAL_CMD -9999
+
+#define MAX_ALIAS 100
 
 //
 // typedefs
@@ -55,15 +46,15 @@ typedef struct {
 //
 
 // these are obtained from the ez.cfg file
-char    ipaddr[100];
+char    ipaddr[200];
 int     port;
-char    password[100];
-alias_t alias_tbl[50];
+char    password[200];
+alias_t alias_tbl[MAX_ALIAS];
 int     max_alias;
 
 // current working directory
-char    cwd[100];
-char    cwd_initial[100];
+char    cwd[200];
+char    cwd_initial[200];
 
 // fp used to communicate to server process running on android
 FILE   *sockfp;
@@ -80,9 +71,11 @@ int run_cmd(char *cmdline);
 
 // run special cmd
 int run_special_cmd(char *cmdline);
-int special_cmd_copy_file_to_android(char *src_path, char *dest_dir);  // xxx return a value
+int special_cmd_copy_file_to_android(char *src_path, char *dest_dir);
 int special_cmd_copy_file_from_android(char *src_path, char *dest_path);
 int special_cmd_cd(char *path);
+int special_cmd_pwd(void);
+int special_cmd_alias(void);
 
 // run cmd on android
 int run_cmd_on_android(char *cmdline, char *data_out, int data_out_len, char **data_in, int *data_in_len);
@@ -96,7 +89,7 @@ int write_file(char *fn, void *buf, int len);
 
 // -----------------  MAIN  -------------------------------------------------
 
-int main(int argc, char **argv) // ok
+int main(int argc, char **argv)
 {
     char *cmdline;
     int   status;
@@ -123,7 +116,7 @@ int main(int argc, char **argv) // ok
     // runtime loop
     while (true) {
         // construct prompt
-        char prompt[100], temp[100];
+        char prompt[200], temp[200];
         strcpy(temp, cwd);
         snprintf(prompt, sizeof(prompt), "ezsh %s> ", basename(temp));
 
@@ -159,8 +152,9 @@ int main(int argc, char **argv) // ok
 
 void read_ez_cfg(void)
 {
-    char  self_path[100], ez_cfg_path[100], *self_dir, s[100];
+    char  self_path[200], ez_cfg_path[200], *self_dir, s[200];
     FILE *fp;
+    int   line_num=0;
 
     // get path to ez.cfg file
     readlink("/proc/self/exe", self_path, sizeof(self_path));
@@ -176,6 +170,8 @@ void read_ez_cfg(void)
 
     // read and process lines from ez.cfg file
     while (fgets(s, sizeof(s), fp) != NULL) {
+        line_num++;
+
         // remove leading and trailing spaces and trailing newline
         sanitize(s);
 
@@ -202,8 +198,13 @@ void read_ez_cfg(void)
         } else if (strcmp(id, "password") == 0) {
             strcpy(password, val);
         } else if (strcmp(id, "alias") == 0) {
+            if (max_alias == MAX_ALIAS) {
+                printf("ERROR: alias tbl is full, ez.cfg line %d\n", line_num);
+                continue;
+            }
             if (rest == NULL) {
-                continue;  // xxx or exit
+                printf("ERROR: invalid alias, ez.cfg line %d\n", line_num);
+                continue;
             }
             sanitize(rest);
             alias_tbl[max_alias].cmd = strdup(val);
@@ -230,12 +231,12 @@ void read_ez_cfg(void)
     }
 }
 
-void connect_to_android(void) // ok
+void connect_to_android(void)
 {
     int                ret, len, sockfd;
     struct sockaddr_in addr;
     socklen_t          addrlen;
-    char               response[100];
+    char               response[200];
 
     // create socket
     sockfd = socket(AF_INET, SOCK_STREAM, 0);
@@ -305,7 +306,7 @@ void substitue_alias(char *cmdline)
 int run_cmd(char *cmdline)
 {
     int status;
-    char cd_plus_cmdline[200];
+    char cd_plus_cmdline[1000];
 
     status = run_special_cmd(cmdline);
 
@@ -319,9 +320,9 @@ int run_cmd(char *cmdline)
 
 // -----------------  RUN SPECIAL CMD  ----------------------------------
 
-int run_special_cmd(char *cmdline)  // XXX
+int run_special_cmd(char *cmdline)
 {
-    char cmd[100], arg1[100], arg2[100];
+    char cmd[200], arg1[200], arg2[200];
 
     // extract cmd, arg1, and arg2 from cmdline
     cmd[0] = arg1[0] = arg2[0] = '\0';
@@ -335,10 +336,12 @@ int run_special_cmd(char *cmdline)  // XXX
     if (strcmp(cmd, "cd") == 0) {
         return special_cmd_cd(arg1);
     } else if (strcmp(cmd, "pwd") == 0) {
-        printf("%s\n", cwd);
-        return 0;
+        return special_cmd_pwd();
+    } else if (strcmp(cmd, "alias") == 0) {
+        return special_cmd_alias();
     } else if (strcmp(cmd, "put") == 0) {
-        char *src_path, dest_path[200], temp[200];
+        // xxx move the complextiy to the routines
+        char *src_path, dest_path[400], temp[200];
         char *src_file_name;
 
         // init develsys src_path
@@ -349,7 +352,8 @@ int run_special_cmd(char *cmdline)  // XXX
         }
 
         // init android dest_path
-        // xxx maybe just allow arg2[0] == \0
+        // xxx could send the filename too, and let android fix up the dest_path
+        //     if the dest_path is a directory
         if (arg2[0] == '\0') {
             strcpy(temp, src_path);
             src_file_name = basename(temp);
@@ -362,7 +366,7 @@ int run_special_cmd(char *cmdline)  // XXX
         
         return special_cmd_copy_file_to_android(src_path, dest_path);
     } else if (strcmp(cmd, "get") == 0) {
-        char src_path[200], dest_path[200], temp[200];
+        char src_path[400], dest_path[200], temp[200];
         char *src_file_name;
 
         // init android src_path
@@ -376,6 +380,7 @@ int run_special_cmd(char *cmdline)  // XXX
         }
 
         // init devlsys dest_path
+        // xxx also handle the case where arg2 is a directory
         if (arg2[0] == '\0') {
             strcpy(temp, src_path);
             src_file_name = basename(temp);
@@ -397,17 +402,16 @@ int run_special_cmd(char *cmdline)  // XXX
     // not reached
 }
 
-int special_cmd_copy_file_to_android(char *src_path, char *dest_path)  // ok
+int special_cmd_copy_file_to_android(char *src_path, char *dest_path)
 {
     char  cmdline[1000];
     void *data;
     int   data_len;
     int   status;
 
-    printf("put %s %s\n", src_path, dest_path);
+    //printf("put %s %s\n", src_path, dest_path);
 
     // read src_path file
-    // xxx maybe read_file should return status instead of data
     status = read_file(src_path, &data, &data_len);
     if (status != 0) {
         printf("ERROR: read_file %s, %s\n", src_path, strerror(errno));
@@ -426,14 +430,13 @@ int special_cmd_copy_file_to_android(char *src_path, char *dest_path)  // ok
     return status;
 }
 
-int special_cmd_copy_file_from_android(char *src_path, char *dest_path)  // ok
+int special_cmd_copy_file_from_android(char *src_path, char *dest_path)
 {
     char  cmd[1000];
     char *data = NULL;
     int   data_len = 0, status;
 
-    // xxx comment out
-    printf("get %s %s\n", src_path, dest_path);
+    //printf("get %s %s\n", src_path, dest_path);
 
     // run 'get' on android
     sprintf(cmd, "get %s", src_path);
@@ -458,10 +461,10 @@ int special_cmd_copy_file_from_android(char *src_path, char *dest_path)  // ok
 }
 
 // This routine updates cwd; and will always terminate cwd with '/'.
-int special_cmd_cd(char *path)  // ok
+int special_cmd_cd(char *path)
 {
     int   len;
-    char  new_cwd[100];
+    char  new_cwd[200];
     char *token;
 
     // sanity check that cwd begins and ends with '/'
@@ -513,7 +516,7 @@ int special_cmd_cd(char *path)  // ok
 
     // run_cmd_on_android to verify new_cwd is an android directory;
     // if so then the new_cwd will be used
-    char cmd[200];
+    char cmd[300];
     int  status;
     sprintf(cmd, "if [ ! -d %s ]; then exit 1; else exit 0; fi", new_cwd);
     status = run_cmd_on_android(cmd, NULL, 0, NULL, 0);
@@ -525,9 +528,25 @@ int special_cmd_cd(char *path)  // ok
     return status;
 }
 
+int special_cmd_pwd(void)
+{
+    printf("%s\n", cwd);
+    return 0;
+}
+
+int special_cmd_alias(void)
+{
+    int i;
+
+    for (i = 0; i < max_alias; i++) {
+        printf("%-16s %s\n", alias_tbl[i].cmd, alias_tbl[i].alias);
+    }
+    return 0;
+}
+
 // -----------------  RUN CMD ON ANDROID  -----------------------------------
 
-int run_cmd_on_android(char *cmdline, char *data_out, int data_out_len,  // ok
+int run_cmd_on_android(char *cmdline, char *data_out, int data_out_len,
                        char **data_in, int *data_in_len)
 {
     char  s[200];
@@ -616,7 +635,9 @@ int run_cmd_on_android(char *cmdline, char *data_out, int data_out_len,  // ok
     }
 
     // print status
-    // xxx mabye dont always print
+    // - status == 0 : success
+    // - status > 0  : is an exitcode from the cmdline executed on android
+    // - status < 0  : is an errno
     if (status > 0) {
         printf("ERROR: exit_status %d\n", status);
     } else if (status < 0) {
@@ -629,7 +650,7 @@ int run_cmd_on_android(char *cmdline, char *data_out, int data_out_len,  // ok
 
 // -----------------  UTILS  ----------------------------------------
 
-void sanitize(char *s)  // ok
+void sanitize(char *s)
 {
     char *p = s;
     int   len;
@@ -659,7 +680,7 @@ void sanitize(char *s)  // ok
     }
 }
 
-void put_fmt(FILE *fp, char *fmt, ...)  // ok
+void put_fmt(FILE *fp, char *fmt, ...)
 {
     va_list ap;
     int rc;
@@ -681,7 +702,7 @@ void put_fmt(FILE *fp, char *fmt, ...)  // ok
     va_end(ap);
 }
 
-char *get_str(FILE *fp, char *s, int s_len)  // ok
+char *get_str(FILE *fp, char *s, int s_len)
 {
     char *p;
     int len;
@@ -741,7 +762,7 @@ int read_file(char *fn, void **buf_arg, int *buf_len_arg)
     return 0;  
 }
 
-int write_file(char *fn, void *buf, int len)  // ok
+int write_file(char *fn, void *buf, int len)
 {
     int fd, ret;
 

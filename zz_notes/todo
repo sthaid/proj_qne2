@@ -1,3 +1,22 @@
+ezput                                  okay
+ezsh
+main.c                                 okay
+utils.c                                 okay
+cleanup bin dir
+- add logcat, connect adb
+- separate out build tools
+
+
+xxxxxxxxxxxxxxx
+
+cleanup and finish work with ezsh
+- get ezput working too
+- cleanup main
+
+Weather app
+
+Tilt app
+
 -------------
 ---- now ----
 -------------
