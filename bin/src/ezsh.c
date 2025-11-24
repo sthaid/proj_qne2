@@ -19,9 +19,7 @@
 #include <readline/history.h>
 
 // xxx todo
-// - vi cmd
 // - test WEXITSTATUS on android
-// - run local or devel cmds
 
 // NOTES:
 // - status returns xxx
@@ -120,9 +118,10 @@ int main(int argc, char **argv)
     // runtime loop
     while (true) {
         // construct prompt
-        char prompt[200], temp[200];
-        strcpy(temp, cwd);
-        snprintf(prompt, sizeof(prompt), "ezsh %s> ", basename(temp));
+        char prompt[200], local_cwd[200], android_cwd[200];
+        getcwd(local_cwd, sizeof(local_cwd));
+        strcpy(android_cwd, cwd);
+        snprintf(prompt, sizeof(prompt), "ezsh %s %s> ", basename(local_cwd), basename(android_cwd));
 
         // read cmdline
         // - if NULL then end program
@@ -601,18 +600,38 @@ int special_cmd_vi(char *android_path)
 
 int special_cmd_local(char *cmdline)
 {
-    char *p, *local_cmd;
+    char *p, *local_cmd, *home;
+    int   status = 0;
+    char  dir[200];
 
     p = strchr(cmdline, ' ');
     if (p == NULL) {
         system("bash");
         return 0;
     } 
-
     local_cmd = p+1;
-    system(local_cmd);
 
-    return 0;
+    if (strcmp(local_cmd, "cd") == 0) {
+        home = getenv("HOME");
+        if (home == NULL) {
+            home = "/";
+        }
+        status = chdir(home);
+        if (status != 0) {
+            status = -errno;
+        }
+    } else if (sscanf(local_cmd, "cd %s", dir) == 1) {
+        status = chdir(dir);
+        if (status != 0) {
+            status = -errno;
+            printf("ERROR: cd %s, %s\n", dir, strerror(-status));
+        }
+    } else {
+        status = system(local_cmd);
+        status = WEXITSTATUS(status);
+    }
+
+    return status;
 }
 
 // -----------------  RUN CMD ON ANDROID  -----------------------------------
