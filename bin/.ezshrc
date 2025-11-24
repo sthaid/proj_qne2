@@ -4,4 +4,4 @@ port        9000
 password    secret
 
 alias       ls      ls -l
-alias       lcl     local
+alias       l       local

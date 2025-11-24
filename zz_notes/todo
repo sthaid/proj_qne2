@@ -1,7 +1,5 @@
-ezput                                  okay
-ezsh
-main.c                                 okay
-utils.c                                 okay
+ezsh                                 cleanup
+ezgetall   - print error if files dir exits locally
 cleanup bin dir
 - add logcat, connect adb
 - separate out build tools
