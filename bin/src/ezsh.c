@@ -78,6 +78,7 @@ int special_cmd_get(char *src, char *dest);
 int special_cmd_cd(char *path);
 int special_cmd_pwd(void);
 int special_cmd_alias(void);
+int special_cmd_vi(char *android_path);
 
 // run cmd on android
 int run_cmd_on_android(char *cmdline, char *data_out, int data_out_len, char **data_in, int *data_in_len);
@@ -346,9 +347,7 @@ int run_special_cmd(char *cmdline)
     } else if (strcmp(cmd, "get") == 0) {
         return special_cmd_get(arg1, arg2);
     } else if (strcmp(cmd, "vi") == 0) {
-        // xxx todo
-        printf("ERROR: vi cmd not supported yet\n");
-        return -EINVAL;
+        return special_cmd_vi(arg1);
     } else {
         // not a special cmd
         return NOT_A_SPECIAL_CMD;
@@ -426,6 +425,7 @@ int special_cmd_get(char *src, char *dest)
     }
 
     // construct src_path by prepending src with cwd
+    // xxx dont if begins with '/'
     sprintf(src_path, "%s%s", cwd, src);
 
     // construct dest_path
@@ -555,6 +555,41 @@ int special_cmd_alias(void)
     for (i = 0; i < max_alias; i++) {
         printf("%-16s %s\n", alias_tbl[i].cmd, alias_tbl[i].alias);
     }
+    return 0;
+}
+
+int special_cmd_vi(char *android_path)
+{
+    char temp[200], tmp_path[200], vi_cmd[1000];
+    int status;
+
+    // android_path is required
+    if (android_path[0] == '\0') {
+        printf("ERROR: android_path required\n");
+        return -EINVAL;
+    }
+
+    // construct /tmp path
+    strcpy(temp, android_path);
+    sprintf(tmp_path, "/tmp/%s", basename(temp));
+
+    // copy android file to tmp
+    status = special_cmd_get(android_path, tmp_path);
+    if (status != 0) {
+        return status;
+    }
+
+    // edit tmp_path file
+    sprintf(vi_cmd, "vi %s", tmp_path);
+    system(vi_cmd);
+
+    // copy tmp file back to android
+    status = special_cmd_put(tmp_path, android_path);
+    if (status != 0) {
+        return status;
+    }
+
+    // success
     return 0;
 }
 
