@@ -13,6 +13,7 @@
 #include <sys/socket.h>
 #include <netinet/in.h> 
 #include <arpa/inet.h>
+#include <dirent.h>
 
 #include <readline/readline.h>
 #include <readline/history.h>
@@ -20,6 +21,7 @@
 // xxx todo
 // - vi cmd
 // - test WEXITSTATUS on android
+// - run local or devel cmds
 
 // NOTES:
 // - status returns xxx
@@ -71,8 +73,8 @@ int run_cmd(char *cmdline);
 
 // run special cmd
 int run_special_cmd(char *cmdline);
-int special_cmd_copy_file_to_android(char *src_path, char *dest_dir);
-int special_cmd_copy_file_from_android(char *src_path, char *dest_path);
+int special_cmd_put(char *src, char *dest);
+int special_cmd_get(char *src, char *dest);
 int special_cmd_cd(char *path);
 int special_cmd_pwd(void);
 int special_cmd_alias(void);
@@ -340,56 +342,9 @@ int run_special_cmd(char *cmdline)
     } else if (strcmp(cmd, "alias") == 0) {
         return special_cmd_alias();
     } else if (strcmp(cmd, "put") == 0) {
-        // xxx move the complextiy to the routines
-        char *src_path, dest_path[400], temp[200];
-        char *src_file_name;
-
-        // init develsys src_path
-        src_path = arg1;
-        if (src_path[0] == '\0') {
-            printf("ERROR: develsys src_path required\n");
-            return -EINVAL;
-        }
-
-        // init android dest_path
-        // xxx could send the filename too, and let android fix up the dest_path
-        //     if the dest_path is a directory
-        if (arg2[0] == '\0') {
-            strcpy(temp, src_path);
-            src_file_name = basename(temp);
-            sprintf(dest_path, "%s%s", cwd, src_file_name);
-        } else if (arg2[0] == '/') {
-            strcpy(dest_path, arg2);
-        } else {
-            sprintf(dest_path, "%s%s", cwd, arg2);
-        }
-        
-        return special_cmd_copy_file_to_android(src_path, dest_path);
+        return special_cmd_put(arg1, arg2);
     } else if (strcmp(cmd, "get") == 0) {
-        char src_path[400], dest_path[200], temp[200];
-        char *src_file_name;
-
-        // init android src_path
-        if (arg1[0] == '\0') {
-            printf("ERROR: android src_path required\n");
-            return -EINVAL;
-        } else if (arg1[0] == '/') {
-            strcpy(src_path, arg1);
-        } else {
-            sprintf(src_path, "%s%s", cwd, arg1);
-        }
-
-        // init devlsys dest_path
-        // xxx also handle the case where arg2 is a directory
-        if (arg2[0] == '\0') {
-            strcpy(temp, src_path);
-            src_file_name = basename(temp);
-            strcpy(dest_path, src_file_name);
-        } else {
-            strcpy(dest_path, arg2);
-        }
-
-        return special_cmd_copy_file_from_android(src_path, dest_path);
+        return special_cmd_get(arg1, arg2);
     } else if (strcmp(cmd, "vi") == 0) {
         // xxx todo
         printf("ERROR: vi cmd not supported yet\n");
@@ -402,25 +357,48 @@ int run_special_cmd(char *cmdline)
     // not reached
 }
 
-int special_cmd_copy_file_to_android(char *src_path, char *dest_path)
+// copy file to android:
+// - src: path to src file on develsys
+// - dest: path to dest file or dest dir on android,
+//   . will be prepended with cwd
+//   . may be empty str
+int special_cmd_put(char *src, char *dest)
 {
     char  cmdline[1000];
+    char  temp[200];
+    char  dest_path[200];
+    char *src_filename;
     void *data;
     int   data_len;
     int   status;
 
-    //printf("put %s %s\n", src_path, dest_path);
-
-    // read src_path file
-    status = read_file(src_path, &data, &data_len);
-    if (status != 0) {
-        printf("ERROR: read_file %s, %s\n", src_path, strerror(errno));
-        free(data);
-        return -errno;
+    // src is required
+    if (src[0] == '\0') {
+        printf("ERROR: src required\n");
+        return -EINVAL;
     }
 
-    // run 'put' on android
-    sprintf(cmdline, "put %s", dest_path);
+    // extract src_filename from src
+    strcpy(temp, src);
+    src_filename = basename(temp);
+
+    // construct dest_path
+    if (dest[0] == '/') {
+        strcpy(dest_path, dest);
+    } else {
+        sprintf(dest_path, "%s%s", cwd, dest);
+    }
+
+    // read src file
+    status = read_file(src, &data, &data_len);
+    if (status != 0) {
+        printf("ERROR: read_file %s, %s\n", src, strerror(errno));
+        free(data);
+        return status;
+    }
+
+    // run 'put <dest_path> <src_filename>' on android
+    sprintf(cmdline, "put %s %s", dest_path, src_filename);
     status = run_cmd_on_android(cmdline, data, data_len, NULL, 0);
 
     // free data
@@ -430,33 +408,69 @@ int special_cmd_copy_file_to_android(char *src_path, char *dest_path)
     return status;
 }
 
-int special_cmd_copy_file_from_android(char *src_path, char *dest_path)
+// copy file from android:
+// - src: path to src file on android
+// - dest: path to dest file or dest dir on develsys,
+//   . if empty str then will be replaced with "."
+int special_cmd_get(char *src, char *dest)
 {
-    char  cmd[1000];
-    char *data = NULL;
-    int   data_len = 0, status;
+    char  src_path[200], dest_path[200], cmdline[1000];
+    DIR  *dir;
+    int   status, data_len;
+    char *data;
 
-    //printf("get %s %s\n", src_path, dest_path);
+    // src is required
+    if (src[0] == '\0') {
+        printf("ERROR: src required\n");
+        return -EINVAL;
+    }
 
-    // run 'get' on android
-    sprintf(cmd, "get %s", src_path);
-    status = run_cmd_on_android(cmd, NULL, 0, &data, &data_len);
+    // construct src_path by prepending src with cwd
+    sprintf(src_path, "%s%s", cwd, src);
+
+    // construct dest_path
+    if (dest[0] != '\0') {
+        strcpy(dest_path, dest);
+    } else {
+        strcpy(dest_path, ".");
+    }
+    dir = opendir(dest_path);
+    if (dir != NULL) {
+        char *src_filename, temp[200];
+        int   len;
+
+        len = strlen(dest_path);
+        if (len > 0 && dest_path[len-1] != '/') {
+            strcat(dest_path, "/");
+        }
+        strcpy(temp, src_path);
+        src_filename = basename(temp);
+        strcat(dest_path, src_filename);
+        closedir(dir);
+    }
+
+    // debug print
+    //printf("src_path '%s'\n", src_path);
+    //printf("dest_path '%s'\n", dest_path);
+
+    // run 'get <src_path>' on android
+    sprintf(cmdline, "get %s", src_path);
+    status = run_cmd_on_android(cmdline, NULL, 0, &data, &data_len);
     if (status != 0) {
-        printf("ERROR: file data not recvd from android\n");
         free(data);
         return status;
     }
 
-    // write file to dest_dir on develsys
+    // write file to dest_path on develsys
     status = write_file(dest_path, data, data_len);
     if (status != 0) {
         printf("ERROR: failed to create '%s', %s\n", dest_path, strerror(-status));
+        free(data);
+        return status;
     }
 
-    // free data
+    // free data, and return status
     free(data);
-
-    // return status
     return status;
 }
 

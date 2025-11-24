@@ -921,7 +921,7 @@ static int process_req_thread(void *cx)
         put_fmt(sockfp, "%s\n", "password okay");
     } else {
         put_fmt(sockfp, "%s\n", "password invalid");
-        goto done;
+        goto disconnect;
     }
 
     // put storage_path to socket
@@ -933,14 +933,14 @@ static int process_req_thread(void *cx)
         int  status=99;
 
         // read from socket
-        // - if socket has been closed on other end then goto done
+        // - if socket has been closed on other end then goto disconnect
         // - else verify 'run' is received
         if (get_str(sockfp, str, sizeof(str)) == NULL) {
-            goto done;
+            goto disconnect;
         }
         if (strcmp(str, "run") != 0) {
             ERROR("'run' expected\n");
-            goto done;
+            goto disconnect;
         }
 
         // read cmdline from socket
@@ -954,45 +954,61 @@ static int process_req_thread(void *cx)
         //
         // status return is either a negative errno, or a positive exit code
         if (strncmp(str, "put ", 4) == 0) {
-            char  file_path[200];
-            char *data;
-            int   data_len, rc;
+            char *data, *p;
+            int   data_len, rc, cnt;
+            DIR  *dir;
+            char  dest_path[200], src_filename[200];
 
-            // save file_path
-            strcpy(file_path, str+4);
+            // extract dest_path and src_filename from str
+            cnt = sscanf(str, "put %s %s", dest_path, src_filename);
+            if (cnt != 2) {
+                ERROR("dest_path and src_filename both required\n");
+                goto disconnect;
+            }
 
-            // get data_len
-            get_str(sockfp, str, sizeof(str));
-            if (sscanf(str, "data_len %d", &data_len) != 1) {
+            // if dest_path is a directory then append src_filename
+            dir = opendir(dest_path);
+            if (dir != NULL) {
+                int len = strlen(dest_path);
+                if (len > 0 && dest_path[len-1] != '/') {
+                    strcat(dest_path, "/");
+                }
+                strcat(dest_path, src_filename);
+                closedir(dir);
+            }
+
+            // read data_len from sockfp
+            p = get_str(sockfp, str, sizeof(str));
+            if (p == NULL || sscanf(str, "data_len %d", &data_len) != 1) {
                 ERROR("failed to get data_len\n");
-                goto done;
+                goto disconnect;
             }
 
             // read data from socket
             data = calloc(data_len, 1);             // nmemb=data_len, size=1
-            rc = fread(data, 1, data_len, sockfp);  // size=1, nmemb=data_len
-            if (rc != data_len) {
+            status = fread(data, 1, data_len, sockfp);  // size=1, nmemb=data_len
+            if (status != data_len) {
                 ERROR("failed to read data from socket\n");
                 free(data);
-                goto done;
+                goto disconnect;
             }
 
             // write data to android file
-            rc = util_write_file(file_path, NULL, data, data_len); //xxx fix util_write_file
+            rc = util_write_file(dest_path, NULL, data, data_len);
             status = (rc == 0 ? 0 : errno != 0 ? -errno : -EINVAL);
 
             // free allocated data
             free(data);
         } else if (strncmp(str, "get ", 4) == 0) {
-            char  file_path[200];
+            char  src_path[200];
             char *data;
             int   data_len, rc;
 
-            // save file_path
-            strcpy(file_path, str+4);
+            // save src_path
+            strcpy(src_path, str+4);
 
             // read android file
-            data = util_read_file(file_path, NULL, &data_len);
+            data = util_read_file(src_path, NULL, &data_len);
             if (data == NULL) {
                 // failed to read file
                 status = (errno != 0 ? -errno : -EINVAL);
@@ -1006,13 +1022,11 @@ static int process_req_thread(void *cx)
                 if (rc != data_len) {
                     ERROR("failed to write data to socket\n");
                     free(data);
-                    goto done;
+                    goto disconnect;
                 }
 
-                // free data
+                // free data, and set success status
                 free(data);
-
-                // success
                 status = 0;
             }
         } else {
@@ -1037,7 +1051,7 @@ static int process_req_thread(void *cx)
         put_fmt(sockfp, "CMD_COMPLETE %d\n", status);
     }
 
-done:
+disconnect:
     fclose(sockfp);
     return 0;
 }
