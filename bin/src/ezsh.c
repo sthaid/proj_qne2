@@ -79,6 +79,7 @@ int special_cmd_cd(char *path);
 int special_cmd_pwd(void);
 int special_cmd_alias(void);
 int special_cmd_vi(char *android_path);
+int special_cmd_local(char *cmdline);
 
 // run cmd on android
 int run_cmd_on_android(char *cmdline, char *data_out, int data_out_len, char **data_in, int *data_in_len);
@@ -127,7 +128,7 @@ int main(int argc, char **argv)
         // - if NULL then end program
         // - remove leading and trailing spaces and trailing newline
         // - if blank line then continue
-        // - if 'q' then end program
+        // - if 'q' or 'exit' then end program
         // - add cmdline to history
         cmdline = readline(prompt);
         if (cmdline == NULL) {
@@ -137,7 +138,7 @@ int main(int argc, char **argv)
         if (cmdline[0] == '\0') {
             continue;
         }
-        if (strcmp(cmdline, "q") == 0) {
+        if (strcmp(cmdline, "q") == 0 || strcmp(cmdline, "exit") == 0) {
             break;
         }
         add_history(cmdline);
@@ -348,6 +349,8 @@ int run_special_cmd(char *cmdline)
         return special_cmd_get(arg1, arg2);
     } else if (strcmp(cmd, "vi") == 0) {
         return special_cmd_vi(arg1);
+    } else if (strcmp(cmd, "local") == 0) {
+        return special_cmd_local(cmdline);
     } else {
         // not a special cmd
         return NOT_A_SPECIAL_CMD;
@@ -425,8 +428,11 @@ int special_cmd_get(char *src, char *dest)
     }
 
     // construct src_path by prepending src with cwd
-    // xxx dont if begins with '/'
-    sprintf(src_path, "%s%s", cwd, src);
+    if (src[0] == '/') {
+        strcpy(src_path, src);
+    } else {
+        sprintf(src_path, "%s%s", cwd, src);
+    }
 
     // construct dest_path
     if (dest[0] != '\0') {
@@ -590,6 +596,22 @@ int special_cmd_vi(char *android_path)
     }
 
     // success
+    return 0;
+}
+
+int special_cmd_local(char *cmdline)
+{
+    char *p, *local_cmd;
+
+    p = strchr(cmdline, ' ');
+    if (p == NULL) {
+        system("bash");
+        return 0;
+    } 
+
+    local_cmd = p+1;
+    system(local_cmd);
+
     return 0;
 }
 
