@@ -1,8 +1,10 @@
-ezsh                                 cleanup
+mv Template app to 2nd page
+
+Tilt app
+
 ezgetall   - print error if files dir exits locally
+
 cleanup bin dir
-- add logcat, connect adb
-- separate out build tools
 
 
 xxxxxxxxxxxxxxx

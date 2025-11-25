@@ -236,7 +236,8 @@ int sdlx_sensor_read_raw(int id, double *data, int num_values);
 
 int sdlx_sensor_read_step_counter(double *step_count);  // xxx just return INVALID_NUMBER
 int sdlx_sensor_read_mag_heading(double *mag_heading);
-int sdlx_sensor_read_tilt(double *roll, double *pitch);
+int sdlx_sensor_read_accelerometer(double *ax, double *ay, double *az);
+int sdlx_sensor_read_roll_pitch(double *roll, double *pitch);
 int sdlx_sensor_read_pressure(double *millibars);
 int sdlx_sensor_read_temperature(double *degrees_c);
 int sdlx_sensor_read_humidity(double *percent);

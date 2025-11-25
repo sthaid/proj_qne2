@@ -231,7 +231,43 @@ int sdlx_sensor_read_step_counter(double *step_count)
     return 0;
 }
 
-int sdlx_sensor_read_tilt(double *roll, double *pitch)
+// x-axis: left to right
+// y-axis: bottom to top
+// z-axis: perpendicular to the screen pointing to user
+// units: m/s^2
+int sdlx_sensor_read_accelerometer(double *ax, double *ay, double *az)
+{
+    double data[3];
+
+    static bool first_call = true;
+    static int  id = -1;
+
+    // if first call then find the sensor id;
+    // if not found then return error
+    if (first_call) {
+        first_call = false;
+        id = sdlx_sensor_find(ASENSOR_TYPE_ACCELEROMETER);
+    }
+    if (id == -1) {
+        *ax = INVALID_NUMBER;
+        *ay = INVALID_NUMBER;
+        *az = INVALID_NUMBER;
+        return -1;
+    }
+
+    // read raw sensor data
+    sdlx_sensor_read_raw(id, data, 3);
+
+    // return accelerometer values
+    *ax = data[0];
+    *ay = data[1];
+    *az = data[2];
+
+    // success
+    return 0;
+}
+
+int sdlx_sensor_read_roll_pitch(double *roll, double *pitch)
 {
     double data[3];
     double ax, ay, az;
@@ -257,11 +293,11 @@ int sdlx_sensor_read_tilt(double *roll, double *pitch)
     // return roll and pitch; 
     // - positive pitch means top of phone points upward
     // - positive roll means right side of phone is below the left side
-    ay = data[0];
-    ax = data[1];
+    ax = data[0];
+    ay = data[1];
     az = data[2];
-    *roll  = -atan(ay / sqrt(ax*ax + az*az)) * RAD_TO_DEG;
-    *pitch = -atan(-ax / sqrt(ay*ay + az*az)) * RAD_TO_DEG;
+    *roll  = -atan(ax / sqrt(ay*ay + az*az)) * RAD_TO_DEG;
+    *pitch = -atan(-ay / sqrt(ax*ax + az*az)) * RAD_TO_DEG;
 
     // if nan then set mag_heading to INVALID_NUMBER, 
     // because picoc does not support nan
@@ -301,7 +337,7 @@ int sdlx_sensor_read_mag_heading(double *mag_heading)
     mz = -data[2];
 
     // get roll and pitch
-    sdlx_sensor_read_tilt(&roll, &pitch);
+    sdlx_sensor_read_roll_pitch(&roll, &pitch);
     roll  *= -DEG_TO_RAD;
     pitch *= -DEG_TO_RAD;
 

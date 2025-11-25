@@ -36,7 +36,7 @@ android_dir_exists=$(ezsh "if [ ! -d $android_dir ]; then echo NO; else echo YES
 
 # if no response received then ezApp may not be running or developer mode not entabled
 if [ "$android_dir_exists" != NO -a "$android_dir_exists" != YES ]; then
-  echo "ERROR: response not received"
+  echo $android_dir_exists
   exit 1
 fi
 

@@ -253,7 +253,7 @@ void connect_to_android(void)
     addr.sin_port        = htons(port);
     addr.sin_addr.s_addr = inet_addr(ipaddr);
     addrlen = sizeof(addr);
-    ret = connect(sockfd,  (struct sockaddr*)&addr, addrlen);
+    ret = connect(sockfd, (struct sockaddr*)&addr, addrlen);
     if (ret != 0) {
         printf("ERROR: connect %s:%d, %s\n", ipaddr, port, strerror(errno));
         exit(1);
@@ -266,7 +266,7 @@ void connect_to_android(void)
     put_fmt(sockfp, "%s\n", password);
     get_str(sockfp, response, sizeof(response));
     if (strcmp(response, "password okay") != 0) {
-        printf("ERROR: password invalid\n");
+        printf("ERROR: invalid password\n");
         exit(1);   
     }
 

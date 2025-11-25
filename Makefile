@@ -14,7 +14,8 @@ APPS = \
     files/apps/Morse \
     files/apps/Reversi \
     files/apps/Template \
-    files/apps/Test
+    files/apps/Test \
+    files/apps/Tilt
 
 SVCS = \
     files/svcs/Location \

@@ -1,16 +1,16 @@
 # -------- Page 0 --------
 Compass     Clock       Reversi
-Morse       HexCalc     Light
-Location    -           -
+Morse       HexCalc     Location
+Tilt        -           -
 -           -           -
 -           -           -
 -           -           Settings
 
 # -------- Page 1 --------
-Template    Test        -
+Test        Light       Template
 -           -           -
 -           -           -
 -           -           -
 -           -           -
--           -           Settings
+-           -           -
 

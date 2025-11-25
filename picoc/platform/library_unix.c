@@ -668,14 +668,26 @@ void Sdl_sensor_read_mag_heading (struct ParseState *Parser, struct Value *Retur
     ReturnValue->Val->Integer = rc;
 }
 
-void Sdl_sensor_read_tilt (struct ParseState *Parser, struct Value *ReturnValue,
+void Sdl_sensor_read_accelerometer (struct ParseState *Parser, struct Value *ReturnValue,
+	struct Value **Param, int NumArgs)
+{
+    double *ax = Param[0]->Val->Pointer;
+    double *ay = Param[1]->Val->Pointer;
+    double *az = Param[2]->Val->Pointer;
+    int     rc;
+
+    rc = sdlx_sensor_read_accelerometer(ax, ay, az);
+    ReturnValue->Val->Integer = rc;
+}
+
+void Sdl_sensor_read_roll_pitch (struct ParseState *Parser, struct Value *ReturnValue,
 	struct Value **Param, int NumArgs)
 {
     double *roll = Param[0]->Val->Pointer;
     double *pitch = Param[1]->Val->Pointer;
     int     rc;
 
-    rc = sdlx_sensor_read_tilt(roll, pitch);
+    rc = sdlx_sensor_read_roll_pitch(roll, pitch);
     ReturnValue->Val->Integer = rc;
 }
 
@@ -812,7 +824,8 @@ struct LibraryFunction SdlFunctions[] = {
     { Sdl_sensor_read_raw,              "int sdlx_sensor_read_raw(int id, double *data, int num_values);" },
     { Sdl_sensor_read_step_counter,     "int sdlx_sensor_read_step_counter(double *step_count);" },
     { Sdl_sensor_read_mag_heading,      "int sdlx_sensor_read_mag_heading(double *mag_heading);" },
-    { Sdl_sensor_read_tilt,             "int sdlx_sensor_read_tilt(double *roll, double *pitch);" },
+    { Sdl_sensor_read_accelerometer,    "int sdlx_sensor_read_accelerometer(double *ax, double *ay, double *az);" },
+    { Sdl_sensor_read_roll_pitch,       "int sdlx_sensor_read_roll_pitch(double *roll, double *pitch);" },
     { Sdl_sensor_read_pressure,         "int sdlx_sensor_read_pressure(double *millibars);" },
     { Sdl_sensor_read_temperature,      "int sdlx_sensor_read_temperature(double *degrees_c);" },
     { Sdl_sensor_read_humidity,         "int sdlx_sensor_read_humidity(double *percent);" },

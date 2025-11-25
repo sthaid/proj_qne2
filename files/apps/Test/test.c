@@ -913,6 +913,7 @@ static void page_9_draw(void)
     int    rc;
     double step_count;
     double mag_heading, roll, pitch, millibars, degrees_c, percent;
+    double ax, ay, az;
 
     sdlx_print_init(SMALL_FONT, COLOR_WHITE, COLOR_BLACK);
 
@@ -930,32 +931,37 @@ static void page_9_draw(void)
 
     rc = sdlx_sensor_read_step_counter(&step_count);
     if (rc == 0) {
-        sdlx_render_printf(0, ROW2Y(row++), "stepc = %.0f", step_count);
+        sdlx_render_printf(0, ROW2Y(row++), "stepc=% .0f", step_count);
     }
 
     rc = sdlx_sensor_read_mag_heading(&mag_heading);
     if (rc == 0) {
-        sdlx_render_printf(0, ROW2Y(row++), "magh  = %.0f", mag_heading);
+        sdlx_render_printf(0, ROW2Y(row++), "magh =% 3.0f", mag_heading);
     }
 
-    rc = sdlx_sensor_read_tilt(&roll, &pitch);
+    rc = sdlx_sensor_read_accelerometer(&ax, &ay, &az);
     if (rc == 0) {
-        sdlx_render_printf(0, ROW2Y(row++), "tilt  = %.1f %.1f", roll, pitch);
+        sdlx_render_printf(0, ROW2Y(row++), "accel=% 4.1f % 4.1f % 4.1f", ax, ay, az);;
+    }
+
+    rc = sdlx_sensor_read_roll_pitch(&roll, &pitch);
+    if (rc == 0) {
+        sdlx_render_printf(0, ROW2Y(row++), "r/p  =% 4.1f % 4.1f", roll, pitch);
     }
 
     rc = sdlx_sensor_read_pressure(&millibars);
     if (rc == 0) {
-        sdlx_render_printf(0, ROW2Y(row++), "press = %.0f", millibars);
+        sdlx_render_printf(0, ROW2Y(row++), "press=% 5.0f", millibars);
     }
 
     rc = sdlx_sensor_read_temperature(&degrees_c);
     if (rc == 0) {
-        sdlx_render_printf(0, ROW2Y(row++), "temp  = %.1f", degrees_c);
+        sdlx_render_printf(0, ROW2Y(row++), "temp =% 4.0f", degrees_c);
     }
 
     rc = sdlx_sensor_read_humidity(&percent);
     if (rc == 0) {
-        sdlx_render_printf(0, ROW2Y(row++), "humid = %.0f", percent);
+        sdlx_render_printf(0, ROW2Y(row++), "humid=% 4.0f", percent);
     }
 }
 
