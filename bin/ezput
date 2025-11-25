@@ -34,9 +34,11 @@ else
 fi
 android_dir_exists=$(ezsh "if [ ! -d $android_dir ]; then echo NO; else echo YES; fi")
 
-# if no response received then ezApp may not be running or developer mode not entabled
+# if invalid response received then ezApp may not be running or developer mode not entabled,
+# or invalid password
 if [ "$android_dir_exists" != NO -a "$android_dir_exists" != YES ]; then
   echo $android_dir_exists
+  echo "ERROR: ezput failed"
   exit 1
 fi
 

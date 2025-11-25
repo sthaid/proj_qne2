@@ -131,7 +131,7 @@ int main(int argc, char **argv)
     return 0;
 }
 
-#define K 0.9
+#define K 0.8
 
 void smooth(double newval, double *smoothed)
 {
