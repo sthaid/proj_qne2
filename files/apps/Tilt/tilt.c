@@ -6,9 +6,11 @@
 #include <utils.h>
 
 // xxx
-// - smooth result values
 // - handle other orientations
-// - param for tilt limit
+// - put black dot in ctr
+//
+// xxx probably not
+// - smooth result values
 
 // defines
 #define RAD_TO_DEG (180 / M_PI)
@@ -18,6 +20,8 @@
 char *progname;
 char *data_dir;
 
+bool end_program = false;
+
 sdlx_texture_t *green_circle;
 sdlx_texture_t *blue_circle;
 sdlx_texture_t *red_circle;
@@ -26,6 +30,7 @@ sdlx_texture_t *light_gray_circle;
     
 // prototypes
 void smooth(double newval, double *smoothed);
+void no_accelerometer(void);
 void horizontal(double ax, double ay, double az);
 
 // -----------------  MAIN  ------------------------------------------
@@ -33,8 +38,6 @@ void horizontal(double ax, double ay, double az);
 int main(int argc, char **argv)
 {
     int          rc;
-    sdlx_event_t event;
-    bool         done = false;
     double       ax_raw, ay_raw, az_raw;
     double       ax=INVALID_NUMBER, ay=INVALID_NUMBER, az=INVALID_NUMBER;
 
@@ -65,42 +68,24 @@ int main(int argc, char **argv)
     sdlx_print_init(DEFAULT_FONT, COLOR_WHITE, COLOR_BLACK);
 
     // runtime loop
-    while (!done) {
-        // init the backbuffer
-        sdlx_display_init(COLOR_BLACK);
-
-        // register control event to
-        // - end program
-        sdlx_register_control_events(NULL, NULL, "X", COLOR_WHITE, COLOR_BLACK, 0, 0, EVID_QUIT);
-
-        // read and smooth accelerometer values
+    while (!end_program) {
+        // read accelerometer values
         rc = sdlx_sensor_read_accelerometer(&ax_raw, &ay_raw, &az_raw);
         if (rc != 0) {
-            sdlx_render_printf_xyctr(sdlx_win_width/2, sdlx_win_height/2, "No Accelerometer");
-            goto display_present;
+            no_accelerometer();
+            continue;
         }
+
+        // smooth accelerometer values
         smooth(ax_raw, &ax);
         smooth(ay_raw, &ay);
         smooth(az_raw, &az);
 
-        // if orientation is horizontal
-        if (1) {
-            horizontal(ax, ay, az);
-        }
+        // determine orientation
+        // xxx todo
 
-        // present the display
-display_present:
-        sdlx_display_present();
-
-        // wait for event, with 100ms timeout
-        sdlx_get_event(100000, &event);
-
-        // process events
-        switch (event.event_id) {
-        case EVID_QUIT:
-            done = true;
-            break;
-        }
+        // if orientation is horizontal ..
+        horizontal(ax, ay, az);
     }
 
     // free allocations
@@ -116,7 +101,7 @@ display_present:
     return 0;
 }
 
-#define K 0.9
+#define SMOOTH_K 0.9
 void smooth(double newval, double *smoothed)
 {
     if (*smoothed == INVALID_NUMBER) {
@@ -124,20 +109,48 @@ void smooth(double newval, double *smoothed)
         return;
     }
 
-    *smoothed = K * *smoothed + (1.0 - K) * newval;
+    *smoothed = SMOOTH_K * *smoothed + (1.0 - SMOOTH_K) * newval;
+}
+
+void no_accelerometer(void)
+{
+    sdlx_event_t event;
+
+    sdlx_display_init(COLOR_BLACK);
+    sdlx_register_control_events(NULL, NULL, "X", COLOR_WHITE, COLOR_BLACK, 0, 0, EVID_QUIT);
+    sdlx_render_printf_xyctr(sdlx_win_width/2, sdlx_win_height/2, "No Accelerometer");
+    sdlx_display_present();
+
+    sdlx_get_event(100000, &event);  // 100 ms timeout
+    switch (event.event_id) {
+    case EVID_QUIT:
+        end_program = true;
+        break;
+    }
 }
 
 // -----------------  HORIZONTAL  ---------------------------
 
+#define EVID_INCR_MAX_BULLS_EYE 1
+#define EVID_DECR_MAX_BULLS_EYE 2
+
 void horizontal(double ax, double ay, double az)
 {
-    int             width, xctr, yctr;
+    int             width, xctr, yctr, deg;
     sdlx_texture_t *t;
     double          tilt_dir, tilt_amount;
-    int             max_bulls_eye, deg;
+    sdlx_event_t    event;
+    static int      max_bulls_eye = 5;
 
-    // set the max bulls-eye tilt amount (degrees)
-    max_bulls_eye = 5;  // xxx adjst
+    // init the backbuffer
+    sdlx_display_init(COLOR_BLACK);
+
+    // register control event to
+    // - end program
+    // - adjust max_bulls_eye
+    sdlx_register_control_events(
+            "-", "+", "X", COLOR_WHITE, COLOR_BLACK, 
+            EVID_DECR_MAX_BULLS_EYE, EVID_INCR_MAX_BULLS_EYE, EVID_QUIT);
 
     // init center location of the bulls-eye
     xctr = sdlx_win_width/2;
@@ -151,29 +164,16 @@ void horizontal(double ax, double ay, double az)
         sdlx_render_texture(xctr-width/2, yctr-width/2, width, width, t);
     }
 
-
-
-//  t = gray_circle;
-//  for (width = sdlx_win_width; width >= 100; width -= 100) {
-//      t = (t == gray_circle ? light_gray_circle : gray_circle);
-//      sdlx_render_texture(xctr-width/2, yctr-width/2, width, width, t);
-//  }
-
-
     // calculate tilt amount and direction
     tilt_dir    = atan2(ax, ay) * RAD_TO_DEG;
     tilt_amount = atan( sqrt(ax*ax + ay*ay) / az ) * RAD_TO_DEG;
-
-    tilt_dir = 90;
-    tilt_amount = 5;
 
     // limit tilt amount to the max that can be displayed on the bulls-eye
     if (tilt_amount > max_bulls_eye) {
         tilt_amount = max_bulls_eye;
     }
     
-    // prints
-    // xxx improve
+    // prints xxx improve
     sdlx_render_printf(0, ROW2Y(1.0),   "axyz % 4.1f % 4.1f % 4.1f", ax, ay, az);
     sdlx_render_printf(0, ROW2Y(2.5),   "max %d deg", max_bulls_eye);
     sdlx_render_printf_xyctr(sdlx_win_width/2, ROW2Y(5.0), "%4.1f @ %.0f deg", tilt_amount, tilt_dir);
@@ -199,4 +199,27 @@ void horizontal(double ax, double ay, double az)
                         small_circle_diameter, 
                         small_circle_diameter, 
                         t);
+
+    // present the display
+    sdlx_display_present();
+
+    // wait for event, with 100ms timeout
+    sdlx_get_event(100000, &event);
+
+    // process events
+    switch (event.event_id) {
+    case EVID_INCR_MAX_BULLS_EYE:
+        if (max_bulls_eye < 20) {
+            max_bulls_eye++;
+        }
+        break;
+    case EVID_DECR_MAX_BULLS_EYE:
+        if (max_bulls_eye > 1) {
+            max_bulls_eye--;
+        }
+        break;
+    case EVID_QUIT:
+        end_program = true;
+        break;
+    }
 }
