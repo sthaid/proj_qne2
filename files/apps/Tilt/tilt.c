@@ -172,13 +172,9 @@ void horizontal(double ax, double ay, double az)
     // calculate tilt amount and direction
     tilt_dir    = atan2(ax, ay) * RAD_TO_DEG;
     tilt_amount = atan( sqrt(ax*ax + ay*ay) / az ) * RAD_TO_DEG;
-
-    // limit tilt amount to the max that can be displayed on the bulls-eye
-    if (tilt_amount > max_bulls_eye) {
-        tilt_amount = max_bulls_eye;
-    }
     
-    // prints
+    // display ...
+    // - tilt_amount
     sdlx_print_save(&print_state);
     sdlx_print_init(LARGE_FONT, COLOR_WHITE, COLOR_BLACK);  // xxx add new sdlx routine to just choose the font size
     sdlx_render_printf_xyctr(
@@ -187,8 +183,13 @@ void horizontal(double ax, double ay, double az)
             "%0.2f",
             tilt_amount);
     sdlx_print_restore(&print_state);
-
+    // - max_bulls_eye (degrees)
     sdlx_render_printf_xyctr(sdlx_win_width/2, sdlx_win_height-ROW2Y(3), "max %d deg", max_bulls_eye);
+
+    // limit tilt amount to the max that can be displayed on the bulls-eye
+    if (tilt_amount > max_bulls_eye) {
+        tilt_amount = max_bulls_eye;
+    }
 
     // display small circle on the bulls-eye pattern, 
     // at location indicating the tilt direction and amount
