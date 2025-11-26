@@ -102,6 +102,7 @@ int sdlx_set_color_alpha(int color, int alpha);
 int sdlx_wavelength_to_color(int wavelength);
 
 // render text
+// xxx print init for numchars
 void sdlx_print_init(double numchars, int fg_color, int bg_color);
 void sdlx_print_init_color(int fg_color, int bg_color);
 void sdlx_print_save(sdlx_print_state_t *save);

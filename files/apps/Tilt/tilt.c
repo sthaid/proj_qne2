@@ -7,10 +7,6 @@
 
 // xxx
 // - handle other orientations
-// - put black dot in ctr
-//
-// xxx probably not
-// - smooth result values
 
 // defines
 #define RAD_TO_DEG (180 / M_PI)
@@ -134,13 +130,22 @@ void no_accelerometer(void)
 #define EVID_INCR_MAX_BULLS_EYE 1
 #define EVID_DECR_MAX_BULLS_EYE 2
 
+#define MAX_BULLS_EYE_DEFAULT 5
+
 void horizontal(double ax, double ay, double az)
 {
-    int             width, xctr, yctr, deg;
-    sdlx_texture_t *t;
-    double          tilt_dir, tilt_amount;
-    sdlx_event_t    event;
-    static int      max_bulls_eye = 5;
+    int                 width, xctr, yctr, deg;
+    sdlx_texture_t     *t;
+    double              tilt_dir, tilt_amount;
+    sdlx_event_t        event;
+    sdlx_print_state_t  print_state;
+
+    static int          max_bulls_eye = -1;
+
+    // if max_bulls_eye param has not been read, then do so
+    if (max_bulls_eye == -1) {
+        max_bulls_eye = util_get_int_param(data_dir, "max_bulls_eye", MAX_BULLS_EYE_DEFAULT);
+    }
 
     // init the backbuffer
     sdlx_display_init(COLOR_BLACK);
@@ -173,10 +178,17 @@ void horizontal(double ax, double ay, double az)
         tilt_amount = max_bulls_eye;
     }
     
-    // prints xxx improve
-    sdlx_render_printf(0, ROW2Y(1.0),   "axyz % 4.1f % 4.1f % 4.1f", ax, ay, az);
-    sdlx_render_printf(0, ROW2Y(2.5),   "max %d deg", max_bulls_eye);
-    sdlx_render_printf_xyctr(sdlx_win_width/2, ROW2Y(5.0), "%4.1f @ %.0f deg", tilt_amount, tilt_dir);
+    // prints
+    sdlx_print_save(&print_state);
+    sdlx_print_init(LARGE_FONT, COLOR_WHITE, COLOR_BLACK);  // xxx add new sdlx routine to just choose the font size
+    sdlx_render_printf_xyctr(
+            xctr,
+            yctr - sdlx_win_width/2 - ROW2Y(1.5),
+            "%0.2f",
+            tilt_amount);
+    sdlx_print_restore(&print_state);
+
+    sdlx_render_printf_xyctr(sdlx_win_width/2, sdlx_win_height-ROW2Y(3), "max %d deg", max_bulls_eye);
 
     // display small circle on the bulls-eye pattern, 
     // at location indicating the tilt direction and amount
@@ -190,7 +202,7 @@ void horizontal(double ax, double ay, double az)
 
     small_circle_diameter = 50;
 
-    t = ((fabs(tilt_amount) < 0.1)            ? green_circle :
+    t = ((fabs(tilt_amount) < 0.2)            ? green_circle :
          ((fabs(tilt_amount) < max_bulls_eye) ? blue_circle :
                                                 red_circle));
 
@@ -199,6 +211,9 @@ void horizontal(double ax, double ay, double az)
                         small_circle_diameter, 
                         small_circle_diameter, 
                         t);
+
+    // display dot at center of bulls_eye
+    sdlx_render_point(xctr, yctr, COLOR_BLACK, 9);
 
     // present the display
     sdlx_display_present();
@@ -211,11 +226,13 @@ void horizontal(double ax, double ay, double az)
     case EVID_INCR_MAX_BULLS_EYE:
         if (max_bulls_eye < 20) {
             max_bulls_eye++;
+            util_set_int_param(data_dir, "max_bulls_eye", max_bulls_eye);
         }
         break;
     case EVID_DECR_MAX_BULLS_EYE:
         if (max_bulls_eye > 1) {
             max_bulls_eye--;
+            util_set_int_param(data_dir, "max_bulls_eye", max_bulls_eye);
         }
         break;
     case EVID_QUIT:
