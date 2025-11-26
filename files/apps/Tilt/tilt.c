@@ -172,9 +172,11 @@ void horizontal(double ax, double ay, double az)
         tilt_amount = max_bulls_eye;
     }
     
-    // print results
-    sdlx_render_printf(0, ROW2Y(1), "axyz % 4.1f % 4.1f % 4.1f", ax, ay, az);
-    sdlx_render_printf(0, ROW2Y(3), "tilt %4.2f @ %3.0f deg", tilt_amount, tilt_dir);
+    // prints
+    // xxx improve
+    sdlx_render_printf(0, ROW2Y(1.0),   "axyz % 4.1f % 4.1f % 4.1f", ax, ay, az);
+    sdlx_render_printf(0, ROW2Y(2.5),   "max %d deg", max_bulls_eye);
+    sdlx_render_printf_xyctr(sdlx_win_width/2, ROW2Y(5.0), "%4.1f @ %.0f deg", tilt_amount, tilt_dir);
 
     // display small circle on the bulls-eye pattern, 
     // at location indicating the tilt direction and amount
