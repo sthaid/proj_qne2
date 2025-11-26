@@ -5,6 +5,11 @@
 #include <sdlx.h>
 #include <utils.h>
 
+// xxx
+// - smooth result values
+// - handle other orientations
+// - param for tilt limit
+
 // defines
 #define RAD_TO_DEG (180 / M_PI)
 #define DEG_TO_RAD (M_PI / 180)
@@ -12,9 +17,16 @@
 // variables
 char *progname;
 char *data_dir;
+
+sdlx_texture_t *green_circle;
+sdlx_texture_t *blue_circle;
+sdlx_texture_t *red_circle;
+sdlx_texture_t *gray_circle;
+sdlx_texture_t *light_gray_circle;
     
 // prototypes
 void smooth(double newval, double *smoothed);
+void horizontal(double ax, double ay, double az);
 
 // -----------------  MAIN  ------------------------------------------
     
@@ -42,10 +54,14 @@ int main(int argc, char **argv)
         return 1;
     }
 
-    sdlx_texture_t *
-    green_circle = sdlx_create_filled_circle_texture(100, COLOR_GREEN);
+    // create textures
+    green_circle      = sdlx_create_filled_circle_texture(50, COLOR_GREEN);
+    blue_circle       = sdlx_create_filled_circle_texture(50, COLOR_BLUE);
+    red_circle        = sdlx_create_filled_circle_texture(50, COLOR_RED);
+    gray_circle       = sdlx_create_filled_circle_texture(500, COLOR_GRAY);
+    light_gray_circle = sdlx_create_filled_circle_texture(500, COLOR_LIGHT_GRAY);
 
-    // init font size and color
+    // use default font size and color
     sdlx_print_init(DEFAULT_FONT, COLOR_WHITE, COLOR_BLACK);
 
     // runtime loop
@@ -57,59 +73,23 @@ int main(int argc, char **argv)
         // - end program
         sdlx_register_control_events(NULL, NULL, "X", COLOR_WHITE, COLOR_BLACK, 0, 0, EVID_QUIT);
 
-        // read and display accelerometer values
+        // read and smooth accelerometer values
         rc = sdlx_sensor_read_accelerometer(&ax_raw, &ay_raw, &az_raw);
         if (rc != 0) {
-            //sdlx_render_printf_xyctr(sdlx_win_width/2, sdlx_win_height/2, "No Accelerometer");
-            //goto display_present;
-            ax_raw = 0.1;
-            ay_raw = 0.1;
-            az_raw = 9.8;
+            sdlx_render_printf_xyctr(sdlx_win_width/2, sdlx_win_height/2, "No Accelerometer");
+            goto display_present;
         }
-
         smooth(ax_raw, &ax);
         smooth(ay_raw, &ay);
         smooth(az_raw, &az);
 
-// xxx
-// - smooth values
-// - handle other orientations
-// - display tilt amount, and rotat for different orientations
-// - display a cirle instead, color green when close to no tilt
-// - param for tilt limit
-// - limit tilt to circular area,  and display this area in gray
-// - display target circle, which is for the tilt limit
-// - debug display mode
-
-
-        sdlx_render_printf(0, ROW2Y(1), "ax = %5.2f", ax);
-        sdlx_render_printf(0, ROW2Y(2), "ay = %5.2f", ay);
-        sdlx_render_printf(0, ROW2Y(3), "az = %5.2f", az);
-
-        // xxx
-        double tilt_dir, tilt_amount;
-        tilt_dir   = atan2(ax, ay) * RAD_TO_DEG;
-        tilt_amount = atan( sqrt(ax*ax + ay*ay) / az ) * RAD_TO_DEG;
-        sdlx_render_printf(0, ROW2Y(5), "tilt_dir   = %0.2f", tilt_dir);
-        sdlx_render_printf(0, ROW2Y(6), "tilt_amount = %0.2f", tilt_amount);
-
-        double dx, dy, scale;
-        int x, y;
-
-        scale = sdlx_win_width/2 / 10.0;
-
-        dx = tilt_amount * sin(tilt_dir*DEG_TO_RAD) * scale;
-        dy = tilt_amount * cos(tilt_dir*DEG_TO_RAD) * scale;
-
-        x = nearbyint(sdlx_win_width/2  + dx);
-        y = nearbyint(sdlx_win_height/2 - dy);
-
-        int wh = 100;
-        sdlx_render_texture(x-wh/2, y-wh/2, wh, wh, green_circle);
-        //sdlx_render_printf_xyctr(x, y, "X");
+        // if orientation is horizontal
+        if (1) {
+            horizontal(ax, ay, az);
+        }
 
         // present the display
-//display_present:
+display_present:
         sdlx_display_present();
 
         // wait for event, with 100ms timeout
@@ -123,16 +103,20 @@ int main(int argc, char **argv)
         }
     }
 
+    // free allocations
     sdlx_destroy_texture(green_circle);
+    sdlx_destroy_texture(blue_circle);
+    sdlx_destroy_texture(red_circle);
+    sdlx_destroy_texture(gray_circle);
+    sdlx_destroy_texture(light_gray_circle);
 
-    // cleanup and end program
+    // quit sdl subsystems and end program
     sdlx_quit(SUBSYS_VIDEO|SUBSYS_SENSOR);
     printf("INFO %s: terminating\n", progname);
     return 0;
 }
 
-#define K 0.8
-
+#define K 0.9
 void smooth(double newval, double *smoothed)
 {
     if (*smoothed == INVALID_NUMBER) {
@@ -140,7 +124,66 @@ void smooth(double newval, double *smoothed)
         return;
     }
 
-    double delta = newval - *smoothed;
     *smoothed = K * *smoothed + (1.0 - K) * newval;
 }
 
+// -----------------  HORIZONTAL  ---------------------------
+
+void horizontal(double ax, double ay, double az)
+{
+    int             width, xctr, yctr;
+    sdlx_texture_t *t;
+    double          tilt_dir, tilt_amount, max_bulls_eye;
+
+    // init center location of the bulls-eye
+    xctr = sdlx_win_width/2;
+    yctr = sdlx_win_height/2;
+
+    // draw bulls-eye
+    t = gray_circle;
+    for (width = 1000; width >= 100; width -= 100) {
+        t = (t == gray_circle ? light_gray_circle : gray_circle);
+        sdlx_render_texture(xctr-width/2, yctr-width/2, width, width, t);
+    }
+
+    // set the max bulls-eye tilt amount (degrees)
+    max_bulls_eye = 10.0;  // xxx adjst
+
+    // calculate tilt amount and direction
+    tilt_dir    = atan2(ax, ay) * RAD_TO_DEG;
+    tilt_amount = atan( sqrt(ax*ax + ay*ay) / az ) * RAD_TO_DEG;
+
+    //xxx test tilt_dir = 90;
+    //xxx test tilt_amount = 5;
+
+    // limit tilt amount to the max that can be displayed on the bulls-eye
+    if (tilt_amount > max_bulls_eye) {
+        tilt_amount = max_bulls_eye;
+    }
+    
+    // print results
+    sdlx_render_printf(0, ROW2Y(1), "axyz % 4.1f % 4.1f % 4.1f", ax, ay, az);
+    sdlx_render_printf(0, ROW2Y(3), "tilt %4.2f @ %3.0f deg", tilt_amount, tilt_dir);
+
+    // display small circle on the bulls-eye pattern, 
+    // at location indicating the tilt direction and amount
+    double dx, dy;
+    int x, y, small_circle_diameter;
+
+    dx = tilt_amount * sin(tilt_dir*DEG_TO_RAD) * (500 / max_bulls_eye);
+    dy = tilt_amount * cos(tilt_dir*DEG_TO_RAD) * (500 / max_bulls_eye);
+    x = nearbyint(xctr  + dx);
+    y = nearbyint(yctr - dy);
+
+    small_circle_diameter = 50;
+
+    t = ((fabs(tilt_amount) < 0.1)            ? green_circle :
+         ((fabs(tilt_amount) < max_bulls_eye) ? blue_circle :
+                                                red_circle));
+
+    sdlx_render_texture(x-small_circle_diameter/2, 
+                        y-small_circle_diameter/2, 
+                        small_circle_diameter, 
+                        small_circle_diameter, 
+                        t);
+}

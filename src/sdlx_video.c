@@ -884,7 +884,7 @@ sdlx_texture_t *sdlx_create_filled_circle_texture(int radius, int color)
     int x = radius;
     int y = 0;
     int radiusError = 1-x;
-    int pixels[width][width];
+    int (*pixels)[width];
     sdlx_texture_t * texture;
 
     #define DRAWLINE(Y, XS, XE, V) \
@@ -895,8 +895,10 @@ sdlx_texture_t *sdlx_create_filled_circle_texture(int radius, int color)
             } \
         } while (0)
 
+    // alloc zeroed pixels
+    pixels = calloc(width * width, BYTES_PER_PIXEL);
+
     // initialize pixels
-    memset(pixels,0,sizeof(pixels));
     while(x >= y) {
         DRAWLINE(y+radius, -x+radius, x+radius, color);
         DRAWLINE(x+radius, -y+radius, y+radius, color);
@@ -919,10 +921,13 @@ sdlx_texture_t *sdlx_create_filled_circle_texture(int radius, int color)
                                 width, width);
     if (texture == NULL) {
         ERROR("failed to allocate texture\n");
+        free(pixels);
         return NULL;
     }
     SDL_SetTextureBlendMode((SDL_Texture*)texture, SDL_BLENDMODE_BLEND);
     SDL_UpdateTexture((SDL_Texture*)texture, NULL, pixels, width*BYTES_PER_PIXEL);
+
+    free(pixels);
 
     // return texture
     return texture;
