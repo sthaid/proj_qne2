@@ -133,7 +133,11 @@ void horizontal(double ax, double ay, double az)
 {
     int             width, xctr, yctr;
     sdlx_texture_t *t;
-    double          tilt_dir, tilt_amount, max_bulls_eye;
+    double          tilt_dir, tilt_amount;
+    int             max_bulls_eye, deg;
+
+    // set the max bulls-eye tilt amount (degrees)
+    max_bulls_eye = 5;  // xxx adjst
 
     // init center location of the bulls-eye
     xctr = sdlx_win_width/2;
@@ -141,20 +145,27 @@ void horizontal(double ax, double ay, double az)
 
     // draw bulls-eye
     t = gray_circle;
-    for (width = 1000; width >= 100; width -= 100) {
+    for (deg = max_bulls_eye; deg >= 1; deg--) {
+        width = nearbyint((double)sdlx_win_width / max_bulls_eye * deg);
         t = (t == gray_circle ? light_gray_circle : gray_circle);
         sdlx_render_texture(xctr-width/2, yctr-width/2, width, width, t);
     }
 
-    // set the max bulls-eye tilt amount (degrees)
-    max_bulls_eye = 10.0;  // xxx adjst
+
+
+//  t = gray_circle;
+//  for (width = sdlx_win_width; width >= 100; width -= 100) {
+//      t = (t == gray_circle ? light_gray_circle : gray_circle);
+//      sdlx_render_texture(xctr-width/2, yctr-width/2, width, width, t);
+//  }
+
 
     // calculate tilt amount and direction
     tilt_dir    = atan2(ax, ay) * RAD_TO_DEG;
     tilt_amount = atan( sqrt(ax*ax + ay*ay) / az ) * RAD_TO_DEG;
 
-    //xxx test tilt_dir = 90;
-    //xxx test tilt_amount = 5;
+    tilt_dir = 90;
+    tilt_amount = 5;
 
     // limit tilt amount to the max that can be displayed on the bulls-eye
     if (tilt_amount > max_bulls_eye) {
@@ -170,8 +181,8 @@ void horizontal(double ax, double ay, double az)
     double dx, dy;
     int x, y, small_circle_diameter;
 
-    dx = tilt_amount * sin(tilt_dir*DEG_TO_RAD) * (500 / max_bulls_eye);
-    dy = tilt_amount * cos(tilt_dir*DEG_TO_RAD) * (500 / max_bulls_eye);
+    dx = tilt_amount * sin(tilt_dir*DEG_TO_RAD) * ((double)(sdlx_win_width/2) / max_bulls_eye);
+    dy = tilt_amount * cos(tilt_dir*DEG_TO_RAD) * ((double)(sdlx_win_width/2) / max_bulls_eye);
     x = nearbyint(xctr  + dx);
     y = nearbyint(yctr - dy);
 
