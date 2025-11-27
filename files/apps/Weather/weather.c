@@ -91,6 +91,7 @@ int main(int argc, char **argv)
 
     // get weather forecast
     rc = get_weather_forecast();
+    // xxx fail on error
     printf("XXX rc %d\n", rc);
     return 0;
 
@@ -151,6 +152,7 @@ int main(int argc, char **argv)
 #define TWO_HOURS 7200
 
 int parse_info(void);
+int parse_daily(void);
 
 int get_weather_forecast(void)
 {
@@ -233,6 +235,11 @@ int get_weather_forecast(void)
     }
 
     // parse daily_json
+    rc = parse_daily();
+    if (rc != 0) {
+        printf("ERROR: parse daily.json failed\n");
+        return -1;
+    }
 
     // download icons that have not already been dowloaded
 
@@ -246,8 +253,8 @@ int parse_info(void)
     void *json=NULL;
     int ret = -1, len_ret;
 
-    if (info.city[0] != '\0') {
-        return;
+    if (info.city != NULL) {
+        return 0;
     }
 
     str = util_read_file(data_dir, "info.json", &len_ret);
@@ -286,6 +293,57 @@ int parse_info(void)
     printf("INFO: parse_info: city=%s state=%s\n", info.city, info.state);
     printf("INFO: parse_info: daily = %s\n", info.forecast_daily_url);
 
+    ret = 0;
+
+cleanup_and_return:
+    util_json_free(json);
+    free(str);
+    return ret;
+}
+
+int parse_daily(void)
+{
+    char *str = NULL;
+    void *json = NULL;
+    void *item;
+    json_value_t *value;
+    int array_idx;
+    char array_idx_str[20];
+    int ret = -1, len_ret;
+    char *end_ptr;
+
+
+    str = util_read_file(data_dir, "info.json", &len_ret);
+    if (str == NULL) {
+        printf("ERROR: parse_daily, read daily.json, %s\n", strerror(errno));
+        goto cleanup_and_return;
+    }
+
+    json = util_json_parse(str, &end_ptr);
+    if (json == NULL) {
+        printf("ERROR: parse_daily, parse json\n");
+        goto cleanup_and_return;
+    }
+
+    for (array_idx = 0; array_idx < MAX_DAILY; array_idx++) {
+        sprintf(array_idx_str, "%d", array_idx);
+        value = util_json_get_value(json, "properties", "periods", array_idx_str, NULL);
+        if (value->type != JSON_TYPE_OBJECT) {
+            printf("value type %d\n", item->type);
+            break;
+        }
+        
+
+        value = util_json_get_value(item, "name", NULL);
+        if (value->type != JSON_TYPE_STRING) {
+            printf("failed to get name, %d\n", value->type);
+            break;
+        }
+
+        printf("GOT NAME %s\n", value->u.string);
+    }
+
+    printf("RETURNING\n");
     ret = 0;
 
 cleanup_and_return:
