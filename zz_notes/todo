@@ -252,6 +252,26 @@ https://api.weather.gov/
 https://api.weather.gov/points/{latitude},{longitude}
 https://api.weather.gov/points/41.0,90.1
 
+
+xxxxxxxxx
+
+User-Agent ?
+
+curl "https://api.weather.gov/points/42.4334,-71.6078"
+
+curl "https://api.weather.gov/gridpoints/BOX/52,90/forecast/hourly"
+
+        "forecast": "https://api.weather.gov/gridpoints/BOX/52,90/forecast",
+        "forecastHourly": "https://api.weather.gov/gridpoints/BOX/52,90/forecast/hourly",
+        "forecastGridData": "https://api.weather.gov/gridpoints/BOX/52,90",
+        "observationStations": "https://api.weather.gov/gridpoints/BOX/52,90/stations",
+
+
+curl "https://api.weather.gov/points/42.4334,-71.6078" -H "User-Agent: ezApp (stevenhaid@gmail.com)"
+
+
+User-Agent: (myweatherapp.com, contact@myweatherapp.com)
+
 ===============================================================
 ===================  COMPASS  =================================
 ===============================================================

@@ -348,6 +348,7 @@ void util_sync_file(void *addr, int len)
 
 // -----------------  GET / SET PARAMS  ----------------------
 
+// xxx needed?
 char *util_get_str_param(char *dir, char *name, char *default_value);
 void util_set_str_param(char *dir, char *name, char *value);
 int util_get_int_param(char *dir, char *name, int default_value);
