@@ -707,7 +707,7 @@ json_value_t *util_json_get_value(void *json_item, ...)
         break;
     case cJSON_Object:
         value.type = JSON_TYPE_OBJECT;
-        value.u.array = item;
+        value.u.object = item;
         break;
     default:
         value.type = JSON_TYPE_UNDEFINED;

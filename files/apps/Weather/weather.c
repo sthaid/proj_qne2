@@ -4,6 +4,7 @@
 #include <time.h>
 #include <string.h>
 #include <errno.h>
+#include <libgen.h>
 
 #include <sdlx.h>
 #include <utils.h>
@@ -41,7 +42,8 @@ typedef struct {
 typedef struct {
     char *day_name;
     bool  is_daytime;
-    char *icon;
+    char *icon_url;
+    char *icon_filename;
     char *short_forecast;
     char *temperature;
     char *wind;
@@ -54,6 +56,7 @@ typedef struct {
 
 char *progname;
 char *data_dir;
+char  icon_dir[100];
 
 info_t  info;
 daily_t daily[MAX_DAILY];
@@ -75,6 +78,7 @@ int main(int argc, char **argv)
     sdlx_event_t event;
     bool         done = false;
     int          mode = DAILY;
+    char         cmd[200];
 
     // save args
     if (argc != 2) {
@@ -85,15 +89,21 @@ int main(int argc, char **argv)
     data_dir = argv[1];
     printf("INFO %s: starting, data_dir=%s\n", progname, data_dir);
 
+    // construct icon_dir path, and create icon dir
+    sprintf(icon_dir, "%s/%s", data_dir, "icon");
+    sprintf(cmd, "mkdir -p %s", icon_dir);
+    system(cmd);
+
     //rc = system("ls");
     //printf("rc = %x\n", rc);
     //return 0;
 
     // get weather forecast
     rc = get_weather_forecast();
-    // xxx fail on error
-    printf("XXX rc %d\n", rc);
-    return 0;
+    if (rc != 0) {
+        printf("ERROR %s: get_weather_forecast failed\n", progname);
+        return 1;
+    }
 
     // init sdl video subsystem
     rc = sdlx_init(SUBSYS_VIDEO);
@@ -241,8 +251,6 @@ int get_weather_forecast(void)
         return -1;
     }
 
-    // download icons that have not already been dowloaded
-
     return 0;
 }
 
@@ -301,19 +309,44 @@ cleanup_and_return:
     return ret;
 }
 
+// Sample daily forecast ...
+//  "number": 1,
+//  "name": "Thanksgiving Day",
+//  "startTime": "2025-11-27T06:00:00-05:00",
+//  "endTime": "2025-11-27T18:00:00-05:00",
+//  "isDaytime": true,
+//  "temperature": 44,
+//  "temperatureUnit": "F",
+//  "temperatureTrend": null,
+//  "probabilityOfPrecipitation": {
+//      "unitCode": "wmoUnit:percent",
+//      "value": 1
+//  },
+//  "windSpeed": "7 to 10 mph",
+//  "windDirection": "SW",
+//  "icon": "https://api.weather.gov/icon/land/day/sct?size=medium",
+//  "shortForecast": "Mostly Sunny",
+//  "detailedForecast": "Mostly sunny. ..."
+
+// typedef struct {
+// k   char *day_name;
+//     bool  is_daytime;
+// k   char *icon_url;
+// k   char *icon_filename;
+//     char *short_forecast;
+// k   char *temperature;
+//     char *wind;
+//     int   precip;
+// } daily_t;
+
 int parse_daily(void)
 {
     char *str = NULL;
     void *json = NULL;
-    void *item;
-    json_value_t *value;
-    int array_idx;
-    char array_idx_str[20];
-    int ret = -1, len_ret;
+    int   ret = -1, len_ret;
     char *end_ptr;
 
-
-    str = util_read_file(data_dir, "info.json", &len_ret);
+    str = util_read_file(data_dir, "daily.json", &len_ret);
     if (str == NULL) {
         printf("ERROR: parse_daily, read daily.json, %s\n", strerror(errno));
         goto cleanup_and_return;
@@ -325,22 +358,87 @@ int parse_daily(void)
         goto cleanup_and_return;
     }
 
-    for (array_idx = 0; array_idx < MAX_DAILY; array_idx++) {
-        sprintf(array_idx_str, "%d", array_idx);
-        value = util_json_get_value(json, "properties", "periods", array_idx_str, NULL);
+    for (max_daily = 0; max_daily < MAX_DAILY; max_daily++) {
+        daily_t      *x = &daily[max_daily];
+        json_value_t *value;
+        void         *period;
+        char          tmp_str[200];
+
+        // get periods[max_daily]
+        sprintf(tmp_str, "%d", max_daily);
+        value = util_json_get_value(json, "properties", "periods", tmp_str, NULL);
         if (value->type != JSON_TYPE_OBJECT) {
-            printf("value type %d\n", item->type);
+            printf("value type %d\n", value->type);
             break;
         }
-        
+        period = value->u.object;
 
-        value = util_json_get_value(item, "name", NULL);
+        // get day_name
+        value = util_json_get_value(period, "name", NULL);
         if (value->type != JSON_TYPE_STRING) {
             printf("failed to get name, %d\n", value->type);
             break;
         }
+        x->day_name = strdup(value->u.string);
+        printf("DAY_NAME %s\n", x->day_name);
 
-        printf("GOT NAME %s\n", value->u.string);
+        // get temperature
+        value = util_json_get_value(period, "temperature", NULL);
+        if (value->type != JSON_TYPE_NUMBER) {
+            printf("failed to get temperature, %d\n", value->type);
+            break;
+        }
+        double temperature = value->u.number;
+        value = util_json_get_value(period, "temperatureUnit", NULL);
+        if (value->type != JSON_TYPE_STRING) {
+            printf("failed to get temperatureUnit, %d\n", value->type);
+            break;
+        }
+        sprintf(tmp_str, "%.0f %s", temperature, value->u.string);
+        x->temperature = strdup(tmp_str);
+        printf("TEMPERATURE %s\n", x->temperature);
+
+        // get icon url and filename
+        value = util_json_get_value(period, "icon", NULL);
+        if (value->type != JSON_TYPE_STRING) {
+            printf("failed to get icon, %d\n", value->type);
+            break;
+        }
+        x->icon_url = strdup(value->u.string);
+        printf("ICON_URL      %s\n", x->icon_url);
+
+        // create icon filename from icon url
+        // url example: https://api.weather.gov/icons/land/day/few?size=medium
+        // - remove leading https://api.weather.gov/
+        // - replace '/' chars with '-'
+        // - append ".png"
+        if (strncmp(x->icon_url, "https://api.weather.gov/", 24) != 0) {
+            printf("ERROR %s: unexpected icon_url %s\n", progname, x->icon_url);
+        } else {
+            strcpy(tmp_str, x->icon_url+24);
+            for (int i = 0; tmp_str[i]; i++) {
+                if (tmp_str[i] == '/') tmp_str[i] = '-';
+            }
+            strcat(tmp_str, ".png");
+            x->icon_filename = strdup(tmp_str);
+        }
+        printf("ICON_FILENAME %s\n", x->icon_filename);
+    }
+    printf("MAX_DAILY = %d\n", max_daily);
+
+    // download icons that have not already been dowloaded
+    for (int i = 0; i < max_daily; i++) {
+        daily_t *x = &daily[i];
+        char cmd[500];
+
+        if (util_file_exists(icon_dir, x->icon_filename)) {
+            printf("EXISTS %s\n", x->icon_filename);
+        } else {
+            sprintf(cmd, "curl --silent --max-time 10 --output %s/%s --header %s %s",
+                    icon_dir, x->icon_filename, HEADER, x->icon_url);
+            printf("ICON DOWNLOAD CMD %s\n", cmd);
+            system(cmd);
+        }
     }
 
     printf("RETURNING\n");
@@ -356,6 +454,44 @@ cleanup_and_return:
 
 void display_daily_forecast(void)
 {
+    int rc, i, w, h, y;
+    sdlx_texture_t *icon_texture;
+    unsigned char *pixels;
+
+    y = 0;
+    for (i = 0; i < max_daily; i++) {
+        daily_t *x = &daily[i];
+
+        do {
+            if (x->icon_filename == NULL) {
+                printf("ERROR %s: icon_filename is NULL\n", progname);
+                break;
+            }
+
+            rc = util_read_png_file(icon_dir, x->icon_filename, &pixels, &w, &h);
+            if (rc != 0) {
+                printf("ERROR %s failed to decode png file %s\n", progname, x->icon_filename);
+                break;
+            }
+
+            icon_texture = sdlx_create_texture_from_pixels(pixels, w, h);
+            printf("texture w,h %d %d\n", w,h);
+            if (icon_texture == NULL) {
+                free(pixels);
+                printf("ERROR %s failed to create icon_texture\n", progname);
+                break;
+            }
+
+            sdlx_render_texture(0,y,200,200, icon_texture);
+
+            free(pixels);
+            pixels = NULL;
+        } while (0);
+
+        sdlx_render_printf(200,y, "%s", x->day_name);
+
+        y += 250;
+    }
 }
 
 // -----------------  DISPLAY HOURLY FORECAST  ----------------

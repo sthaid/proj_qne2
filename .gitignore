@@ -5,6 +5,7 @@
 *.swp
 
 cscope.out
+cscope.files
 tags
 
 bin/ezsh
