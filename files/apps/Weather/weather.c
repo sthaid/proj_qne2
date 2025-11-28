@@ -562,10 +562,35 @@ void display_daily_forecast(void)
 
 //123456789 123456789 123456789 
 //Slight chance Light RainXxxxxxxxxxxxxx
-        sdlx_render_printf(200,y, "%s: %s", x->day_name, x->temperature);
-        sdlx_render_printf(200,y+sdlx_char_height, "%s", x->short_forecast);
+// xxx what if no short_forecast
+        char *sfl1=NULL, *sfl2=NULL;
+        char short_forecast[200];
+        strcpy(short_forecast, x->short_forecast);
+        if (strlen(short_forecast) <= 24) {
+            sfl1 = short_forecast;
+            sfl2 = NULL;
+        } else {
+            int k;
+            for (k = 24; k > 0; k--) {
+                if (short_forecast[k] == ' ') {
+                    break;
+                }
+            }
+            printf("XXX '%s' k=%d\n", short_forecast, k);
+            if (k > 0) {
+                short_forecast[k] = '\0';
+                sfl1 = short_forecast;
+                sfl2 = (short_forecast[k+1] != '\0' ? &short_forecast[k+1] : NULL);
+            } else {
+                sfl1 = short_forecast;
+                sfl2 = NULL;
+            }
+        }
 
-        //sdlx_render_printf(200,y+2*sdlx_char_height, "%s", x->temperature);
+        sdlx_render_printf(200,y, "%s: %s", x->day_name, x->temperature);
+        sdlx_render_printf(200,y+1*sdlx_char_height, "%s", sfl1);
+        if (sfl2)
+            sdlx_render_printf(200,y+2*sdlx_char_height, "%s", sfl2);
 
         y += 250;
     }
