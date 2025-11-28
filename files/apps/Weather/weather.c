@@ -221,15 +221,16 @@ int get_weather_forecast(void)
             get_new_forecast = true;
             break;
         }
-        mtime = util_file_mtime(data_dir, "hourly.json");
-        if (mtime == 0 || tnow - mtime > ONE_HOUR) {
-            get_new_forecast = true;
-            break;
-        }
+        //mtime = util_file_mtime(data_dir, "hourly.json");
+        //if (mtime == 0 || tnow - mtime > ONE_HOUR) {
+        //    get_new_forecast = true;
+        //    break;
+        //}
     } while (0);
 
     // xxx temp
     //get_new_forecast = false;
+    printf("INFO: get_new_forecast = %d\n", get_new_forecast);
 
     if (get_new_forecast) {
         printf("INFO: getting new forecast\n");
