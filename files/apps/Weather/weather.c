@@ -330,7 +330,7 @@ cleanup_and_return:
 
 // typedef struct {
 // k   char *day_name;
-//     bool  is_daytime;
+// k   bool  is_daytime;
 // k   char *icon_url;
 // k   char *icon_filename;
 //     char *short_forecast;
@@ -381,6 +381,15 @@ int parse_daily(void)
         }
         x->day_name = strdup(value->u.string);
         printf("DAY_NAME %s\n", x->day_name);
+
+        // get is_daytime
+        value = util_json_get_value(period, "isDaytime", NULL);
+        if (value->type != JSON_TYPE_FLAG) {
+            printf("failed to get isDaytime, %d\n", value->type);
+            break;  // xxx maybe just continue on errors
+        }
+        x->is_daytime = value->u.flag;
+        printf("IS_DAYTIME %d\n", x->is_daytime);
 
         // get temperature
         value = util_json_get_value(period, "temperature", NULL);
@@ -461,6 +470,10 @@ void display_daily_forecast(void)
     y = 0;
     for (i = 0; i < max_daily; i++) {
         daily_t *x = &daily[i];
+
+        if (!x->is_daytime) {
+            continue;
+        }
 
         do {
             if (x->icon_filename == NULL) {
