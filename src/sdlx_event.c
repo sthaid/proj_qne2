@@ -131,6 +131,12 @@ void sdlx_register_control_events(char *evstr1, char *evstr2, char *evstr3,
         }
 
         x = (sdlx_win_width/3/2) + i * (sdlx_win_width/3);
+        if (i == 0 && x < strlen(evstr[0]) * sdlx_char_width / 2) {
+            x = strlen(evstr[0]) * sdlx_char_width / 2;
+        }
+        if (i == 2 && x > sdlx_win_width - (strlen(evstr[2]) * sdlx_char_width / 2)) {
+            x = sdlx_win_width - (strlen(evstr[2]) * sdlx_char_width / 2);
+        }
         y = sdlx_win_height - 75;
         loc = sdlx_render_text_xyctr(x, y, evstr[i]);
         sdlx_register_event(loc, evid[i]);

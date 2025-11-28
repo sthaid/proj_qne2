@@ -4,7 +4,7 @@
 #include <time.h>
 #include <string.h>
 #include <errno.h>
-#include <libgen.h>
+//#include <libgen.h>
 
 #include <sdlx.h>
 #include <utils.h>
@@ -23,10 +23,15 @@
 // defines
 //
 
-#define DAILY  1
-#define HOURLY 2
+#define DAILY          0
+#define DAY_AND_NIGHT  1
+#define HOURLY         2
+
+#define MAX_MODE 3
 
 #define MAX_DAILY 20
+
+#define EVID_MODE_SELECT 1
 
 //
 // typedefs
@@ -62,6 +67,12 @@ info_t  info;
 daily_t daily[MAX_DAILY];
 int     max_daily;
 
+int     y_top;
+int     y_display_begin;
+int     y_display_end;
+
+int     mode;
+
 //
 // prototypes
 //
@@ -77,8 +88,8 @@ int main(int argc, char **argv)
     int          rc;
     sdlx_event_t event;
     bool         done = false;
-    int          mode = DAILY;
     char         cmd[200];
+    char         *mode_str;
 
     // save args
     if (argc != 2) {
@@ -88,15 +99,28 @@ int main(int argc, char **argv)
     progname = argv[0];
     data_dir = argv[1];
     printf("INFO %s: starting, data_dir=%s\n", progname, data_dir);
-
+    
     // construct icon_dir path, and create icon dir
     sprintf(icon_dir, "%s/%s", data_dir, "icon");
     sprintf(cmd, "mkdir -p %s", icon_dir);
     system(cmd);
 
+    // xxx
+    mode = util_get_int_param(data_dir, "mode", DAILY);
+
+    // init sdl video subsystem
+    rc = sdlx_init(SUBSYS_VIDEO);
+    if (rc != 0) {
+        printf("ERROR %s: sdlx_init failed\n", progname);
+        return 1;
+    }
+
     //rc = system("ls");
     //printf("rc = %x\n", rc);
     //return 0;
+    y_display_begin = 0;
+    y_display_end   = sdlx_win_height - 200;
+    y_top           = y_display_begin;
 
     // get weather forecast
     rc = get_weather_forecast();
@@ -105,12 +129,6 @@ int main(int argc, char **argv)
         return 1;
     }
 
-    // init sdl video subsystem
-    rc = sdlx_init(SUBSYS_VIDEO);
-    if (rc != 0) {
-        printf("ERROR %s: sdlx_init failed\n", progname);
-        return 1;
-    }
 
     // init font size and color
     sdlx_print_init(DEFAULT_FONT, COLOR_WHITE, COLOR_BLACK);
@@ -120,19 +138,25 @@ int main(int argc, char **argv)
         // init the backbuffer
         sdlx_display_init(COLOR_BLACK);
 
-        // register control event to
-        // - end program
-        sdlx_register_control_events(NULL, NULL, "X", COLOR_WHITE, COLOR_BLACK, 0, 0, EVID_QUIT);
 
         // xxx del
         // display 'Hello' at center of display
         // sdlx_render_printf_xyctr(sdlx_win_width/2, sdlx_win_height/2, "Hello");
 
-        if (mode == DAILY) {
+        if (mode == DAILY || mode == DAY_AND_NIGHT) {
             display_daily_forecast();
         } else {
             display_hourly_forecast();
         }
+
+        // register control events
+        mode_str = (mode == DAILY         ? "Daily" :
+                   (mode == DAY_AND_NIGHT ? "Day+Night" 
+                                          : "Hourly"));
+        sdlx_register_control_events(mode_str, NULL, "X", COLOR_WHITE, COLOR_BLACK, EVID_MODE_SELECT, 0, EVID_QUIT);
+
+        // register for events
+        sdlx_register_event(NULL, EVID_MOTION);
 
         // present the display
         sdlx_display_present();
@@ -145,6 +169,15 @@ int main(int argc, char **argv)
         case EVID_QUIT:
             done = true;
             break;
+        case EVID_MODE_SELECT:
+            mode = (mode + 1) % MAX_MODE;
+            break;
+        case EVID_MOTION:
+            y_top += event.u.motion.yrel;
+            if (y_top >= y_display_begin) {
+                y_top = y_display_begin;
+            }
+
         }
     }
 
@@ -357,6 +390,7 @@ int parse_daily(void)
         printf("ERROR: parse_daily, parse json\n");
         goto cleanup_and_return;
     }
+    printf("BACK FROM json parse %p\n", json);
 
     for (max_daily = 0; max_daily < MAX_DAILY; max_daily++) {
         daily_t      *x = &daily[max_daily];
@@ -366,12 +400,14 @@ int parse_daily(void)
 
         // get periods[max_daily]
         sprintf(tmp_str, "%d", max_daily);
-        value = util_json_get_value(json, "properties", "periods", tmp_str, NULL);
+        printf("BEFORE PERIOD json=%p  %d %s = %p\n", json, max_daily, tmp_str, period);
+        value = util_json_get_value(json, "properties", "periods", &tmp_str, NULL);  // xxx picoc requires &tmp_str
         if (value->type != JSON_TYPE_OBJECT) {
             printf("value type %d\n", value->type);
             break;
         }
         period = value->u.object;
+        printf("PERIOD %d %s = %p\n", max_daily, tmp_str, period);
 
         // get day_name
         value = util_json_get_value(period, "name", NULL);
@@ -467,13 +503,27 @@ void display_daily_forecast(void)
     sdlx_texture_t *icon_texture;
     unsigned char *pixels;
 
-    y = 0;
+    y = y_top;
+
     for (i = 0; i < max_daily; i++) {
         daily_t *x = &daily[i];
 
-        if (!x->is_daytime) {
+        if (mode == DAILY && !x->is_daytime) {
             continue;
         }
+
+        if (y > y_display_end - 200) {
+            printf("DONE AT y = %d  y_display_end = %d\n", y, y_display_end);
+            break;
+        }
+
+        if (y < y_display_begin - 200) {
+            printf("CONTINUING AT y = %d  begin=%d\n", y, y_display_begin);
+            y += 250;
+            continue;
+        }
+
+        printf("displaying at y = %d\n", y);
 
         do {
             if (x->icon_filename == NULL) {
