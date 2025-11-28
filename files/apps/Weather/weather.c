@@ -118,7 +118,7 @@ int main(int argc, char **argv)
     //rc = system("ls");
     //printf("rc = %x\n", rc);
     //return 0;
-    y_display_begin = 0;
+    y_display_begin = 100;
     y_display_end   = sdlx_win_height - 200;
     y_top           = y_display_begin;
 
@@ -131,7 +131,7 @@ int main(int argc, char **argv)
 
 
     // init font size and color
-    sdlx_print_init(DEFAULT_FONT, COLOR_WHITE, COLOR_BLACK);
+    sdlx_print_init(SMALL_FONT, COLOR_WHITE, COLOR_BLACK);
 
     // runtime loop
     while (!done) {
@@ -192,7 +192,7 @@ int main(int argc, char **argv)
 // -----------------  GET WEATHER FORECAST  ------------------
 
 #define HEADER "\"User-Agent: (ezApp-Weather, stevenhaid@gmail.com)\""
-#define TWO_HOURS 7200
+#define ONE_HOUR 3600
 
 int parse_info(void);
 int parse_daily(void);
@@ -212,24 +212,24 @@ int get_weather_forecast(void)
     do {
         tnow = time(NULL);
         mtime = util_file_mtime(data_dir, "info.json");
-        if (mtime == 0 || tnow - mtime > TWO_HOURS) {
+        if (mtime == 0 || tnow - mtime > ONE_HOUR) {
             get_new_forecast = true;
             break;
         }
         mtime = util_file_mtime(data_dir, "daily.json");
-        if (mtime == 0 || tnow - mtime > TWO_HOURS) {
+        if (mtime == 0 || tnow - mtime > ONE_HOUR) {
             get_new_forecast = true;
             break;
         }
         mtime = util_file_mtime(data_dir, "hourly.json");
-        if (mtime == 0 || tnow - mtime > TWO_HOURS) {
+        if (mtime == 0 || tnow - mtime > ONE_HOUR) {
             get_new_forecast = true;
             break;
         }
     } while (0);
 
     // xxx temp
-    get_new_forecast = false;
+    //get_new_forecast = false;
 
     if (get_new_forecast) {
         printf("INFO: getting new forecast\n");
@@ -366,7 +366,7 @@ cleanup_and_return:
 // k   bool  is_daytime;
 // k   char *icon_url;
 // k   char *icon_filename;
-//     char *short_forecast;
+// k   char *short_forecast;
 // k   char *temperature;
 //     char *wind;
 //     int   precip;
@@ -468,6 +468,15 @@ int parse_daily(void)
             x->icon_filename = strdup(tmp_str);
         }
         printf("ICON_FILENAME %s\n", x->icon_filename);
+
+        // get shortForecast
+        value = util_json_get_value(period, "shortForecast", NULL);
+        if (value->type != JSON_TYPE_STRING) {
+            printf("failed to get shortForecast, %d\n", value->type);
+            break;
+        }
+        x->short_forecast = strdup(value->u.string);
+        printf("SHORT_FORECAST      %s\n", x->short_forecast);
     }
     printf("MAX_DAILY = %d\n", max_daily);
 
@@ -551,7 +560,12 @@ void display_daily_forecast(void)
             pixels = NULL;
         } while (0);
 
-        sdlx_render_printf(200,y, "%s", x->day_name);
+//123456789 123456789 123456789 
+//Slight chance Light RainXxxxxxxxxxxxxx
+        sdlx_render_printf(200,y, "%s: %s", x->day_name, x->temperature);
+        sdlx_render_printf(200,y+sdlx_char_height, "%s", x->short_forecast);
+
+        //sdlx_render_printf(200,y+2*sdlx_char_height, "%s", x->temperature);
 
         y += 250;
     }
