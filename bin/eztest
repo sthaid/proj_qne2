@@ -55,11 +55,11 @@ SRCS=$(echo $PARENT_DIR/$APP_DIR/*.c)
 # perform command
 if [ "$CMD" = build ]; then
     set -x
-    gcc -o /tmp/$APP_NAME $CFLAGS $SRCS $SRCS_COMMON -lSDL3 -lSDL3_ttf -lm || exit 1
+    gcc -DLINUX -o /tmp/$APP_NAME $CFLAGS $SRCS $SRCS_COMMON -lSDL3 -lSDL3_ttf -lm || exit 1
     set +x
 elif [ "$CMD" = linux ]; then
     set -x
-    gcc -o /tmp/$APP_NAME $CFLAGS $SRCS $SRCS_COMMON -lSDL3 -lSDL3_ttf -lm || exit 1
+    gcc -DLINUX -o /tmp/$APP_NAME $CFLAGS $SRCS $SRCS_COMMON -lSDL3 -lSDL3_ttf -lm || exit 1
     set +x
     exec -a $APP_NAME /tmp/$APP_NAME $PARENT_DIR/$APP_DIR
 elif [ "$CMD" = picoc ]; then
