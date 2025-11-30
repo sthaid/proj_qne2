@@ -261,11 +261,11 @@ static void process_sdlx_event(SDL_Event *ev, sdlx_event_t *event)
         break; }
     case SDL_EVENT_MOUSE_MOTION: {
         if ((ev->motion.state & SDL_BUTTON_LMASK) && evid_motion_registered) {
-            INFO("MOUSE_MOTION x=%f y=%f xrel=%f yrel=%f\n",
-                ev->motion.x,
-                ev->motion.y,
-                ev->motion.xrel,
-                ev->motion.yrel);
+            //INFO("MOUSE_MOTION x=%f y=%f xrel=%f yrel=%f\n",
+            //    ev->motion.x,
+            //    ev->motion.y,
+            //    ev->motion.xrel,
+            //    ev->motion.yrel);
 
             event->event_id = EVID_MOTION;
             event->u.motion.x = ev->motion.x / scale;

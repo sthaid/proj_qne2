@@ -4,7 +4,6 @@
 #include <time.h>
 #include <string.h>
 #include <errno.h>
-//#include <libgen.h>
 
 #include <sdlx.h>
 #include <utils.h>
@@ -31,19 +30,22 @@
 // xxx tts
 // - "how to access android text to speech class from SDL3"
 
+// xxx review all prints, do they have progname
+
 //
 // defines
 //
+
+#define MAX_DAILY  20
+#define MAX_HOURLY 250
 
 #define DAILY          0
 #define DAY_AND_NIGHT  1
 #define HOURLY         2
 #define MAX_MODE       3
 
-#define MAX_DAILY  20
-#define MAX_HOURLY 250
-
-#define EVID_MODE_SELECT 1
+#define EVID_MODE_SELECT      1
+#define EVID_RELOAD_FORECAST  2
 
 //
 // typedefs
@@ -56,19 +58,21 @@ typedef struct {
     char *forecast_hourly_url;
 } info_t;
 
+// xxx save pixels here
 typedef struct {
-    bool  is_daytime;  // xxx make string to be consistent
-    char *day_name;
-    char *icon_url;
-    char *icon_filename;
-    char *short_forecast;
-    char *temperature;
-    char *wind;
-    char *precip;
+    bool            is_daytime;
+    char           *day_name;
+    char           *icon_url;
+    char           *icon_filename;
+    sdlx_texture_t *icon_texture;
+    char           *short_forecast;
+    char           *temperature;
+    char           *wind;
+    char           *precip;
 } daily_t;
 
 typedef struct {
-    bool  is_daytime;  // xxx make string to be consistent
+    bool  is_daytime;
     //char *day_name;
     //char *icon_url;
     //char *icon_filename;
@@ -106,9 +110,10 @@ int      y_display_end;
 // prototypes
 //
 
+void cleanup(void);
+
 bool is_new_forecast_needed(void);
 int initiate_forecast_download(void);
-
 int parse_info(void);
 int parse_daily(void);
 int parse_hourly(void);
@@ -150,7 +155,7 @@ int main(int argc, char **argv)
         return 1;
     }
 
-    // xxx
+    // init variables that define the display region
     y_display_begin = 100;
     y_display_end   = sdlx_win_height - 200;
     y_top           = y_display_begin;
@@ -191,10 +196,16 @@ int main(int argc, char **argv)
         }
 
         // register events
-        mode_str = (mode == DAILY         ? "Daily" :
-                   (mode == DAY_AND_NIGHT ? "Day+Night" 
-                                          : "Hourly"));
-        sdlx_register_control_events(mode_str, NULL, "X", COLOR_WHITE, COLOR_BLACK, EVID_MODE_SELECT, 0, EVID_QUIT);
+        mode_str = (mode == DAILY         ? "Day" :
+                   (mode == DAY_AND_NIGHT ? "D+N" 
+                                          : "Hour"));
+//      mode_str = (mode == DAILY         ? "Daily" :
+//                 (mode == DAY_AND_NIGHT ? "Day+Night" 
+//                                        : "Hourly"));
+        sdlx_register_control_events(
+            mode_str, "R", "X", 
+            COLOR_WHITE, COLOR_BLACK,
+            EVID_MODE_SELECT, EVID_RELOAD_FORECAST, EVID_QUIT);
         sdlx_register_event(NULL, EVID_MOTION);
 
         // present the display
@@ -210,6 +221,9 @@ int main(int argc, char **argv)
         case EVID_QUIT:
             done = true;
             break;
+        case EVID_RELOAD_FORECAST:
+            initiate_forecast_download();
+            break;
         case EVID_MODE_SELECT:
             mode = (mode + 1) % MAX_MODE;
             break;
@@ -221,13 +235,50 @@ int main(int argc, char **argv)
         }
     }
 
-    // xxx free all strdups too
-xxx
-
     // cleanup and end program
+    cleanup();
     sdlx_quit(SUBSYS_VIDEO);
     printf("INFO %s: terminating\n", progname);
     return 0;
+}
+
+void cleanup(void)
+{
+    int i;
+
+    // clear json file parsed flags
+    info_parsed = false;
+    daily_forecast_parsed = false;
+    hourly_forecast_parsed = false;
+
+    // free allocations, from strdup
+    free(info.city);
+    free(info.state);
+    free(info.forecast_daily_url);
+    free(info.forecast_hourly_url);
+
+    for (i = 0; i < max_daily; i++) {
+        free(daily[i].day_name);
+        free(daily[i].icon_url);
+        free(daily[i].icon_filename);
+        sdlx_destroy_texture(daily[i].icon_texture);
+        free(daily[i].short_forecast);
+        free(daily[i].temperature);
+        free(daily[i].wind);
+        free(daily[i].precip);
+    }
+
+    // clear forecast data 
+    memset(&info, 0, sizeof(info));
+    memset(&daily, 0, sizeof(daily));
+    memset(&hourly, 0, sizeof(hourly));
+    max_daily = 0;
+    max_hourly = 0;
+
+    // delete temporary files, if needed
+    util_delete_file(data_dir, "info.temp");
+    util_delete_file(data_dir, "daily.temp");
+    util_delete_file(data_dir, "hourly.temp");
 }
 
 // -----------------  GET FORECAST JSON FILES  ---------------
@@ -256,7 +307,6 @@ bool is_new_forecast_needed(void)
     return false;
 }
 
-// xxx review all prints, do they have progname
 int initiate_forecast_download(void)
 {
     char   url[200], cmd[1000];
@@ -269,27 +319,13 @@ int initiate_forecast_download(void)
     printf("INFO: initiate_forecast_download starting\n");
     start_us = util_microsec_timer();
 
-    // xxx
-    info_parsed = false;
-    daily_forecast_parsed = false;
-    hourly_forecast_parsed = false;
-
     // clear forecast data structures
-xxx call routine
-    memset(&info, 0, sizeof(info));
-    memset(&daily, 0, sizeof(daily));
-    max_daily = 0;
-    memset(&hourly, 0, sizeof(hourly));
-    max_hourly = 0;
+    cleanup();
 
     // delete existing forecast files
-xxx 
     util_delete_file(data_dir, "info.json");
     util_delete_file(data_dir, "daily.json");
     util_delete_file(data_dir, "hourly.json");
-    util_delete_file(data_dir, "info.temp");
-    util_delete_file(data_dir, "daily.temp");
-    util_delete_file(data_dir, "hourly.temp");
 
     // get lat/long
     util_get_location(&latitude, &longitude, NULL);  // xxx check for no lat/long
@@ -346,10 +382,10 @@ xxx
 
 int parse_info(void)
 {
-    char *str=NULL, *end_ptr;
+    char         *str = NULL, *end_ptr;
+    void         *json = NULL;
     json_value_t *value;
-    void *json=NULL;
-    int ret = -1, len_ret;
+    int           ret = -1, len_ret;
 
     // clear info parsed flag
     info_parsed = false;
@@ -416,7 +452,6 @@ cleanup_and_return:
     return ret;
 }
 
-// xxx cleanup
 int parse_daily(void)
 {
     char *str = NULL;
@@ -451,7 +486,7 @@ int parse_daily(void)
 
         // get json period object
         sprintf(period_str, "%d", max_daily);
-        value = util_json_get_value(json, "properties", "periods", &period_str, NULL);  // xxx picoc requires &period_str
+        value = util_json_get_value(json, "properties", "periods", &period_str, NULL);  // xxx picoc requires &period_str ?
         if (value->type != JSON_TYPE_OBJECT) {
             printf("value type %d\n", value->type);
             break;
@@ -565,29 +600,51 @@ int parse_daily(void)
         sprintf(tmp_str, "%.0f%%", value->u.number);
         x->precip = strdup(tmp_str);
 
-        // xxx cleanup
-        printf("INFO: periods[%s] ...\n", period_str);
-        printf("INFO:   is_daytime     %d\n", x->is_daytime);
-        printf("INFO:   day_name       %s\n", x->day_name);
-        printf("INFO:   icon_url       %s\n", x->icon_url);
-        printf("INFO:   icon_filename  %s\n", x->icon_filename);
-        printf("INFO:   short_forecast %s\n", x->short_forecast);
-        printf("INFO:   temperature    %s\n", x->temperature);
-        printf("INFO:   wind           %s\n", x->wind);
-        printf("INFO:   precip         %s\n", x->precip);
+        // debug print forecast info
+        if (0) {
+            printf("INFO: periods[%s] ...\n", period_str);
+            printf("INFO:   is_daytime     %d\n", x->is_daytime);
+            printf("INFO:   day_name       %s\n", x->day_name);
+            printf("INFO:   icon_url       %s\n", x->icon_url);
+            printf("INFO:   icon_filename  %s\n", x->icon_filename);
+            printf("INFO:   short_forecast %s\n", x->short_forecast);
+            printf("INFO:   temperature    %s\n", x->temperature);
+            printf("INFO:   wind           %s\n", x->wind);
+            printf("INFO:   precip         %s\n", x->precip);
+        }
     }
     printf("INFO: max_daily = %d\n", max_daily);
 
     // download icons that have not already been dowloaded
+    // xxx and
     for (int i = 0; i < max_daily; i++) {
         daily_t *x = &daily[i];
         char cmd[500];
+        unsigned char *pixels=NULL;
+        int rc, w, h;
+        sdlx_texture_t *icon_texture;
 
         if (!util_file_exists(icon_dir, x->icon_filename)) {
             sprintf(cmd, "curl --silent --max-time 10 --output %s/%s --header %s %s",
                     icon_dir, x->icon_filename, HEADER, x->icon_url);
             printf("INFO: %s\n", cmd);
             system(cmd);
+        }
+
+        // xxx comment
+        if (util_file_exists(icon_dir, x->icon_filename)) {
+            rc = util_read_png_file(icon_dir, x->icon_filename, &pixels, &w, &h);
+            if (rc != 0) {
+                printf("ERROR %s failed to decode png file %s\n", progname, x->icon_filename);
+            } else {
+                icon_texture = sdlx_create_texture_from_pixels(pixels, w, h);
+                if (icon_texture == NULL) {
+                    printf("ERROR %s failed to create icon_texture\n", progname);
+                } else {
+                    x->icon_texture = icon_texture;
+                }
+                free(pixels);
+            }
         }
     }
 
@@ -637,37 +694,15 @@ void display_daily_forecast(void)
         }
 
         if (y < y_display_begin - 200) {
-            printf("CONTINUING AT y = %d  begin=%d\n", y, y_display_begin);
+            //xxx printf("CONTINUING AT y = %d  begin=%d\n", y, y_display_begin);
             y += 250;
             continue;
         }
 
         // display the forecast icon
-        do {
-            // xxx is this test needed
-            if (x->icon_filename == NULL) {
-                printf("ERROR %s: icon_filename is NULL\n", progname);
-                break;
-            }
-
-            rc = util_read_png_file(icon_dir, x->icon_filename, &pixels, &w, &h);
-            if (rc != 0) {
-                printf("ERROR %s failed to decode png file %s\n", progname, x->icon_filename);
-                break;
-            }
-
-            icon_texture = sdlx_create_texture_from_pixels(pixels, w, h);
-            if (icon_texture == NULL) {
-                free(pixels);
-                printf("ERROR %s failed to create icon_texture\n", progname);
-                break;
-            }
-
-            sdlx_render_texture(0,y,200,200, icon_texture);
-
-            free(pixels);
-            pixels = NULL;
-        } while (0);
+        if (x->icon_texture) {
+            sdlx_render_texture(0,y,200,200, x->icon_texture);
+        }
 
         // xxx make this a routine
         // xxx what if no short_forecast
