@@ -218,6 +218,7 @@ int main(int argc, char **argv)
             break;
         case EVID_MODE_SELECT:
             mode = (mode + 1) % MAX_MODE;
+            y_top = y_display_begin;
             break;
         case EVID_MOTION:
             y_top += event.u.motion.yrel;
