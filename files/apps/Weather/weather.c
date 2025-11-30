@@ -36,7 +36,7 @@
 // defines
 //
 
-#define MAX_FORECAST 48
+#define MAX_FORECAST 100
 
 #define DAILY          0
 #define DAY_AND_NIGHT  1
@@ -508,10 +508,20 @@ void parse_forecast(int which)
             printf("failed to get startTime, %d\n", value->type);
             continue;
         }
-        if (x->is_daytime) {
-            sprintf(tmp_str, "%s", get_day_name(value->u.string));
+        if (which == PARSE_DAILY_FORECAST) {
+            if (x->is_daytime) {
+                sprintf(tmp_str, "%s", get_day_name(value->u.string));
+            } else {
+                sprintf(tmp_str, "%s Night", get_day_name(value->u.string));
+            }
         } else {
-            sprintf(tmp_str, "%s Night", get_day_name(value->u.string));
+            int hour;
+            sprintf(tmp_str, "%s", get_day_name(value->u.string));
+            sscanf(value->u.string+10, "T%d", &hour);
+            char *ampm = hour < 12 ? "AM" : "PM";
+            if (hour > 12) hour -= 12;
+            if (hour == 0) hour = 12;
+            sprintf(tmp_str, "%s %d%s", get_day_name(value->u.string), hour, ampm);
         }
         x->day_name = strdup(tmp_str);
         
