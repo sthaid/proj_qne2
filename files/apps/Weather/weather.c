@@ -192,7 +192,7 @@ int main(int argc, char **argv)
         } else if (mode == HOURLY && hourly_forecast_parsed) {
             display_hourly_forecast();
         } else {
-            sdlx_render_printf_xyctr(sdlx_win_width, sdlx_win_height, "Unavailable");
+            sdlx_render_printf_xyctr(sdlx_win_width/2, sdlx_win_height/2, "Unavailable");
         }
 
         // register events
