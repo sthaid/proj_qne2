@@ -36,8 +36,7 @@
 // defines
 //
 
-#define MAX_DAILY  20
-#define MAX_HOURLY 250
+#define MAX_FORECAST 48
 
 #define DAILY          0
 #define DAY_AND_NIGHT  1
@@ -46,6 +45,9 @@
 
 #define EVID_MODE_SELECT      1
 #define EVID_RELOAD_FORECAST  2
+
+#define PARSE_DAILY_FORECAST  1
+#define PARSE_HOURLY_FORECAST 2
 
 //
 // typedefs
@@ -58,8 +60,8 @@ typedef struct {
     char *forecast_hourly_url;
 } info_t;
 
-// xxx save pixels here
 typedef struct {
+    bool            valid;
     bool            is_daytime;
     char           *day_name;
     char           *icon_url;
@@ -69,57 +71,41 @@ typedef struct {
     char           *temperature;
     char           *wind;
     char           *precip;
-} daily_t;
-
-typedef struct {
-    bool  is_daytime;
-    //char *day_name;
-    //char *icon_url;
-    //char *icon_filename;
-    //char *short_forecast;
-    //char *temperature;
-    //char *wind;
-    //char *precip;
-} hourly_t;
+} forecast_t;
 
 //
 // variables
 //
 
-char    *progname;
-char    *data_dir;
-char     icon_dir[100];
+char       *progname;
+char       *data_dir;
+char        icon_dir[100];
 
-int      mode = DAILY;
+int         mode = DAILY;
 
-bool     info_parsed;
-bool     daily_forecast_parsed;
-bool     hourly_forecast_parsed;
+info_t      info;
+forecast_t  daily[MAX_FORECAST];
+forecast_t  hourly[MAX_FORECAST];
 
-info_t   info;
-daily_t  daily[MAX_DAILY];
-int      max_daily;
-hourly_t hourly[MAX_HOURLY];
-int      max_hourly;
-
-int      y_top;
-int      y_display_begin;
-int      y_display_end;
+int         y_top;
+int         y_display_begin;
+int         y_display_end;
 
 //
 // prototypes
 //
 
-void cleanup(void);
+void cleanup_all(void);
+void cleanup_info(void);
+void cleanup_forecast(forecast_t *forecast);
 
 bool is_new_forecast_needed(void);
-int initiate_forecast_download(void);
-int parse_info(void);
-int parse_daily(void);
-int parse_hourly(void);
+void initiate_forecast_download(void);
 
-void display_daily_forecast(void);
-void display_hourly_forecast(void);
+int parse_info(void);
+void parse_forecast(int which);
+
+void display_forecast(void);
 
 char *get_day_name(char * str);
 
@@ -133,6 +119,8 @@ int main(int argc, char **argv)
     char          cmd[200];
     char         *mode_str;
     long          timeout;
+    bool          daily_forecast_parsed = false;
+    bool          hourly_forecast_parsed = false;
 
     // save args
     if (argc != 2) {
@@ -163,10 +151,12 @@ int main(int argc, char **argv)
     // initiate weather forecast download
     if (is_new_forecast_needed()) {
         initiate_forecast_download();
+        daily_forecast_parsed = false;
+        hourly_forecast_parsed = false;
     }
 
     // if info.json file is not yet parsed then do so
-    if (!info_parsed) {
+    if (info.city == NULL) {
         parse_info();
     }
 
@@ -180,18 +170,21 @@ int main(int argc, char **argv)
 
         // if forecast is available but not parsed then parse it
         if (!daily_forecast_parsed && util_file_exists(data_dir, "daily.json")) {
-            parse_daily();
+            parse_forecast(PARSE_DAILY_FORECAST);
+            daily_forecast_parsed = true;
         }
         if (!hourly_forecast_parsed && util_file_exists(data_dir, "hourly.json")) {
-            parse_hourly();
+            parse_forecast(PARSE_HOURLY_FORECAST);
+            hourly_forecast_parsed = true;
         }
 
         // display forecast         
         if ((mode == DAILY || mode == DAY_AND_NIGHT) && daily_forecast_parsed) {
-            display_daily_forecast();
+            display_forecast();
         } else if (mode == HOURLY && hourly_forecast_parsed) {
-            display_hourly_forecast();
+            display_forecast();
         } else {
+            // xxx Loading / Unavail
             sdlx_render_printf_xyctr(sdlx_win_width/2, sdlx_win_height/2, "Unavailable");
         }
 
@@ -199,9 +192,6 @@ int main(int argc, char **argv)
         mode_str = (mode == DAILY         ? "Day" :
                    (mode == DAY_AND_NIGHT ? "D+N" 
                                           : "Hour"));
-//      mode_str = (mode == DAILY         ? "Daily" :
-//                 (mode == DAY_AND_NIGHT ? "Day+Night" 
-//                                        : "Hourly"));
         sdlx_register_control_events(
             mode_str, "R", "X", 
             COLOR_WHITE, COLOR_BLACK,
@@ -223,6 +213,8 @@ int main(int argc, char **argv)
             break;
         case EVID_RELOAD_FORECAST:
             initiate_forecast_download();
+            daily_forecast_parsed = false;
+            hourly_forecast_parsed = false;
             break;
         case EVID_MODE_SELECT:
             mode = (mode + 1) % MAX_MODE;
@@ -236,49 +228,44 @@ int main(int argc, char **argv)
     }
 
     // cleanup and end program
-    cleanup();
+    cleanup_all();
     sdlx_quit(SUBSYS_VIDEO);
     printf("INFO %s: terminating\n", progname);
     return 0;
 }
 
-void cleanup(void)
+
+void cleanup_all(void)
 {
-    int i;
+    cleanup_info();
+    cleanup_forecast(daily);
+    cleanup_forecast(hourly);
+}
 
-    // clear json file parsed flags
-    info_parsed = false;
-    daily_forecast_parsed = false;
-    hourly_forecast_parsed = false;
-
-    // free allocations, from strdup
+void cleanup_info(void)
+{
     free(info.city);
     free(info.state);
     free(info.forecast_daily_url);
     free(info.forecast_hourly_url);
 
-    for (i = 0; i < max_daily; i++) {
-        free(daily[i].day_name);
-        free(daily[i].icon_url);
-        free(daily[i].icon_filename);
-        sdlx_destroy_texture(daily[i].icon_texture);
-        free(daily[i].short_forecast);
-        free(daily[i].temperature);
-        free(daily[i].wind);
-        free(daily[i].precip);
+    memset(&info, 0, sizeof(info));
+}
+
+void cleanup_forecast(forecast_t *forecast)
+{
+    for (int i = 0; i < MAX_FORECAST; i++) {
+        free(forecast[i].day_name);
+        free(forecast[i].icon_url);
+        free(forecast[i].icon_filename);
+        sdlx_destroy_texture(forecast[i].icon_texture);
+        free(forecast[i].short_forecast);
+        free(forecast[i].temperature);
+        free(forecast[i].wind);
+        free(forecast[i].precip);
     }
 
-    // clear forecast data 
-    memset(&info, 0, sizeof(info));
-    memset(&daily, 0, sizeof(daily));
-    memset(&hourly, 0, sizeof(hourly));
-    max_daily = 0;
-    max_hourly = 0;
-
-    // delete temporary files, if needed
-    util_delete_file(data_dir, "info.temp");
-    util_delete_file(data_dir, "daily.temp");
-    util_delete_file(data_dir, "hourly.temp");
+    memset(forecast, 0, MAX_FORECAST * sizeof(forecast_t));
 }
 
 // -----------------  GET FORECAST JSON FILES  ---------------
@@ -307,7 +294,7 @@ bool is_new_forecast_needed(void)
     return false;
 }
 
-int initiate_forecast_download(void)
+void initiate_forecast_download(void)
 {
     char   url[200], cmd[1000];
     char   daily_temp[200], daily_json[200];
@@ -319,13 +306,17 @@ int initiate_forecast_download(void)
     printf("INFO: initiate_forecast_download starting\n");
     start_us = util_microsec_timer();
 
-    // clear forecast data structures
-    cleanup();
+    // cleanup forecast data structures
+    cleanup_all();
 
     // delete existing forecast files
     util_delete_file(data_dir, "info.json");
     util_delete_file(data_dir, "daily.json");
     util_delete_file(data_dir, "hourly.json");
+
+    util_delete_file(data_dir, "info.temp");
+    util_delete_file(data_dir, "daily.temp");
+    util_delete_file(data_dir, "hourly.temp");
 
     // get lat/long
     util_get_location(&latitude, &longitude, NULL);  // xxx check for no lat/long
@@ -339,7 +330,7 @@ int initiate_forecast_download(void)
     rc = system(cmd);
     if (rc != 0) {
         printf("ERROR: system curl info.json failed, rc=0x%x\n", rc);
-        return -1;
+        return;
     }
 
     // parse file info.json, this will obtain the following, which are used below:
@@ -348,7 +339,7 @@ int initiate_forecast_download(void)
     rc = parse_info();
     if (rc != 0) {
         printf("ERROR: parse info.json failed\n");
-        return -1;
+        return;
     }
 
     // initiate dowload daily forecast, save to daily.json
@@ -375,7 +366,6 @@ int initiate_forecast_download(void)
 
     // print completed, with duration this routine took
     printf("INFO: initiate_forecast_download done, %.1f secs\n", (util_microsec_timer() - start_us) / 1000000.);
-    return 0;
 }
 
 // -----------------  PARSE JSON FILES  ---------------------------
@@ -386,9 +376,6 @@ int parse_info(void)
     void         *json = NULL;
     json_value_t *value;
     int           ret = -1, len_ret;
-
-    // clear info parsed flag
-    info_parsed = false;
 
     // read file info.json
     str = util_read_file(data_dir, "info.json", &len_ret);
@@ -443,7 +430,6 @@ int parse_info(void)
     printf("INFO:   hourly   = %s\n", info.forecast_hourly_url);
 
     // success
-    info_parsed = true;
     ret = 0;
 
 cleanup_and_return:
@@ -452,43 +438,57 @@ cleanup_and_return:
     return ret;
 }
 
-int parse_daily(void)
+void parse_forecast(int which)
 {
     char *str = NULL;
     void *json = NULL;
-    int   ret = -1, len_ret;
+    int   len_ret;
     char *end_ptr;
+    char *json_filename;
+    forecast_t *forecast;
+    long start_us;
 
-    // clear parsed flag
-    daily_forecast_parsed = false;
+    // init json_filename, and forecast variables based on 'which' arg
+    if (which == PARSE_DAILY_FORECAST) {
+        json_filename = "daily.json";
+        forecast = daily;
+    } else {
+        json_filename = "hourly.json";
+        forecast = hourly;
+    }
+    cleanup_forecast(forecast);
 
-    // read daily.json file
-    str = util_read_file(data_dir, "daily.json", &len_ret);
+    // print starting msg
+    printf("INFO %s: parse_forecast %s starting\n", progname, json_filename);
+    start_us = util_microsec_timer();
+
+    // read forecast json file
+    str = util_read_file(data_dir, json_filename, &len_ret);
     if (str == NULL) {
-        printf("ERROR: parse_daily, read daily.json, %s\n", strerror(errno));
-        goto cleanup_and_return;
+        printf("ERROR: parse_forecast, read forecast json, %s\n", strerror(errno));
+        return;
     }
 
     // init json parser
     json = util_json_parse(str, &end_ptr);
     if (json == NULL) {
-        printf("ERROR: parse_daily, parse json\n");
-        goto cleanup_and_return;
+        printf("ERROR: parse_forecast, parse json\n");
+        free(str);
+        return;
     }
 
-    // loop over the day / night periods contained in the daily.json file
-    for (max_daily = 0; max_daily < MAX_DAILY; max_daily++) {
-        daily_t      *x = &daily[max_daily];
+    // loop over the periods of the json file
+    for (int i = 0; i < MAX_FORECAST; i++) {
+        forecast_t   *x = &forecast[i];
         json_value_t *value;
         void         *period;
         char          tmp_str[200];
         char          period_str[200];
 
         // get json period object
-        sprintf(period_str, "%d", max_daily);
+        sprintf(period_str, "%d", i);
         value = util_json_get_value(json, "properties", "periods", &period_str, NULL);  // xxx picoc requires &period_str ?
         if (value->type != JSON_TYPE_OBJECT) {
-            printf("value type %d\n", value->type);
             break;
         }
         period = value->u.object;
@@ -497,7 +497,7 @@ int parse_daily(void)
         value = util_json_get_value(period, "isDaytime", NULL);
         if (value->type != JSON_TYPE_FLAG) {
             printf("failed to get isDaytime, %d\n", value->type);
-            break;  // xxx maybe just continue on errors
+            continue;
         }
         x->is_daytime = value->u.flag;
 
@@ -505,8 +505,8 @@ int parse_daily(void)
         // also based o the is_daytime flag
         value = util_json_get_value(period, "startTime", NULL);
         if (value->type != JSON_TYPE_STRING) {
-            printf("failed to get tm, %d\n", value->type);
-            break;
+            printf("failed to get startTime, %d\n", value->type);
+            continue;
         }
         if (x->is_daytime) {
             sprintf(tmp_str, "%s", get_day_name(value->u.string));
@@ -515,11 +515,11 @@ int parse_daily(void)
         }
         x->day_name = strdup(tmp_str);
         
-        // get icon url
+        // get icon_url
         value = util_json_get_value(period, "icon", NULL);
         if (value->type != JSON_TYPE_STRING) {
             printf("failed to get icon, %d\n", value->type);
-            break;
+            continue;
         }
         x->icon_url = strdup(value->u.string);
 
@@ -530,10 +530,11 @@ int parse_daily(void)
         // - append ".png"
         if (strncmp(x->icon_url, "https://api.weather.gov/", 24) != 0) {
             printf("ERROR %s: unexpected icon_url %s\n", progname, x->icon_url);
+            continue;
         } else {
             strcpy(tmp_str, x->icon_url+24);
-            for (int i = 0; tmp_str[i]; i++) {
-                if (tmp_str[i] == '/') tmp_str[i] = '-';
+            for (int ii = 0; tmp_str[ii]; ii++) {
+                if (tmp_str[ii] == '/') tmp_str[ii] = '-';
             }
             strcat(tmp_str, ".png");
             x->icon_filename = strdup(tmp_str);
@@ -543,7 +544,7 @@ int parse_daily(void)
         value = util_json_get_value(period, "shortForecast", NULL);
         if (value->type != JSON_TYPE_STRING) {
             printf("failed to get shortForecast, %d\n", value->type);
-            break;
+            continue;
         }
         x->short_forecast = strdup(value->u.string);
 
@@ -551,13 +552,13 @@ int parse_daily(void)
         value = util_json_get_value(period, "temperature", NULL);
         if (value->type != JSON_TYPE_NUMBER) {
             printf("failed to get temperature, %d\n", value->type);
-            break;
+            continue;
         }
         double temperature = value->u.number;
         value = util_json_get_value(period, "temperatureUnit", NULL);
         if (value->type != JSON_TYPE_STRING) {
             printf("failed to get temperatureUnit, %d\n", value->type);
-            break;
+            continue;
         }
         sprintf(tmp_str, "%.0f%s", temperature, value->u.string);
         x->temperature = strdup(tmp_str);
@@ -569,14 +570,14 @@ int parse_daily(void)
         value = util_json_get_value(period, "windSpeed", NULL);
         if (value->type != JSON_TYPE_STRING) {
             printf("failed to get windSpeed, %d\n", value->type);
-            break;
+            continue;
         }
         strcpy(wind_speed, value->u.string);
 
         value = util_json_get_value(period, "windDirection", NULL);
         if (value->type != JSON_TYPE_STRING) {
             printf("failed to get windDirection, %d\n", value->type);
-            break;
+            continue;
         }
         strcpy(wind_dir, value->u.string);
 
@@ -594,15 +595,18 @@ int parse_daily(void)
         // get precip probability
         value = util_json_get_value(period, "probabilityOfPrecipitation", "value", NULL);
         if (value->type != JSON_TYPE_NUMBER) {
-            printf("failed to get precip, %d\n", value->type);
-            break;
+            printf("failed to get probabilityOfPrecipitation, %d\n", value->type);
+            continue;
         }
         sprintf(tmp_str, "%.0f%%", value->u.number);
         x->precip = strdup(tmp_str);
 
+        // set forecast item valid
+        x->valid = true;
+
         // debug print forecast info
-        if (0) {
-            printf("INFO: periods[%s] ...\n", period_str);
+        if (1) {
+            printf("INFO: %s periods[%s] ...\n", json_filename, period_str);
             printf("INFO:   is_daytime     %d\n", x->is_daytime);
             printf("INFO:   day_name       %s\n", x->day_name);
             printf("INFO:   icon_url       %s\n", x->icon_url);
@@ -613,16 +617,15 @@ int parse_daily(void)
             printf("INFO:   precip         %s\n", x->precip);
         }
     }
-    printf("INFO: max_daily = %d\n", max_daily);
 
     // download icons that have not already been dowloaded
-    // xxx and
-    for (int i = 0; i < max_daily; i++) {
-        daily_t *x = &daily[i];
+    for (int i = 0; i < MAX_FORECAST; i++) {
+        forecast_t *x = &forecast[i];
         char cmd[500];
-        unsigned char *pixels=NULL;
-        int rc, w, h;
-        sdlx_texture_t *icon_texture;
+
+        if (!x->valid) {
+            continue;
+        }
 
         if (!util_file_exists(icon_dir, x->icon_filename)) {
             sprintf(cmd, "curl --silent --max-time 10 --output %s/%s --header %s %s",
@@ -630,8 +633,19 @@ int parse_daily(void)
             printf("INFO: %s\n", cmd);
             system(cmd);
         }
+    }
 
-        // xxx comment
+    // create icon_texture for each forecast element
+    for (int i = 0; i < MAX_FORECAST; i++) {
+        forecast_t        *x = &forecast[i];
+        unsigned char  *pixels = NULL;
+        int             rc, w, h;
+        sdlx_texture_t *icon_texture;
+
+        if (!x->valid) {
+            continue;
+        }
+
         if (util_file_exists(icon_dir, x->icon_filename)) {
             rc = util_read_png_file(icon_dir, x->icon_filename, &pixels, &w, &h);
             if (rc != 0) {
@@ -648,40 +662,32 @@ int parse_daily(void)
         }
     }
 
-    // set parsed flag
-    printf("INFO: parse_daily success\n");
-    daily_forecast_parsed = true;
-    ret = 0;
-
-cleanup_and_return:
+    // cleanup and return
+    printf("INFO %s: parse_forecast %s completed, %0.3f secs\n", 
+           progname, json_filename, 
+           (util_microsec_timer() - start_us) / 1000000.0);
     util_json_free(json);
     free(str);
-    return ret;
-}
-
-int parse_hourly(void)
-{
-    // xxx todo
-    hourly_forecast_parsed = true;
-    return 0;
 }
 
 // -----------------  DISPLAY DAILY FORECAST  ----------------
 
 // xxx cleanup this routine, and comment
-void display_daily_forecast(void)
+void display_forecast(void)
 {
-    int rc, i, w, h, y;
-    sdlx_texture_t *icon_texture;
-    unsigned char *pixels;
+    int y;
 
     y = y_top;
 
     sdlx_render_printf_xyctr(sdlx_win_width/2, y, "%s %s", info.city, info.state);
     y += sdlx_char_height;
 
-    for (i = 0; i < max_daily; i++) {
-        daily_t *x = &daily[i];
+    for (int i = 0; i < MAX_FORECAST; i++) {
+        forecast_t *x = (mode == HOURLY ? &hourly[i] : &daily[i]);
+
+        if (!x->valid) {
+            continue;
+        }        
 
         // skip nightime forecast when mode is DAILY
         if (mode == DAILY && !x->is_daytime) {
@@ -721,7 +727,7 @@ void display_daily_forecast(void)
                     break;
                 }
             }
-            printf("XXX '%s' k=%d\n", short_forecast, k);
+            //printf("XXX '%s' k=%d\n", short_forecast, k);
             if (k > 0) {
                 short_forecast[k] = '\0';
                 sfl1 = short_forecast;
@@ -744,13 +750,6 @@ void display_daily_forecast(void)
         y += 250;
     }
 }
-
-// -----------------  DISPLAY HOURLY FORECAST  ----------------
-
-void display_hourly_forecast(void)
-{
-}
-
 
 // -----------------  UTILS  ----------------------------------
 
