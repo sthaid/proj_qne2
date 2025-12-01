@@ -1,5 +1,3 @@
-//#include <stddef.h>
-
 #include <utils.h>
 #include <logging.h>
 
@@ -33,9 +31,12 @@
 void util_get_location(double *latitude, double *longitude, double *altitude)
 {
     jmethodID method_id;
+    int tries = 0;
 
-    INFO("XXX TEST INFO PRINT FROM CPP\n");
+try_again:
+    INFO("XXX TEST INFO PRINT FROM CPP\n"); //xxx does this work
 
+    // preset return values to invalid
     if (latitude)  *latitude = INVALID_NUMBER;
     if (longitude) *longitude = INVALID_NUMBER;
     if (altitude)  *altitude = INVALID_NUMBER;
@@ -69,12 +70,25 @@ void util_get_location(double *latitude, double *longitude, double *altitude)
         }
     }
 
-    // xxx retry if results are 0.0
-
-cleanup:
     // clean up the localreferences.
     env->DeleteLocalRef(activity);
     env->DeleteLocalRef(clazz);
+
+    // retry if latitude, longitude or altitude are invalid
+    if ((latitude && (*latitude == 0 || *latitude == INVALID_NUMBER)) ||
+        (longitude && (*longitude == 0 || *longitude == INVALID_NUMBER)) ||
+        (altitude && (*altitude == INVALID_NUMBER))) 
+    {
+        if (tries++ == 10) {
+            if (latitude)  *latitude = INVALID_NUMBER;
+            if (longitude) *longitude = INVALID_NUMBER;
+            if (altitude)  *altitude = INVALID_NUMBER;
+        } else {
+            INFO("retrying get lat,long,alt\n");
+            sleep(1);
+            goto try_again;
+        }
+    }
 }
 
 #else

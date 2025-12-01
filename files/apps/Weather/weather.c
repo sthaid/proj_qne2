@@ -8,29 +8,14 @@
 #include <sdlx.h>
 #include <utils.h>
 
-// xxx testing
-// - at a info out of US
-// - at PeutoRico
-
-// xxx events
-// daily
-// hourly
-// vertical motion
-// add WEXITSTATUS to picoc
-
-// xxx 
+// xxx
+// - test at a loc out of US
+// - WEXITSTATUS to picoc
+// - display last time forecast queried
 // - text to speech
-// - display location
-// - option to reload
-// - log the durations
-// - add stgs to reload
-//     - display load time durations
-//     - display last time forecast queried
-// - save param
-// xxx tts
-// - "how to access android text to speech class from SDL3"
-
-// xxx review all prints, do they have progname
+//   - "how to access android text to speech class from SDL3"
+// - review all prints, do they have progname
+// - add api to just update numchars for font
 
 //
 // defines
@@ -108,6 +93,7 @@ void parse_forecast(int which);
 void display_forecast(void);
 
 char *get_day_name(char * str);
+void split_string(char *str_arg, char **split1, char **split2, int n)
 
 // -----------------  MAIN  ------------------------------------------
     
@@ -124,7 +110,7 @@ int main(int argc, char **argv)
 
     // save args
     if (argc != 2) {
-        printf("ERROR: data_dir arg expected\n");
+        printf("ERROR %s: data_dir arg expected\n", progname);
         return 1;
     }
     progname = argv[0];
@@ -184,8 +170,9 @@ int main(int argc, char **argv)
         } else if (mode == HOURLY && hourly_forecast_parsed) {
             display_forecast();
         } else {
-            // xxx Loading / Unavail
-            sdlx_render_printf_xyctr(sdlx_win_width/2, sdlx_win_height/2, "Unavailable");
+            sdlx_print_init(DEFAULT_FONT, COLOR_WHITE, COLOR_BLACK);
+            sdlx_render_printf_xyctr(sdlx_win_width/2, sdlx_win_height/2, "Loading");
+            sdlx_print_init(SMALL_FONT, COLOR_WHITE, COLOR_BLACK);
         }
 
         // register events
@@ -304,7 +291,7 @@ void initiate_forecast_download(void)
     int    rc;
     double latitude, longitude;
 
-    printf("INFO: initiate_forecast_download starting\n");
+    printf("INFO %s: initiate_forecast_download starting\n", progname);
     start_us = util_microsec_timer();
 
     // cleanup forecast data structures
@@ -320,17 +307,21 @@ void initiate_forecast_download(void)
     util_delete_file(data_dir, "hourly.temp");
 
     // get lat/long
-    util_get_location(&latitude, &longitude, NULL);  // xxx check for no lat/long
-    printf("INFO: lat/long = %0.4f %0.4f\n", latitude, longitude);
+    util_get_location(&latitude, &longitude, NULL);
+    if (latitude == INVALID_NUMBER || longitude == INVALID_NUMBER) {
+        printf("ERROR %s: failed to get lat/long\n", progname);
+        return;
+    }
+    printf("INFO %s: long/lat = %0.4f %0.4f\n", progname, latitude, longitude);
 
     // get forecast information, save to info.json
     sprintf(url, "https://api.weather.gov/points/%0.4f,%0.4f", latitude, longitude);
     sprintf(cmd, "curl --silent --max-time 10 --output %s/%s --header %s %s",
             data_dir, "info.json", HEADER, url);
-    printf("INFO: RUNNING '%s'\n", cmd);
+    printf("INFO %s: RUNNING '%s'\n", progname, cmd);
     rc = system(cmd);
     if (rc != 0) {
-        printf("ERROR: system curl info.json failed, rc=0x%x\n", rc);
+        printf("ERROR %s: system curl info.json failed, rc=0x%x\n", progname, rc);  // xxx use WEXITSTATUS
         return;
     }
 
@@ -339,7 +330,7 @@ void initiate_forecast_download(void)
     // - info.forecast_hourly_url
     rc = parse_info();
     if (rc != 0) {
-        printf("ERROR: parse info.json failed\n");
+        printf("ERROR %s: parse info.json failed\n", progname);
         return;
     }
 
@@ -348,10 +339,10 @@ void initiate_forecast_download(void)
     sprintf(daily_json, "%s/daily.json", data_dir);
     sprintf(cmd, "(curl --silent --max-time 30 --output %s --header %s %s; mv %s %s) &",
             daily_temp, HEADER, info.forecast_daily_url, daily_temp, daily_json);
-    printf("INFO: RUNNING '%s'\n", cmd);
+    printf("INFO %s: RUNNING '%s'\n", progname, cmd);
     rc = system(cmd);
     if (rc != 0) {
-        printf("ERROR: system curl daily.json failed, rc=0x%x\n", rc);
+        printf("ERROR %s: system curl daily.json failed, rc=0x%x\n", progname, rc);
     }
 
     // initiate dowload hourly forecast, save to hourly.json
@@ -359,14 +350,15 @@ void initiate_forecast_download(void)
     sprintf(hourly_json, "%s/hourly.json", data_dir);
     sprintf(cmd, "(curl --silent --max-time 30 --output %s --header %s %s; mv %s %s) &",
             hourly_temp, HEADER, info.forecast_hourly_url, hourly_temp, hourly_json);
-    printf("INFO: RUNNING '%s'\n", cmd);
+    printf("INFO %s: RUNNING '%s'\n", progname, cmd);
     rc = system(cmd);
     if (rc != 0) {
-        printf("ERROR: system curl hourly.json failed, rc=0x%x\n", rc);
+        printf("ERROR %s: system curl hourly.json failed, rc=0x%x\n", progname, rc);
     }
 
     // print completed, with duration this routine took
-    printf("INFO: initiate_forecast_download done, %.1f secs\n", (util_microsec_timer() - start_us) / 1000000.);
+    printf("INFO %s: initiate_forecast_download done, %.1f secs\n", 
+           progname, (util_microsec_timer() - start_us) / 1000000.);
 }
 
 // -----------------  PARSE JSON FILES  ---------------------------
@@ -381,14 +373,14 @@ int parse_info(void)
     // read file info.json
     str = util_read_file(data_dir, "info.json", &len_ret);
     if (str == NULL) {
-        printf("ERROR: parse_info, read info.json, %s\n", strerror(errno));
+        printf("ERROR %s: parse_info, read info.json, %s\n", progname, strerror(errno));
         goto cleanup_and_return;
     }
 
     // init json parser
     json = util_json_parse(str, &end_ptr);
     if (json == NULL) {
-        printf("ERROR: parse_info, parse json\n");
+        printf("ERROR %s: parse_info, parse json\n", progname);
         goto cleanup_and_return;
     }
 
@@ -398,37 +390,37 @@ int parse_info(void)
     // - city, state     : location of the forecast
     value = util_json_get_value(json, "properties", "forecast", NULL);
     if (value->type != JSON_TYPE_STRING) {
-        printf("ERROR: parse_info, forecast %d\n", value->type);
+        printf("ERROR %s: parse_info, forecast %d\n", progname, value->type);
         goto cleanup_and_return;
     }
     info.forecast_daily_url = strdup(value->u.string);
 
     value = util_json_get_value(json, "properties", "forecastHourly", NULL);
     if (value->type != JSON_TYPE_STRING) {
-        printf("ERROR: parse_info, forecastHourly %d\n", value->type);
+        printf("ERROR %s: parse_info, forecastHourly %d\n", progname, value->type);
         goto cleanup_and_return;
     }
     info.forecast_hourly_url = strdup(value->u.string);
 
     value = util_json_get_value(json, "properties", "relativelocation", "properties", "city", NULL);
     if (value->type != JSON_TYPE_STRING) {
-        printf("ERROR: parse_info, city %d\n", value->type);
+        printf("ERROR %s: parse_info, city %d\n", progname, value->type);
         goto cleanup_and_return;
     }
     info.city = strdup(value->u.string);
 
     value = util_json_get_value(json, "properties", "relativelocation", "properties", "state", NULL);
     if (value->type != JSON_TYPE_STRING) {
-        printf("ERROR: parse_info, state %d\n", value->type);
+        printf("ERROR %s: parse_info, state %d\n", progname, value->type);
         goto cleanup_and_return;
     }
     info.state = strdup(value->u.string);
 
     // debug print the results
-    printf("INFO: parse info.json results:\n");
-    printf("INFO:   location = %s %s\n", info.city, info.state);
-    printf("INFO:   daily    = %s\n", info.forecast_daily_url);
-    printf("INFO:   hourly   = %s\n", info.forecast_hourly_url);
+    printf("INFO %s: parse info.json results:\n", progname);
+    printf("INFO %s:   location = %s %s\n", progname, info.city, info.state);
+    printf("INFO %s:   daily    = %s\n", progname, info.forecast_daily_url);
+    printf("INFO %s:   hourly   = %s\n", progname, info.forecast_hourly_url);
 
     // success
     ret = 0;
@@ -466,14 +458,14 @@ void parse_forecast(int which)
     // read forecast json file
     str = util_read_file(data_dir, json_filename, &len_ret);
     if (str == NULL) {
-        printf("ERROR: parse_forecast, read forecast json, %s\n", strerror(errno));
+        printf("ERROR %s: parse_forecast, read forecast json, %s\n", progname, strerror(errno));
         return;
     }
 
     // init json parser
     json = util_json_parse(str, &end_ptr);
     if (json == NULL) {
-        printf("ERROR: parse_forecast, parse json\n");
+        printf("ERROR %s: parse_forecast, parse json\n", progname);
         free(str);
         return;
     }
@@ -497,7 +489,7 @@ void parse_forecast(int which)
         // get is_daytime
         value = util_json_get_value(period, "isDaytime", NULL);
         if (value->type != JSON_TYPE_FLAG) {
-            printf("failed to get isDaytime, %d\n", value->type);
+            printf("ERROR %s: failed to get isDaytime, %d\n", progname, value->type);
             continue;
         }
         x->is_daytime = value->u.flag;
@@ -506,7 +498,7 @@ void parse_forecast(int which)
         // also based o the is_daytime flag
         value = util_json_get_value(period, "startTime", NULL);
         if (value->type != JSON_TYPE_STRING) {
-            printf("failed to get startTime, %d\n", value->type);
+            printf("ERROR %s: failed to get startTime, %d\n", progname, value->type);
             continue;
         }
         if (which == PARSE_DAILY_FORECAST) {
@@ -529,7 +521,7 @@ void parse_forecast(int which)
         // get icon_url
         value = util_json_get_value(period, "icon", NULL);
         if (value->type != JSON_TYPE_STRING) {
-            printf("failed to get icon, %d\n", value->type);
+            printf("ERROR %s: failed to get icon, %d\n", progname, value->type);
             continue;
         }
         x->icon_url = strdup(value->u.string);
@@ -554,7 +546,7 @@ void parse_forecast(int which)
         // get shortForecast
         value = util_json_get_value(period, "shortForecast", NULL);
         if (value->type != JSON_TYPE_STRING) {
-            printf("failed to get shortForecast, %d\n", value->type);
+            printf("ERROR %s: failed to get shortForecast, %d\n", progname, value->type);
             continue;
         }
         x->short_forecast = strdup(value->u.string);
@@ -562,13 +554,13 @@ void parse_forecast(int which)
         // get temperature, and append temperatureUnit
         value = util_json_get_value(period, "temperature", NULL);
         if (value->type != JSON_TYPE_NUMBER) {
-            printf("failed to get temperature, %d\n", value->type);
+            printf("ERROR %s: failed to get temperature, %d\n", progname, value->type);
             continue;
         }
         double temperature = value->u.number;
         value = util_json_get_value(period, "temperatureUnit", NULL);
         if (value->type != JSON_TYPE_STRING) {
-            printf("failed to get temperatureUnit, %d\n", value->type);
+            printf("ERROR %s: failed to get temperatureUnit, %d\n", progname, value->type);
             continue;
         }
         sprintf(tmp_str, "%.0f%s", temperature, value->u.string);
@@ -580,14 +572,14 @@ void parse_forecast(int which)
 
         value = util_json_get_value(period, "windSpeed", NULL);
         if (value->type != JSON_TYPE_STRING) {
-            printf("failed to get windSpeed, %d\n", value->type);
+            printf("ERROR %s: failed to get windSpeed, %d\n", progname, value->type);
             continue;
         }
         strcpy(wind_speed, value->u.string);
 
         value = util_json_get_value(period, "windDirection", NULL);
         if (value->type != JSON_TYPE_STRING) {
-            printf("failed to get windDirection, %d\n", value->type);
+            printf("ERROR %s: failed to get windDirection, %d\n", progname, value->type);
             continue;
         }
         strcpy(wind_dir, value->u.string);
@@ -606,7 +598,7 @@ void parse_forecast(int which)
         // get precip probability
         value = util_json_get_value(period, "probabilityOfPrecipitation", "value", NULL);
         if (value->type != JSON_TYPE_NUMBER) {
-            printf("failed to get probabilityOfPrecipitation, %d\n", value->type);
+            printf("ERROR %s: failed to get probabilityOfPrecipitation, %d\n", progname, value->type);
             continue;
         }
         sprintf(tmp_str, "%.0f%%", value->u.number);
@@ -617,15 +609,15 @@ void parse_forecast(int which)
 
         // debug print forecast info
         if (1) {
-            printf("INFO: %s periods[%s] ...\n", json_filename, period_str);
-            printf("INFO:   is_daytime     %d\n", x->is_daytime);
-            printf("INFO:   day_name       %s\n", x->day_name);
-            printf("INFO:   icon_url       %s\n", x->icon_url);
-            printf("INFO:   icon_filename  %s\n", x->icon_filename);
-            printf("INFO:   short_forecast %s\n", x->short_forecast);
-            printf("INFO:   temperature    %s\n", x->temperature);
-            printf("INFO:   wind           %s\n", x->wind);
-            printf("INFO:   precip         %s\n", x->precip);
+            printf("INFO %s: %s periods[%s] ...\n", progname, json_filename, period_str);
+            printf("INFO %s:   is_daytime     %d\n", progname, x->is_daytime);
+            printf("INFO %s:   day_name       %s\n", progname, x->day_name);
+            printf("INFO %s:   icon_url       %s\n", progname, x->icon_url);
+            printf("INFO %s:   icon_filename  %s\n", progname, x->icon_filename);
+            printf("INFO %s:   short_forecast %s\n", progname, x->short_forecast);
+            printf("INFO %s:   temperature    %s\n", progname, x->temperature);
+            printf("INFO %s:   wind           %s\n", progname, x->wind);
+            printf("INFO %s:   precip         %s\n", progname, x->precip);
         }
     }
 
@@ -641,7 +633,7 @@ void parse_forecast(int which)
         if (!util_file_exists(icon_dir, x->icon_filename)) {
             sprintf(cmd, "curl --silent --max-time 10 --output %s/%s --header %s %s",
                     icon_dir, x->icon_filename, HEADER, x->icon_url);
-            printf("INFO: %s\n", cmd);
+            printf("INFO %s: %s\n", progname, cmd);
             system(cmd);
         }
     }
@@ -683,7 +675,9 @@ void parse_forecast(int which)
 
 // -----------------  DISPLAY DAILY FORECAST  ----------------
 
-// xxx cleanup this routine, and comment
+#define ICON_WH 200  // width and height of forecast icon
+#define Y_STEP  250
+
 void display_forecast(void)
 {
     int y;
@@ -696,6 +690,7 @@ void display_forecast(void)
     for (int i = 0; i < MAX_FORECAST; i++) {
         forecast_t *x = (mode == HOURLY ? &hourly[i] : &daily[i]);
 
+        // if forecast entry is not valid then continue
         if (!x->valid) {
             continue;
         }        
@@ -705,60 +700,33 @@ void display_forecast(void)
             continue;
         }
 
-        if (y > y_display_end - 200) {
-            printf("DONE AT y = %d  y_display_end = %d\n", y, y_display_end);
+        // if y coord is below bottom then done displaying
+        if (y > y_display_end - ICON_WH) {
             break;
         }
 
-        if (y < y_display_begin - 200) {
-            //xxx printf("CONTINUING AT y = %d  begin=%d\n", y, y_display_begin);
-            y += 250;
+        // if y coord is above top then skip
+        if (y < y_display_begin - ICON_WH) {
+            y += Y_STEP;
             continue;
         }
 
         // display the forecast icon
         if (x->icon_texture) {
-            sdlx_render_texture(0,y,200,200, x->icon_texture);
+            sdlx_render_texture(0, y, ICON_WH, ICON_WH, x->icon_texture);
         }
 
-        // xxx make this a routine
-        // xxx what if no short_forecast
-        //123456789 123456789 123456789 
-        //Slight chance Light RainXxxxxxxxxxxxxx
-        char *sfl1=NULL, *sfl2=NULL;
-        char short_forecast[200];
-        strcpy(short_forecast, x->short_forecast);
-        if (strlen(short_forecast) <= 24) {
-            sfl1 = short_forecast;
-            sfl2 = NULL;
-        } else {
-            int k;
-            for (k = 24; k > 0; k--) {
-                if (short_forecast[k] == ' ') {
-                    break;
-                }
-            }
-            //printf("XXX '%s' k=%d\n", short_forecast, k);
-            if (k > 0) {
-                short_forecast[k] = '\0';
-                sfl1 = short_forecast;
-                sfl2 = (short_forecast[k+1] != '\0' ? &short_forecast[k+1] : NULL);
-            } else {
-                sfl1 = short_forecast;
-                sfl2 = NULL;
-            }
-        }
+        // split the short forecast string to 2 lines
+        split_string(x->short_forecast, &sf1, &sf2, 24);
 
         // display forecast info:
         // - day_name, temperature, wind, and precip probability
-        // - short_forecast
-        sdlx_render_printf(200,y, "%s: %s %s %s", x->day_name, x->temperature, x->wind, x->precip);
-        sdlx_render_printf(200,y+1*sdlx_char_height, "%s", sfl1);
-        if (sfl2)
-            sdlx_render_printf(200,y+2*sdlx_char_height, "%s", sfl2);
+        sdlx_render_printf(ICON_WH,y, "%s: %s %s %s", x->day_name, x->temperature, x->wind, x->precip);
+        sdlx_render_printf(ICON_WH,y+1*sdlx_char_height, "%s", sf1);
+        sdlx_render_printf(ICON_WH,y+2*sdlx_char_height, "%s", sf2);
 
         // advance y
-        y += 250;
+        y += Y_STEP;
     }
 }
 
@@ -786,4 +754,46 @@ char *get_day_name(char * time_str)
     }
 
     return "Error";
+}
+
+void split_string(char *str_arg, char **split1, char **split2, int n)
+{
+    int k;
+    static char str[200];
+
+    // if str_arg is null then return empty str for the 2 splits
+    if (str_arg == NULL) {
+        **split1 = "";;
+        **split2 = "";
+        return;
+    }
+
+    // make static copy of caller str_arg
+    strcpy(str, str_arg);
+
+    // if str is already <= n chars then no need to split
+    if (strlen(str) <= n) {
+        **split1 = str;
+        **split2 = "";
+        return;
+    }
+
+    // find first space char at or below str idx n
+    for (k = n; k > 0; k--) {
+        if (str[k] == ' ') {
+            break;
+        }
+    }
+
+    // if space char found then split str at the space char
+    if (k > 0) {
+        str[k] = '\0';
+        **split1 = str;
+        **split2 = &str[k+1];
+        return;
+    }
+
+    // no space char found, return the entire str in split1
+    *split1 = str;
+    *split2 = "";
 }
