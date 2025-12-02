@@ -475,7 +475,6 @@ static sdlx_loc_t *render_text(bool xy_is_ctr, int x, int y, char * str)
     loc.y = pos.y / scale;
     loc.w = pos.w / scale;
     loc.h = pos.h / scale;
-
     return &loc;
 }
 
@@ -970,12 +969,14 @@ sdlx_texture_t *sdlx_create_text_texture(char * str)
     return (sdlx_texture_t*)texture;
 }
 
-void sdlx_render_texture(int x, int y, int w, int h, sdlx_texture_t *texture)
+sdlx_loc_t *sdlx_render_texture(int x, int y, int w, int h, sdlx_texture_t *texture)
 {
     SDL_FRect dest;
+    static sdlx_loc_t loc;
 
     if (texture == NULL) {
-        return;
+        loc.x = x; loc.y = y; loc.w = 0; loc.h = 0;
+        return &loc;
     }
 
     dest.x = x * scale;
@@ -984,6 +985,13 @@ void sdlx_render_texture(int x, int y, int w, int h, sdlx_texture_t *texture)
     dest.h = h * scale;
 
     SDL_RenderTextureRotated(renderer, (SDL_Texture*)texture, NULL, &dest, 0, NULL, false);
+
+    // return the display location where the text was rendered;
+    loc.x = x;
+    loc.y = y;
+    loc.w = w;
+    loc.h = h;
+    return &loc;
 }
 
 void sdlx_render_texture_ex(int x, int y, int w, int h, double angle, sdlx_texture_t *texture)

@@ -107,6 +107,14 @@ void StdlibSystem(struct ParseState *Parser, struct Value *ReturnValue,
     ReturnValue->Val->Integer = system(Param[0]->Val->Pointer);
 }
 
+void StdlibWexitstatus(struct ParseState *Parser, struct Value *ReturnValue,
+    struct Value **Param, int NumArgs)
+{
+    int rc = Param[0]->Val->Integer;
+
+    ReturnValue->Val->Integer = WEXITSTATUS(rc);
+}
+
 #if 0
 void StdlibBsearch(struct ParseState *Parser, struct Value *ReturnValue,
     struct Value **Param, int NumArgs)
@@ -192,6 +200,7 @@ struct LibraryFunction StdlibFunctions[] =
     {StdlibExit, "void exit(int);"},
     {StdlibGetenv, "char *getenv(char *);"},
     {StdlibSystem, "int system(char *);"},
+    {StdlibWexitstatus, "int WEXITSTATUS(int);"},
 /*    {StdlibBsearch, "void *bsearch(void *,void *,int,int,int (*)());"}, */
 /*    {StdlibQsort, "void *qsort(void *,int,int,int (*)());"}, */
     {StdlibAbs, "int abs(int);"},
