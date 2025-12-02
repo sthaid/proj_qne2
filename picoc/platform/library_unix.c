@@ -404,8 +404,10 @@ void Sdl_render_texture (struct ParseState *Parser, struct Value *ReturnValue,
     int            w       = Param[2]->Val->Integer;
     int            h       = Param[3]->Val->Integer;
     sdlx_texture_t *texture = (sdlx_texture_t*)Param[4]->Val->Pointer;
+    sdlx_loc_t     *loc;
 
-    sdlx_render_texture(x, y, w, h, texture);
+    loc = sdlx_render_texture(x, y, w, h, texture);
+    ReturnValue->Val->Pointer = loc;
 }
 
 void Sdl_render_texture_ex (struct ParseState *Parser, struct Value *ReturnValue,
@@ -786,7 +788,7 @@ struct LibraryFunction SdlFunctions[] = {
     { Sdl_create_texture_from_pixels,   "sdlx_texture_t *sdlx_create_texture_from_pixels(unsigned char *pixels, int w, int h);" },
     { Sdl_create_filled_circle_texture, "sdlx_texture_t *sdlx_create_filled_circle_texture(int radius, int color);" },
     { Sdl_create_text_texture,          "sdlx_texture_t *sdlx_create_text_texture(char *str);" },
-    { Sdl_render_texture,               "void sdlx_render_texture(int x, int y, int w, int h, sdlx_texture_t *texture);" },
+    { Sdl_render_texture,               "sdlx_loc_t *sdlx_render_texture(int x, int y, int w, int h, sdlx_texture_t *texture);" },
     { Sdl_render_texture_ex,            "void sdlx_render_texture_ex(int x, int y, int w, int h, double angle, sdlx_texture_t *texture);" },
     { Sdl_render_texture_ex2,           "void sdlx_render_texture_ex2(int x, int y, int w, int h, double angle, int xctr, int yctr, sdlx_texture_t *texture);" },
     { Sdl_destroy_texture,              "void sdlx_destroy_texture(sdlx_texture_t *texture);" },

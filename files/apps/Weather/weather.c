@@ -13,7 +13,6 @@
 // - text to speech
 //   - "how to access android text to speech class from SDL3"
 // - add api to just update numchars for font
-// - display long forecast
 
 //
 // defines
@@ -29,7 +28,6 @@
 #define EVID_MODE_SELECT      1
 #define EVID_RELOAD_FORECAST  2
 #define EVID_FORECAST         100 // 100..(100+MAX_FORECASST)
-//xxx more events
 
 #define PARSE_DAILY_FORECAST  1
 #define PARSE_HOURLY_FORECAST 2
@@ -191,8 +189,7 @@ int main(int argc, char **argv)
         // present the display
         sdlx_display_present();
 
-        // wait for event, with xxx timeout
-        // xxx timeout on this
+        // wait for event, timeout is either 100ms or infinite
         timeout = (!daily_forecast_parsed || !hourly_forecast_parsed) ? 100000 : -1;
         sdlx_get_event(timeout, &event);
 
