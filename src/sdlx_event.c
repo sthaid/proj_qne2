@@ -125,6 +125,10 @@ void sdlx_register_control_events(char *evstr1, char *evstr2, char *evstr3,
 
     sdlx_print_init(DEFAULT_FONT, fg_color, bg_color);
 
+    // xxx trial, fill entire control events area with bg_color
+    y = sdlx_win_height - 150;
+    sdlx_render_fill_rect(0, y, sdlx_win_width, sdlx_win_height-y, bg_color);
+
     for (i = 0; i < 3; i++) {
         if (evstr[i] == NULL) {
             continue;

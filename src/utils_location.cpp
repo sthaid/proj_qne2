@@ -7,6 +7,7 @@
 
 #include <SDL3/SDL.h>
 #include <jni.h>
+#include <unistd.h>
 
 // The following comment is copied from here:
 //   https://wiki.libsdl.org/SDL3/SDL_GetAndroidActivity

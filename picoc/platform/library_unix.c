@@ -171,6 +171,14 @@ void Sdl_print_init (struct ParseState *Parser, struct Value *ReturnValue,
     sdlx_print_init(numchars, fg_color, bg_color);
 }
 
+void Sdl_print_init_numchars (struct ParseState *Parser, struct Value *ReturnValue,
+	struct Value **Param, int NumArgs)
+{
+    double numchars = Param[0]->Val->FP;
+
+    sdlx_print_init_numchars(numchars);
+}
+
 void Sdl_print_init_color (struct ParseState *Parser, struct Value *ReturnValue,
 	struct Value **Param, int NumArgs)
 {
@@ -766,6 +774,7 @@ struct LibraryFunction SdlFunctions[] = {
 
     // render text
     { Sdl_print_init,              "void sdlx_print_init(double numchars, int fg_color, int bg_color);" },
+    { Sdl_print_init_numchars,     "void sdlx_print_init_numchars(double numchars);" },
     { Sdl_print_init_color,        "void sdlx_print_init_color(int fg_color, int bg_color);" },
     { Sdl_print_save,              "void sdlx_print_save(sdlx_print_state_t *save);" },
     { Sdl_print_restore,           "void sdlx_print_restore(sdlx_print_state_t *restore);" },

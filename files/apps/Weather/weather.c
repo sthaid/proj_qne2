@@ -9,10 +9,8 @@
 #include <utils.h>
 
 // xxx
-// - test at a loc out of US
 // - text to speech
-//   - "how to access android text to speech class from SDL3"
-// - add api to just update numchars for font
+//   google search- "how to access android text to speech class from SDL3"
 
 //
 // defines
@@ -171,9 +169,9 @@ int main(int argc, char **argv)
         } else if (mode == HOURLY && hourly_forecast_parsed) {
             display_forecast();
         } else {
-            sdlx_print_init(DEFAULT_FONT, COLOR_WHITE, COLOR_BLACK);
+            sdlx_print_init_numchars(DEFAULT_FONT);
             sdlx_render_printf_xyctr(sdlx_win_width/2, sdlx_win_height/2, "%s", download_status);
-            sdlx_print_init(SMALL_FONT, COLOR_WHITE, COLOR_BLACK);
+            sdlx_print_init_numchars(SMALL_FONT);
         }
 
         // register events
@@ -702,7 +700,7 @@ void parse_forecast(int which)
 void display_forecast(void)
 {
     int y;
-    sdlx_loc_t *loc;
+    sdlx_loc_t loc;
     char *lines[MAX_SHORT_FORECAST_LINES];
     int max_lines;
 
@@ -737,17 +735,22 @@ void display_forecast(void)
 
         // display the forecast icon
         if (x->icon_texture) {
-            loc = sdlx_render_texture(0, y, ICON_WH, ICON_WH, x->icon_texture);
-            sdlx_register_event(loc, EVID_FORECAST+i);
+            sdlx_render_texture(0, y, ICON_WH, ICON_WH, x->icon_texture);
+
+            loc.x = 0;
+            loc.y = y;
+            loc.w = sdlx_win_width;
+            loc.h = ICON_WH;
+            sdlx_register_event(&loc, EVID_FORECAST+i);
         }
 
         // display forecast info ...
         // - day_name, temperature, wind, and precip probability
-        sdlx_render_printf(ICON_WH,y, "%s: %s %s %s", x->day_name, x->temperature, x->wind, x->precip);
+        sdlx_render_printf(ICON_WH,y+2, "%s: %s %s %s", x->day_name, x->temperature, x->wind, x->precip);
         // - short_forecast
         split_string(x->short_forecast, lines, MAX_SHORT_FORECAST_LINES, &max_lines, 24);
         for (int k = 0; k < max_lines; k++) {
-            sdlx_render_printf(ICON_WH,y+(k+1)*sdlx_char_height, "%s", lines[k]);
+            sdlx_render_printf(ICON_WH,y+2+(k+1)*sdlx_char_height, "%s", lines[k]);
         }
 
         // advance y
@@ -756,8 +759,8 @@ void display_forecast(void)
 }
 
 #define MAX_DETAILED_FORECAST_LINES 15
-
-// xxx add up/down events
+#define EVID_PREVIOUS 1
+#define EVID_NEXT     2
 
 void display_detailed_forecast(int idx)
 {
@@ -779,11 +782,11 @@ void display_detailed_forecast(int idx)
 
         // display forecast info ...
         // - day_name, temperature, wind, and precip probability
-        sdlx_render_printf(ICON_WH, y, "%s: %s %s %s", x->day_name, x->temperature, x->wind, x->precip);
+        sdlx_render_printf(ICON_WH, y+2, "%s: %s %s %s", x->day_name, x->temperature, x->wind, x->precip);
         // - short_forecast
         split_string(x->short_forecast, lines, MAX_SHORT_FORECAST_LINES, &max_lines, 24);
         for (int k = 0; k < max_lines; k++) {
-            sdlx_render_printf(ICON_WH,y+(k+1)*sdlx_char_height, "%s", lines[k]);
+            sdlx_render_printf(ICON_WH,y+2+(k+1)*sdlx_char_height, "%s", lines[k]);
         }
         // - detailed_forecast
         split_string(x->detailed_forecast, lines, MAX_DETAILED_FORECAST_LINES, &max_lines, 30);
@@ -792,8 +795,9 @@ void display_detailed_forecast(int idx)
         }
 
         // register events
-        // xxx this should overwirte the bottom of display
-        sdlx_register_control_events(NULL, NULL, "X", COLOR_WHITE, COLOR_BLACK, 0, 0, EVID_QUIT);
+        sdlx_register_control_events(
+            "^", "v", "X", COLOR_WHITE, COLOR_BLACK, 
+            EVID_PREVIOUS, EVID_NEXT, EVID_QUIT);
 
         // present the display
         sdlx_display_present();
@@ -806,6 +810,28 @@ void display_detailed_forecast(int idx)
         case EVID_QUIT:
             done = true;
             break;
+        case EVID_PREVIOUS: {
+            forecast_t *fc = (mode == HOURLY ? &hourly[0] : &daily[0]);  // xxx picoc problem
+            int i = idx-1;
+            while (i >= 0 && (!fc[i].valid || (mode == DAILY && !fc[i].is_daytime))) {
+                i--;
+            }
+            if (i >= 0) {
+                idx = i;
+                x = (mode == HOURLY ? &hourly[idx] : &daily[idx]);
+            }
+            break; }
+        case EVID_NEXT: {
+            forecast_t *fc = (mode == HOURLY ? &hourly[0] : &daily[0]);  // xxx picoc problem
+            int i = idx+1;
+            while (i < MAX_FORECAST && (!fc[i].valid || (mode == DAILY && !fc[i].is_daytime))) {
+                i++;
+            }
+            if (i < MAX_FORECAST) {
+                idx = i;
+                x = (mode == HOURLY ? &hourly[idx] : &daily[idx]);
+            }
+            break; }
         }
     }
 }

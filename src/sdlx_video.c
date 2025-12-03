@@ -379,7 +379,7 @@ void sdlx_print_init_color(int fg_color, int bg_color)
     print_state.bg_color = bg_color;
 }
 
-void sdlx_print_init(double numchars, int fg_color, int bg_color)
+void sdlx_print_init_numchars(double numchars)
 {
     int ptsize;
     double chw_fp, chh_fp;
@@ -408,12 +408,16 @@ void sdlx_print_init(double numchars, int fg_color, int bg_color)
     sdlx_char_width  = rint(sdlx_win_width / numchars);  // xxx nearbyint
     sdlx_char_height = rint(sdlx_char_width / 0.6);
 
-    // save new font color xxx comment
+    // save new font ptsize and sdlx_char width/height to print_state
     print_state.ptsize = ptsize;
     print_state.char_width = sdlx_char_width;
     print_state.char_height = sdlx_char_height;
-    print_state.fg_color = fg_color;
-    print_state.bg_color = bg_color;
+}
+
+void sdlx_print_init(double numchars, int fg_color, int bg_color)
+{
+    sdlx_print_init_numchars(numchars);
+    sdlx_print_init_color(fg_color, bg_color);
 }
 
 static sdlx_loc_t *render_text(bool xy_is_ctr, int x, int y, char * str)
