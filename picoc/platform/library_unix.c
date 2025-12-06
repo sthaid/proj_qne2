@@ -1247,20 +1247,6 @@ void Util_json_get_value(struct ParseState *Parser, struct Value *ReturnValue,
 }
 
 //
-// utils get location: latitude, longitude, and altitude
-//
-
-void Util_get_location(struct ParseState *Parser, struct Value *ReturnValue,
-        struct Value **Param, int NumArgs)
-{
-    double *lat = (double*)Param[0]->Val->Pointer;
-    double *lng = (double*)Param[1]->Val->Pointer;
-    double *alt = (double*)Param[2]->Val->Pointer;
-
-    util_get_location(lat, lng, alt);
-}
-
-//
 // utils read/write 32-bit RGBA png files
 //
 
@@ -1292,6 +1278,38 @@ void Util_write_png_file(struct ParseState *Parser, struct Value *ReturnValue,
     rc = util_write_png_file(dir, filename, pixels, w, h);
 
     ReturnValue->Val->Integer = rc;
+}
+
+//
+// utils get location: latitude, longitude, and altitude
+//
+
+void Util_get_location(struct ParseState *Parser, struct Value *ReturnValue,
+        struct Value **Param, int NumArgs)
+{
+    double *lat = (double*)Param[0]->Val->Pointer;
+    double *lng = (double*)Param[1]->Val->Pointer;
+    double *alt = (double*)Param[2]->Val->Pointer;
+
+    util_get_location(lat, lng, alt);
+}
+
+//
+// utils text to speech
+//
+
+void Util_text_to_speech(struct ParseState *Parser, struct Value *ReturnValue,
+        struct Value **Param, int NumArgs)
+{
+    char *text = Param[0]->Val->Pointer;
+
+    util_text_to_speech(text);
+}
+
+void Util_text_to_speech_stop(struct ParseState *Parser, struct Value *ReturnValue,
+        struct Value **Param, int NumArgs)
+{
+    util_text_to_speech_stop();
 }
 
 //
@@ -1332,11 +1350,14 @@ struct LibraryFunction UtilsFunctions[] = {
     { Util_json_parse,       "void *util_json_parse(char *str, char **end_ptr);" },
     { Util_json_free,        "void util_json_free(void *json_root);" },
     { Util_json_get_value,   "json_value_t *util_json_get_value(void *json_item, ...);" },
-    // location
-    { Util_get_location,     "void util_get_location(double *latitude, double *longitude, double *altitude);" },
     // png file read/write
     { Util_read_png_file,    "int util_read_png_file(char *dir, char *filename, unsigned char **pixels, int *w, int *h);" },
     { Util_write_png_file,   "int util_write_png_file(char *dir, char *filename, unsigned char *pixels, int w, int h);" },
+    // location
+    { Util_get_location,     "void util_get_location(double *latitude, double *longitude, double *altitude);" },
+    // text to speech
+    { Util_text_to_speech,      "void util_text_to_speech(char *text);" },
+    { Util_text_to_speech_stop, "void util_text_to_speech_stop(void);" },
 
     { NULL, NULL } };
 

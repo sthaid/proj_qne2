@@ -30,7 +30,7 @@ SRCS_COMMON="\
        ../src/sdlx_event.c \
        ../src/svcs_stubs.c \
        ../src/utils.c \
-       ../src/utils_location.cpp \
+       ../src/utils_android.cpp \
        ../src/logging.c \
        ../cJSON/cJSON.c \
        ../lodepng/lodepng.c"

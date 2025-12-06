@@ -1,47 +1,75 @@
+git commit android/setup_files/app_jni_src_Android.mk bin/eztest bin/src/ezsh.c files/apps/Weather/weather.c linux/Makefile picoc/Makefile picoc/platform/library_unix.c src/utils.h src/utils_android.cpp zz_notes/todo
+
+
+xxxxxxxxxxxxxxxx
+
+cleanup java code
+- get rid of location service, if possible
+
+rename cpp code        DONE
+
+add play to weather app, or tts   IN PROGRESS
+
+update ezsh.c with periodic connection status test
+
+checkins
+
+xxxxxxxxxxxxxxxxxx
+xxxxxxxxxxxxxxxxxx
+xxxxxxxxxxxxxxxxxx
+xxxxxxxxxxxxxxxxxx
+
+document foreground 
+
+document type sig
+https://docs.oracle.com/javase/7/docs/technotes/guides/jni/spec/types.html#wp276
+
+latitude / longitude on demand
+- get initial location when ezapp starts
+- get on demand, not always,  or not so often
+
 text to speech
+- add play button to weather detailed forecast
 
-mv Template app to 2nd page
+run ezapp as a service when installed or device boots
 
-Tilt app
+APIs
+- print API to print text rotated
+- should textures have a bg color arg
+- make pixels unsigned int, add pixel_t
 
-ezgetall   - print error if files dir exits locally
+Apps:
+- Steps
+- Tilt app, allow different orientations
+- Memo app
+- Paddle app
+- Calculater
+  - 64bit problem
+     - >> and / ops on 64 bit with msb set
+  - display numeric buttons in different color
 
-cleanup bin dir
+Picoc
+- load vanilla picoc
+- test programs for issues
+- compare these programs with improved picoc
+- expression evaluator test
 
+tools
+- ezgetall   - print error if files dir exits locally
+- cleanup bin dir
+   - maybe move more android dir scripts to bin dir
+- cleanup with ezsh
+  - review main interaction with ezsh
+- how to run vi with tags from a subdir
 
+misc
+- launcher icon
+- remove templates from layout and svcs
 xxxxxxxxxxxxxxx
 
-cleanup and finish work with ezsh
-- get ezput working too
-- cleanup main
-
-Weather app
-
-Tilt app
-
--------------
----- now ----
--------------
-
-adb shell
-   TERM=xterm-256color
-
-cscope
-location items
-
-picoc tests
-
---------------
----- apps ----
---------------
-
-calculater
-- >> and / ops on 64 bit with msb set   <==============
-
-weather app
-- get forecast
-- parse
-- weather icons, are they in the forecast
+----------------------
+---- MAYBE LATER  ----
+----------------------
 
 Location 
 - add option to disable and enable the svc from adding loc history <======
@@ -55,24 +83,17 @@ reversi
 - edge heuristic
 
 new apps
-- steps,  needs a service too
-- tilt
-- quantum
-- tennis
-- music, with color organ
-- weather                    <==========
-- memo
+- play music, with color organ
 - prime number benchmark
 - tick tack toe
+
+probably not
+- quantum
 - blackjack
 
 ---------------
 ---- picoc ----
 ---------------
-
-picoc
-- snprintf            <============  probably done
-- expressions
 
 picoc issues
 - support NAN in picoc  ??
@@ -102,15 +123,6 @@ picoc issues
   - fix print 'u' 
   - make list of problems, and a demo program
 
-------------------
----- lat/long ----
-------------------
-
-lat/long
-- get on demand, not always,  or not so often
-- zero values
-- get initial location when ezapp starts
-
 ---------------
 ---- audio ----
 ---------------
@@ -127,21 +139,9 @@ recording
 ---- sdlx video ----
 --------------------
 
-sdlx
-- should textures have a bg color
-- make pixels unsigned int, add pixel_t
-
 plot apis,
 - improve them
 - write an app that uses them, maybe steps
-
---------------------
----- devel tool ----
---------------------
-
-fix ezsh for vi and cmd recall, and running vi
-
-fix waiter_thread
 
 --------------
 ---- misc ----
@@ -157,12 +157,8 @@ start app in background
 battery usage
 - adjust compass app interval, to trade off jitter for battery life
 
-remove templates from layout and svcs
-
 misc:
 - main: test reinit option,  does it reset data files?
-- cscope_init, minus the sdl
-- ezput all
 - what happens to main sdl thread when paused, is it blocked on the event,
    - is renderer being cleared
 - need to handle ondestroy to kill off the android services
@@ -174,10 +170,10 @@ misc:
     https://wiki.libsdl.org/SDL3/SDL_RequestAndroidPermission
 - eval sdl routines for sdl3 port error checking
 - eval sdl use of rint or nearbyint
-- launcher icon
 - running from git env on Windows OS
 
 add networking support for apps, and add test in unit_test
+- should this be included?
   - util_net_connect
   - util_net_disconnect
   - util_net_send

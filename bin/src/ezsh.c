@@ -18,9 +18,6 @@
 #include <readline/readline.h>
 #include <readline/history.h>
 
-// xxx todo
-// - test WEXITSTATUS on android
-
 // NOTES:
 // - status returns xxx
 

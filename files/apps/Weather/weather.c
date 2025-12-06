@@ -8,10 +8,6 @@
 #include <sdlx.h>
 #include <utils.h>
 
-// xxx
-// - text to speech
-//   google search- "how to access android text to speech class from SDL3"
-
 //
 // defines
 //
@@ -45,6 +41,7 @@ typedef struct {
     bool            valid;
     bool            is_daytime;
     char           *day_name;
+    char           *day_name_unabbreviated;
     char           *icon_url;
     char           *icon_filename;
     sdlx_texture_t *icon_texture;
@@ -90,7 +87,7 @@ void parse_forecast(int which);
 void display_forecast(void);
 void display_detailed_forecast(int idx);
 
-char *get_day_name(char * str);
+char *get_day_name(char * str, bool unabbreviated);
 void split_string(char *str, char **lines, int max_lines_in, int *max_lines_ret, int n);
 
 // -----------------  MAIN  ------------------------------------------
@@ -226,7 +223,6 @@ int main(int argc, char **argv)
     return 0;
 }
 
-
 void cleanup_all(void)
 {
     cleanup_info();
@@ -248,6 +244,7 @@ void cleanup_forecast(forecast_t *forecast)
 {
     for (int i = 0; i < MAX_FORECAST; i++) {
         free(forecast[i].day_name);
+        free(forecast[i].day_name_unabbreviated);
         free(forecast[i].icon_url);
         free(forecast[i].icon_filename);
         sdlx_destroy_texture(forecast[i].icon_texture);
@@ -484,7 +481,7 @@ void parse_forecast(int which)
         forecast_t   *x = &forecast[i];
         json_value_t *value;
         void         *period;
-        char          tmp_str[200];
+        char          tmp_str[1000];
         char          period_str[200];
 
         // get json period object
@@ -512,21 +509,43 @@ void parse_forecast(int which)
         }
         if (which == PARSE_DAILY_FORECAST) {
             if (x->is_daytime) {
-                sprintf(tmp_str, "%s", get_day_name(value->u.string));
+                sprintf(tmp_str, "%s", get_day_name(value->u.string, false));
             } else {
-                sprintf(tmp_str, "%s Night", get_day_name(value->u.string));
+                sprintf(tmp_str, "%s Night", get_day_name(value->u.string, false));
             }
         } else {
             int hour;
-            sprintf(tmp_str, "%s", get_day_name(value->u.string));
             sscanf(value->u.string+10, "T%d", &hour);
             char *ampm = hour < 12 ? "AM" : "PM";
             if (hour > 12) hour -= 12;
             if (hour == 0) hour = 12;
-            sprintf(tmp_str, "%s %d%s", get_day_name(value->u.string), hour, ampm);
+            sprintf(tmp_str, "%s %d%s", get_day_name(value->u.string, false), hour, ampm);
         }
         x->day_name = strdup(tmp_str);
-        
+
+        // get day_name_unabbreviated based on startTime of this period; and
+        // also based o the is_daytime flag
+        value = util_json_get_value(period, "startTime", NULL);
+        if (value->type != JSON_TYPE_STRING) {
+            printf("ERROR %s: failed to get startTime, %d\n", progname, value->type);
+            continue;
+        }
+        if (which == PARSE_DAILY_FORECAST) {
+            if (x->is_daytime) {
+                sprintf(tmp_str, "%s", get_day_name(value->u.string, true));
+            } else {
+                sprintf(tmp_str, "%s Night", get_day_name(value->u.string, true));
+            }
+        } else {
+            int hour;
+            sscanf(value->u.string+10, "T%d", &hour);
+            char *ampm = hour < 12 ? "AM" : "PM";
+            if (hour > 12) hour -= 12;
+            if (hour == 0) hour = 12;
+            sprintf(tmp_str, "%s %d%s", get_day_name(value->u.string, true), hour, ampm);
+        }
+        x->day_name_unabbreviated = strdup(tmp_str);
+
         // get icon_url
         value = util_json_get_value(period, "icon", NULL);
         if (value->type != JSON_TYPE_STRING) {
@@ -566,7 +585,12 @@ void parse_forecast(int which)
             printf("ERROR %s: failed to get detailedForecast, %d\n", progname, value->type);
             continue;
         }
-        x->detailed_forecast = strdup(value->u.string);
+        if (strlen(value->u.string) > 0) {
+            sprintf(tmp_str, "%s. %s", x->day_name_unabbreviated, value->u.string);
+            x->detailed_forecast = strdup(tmp_str);
+        } else {
+            x->detailed_forecast = strdup("");
+        }
 
         // get temperature, and append temperatureUnit
         value = util_json_get_value(period, "temperature", NULL);
@@ -629,6 +653,7 @@ void parse_forecast(int which)
             printf("INFO %s: %s periods[%s] ...\n", progname, json_filename, period_str);
             printf("INFO %s:   is_daytime        %d\n", progname, x->is_daytime);
             printf("INFO %s:   day_name          %s\n", progname, x->day_name);
+            printf("INFO %s:   day_name_unabbrev %s\n", progname, x->day_name_unabbreviated);
             printf("INFO %s:   icon_url          %s\n", progname, x->icon_url);
             printf("INFO %s:   icon_filename     %s\n", progname, x->icon_filename);
             printf("INFO %s:   short_forecast    %s\n", progname, x->short_forecast);
@@ -794,6 +819,11 @@ void display_detailed_forecast(int idx)
             sdlx_render_printf(0, y+ICON_WH+(k+1)*sdlx_char_height, "%s", lines[k]);
         }
 
+        // pass detailed_forecast to text_to_speech
+        if (strlen(x->detailed_forecast) > 0) {
+            util_text_to_speech(x->detailed_forecast);
+        }
+
         // register events
         sdlx_register_control_events(
             "^", "v", "X", COLOR_WHITE, COLOR_BLACK, 
@@ -808,6 +838,7 @@ void display_detailed_forecast(int idx)
         // process events
         switch (event.event_id) {
         case EVID_QUIT:
+            util_text_to_speech_stop();
             done = true;
             break;
         case EVID_PREVIOUS: {
@@ -842,17 +873,18 @@ void display_detailed_forecast(int idx)
 extern char *strptime(const char *s, const char *format, struct tm *tm);
 #endif
 
-char *get_day_name(char * time_str)
+char *get_day_name(char * time_str, bool unabbreviated)
 {
     time_t t;
     struct tm tm;
+    char *fmt = (unabbreviated ? "%A" : "%a");
     static char day_name_str[20];
 
     memset(&tm, 0, sizeof(tm));
     if (strptime(time_str, "%Y-%m-%d", &tm) != NULL) {
         t = mktime(&tm);
         if (t > 0) {
-            strftime(day_name_str, sizeof(day_name_str), "%a", &tm);
+            strftime(day_name_str, sizeof(day_name_str), fmt, &tm);
             return day_name_str;
         } else {
             return "Error";
@@ -869,6 +901,12 @@ void split_string(char *str, char **lines, int max_lines_in, int *max_lines_ret,
     char *p, *pspace;
 
     static char str_copy[1000];
+
+    // if caller supplied NULL str then return
+    if (str == NULL) {
+        *max_lines_ret = 0;
+        return;
+    }
 
     // make static copy of caller str_arg
     strncpy(str_copy, str, sizeof(str_copy));

@@ -8,7 +8,7 @@ SRCS :=  \
   ../src/sdlx_sensor.c \
   ../src/sdlx_event.c \
   ../src/utils.c \
-  ../src/utils_location.cpp \
+  ../src/utils_android.cpp \
   ../src/logging.c \
   ../cJSON/cJSON.c \
   ../lodepng/lodepng.c \

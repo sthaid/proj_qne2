@@ -68,15 +68,17 @@ void *util_json_parse(char *str, char **end_ptr);
 void util_json_free(void *json_root);
 json_value_t *util_json_get_value(void *json_item, ...);
 
-// -----------------  LOCATION  ------------------------------
-
-void util_get_location(double *latitude, double *longitude, double *altitude);
-
 // ----------------- PNG  --------------------
 
 // these routines read/write 32-bit RGBA png files
 int util_read_png_file(char *dir, char *filename, unsigned char **pixels, int *w, int *h);
 int util_write_png_file(char *dir, char *filename, unsigned char *pixels, int w, int h);
+
+// -----------------  CALL ANDROID JAVA  ---------------------
+
+void util_get_location(double *latitude, double *longitude, double *altitude);
+void util_text_to_speech(char *text);
+void util_text_to_speech_stop(void);
 
 #ifdef __cplusplus
 }
