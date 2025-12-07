@@ -28,7 +28,7 @@ public class ezapp_utils {
     private double                      altitude = 999999999;
 
     public ezapp_utils(Context cx) {
-        Log.v(TAG, "EAAPP_utils init");
+        Log.v(TAG, "EZAPP utils init");
 
         // Initialize TextToSpeech support
         mTts = new TextToSpeech(cx, new TextToSpeech.OnInitListener() {
@@ -71,7 +71,7 @@ public class ezapp_utils {
     }
 
     public void destroy() {
-        Log.v(TAG, "EAAPP_utils destroy");
+        Log.v(TAG, "EZAPP utils destroy");
         if (mTts != null) {
             mTts.stop();
             mTts.shutdown();

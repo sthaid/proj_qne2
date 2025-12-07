@@ -1,0 +1,6 @@
+#!/bin/bash
+
+# clean
+cd SDL/build/org.sthaid.ezApp
+./gradlew clean
+

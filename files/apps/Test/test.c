@@ -291,7 +291,7 @@ static void page_0_draw(void)
     loc = sdlx_render_text(
             0, 
             sdlx_win_height-8*sdlx_char_height, 
-            util_is_foreground_enabled() ? "Fg_Is_Enabled" : "Fg_Is_Disabled");
+            util_is_foreground_enabled() ? "Foreground_Enabled" : "Foreground_Disabled");
     sdlx_register_event(loc, EVID_TOGGLE_FOREGROUND);
     sdlx_print_init_color(COLOR_WHITE, COLOR_BLACK);
 

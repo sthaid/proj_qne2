@@ -8,22 +8,15 @@ regarding foreground -
 // xxx maybe - if its param is enabled, then dont allow it to be stopped
 // by an application call
 
-xxxxxxxxxxxxxxxxxx
-xxxxxxxxxxxxxxxxxx
-xxxxxxxxxxxxxxxxxx
-xxxxxxxxxxxxxxxxxx
-
 document foreground 
 
 document type sig
 https://docs.oracle.com/javase/7/docs/technotes/guides/jni/spec/types.html#wp276
 
-latitude / longitude on demand
-- get initial location when ezapp starts
-- get on demand, not always,  or not so often
-
-text to speech
-- add play button to weather detailed forecast
+xxxxxxxxxxxxxxxxxx
+xxxxxxxxxxxxxxxxxx
+xxxxxxxxxxxxxxxxxx
+xxxxxxxxxxxxxxxxxx
 
 run ezapp as a service when installed or device boots
 
@@ -59,7 +52,6 @@ tools
 misc
 - launcher icon
 - remove templates from layout and svcs
-xxxxxxxxxxxxxxx
 
 ----------------------
 ---- MAYBE LATER  ----

@@ -587,7 +587,7 @@ static void settings(void)
     #define EVID_SERVICES        1005
 #ifdef ANDROID
     #define EVID_RESET_APPS_AND_SVCS  1006
-    #define EVID_FG_SVC               1007
+    #define EVID_FOREGROUND           1007
 #endif
 
     // get this device ipaddr
@@ -633,9 +633,9 @@ static void settings(void)
         loc = sdlx_render_printf(0, ROW2Y(15), "Reset_Apps_And_Svcs");
         sdlx_register_event(loc, EVID_RESET_APPS_AND_SVCS);
 
-        // display Fg_Svc
-        loc = sdlx_render_printf(0, ROW2Y(17), "Fg_Svc = %s", params.foreground_enabled ? "ENABLED" : "DISABLED");
-        sdlx_register_event(loc, EVID_FG_SVC);
+        // display Foreground
+        loc = sdlx_render_printf(0, ROW2Y(17), "Foreground = %s", params.foreground_enabled ? "ENABLED" : "DISABLED");
+        sdlx_register_event(loc, EVID_FOREGROUND);
 #endif
 
         // change print color back to white
@@ -719,7 +719,7 @@ static void settings(void)
             msg = "Apps/Svcs are reset";
             msg_time = util_microsec_timer();
             break; }
-        case EVID_FG_SVC: {
+        case EVID_FOREGROUND: {
             params.foreground_enabled = (params.foreground_enabled ? false : true);
             util_set_int_param(".", "foreground_enabled", params.foreground_enabled);
             if (params.foreground_enabled) {
