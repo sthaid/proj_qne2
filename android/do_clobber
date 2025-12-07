@@ -2,5 +2,5 @@
 
 rm -f SDL
 rm -rf SDL3-*
-rm -rf setup_files/*.orig
+rm -rf setup_files/orig
 rm -rf assets/*

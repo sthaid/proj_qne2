@@ -48,21 +48,19 @@ import android.widget.RelativeLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import android.content.ServiceConnection;
-import android.os.Binder;
-import android.os.IBinder;
-import android.os.SystemClock;
-import android.content.ComponentName;
-import org.libsdl.app.ezapp_fgsvc;;
-import org.libsdl.app.ezapp_utils;
-
 import java.io.FileNotFoundException;
 import java.util.ArrayList;
 import java.util.Hashtable;
 import java.util.Locale;
 
-import android.speech.tts.TextToSpeech;
+// EZAPP additional imports
+import android.content.ServiceConnection;
+import android.os.Binder;
+import android.os.IBinder;
+import android.content.ComponentName;
 
+import org.libsdl.app.ezapp_fgsvc;
+import org.libsdl.app.ezapp_utils;
 
 /**
     SDL Activity
@@ -244,10 +242,10 @@ public class SDLActivity extends Activity implements View.OnSystemUiVisibilityCh
     private static SDLFileDialogState mFileDialogState = null;
     protected static boolean mDispatchingKeyEvent = false;
 
-    // EZAPP
+    // EZAPP variables
     private static ezapp_utils mezapp_utils;
     private static ezapp_fgsvc mezapp_fgsvc;
-    private static boolean mezapp_fgsvc_isbound = false;  // xxx rename
+    private static boolean mezapp_fgsvc_isbound = false;
 
     protected static SDLGenericMotionListener_API14 getMotionListener() {
         if (mMotionListener == null) {
@@ -517,48 +515,34 @@ public class SDLActivity extends Activity implements View.OnSystemUiVisibilityCh
             }
         }
 
-        // vvvv EZAPP vvvv
-        // Initialize TextToSpeech
-        mezapp_utils = new ezapp_utils(getApplicationContext());  // xxx the constructor can init
+        // EZAPP onCreate: Initialize TextToSpeech
+        mezapp_utils = new ezapp_utils(getApplicationContext());
     }
 
-    // vvvv EZAPP vvvv
-
+    // EZAPP start/stop fgsvc
     public void start_fgsvc() {
         if (mezapp_fgsvc_isbound) {
-            Log.v(TAG, "XXX fgsvc already bound");
+            Log.v(TAG, "EZAPP fgsvc already running");
             return;
         }
             
+        Log.v(TAG, "EZAPP starting fgsvc");
         ComponentName component_name;
-        Log.v(TAG, "XXX call startService");
         component_name = startForegroundService(new Intent(this, ezapp_fgsvc.class));
-        Log.v(TAG, "XXX back from startService " + component_name);
-
-        // Context.BIND_AUTO_CREATE: create the Service if it is not already running
-        Log.v(TAG, "XXX call bindService");
         bindService(new Intent(this, ezapp_fgsvc.class), ezapp_fgsvc_connection, Context.BIND_AUTO_CREATE);
-        Log.v(TAG, "XXX back from bindService");
     }
 
     public void stop_fgsvc() {
-        
         if (!mezapp_fgsvc_isbound) {
-            Log.v(TAG, "XXX fgsvc not bound");
+            Log.v(TAG, "EZAPP fgsvc is not running");
             return;
         }
 
+        Log.v(TAG, "EZAPP stopping fgsvc");
         Intent serviceIntent = new Intent(this, ezapp_fgsvc.class);
         stopService(serviceIntent);
-
-
-        //Log.v(TAG, "XXXXXXXXXX calling mezapp_fgsvc.OnDestroy");
-        //mezapp_fgsvc.onDestroy();
-        //Log.v(TAG, "XXXXXXXXXX back from calling mezapp_fgsvc.OnDestroy");
-
         unbindService(ezapp_fgsvc_connection);
         mezapp_fgsvc_isbound = false;
-        Log.v(TAG, "XXXXXXXXXX back from unbind");
     }
 
     private ServiceConnection ezapp_fgsvc_connection = new ServiceConnection() {
@@ -567,16 +551,17 @@ public class SDLActivity extends Activity implements View.OnSystemUiVisibilityCh
             ezapp_fgsvc.InnerBinder binder = (ezapp_fgsvc.InnerBinder) service;
             mezapp_fgsvc = binder.getService();
             mezapp_fgsvc_isbound = true;
-            Log.v(TAG, "XXX mezapp_fgsvc_isbound = true");
+            Log.v(TAG, "EZAPP fgsvc is bound");
         }
 
         @Override
         public void onServiceDisconnected(ComponentName name) {
             mezapp_fgsvc_isbound = false;
-            Log.v(TAG, "XXX mezapp_fgsvc_isbound = false");
+            Log.v(TAG, "EZAPP fgsvc is unbound");
         }
     };
 
+    // EZAPP get location
     public double get_latitude() {
         return mezapp_utils.get_latitude();
     }
@@ -589,11 +574,12 @@ public class SDLActivity extends Activity implements View.OnSystemUiVisibilityCh
         return mezapp_utils.get_altitude();
     }
 
+    // EZAPP text to speech
     public int text_to_speech(String message) {
         return mezapp_utils.text_to_speech(message);
     }
 
-    // ^^^^ EZAPP ^^^^^
+    // ---- EZAPP END ----
 
     protected void pauseNativeThread() {
         mNextNativeState = NativeState.PAUSED;
@@ -772,31 +758,14 @@ public class SDLActivity extends Activity implements View.OnSystemUiVisibilityCh
     protected void onDestroy() {
         Log.v(TAG, "onDestroy()");
 
-        // EZAPP xxxxxxxxxxxxxx
-        //if (mezapp_fgsvc_isbound) {
-            //mezapp_fgsvc.onDestroy();
-        //}
-
+        // EZAPP onDestroy: stop fgsvc
         if (mezapp_fgsvc_isbound) {
             Intent serviceIntent = new Intent(this, ezapp_fgsvc.class);
             stopService(serviceIntent);
         }
 
+        // EZAPP onDestroy: utils cleanup
         mezapp_utils.destroy();
-
-        //boolean succ;
-        //Log.v(TAG, "XXX call stopService");
-        //succ = stopService(new Intent(this, ezapp_fgsvc.class));
-        //Log.v(TAG, "XXX back from stopService " + succ);
-
-/*
-        xxxx need this in the destructor
-        if (mTts != null) {
-            mTts.stop();
-            mTts.shutdown(); // Release resources
-        }
-*/
-        // --------------------------------------------
 
         if (mHIDDeviceManager != null) {
             HIDDeviceManager.release(mHIDDeviceManager);
