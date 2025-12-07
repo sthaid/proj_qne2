@@ -55,8 +55,8 @@ public class ezapp_fgsvc extends Service {
         Notification.Builder builder;
         builder = new Notification.Builder(this, CHANNEL_ID);
         Notification notification = builder
-                .setContentTitle("")
-                .setContentText("ezApp foreground enabled")
+                .setContentTitle("foreground enabled")
+                 //.setContentText("more text here if needed")
                 .setSmallIcon(R.drawable.ic_notifcation_icon)
                 .setOngoing(true)
                 .setPriority(Notification.PRIORITY_DEFAULT)

@@ -519,10 +519,10 @@ public class SDLActivity extends Activity implements View.OnSystemUiVisibilityCh
         mezapp_utils = new ezapp_utils(getApplicationContext());
     }
 
-    // EZAPP start/stop fgsvc
-    public void start_fgsvc() {
+    // EZAPP start/stop foreground
+    public void start_foreground() {
         if (mezapp_fgsvc_isbound) {
-            Log.v(TAG, "EZAPP fgsvc already running");
+            Log.v(TAG, "EZAPP foreground already enabled");
             return;
         }
 
@@ -534,9 +534,9 @@ public class SDLActivity extends Activity implements View.OnSystemUiVisibilityCh
         bindService(new Intent(this, ezapp_fgsvc.class), ezapp_fgsvc_connection, Context.BIND_AUTO_CREATE);
     }
 
-    public void stop_fgsvc() {
+    public void stop_foreground() {
         if (!mezapp_fgsvc_isbound) {
-            Log.v(TAG, "EZAPP fgsvc is not running");
+            Log.v(TAG, "EZAPP foreground already disabled");
             return;
         }
 
@@ -547,6 +547,10 @@ public class SDLActivity extends Activity implements View.OnSystemUiVisibilityCh
         stopService(serviceIntent);
         unbindService(ezapp_fgsvc_connection);
         mezapp_fgsvc_isbound = false;
+    }
+
+    public boolean is_foreground_enabled() {
+        return mezapp_fgsvc_isbound;
     }
 
     private ServiceConnection ezapp_fgsvc_connection = new ServiceConnection() {

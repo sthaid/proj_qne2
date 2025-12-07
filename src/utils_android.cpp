@@ -152,7 +152,7 @@ void util_text_to_speech_stop(void)
 
 // xxx comment 
 
-void util_start_fgsvc(void)
+void util_start_foreground(void)
 {
     jmethodID method_id;
     int rc;
@@ -165,12 +165,12 @@ void util_start_fgsvc(void)
     jclass clazz(env->GetObjectClass(activity));
 
     // get the method_id, print message if failed
-    method_id = env->GetMethodID(clazz, "start_fgsvc", "()V");
+    method_id = env->GetMethodID(clazz, "start_foreground", "()V");
     if (method_id == 0) {
-        ERROR("failed to get method_id for start_fgsvc\n");
+        ERROR("failed to get method_id for start_foreground\n");
     }
 
-    // if got the method_id then call the start_fgsvc method
+    // if got the method_id then call the start_foreground method
     if (method_id != 0) {
         env->CallVoidMethod(activity, method_id);
     }
@@ -180,7 +180,7 @@ void util_start_fgsvc(void)
     env->DeleteLocalRef(clazz);
 }
 
-void util_stop_fgsvc(void)
+void util_stop_foreground(void)
 {
     jmethodID method_id;
     int rc;
@@ -193,12 +193,12 @@ void util_stop_fgsvc(void)
     jclass clazz(env->GetObjectClass(activity));
 
     // get the method_id, print message if failed
-    method_id = env->GetMethodID(clazz, "stop_fgsvc", "()V");
+    method_id = env->GetMethodID(clazz, "stop_foreground", "()V");
     if (method_id == 0) {
-        ERROR("failed to get method_id for stop_fgsvc\n");
+        ERROR("failed to get method_id for stop_foreground\n");
     }
 
-    // if got the method_id then call the stop_fgsvc method
+    // if got the method_id then call the stop_foreground method
     if (method_id != 0) {
         env->CallVoidMethod(activity, method_id);
     }
@@ -206,6 +206,38 @@ void util_stop_fgsvc(void)
     // clean up the localreferences.
     env->DeleteLocalRef(activity);
     env->DeleteLocalRef(clazz);
+}
+
+bool util_is_foreground_enabled(void)
+{
+    jmethodID method_id;
+    int rc;
+    bool is_fg_enabled = false;
+
+    // retrieve the JNI environment;
+    // retrieve the Java instance of the SDLActivity;
+    // find the Java class of the activity. It should be SDLActivity or a subclass of it
+    JNIEnv* env = (JNIEnv*)SDL_GetAndroidJNIEnv();
+    jobject activity = (jobject)SDL_GetAndroidActivity();
+    jclass clazz(env->GetObjectClass(activity));
+
+    // get the method_id, print message if failed
+    method_id = env->GetMethodID(clazz, "is_foreground_enabled", "()Z");
+    if (method_id == 0) {
+        ERROR("failed to get method_id for stop_foreground\n");
+    }
+
+    // if got the method_id then call the is_foreground_enabled method
+    if (method_id != 0) {
+        is_fg_enabled = env->CallBooleanMethod(activity, method_id);
+    }
+
+    // clean up the localreferences.
+    env->DeleteLocalRef(activity);
+    env->DeleteLocalRef(clazz);
+
+    // return is_fg_enabled flag
+    return is_fg_enabled;
 }
 
 #else
@@ -231,7 +263,8 @@ void util_get_location(double *latitude, double *longitude, double *altitude)
 
 void util_text_to_speech(char *text) { }
 void util_text_to_speech_stop(void) { }
-void util_start_fgsvc(void) { }
-void util_stop_fgsvc(void) { }
+void util_start_foreground(void) { }
+void util_stop_foreground(void) { }
+bool util_is_foreground_enabled(void) { return false; }
 
 #endif

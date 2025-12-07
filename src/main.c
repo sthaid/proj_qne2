@@ -55,7 +55,7 @@ typedef struct {
     bool devel_mode;
     int  devel_port;
     char devel_password[50];
-    bool fgsvc_enabled;
+    bool foreground_enabled;
 } params_t;
 
 //
@@ -128,7 +128,7 @@ static int init(void)
     params.devel_mode = util_get_int_param(".", "devel_mode", 0);
     params.devel_port = util_get_int_param(".", "devel_port", DEFAULT_DEVEL_PORT);
     strcpy(params.devel_password, util_get_str_param(".", "devel_password", DEFAULT_DEVEL_PASSWORD));
-    params.fgsvc_enabled = util_get_int_param(".", "fgsvc_enabled", 0);
+    params.foreground_enabled = util_get_int_param(".", "foreground_enabled", 0);
 
 #ifdef ANDROID
     // copy asset files to the working directory
@@ -178,6 +178,13 @@ static int init(void)
 
     // print type sizes
     print_type_sizes();
+
+    // start/stop foreground mode based on the foreground_enabled param
+    if (params.foreground_enabled) {
+        util_start_foreground();
+    } else {
+        util_stop_foreground();
+    }
 
     // success
     return 0;
@@ -250,7 +257,7 @@ static void processing(void)
 {
     sdlx_event_t event;
 
-    sdlx_show_toast("STARTING"); //xxx temp
+    // sdlx_show_toast("STARTING");
 
     while (true) {
         // clear the display, and set the font to default
@@ -627,7 +634,7 @@ static void settings(void)
         sdlx_register_event(loc, EVID_RESET_APPS_AND_SVCS);
 
         // display Fg_Svc
-        loc = sdlx_render_printf(0, ROW2Y(17), "Fg_Svc = %s", params.fgsvc_enabled ? "ENABLED" : "DISABLED");
+        loc = sdlx_render_printf(0, ROW2Y(17), "Fg_Svc = %s", params.foreground_enabled ? "ENABLED" : "DISABLED");
         sdlx_register_event(loc, EVID_FG_SVC);
 #endif
 
@@ -713,12 +720,12 @@ static void settings(void)
             msg_time = util_microsec_timer();
             break; }
         case EVID_FG_SVC: {
-            params.fgsvc_enabled = (params.fgsvc_enabled ? false : true);
-            util_set_int_param(".", "fgsvc_enabled", params.fgsvc_enabled);
-            if (params.fgsvc_enabled) {
-                util_start_fgsvc();
+            params.foreground_enabled = (params.foreground_enabled ? false : true);
+            util_set_int_param(".", "foreground_enabled", params.foreground_enabled);
+            if (params.foreground_enabled) {
+                util_start_foreground();
             } else {
-                util_stop_fgsvc();
+                util_stop_foreground();
             }
             break; }
 #endif
