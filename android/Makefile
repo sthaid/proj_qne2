@@ -25,9 +25,9 @@ gen_version:
 	../bin/build_tools/gen_version
 
 gen_assets:
-	cd ../files
-	git ls-files > /tmp/files.txt
-	tar -cf ../android/assets/files.tar --files-from /tmp/files.txt
+	cd ../files; \
+	git ls-files > /tmp/files.txt; \
+	tar -cf ../android/assets/files.tar --files-from /tmp/files.txt; \
 	rm -f /tmp/files.txt
 
 # -----------------------------
