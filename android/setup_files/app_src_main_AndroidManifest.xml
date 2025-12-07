@@ -118,11 +118,11 @@
 
         <!--Service -->
         <service
-            android:name="org.libsdl.app.LocationService"
+            android:name="org.libsdl.app.ezapp_fgsvc"
             android:enabled="true"
             android:exported="false" 
             android:foregroundServiceType="location" />
-        <!-- <service android:name=".LocationService" /> -->
+        <!-- <service android:name=".ezapp_fgsvc" /> -->
 
     </application>
 

@@ -28,6 +28,7 @@ static bool  end_program;
 static void page_hndlr(void);
 
 static void page_0_draw(void);
+static void page_0_process_event(sdlx_event_t *event);
 
 static void page_1_draw(void);
 
@@ -229,6 +230,7 @@ static void page_hndlr()
         // it wasn't a common event;
         // call the page specific event hndlr, if provided
         switch (pagenum) {
+        case 0: page_0_process_event(&event); break;
         case 3: page_3_process_event(&event); break;
         case 7: page_7_process_event(&event); break;
         }
@@ -248,12 +250,16 @@ static void page_hndlr()
 
 // -----------------  PAGE 0: CLOCK  --------------------------
 
+#define EVID_START_FGSVC 10
+#define EVID_STOP_FGSVC  11
+
 static void page_0_draw(void)
 {
     time_t t;
     struct tm *tm;
     char str[100];
     long usecs, delta_ms;
+    sdlx_loc_t *loc;
     static long usecs_last, usecs_first;
     
     // print the time, hh:mm:ss
@@ -278,8 +284,28 @@ static void page_0_draw(void)
     sdlx_render_printf_xyctr(sdlx_win_width/2, ROW2Y(9), "%0.3f delta=%ld ms", 
         (usecs-usecs_first)/1000000., delta_ms);
 
+    // register start/stop fgsvc events
+    sdlx_print_init_color(COLOR_LIGHT_BLUE, COLOR_BLACK);
+    loc = sdlx_render_text(0, sdlx_win_height-6*sdlx_char_height, "START_FGSVC");
+    sdlx_register_event(loc, EVID_START_FGSVC);
+    loc = sdlx_render_text(0, sdlx_win_height-4*sdlx_char_height, "STOP_FGSVC");
+    sdlx_register_event(loc, EVID_STOP_FGSVC);
+    sdlx_print_init_color(COLOR_WHITE, COLOR_BLACK);
+
     // print ipaddr
     sdlx_render_printf_xyctr(sdlx_win_width/2, ROW2Y(11), "%s", util_get_ipaddr());
+}
+
+static void page_0_process_event(sdlx_event_t *ev)
+{
+    switch (ev->event_id) {
+    case EVID_START_FGSVC:
+        util_start_fgsvc();
+        break;
+    case EVID_STOP_FGSVC:
+        util_stop_fgsvc();
+        break;
+    }
 }
 
 // -----------------  PAGE 1: FONT  ---------------------------

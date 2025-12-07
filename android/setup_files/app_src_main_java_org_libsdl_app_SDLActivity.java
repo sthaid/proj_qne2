@@ -53,12 +53,15 @@ import android.os.Binder;
 import android.os.IBinder;
 import android.os.SystemClock;
 import android.content.ComponentName;
-import org.libsdl.app.LocationService;
+import org.libsdl.app.ezapp_fgsvc;;
+import org.libsdl.app.ezapp_utils;
 
 import java.io.FileNotFoundException;
 import java.util.ArrayList;
 import java.util.Hashtable;
 import java.util.Locale;
+
+import android.speech.tts.TextToSpeech;
 
 
 /**
@@ -241,9 +244,10 @@ public class SDLActivity extends Activity implements View.OnSystemUiVisibilityCh
     private static SDLFileDialogState mFileDialogState = null;
     protected static boolean mDispatchingKeyEvent = false;
 
-    // xxx
-    boolean mIsBound = false;
-    LocationService mLocationService;
+    // EZAPP
+    private static ezapp_utils mezapp_utils;
+    private static ezapp_fgsvc mezapp_fgsvc;
+    private static boolean mezapp_fgsvc_isbound = false;  // xxx rename
 
     protected static SDLGenericMotionListener_API14 getMotionListener() {
         if (mMotionListener == null) {
@@ -513,16 +517,83 @@ public class SDLActivity extends Activity implements View.OnSystemUiVisibilityCh
             }
         }
 
-        // xxx
-        ComponentName component_name;
-        Log.v(TAG, "XXX call startForegroundService");
-        component_name = startForegroundService(new Intent(this, LocationService.class));
-        Log.v(TAG, "XXX back from startForegroundService " + component_name);
+        // vvvv EZAPP vvvv
+        // Initialize TextToSpeech
+        mezapp_utils = new ezapp_utils(getApplicationContext());  // xxx the constructor can init
+    }
 
+    // vvvv EZAPP vvvv
+
+    public void start_fgsvc() {
+        if (mezapp_fgsvc_isbound) {
+            Log.v(TAG, "XXX fgsvc already bound");
+            return;
+        }
+            
+        ComponentName component_name;
+        Log.v(TAG, "XXX call startService");
+        component_name = startForegroundService(new Intent(this, ezapp_fgsvc.class));
+        Log.v(TAG, "XXX back from startService " + component_name);
+
+        // Context.BIND_AUTO_CREATE: create the Service if it is not already running
         Log.v(TAG, "XXX call bindService");
-        bindService(new Intent(this, LocationService.class), serviceConnection, Context.BIND_AUTO_CREATE);
+        bindService(new Intent(this, ezapp_fgsvc.class), ezapp_fgsvc_connection, Context.BIND_AUTO_CREATE);
         Log.v(TAG, "XXX back from bindService");
     }
+
+    public void stop_fgsvc() {
+        
+        if (!mezapp_fgsvc_isbound) {
+            Log.v(TAG, "XXX fgsvc not bound");
+            return;
+        }
+
+        Intent serviceIntent = new Intent(this, ezapp_fgsvc.class);
+        stopService(serviceIntent);
+
+
+        //Log.v(TAG, "XXXXXXXXXX calling mezapp_fgsvc.OnDestroy");
+        //mezapp_fgsvc.onDestroy();
+        //Log.v(TAG, "XXXXXXXXXX back from calling mezapp_fgsvc.OnDestroy");
+
+        unbindService(ezapp_fgsvc_connection);
+        mezapp_fgsvc_isbound = false;
+        Log.v(TAG, "XXXXXXXXXX back from unbind");
+    }
+
+    private ServiceConnection ezapp_fgsvc_connection = new ServiceConnection() {
+        @Override
+        public void onServiceConnected(ComponentName name, IBinder service) {
+            ezapp_fgsvc.InnerBinder binder = (ezapp_fgsvc.InnerBinder) service;
+            mezapp_fgsvc = binder.getService();
+            mezapp_fgsvc_isbound = true;
+            Log.v(TAG, "XXX mezapp_fgsvc_isbound = true");
+        }
+
+        @Override
+        public void onServiceDisconnected(ComponentName name) {
+            mezapp_fgsvc_isbound = false;
+            Log.v(TAG, "XXX mezapp_fgsvc_isbound = false");
+        }
+    };
+
+    public double get_latitude() {
+        return mezapp_utils.get_latitude();
+    }
+
+    public double get_longitude() {
+        return mezapp_utils.get_longitude();
+    }
+
+    public double get_altitude() {
+        return mezapp_utils.get_altitude();
+    }
+
+    public int text_to_speech(String message) {
+        return mezapp_utils.text_to_speech(message);
+    }
+
+    // ^^^^ EZAPP ^^^^^
 
     protected void pauseNativeThread() {
         mNextNativeState = NativeState.PAUSED;
@@ -701,15 +772,31 @@ public class SDLActivity extends Activity implements View.OnSystemUiVisibilityCh
     protected void onDestroy() {
         Log.v(TAG, "onDestroy()");
 
-        // xxx
-        if (mIsBound) {
-            unbindService(serviceConnection);
+        // EZAPP xxxxxxxxxxxxxx
+        //if (mezapp_fgsvc_isbound) {
+            //mezapp_fgsvc.onDestroy();
+        //}
+
+        if (mezapp_fgsvc_isbound) {
+            Intent serviceIntent = new Intent(this, ezapp_fgsvc.class);
+            stopService(serviceIntent);
         }
 
-        boolean succ;
-        Log.v(TAG, "XXX call stopService");
-        succ = stopService(new Intent(this, LocationService.class));
-        Log.v(TAG, "XXX back from stopService " + succ);
+        mezapp_utils.destroy();
+
+        //boolean succ;
+        //Log.v(TAG, "XXX call stopService");
+        //succ = stopService(new Intent(this, ezapp_fgsvc.class));
+        //Log.v(TAG, "XXX back from stopService " + succ);
+
+/*
+        xxxx need this in the destructor
+        if (mTts != null) {
+            mTts.stop();
+            mTts.shutdown(); // Release resources
+        }
+*/
+        // --------------------------------------------
 
         if (mHIDDeviceManager != null) {
             HIDDeviceManager.release(mHIDDeviceManager);
@@ -2185,54 +2272,6 @@ public class SDLActivity extends Activity implements View.OnSystemUiVisibilityCh
             result = lang + "_" + locale.getCountry();
         }
         return result;
-    }
-
-    // xxx
-    private ServiceConnection serviceConnection = new ServiceConnection() {
-        @Override
-        public void onServiceConnected(ComponentName name, IBinder service) {
-            LocationService.InnerBinder binder = (LocationService.InnerBinder) service;
-            mLocationService = binder.getService();
-            mIsBound = true;
-            Log.v(TAG, "XXX mIsBound = true");
-        }
-
-        @Override
-        public void onServiceDisconnected(ComponentName name) {
-            mIsBound = false;
-            Log.v(TAG, "XXX mIsBound = false");
-        }
-    };
-
-    // xxx
-    public double get_latitude() {
-        return mLocationService.get_latitude();
-    }
-
-    public double get_longitude() {
-        return mLocationService.get_longitude();
-    }
-
-    public double get_altitude() {
-        double altitude;
-
-        Log.v(TAG, "XXX call get_altitude");
-
-        // xxx wait for bound
-//      int millisecs = 0;
-//      while (!mIsBound) {
-//          SystemClock.sleep(100);
-//          millisecs = millisecs + 100;
-//          if (millisecs > 2000) {
-//              break;
-//          }
-//      }
-//      Log.v(TAG, "XXXXXXXXXXXXXXXXXXXXXXXXXXXXX millisecs " + millisecs);
-
-        altitude = mLocationService.get_altitude();
-
-        Log.v(TAG, "XXX back from get_altitude " + altitude);
-        return altitude;
     }
 }
 

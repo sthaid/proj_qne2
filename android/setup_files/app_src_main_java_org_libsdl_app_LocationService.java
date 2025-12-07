@@ -39,8 +39,8 @@ public class LocationService extends Service {
     private static final String TAG = "SDL";
     private FusedLocationProviderClient fusedLocationClient;
     private LocationCallback locationCallback;
-    public double latitude;
-    public double longitude;
+    public double latitude = 999999999;
+    public double longitude = 999999999;
     public double altitude = 999999999;
     private final IBinder mBinder = new InnerBinder();
 
@@ -52,11 +52,12 @@ public class LocationService extends Service {
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
+        Log.v(TAG, "XXX in LocationService onStartCommand");
+
+        /**
         String CHANNEL_ID = "my_channel_id";
         String CHANNEL_NAME = "My Channel";
         String CHANNEL_DESCRIPTION = "Description for My Channel";
-
-        Log.v(TAG, "XXX in LocationService onStartCommand");
 
         NotificationManager notificationManager = (NotificationManager) this.getSystemService(this.NOTIFICATION_SERVICE);
 
@@ -86,6 +87,7 @@ public class LocationService extends Service {
 
         // startForeground
         this.startForeground(100, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION);
+        **/
 
         // -----------------------------------------
 
@@ -120,8 +122,9 @@ public class LocationService extends Service {
 
     private void startLocationUpdates() {
         LocationRequest locationRequest = LocationRequest.create();
-        locationRequest.setInterval(10000); // Update interval in milliseconds
-        locationRequest.setFastestInterval(5000); // Fastest update interval
+        locationRequest.setInterval(60*1000); // Update interval in milliseconds
+        //locationRequest.setMinUpdateIntervalMillis(LocationRequest.IMPLICIT_MIN_UPDATE_INTERVAL);  // min same as Interval
+        //locationRequest.setFastestInterval(5000); // Fastest update interval
         locationRequest.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
 
         //xxx why commented out

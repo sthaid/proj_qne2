@@ -1313,6 +1313,22 @@ void Util_text_to_speech_stop(struct ParseState *Parser, struct Value *ReturnVal
 }
 
 //
+// utils fgsvc control 
+//
+
+void Util_start_fgsvc(struct ParseState *Parser, struct Value *ReturnValue,
+        struct Value **Param, int NumArgs)
+{
+    util_start_fgsvc();
+}
+
+void Util_stop_fgsvc(struct ParseState *Parser, struct Value *ReturnValue,
+        struct Value **Param, int NumArgs)
+{
+    util_stop_fgsvc();
+}
+
+//
 // UTILS REGISTRATION
 //
 
@@ -1358,6 +1374,9 @@ struct LibraryFunction UtilsFunctions[] = {
     // text to speech
     { Util_text_to_speech,      "void util_text_to_speech(char *text);" },
     { Util_text_to_speech_stop, "void util_text_to_speech_stop(void);" },
+    // start / stop fgsvc
+    { Util_start_fgsvc,      "void util_start_fgsvc(void);" },
+    { Util_stop_fgsvc,       "void util_stop_fgsvc(void);" },
 
     { NULL, NULL } };
 

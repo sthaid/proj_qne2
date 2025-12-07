@@ -115,28 +115,29 @@ void util_text_to_speech(char *text)
     // - (Ljava/lang/String;)I: A method that takes a String object as a parameter and returns an int.
     // - (Ljava/lang/String;I)V: A method that takes a String and an int as parameters and returns void.
 
-    // get the method_id
+    // get the method_id, print message if failed
     method_id = env->GetMethodID(clazz, "text_to_speech", "(Ljava/lang/String;)I");
     if (method_id == 0) {
         ERROR("failed to get method_id for text_to_speech\n");
-        goto done;
     }
 
-    // Note - When using JNI's NewStringUTF function, you are creating a new java.lang.String
-    //        object within the Java Virtual Machine (JVM). This jstring is a local reference,
-    //        and its memory management is handled by the JVM's garbage collector.
+    // if got the method_id then ...
+    if (method_id != 0) {
+        // Convert C string to Java String
+        //
+        // Note - When using JNI's NewStringUTF function, you are creating a new java.lang.String
+        //        object within the Java Virtual Machine (JVM). This jstring is a local reference,
+        //        and its memory management is handled by the JVM's garbage collector.
+        jstring java_string = env->NewStringUTF(text);
 
-    // Convert C string to Java String
-    jstring java_string = env->NewStringUTF(text);
-
-    // call test_to_speech method
-    rc = env->CallIntMethod(activity, method_id, java_string);
-    if (rc != 0) {
-        ERROR("text_to_speech failed, rc=%d\n", rc);
+        // call text_to_speech method
+        rc = env->CallIntMethod(activity, method_id, java_string);
+        if (rc != 0) {
+            ERROR("text_to_speech failed, rc=%d\n", rc);
+        }
     }
 
     // clean up the localreferences.
-done:
     env->DeleteLocalRef(activity);
     env->DeleteLocalRef(clazz);
 }
@@ -145,6 +146,66 @@ void util_text_to_speech_stop(void)
 {
     char stop[] = "";
     util_text_to_speech(stop);
+}
+
+// -----------------  ANDROID - START/STOP FGSVC  --------------------
+
+// xxx comment 
+
+void util_start_fgsvc(void)
+{
+    jmethodID method_id;
+    int rc;
+
+    // retrieve the JNI environment.,
+    // retrieve the Java instance of the SDLActivity,
+    // find the Java class of the activity. It should be SDLActivity or a subclass of it.
+    JNIEnv* env = (JNIEnv*)SDL_GetAndroidJNIEnv();
+    jobject activity = (jobject)SDL_GetAndroidActivity();
+    jclass clazz(env->GetObjectClass(activity));
+
+    // get the method_id, print message if failed
+    method_id = env->GetMethodID(clazz, "start_fgsvc", "()V");
+    if (method_id == 0) {
+        ERROR("failed to get method_id for start_fgsvc\n");
+    }
+
+    // if got the method_id then call the start_fgsvc method
+    if (method_id != 0) {
+        env->CallVoidMethod(activity, method_id);
+    }
+
+    // clean up the localreferences.
+    env->DeleteLocalRef(activity);
+    env->DeleteLocalRef(clazz);
+}
+
+void util_stop_fgsvc(void)
+{
+    jmethodID method_id;
+    int rc;
+
+    // retrieve the JNI environment;
+    // retrieve the Java instance of the SDLActivity;
+    // find the Java class of the activity. It should be SDLActivity or a subclass of it
+    JNIEnv* env = (JNIEnv*)SDL_GetAndroidJNIEnv();
+    jobject activity = (jobject)SDL_GetAndroidActivity();
+    jclass clazz(env->GetObjectClass(activity));
+
+    // get the method_id, print message if failed
+    method_id = env->GetMethodID(clazz, "stop_fgsvc", "()V");
+    if (method_id == 0) {
+        ERROR("failed to get method_id for stop_fgsvc\n");
+    }
+
+    // if got the method_id then call the stop_fgsvc method
+    if (method_id != 0) {
+        env->CallVoidMethod(activity, method_id);
+    }
+
+    // clean up the localreferences.
+    env->DeleteLocalRef(activity);
+    env->DeleteLocalRef(clazz);
 }
 
 #else
@@ -168,12 +229,9 @@ void util_get_location(double *latitude, double *longitude, double *altitude)
     }
 }
 
-void util_text_to_speech(char *text)
-{
-}
-
-void util_text_to_speech_stop(void)
-{
-}
+void util_text_to_speech(char *text) { }
+void util_text_to_speech_stop(void) { }
+void util_start_fgsvc(void) { }
+void util_stop_fgsvc(void) { }
 
 #endif

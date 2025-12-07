@@ -235,7 +235,7 @@ void svcs_stop_all(void)
         all_stopped = true;
         for (id = 0; id < max_svcs; id++) {
             svc_t *x = &svcs[id];
-            if (SERVICE_IS_STOPPED(x->state)) {
+            if (!SERVICE_IS_STOPPED(x->state)) {
                 all_stopped = false;
                 break;
             }

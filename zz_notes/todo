@@ -1,3 +1,36 @@
+query fg svc status
+param for fg svc, and setting
+
+toast when starting fgsvc
+
+toast from utils
+
+xxxxxxxxxx
+
+control the flashlight
+make toast API, and when starting/stopping fgsvc
+
+"title persist"
+
+cleanup
+
+test pgm start/stop fgsvc
+- need a query for whether or not it is running
+- test the ezsh with fgsvc running or not
+
+xxxxxx
+
+android makefile improvements
+
+finish checkins
+
+save the foreground service example
+
+see if new stuff can go in a seperate file that extends the class
+
+
+
+xxxxxxxxxxxxx
 git commit android/setup_files/app_jni_src_Android.mk bin/eztest bin/src/ezsh.c files/apps/Weather/weather.c linux/Makefile picoc/Makefile picoc/platform/library_unix.c src/utils.h src/utils_android.cpp zz_notes/todo
 
 

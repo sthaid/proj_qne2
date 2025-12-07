@@ -79,6 +79,8 @@ int util_write_png_file(char *dir, char *filename, unsigned char *pixels, int w,
 void util_get_location(double *latitude, double *longitude, double *altitude);
 void util_text_to_speech(char *text);
 void util_text_to_speech_stop(void);
+void util_start_fgsvc(void);
+void util_stop_fgsvc(void);
 
 #ifdef __cplusplus
 }
