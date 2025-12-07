@@ -152,6 +152,9 @@ void util_text_to_speech_stop(void)
 
 // xxx comment 
 
+// xxx maybe - if its param is enabled, then dont allow it to be stopped
+// by an application call
+
 void util_start_foreground(void)
 {
     jmethodID method_id;

@@ -18,7 +18,7 @@ import android.app.NotificationManager;
 
 import android.content.pm.ServiceInfo;
 
-import org.sthaid.ezApp.R;
+import org.sthaid.ezApp.R;  // needed to access R.drawable.ic_notifcation_icon
 
 public class ezapp_fgsvc extends Service {
 
