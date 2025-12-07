@@ -55,6 +55,7 @@ typedef struct {
     bool devel_mode;
     int  devel_port;
     char devel_password[50];
+    bool fgsvc_enabled;
 } params_t;
 
 //
@@ -127,6 +128,7 @@ static int init(void)
     params.devel_mode = util_get_int_param(".", "devel_mode", 0);
     params.devel_port = util_get_int_param(".", "devel_port", DEFAULT_DEVEL_PORT);
     strcpy(params.devel_password, util_get_str_param(".", "devel_password", DEFAULT_DEVEL_PASSWORD));
+    params.fgsvc_enabled = util_get_int_param(".", "fgsvc_enabled", 0);
 
 #ifdef ANDROID
     // copy asset files to the working directory
@@ -247,6 +249,8 @@ static void settings(void);
 static void processing(void)
 {
     sdlx_event_t event;
+
+    sdlx_show_toast("STARTING"); //xxx temp
 
     while (true) {
         // clear the display, and set the font to default
@@ -576,6 +580,7 @@ static void settings(void)
     #define EVID_SERVICES        1005
 #ifdef ANDROID
     #define EVID_RESET_APPS_AND_SVCS  1006
+    #define EVID_FG_SVC               1007
 #endif
 
     // get this device ipaddr
@@ -620,6 +625,10 @@ static void settings(void)
         // display Reset_Apps_And_svcs
         loc = sdlx_render_printf(0, ROW2Y(15), "Reset_Apps_And_Svcs");
         sdlx_register_event(loc, EVID_RESET_APPS_AND_SVCS);
+
+        // display Fg_Svc
+        loc = sdlx_render_printf(0, ROW2Y(17), "Fg_Svc = %s", params.fgsvc_enabled ? "ENABLED" : "DISABLED");
+        sdlx_register_event(loc, EVID_FG_SVC);
 #endif
 
         // change print color back to white
@@ -702,6 +711,15 @@ static void settings(void)
             create_files(CREATE_FILES_RESET);
             msg = "Apps/Svcs are reset";
             msg_time = util_microsec_timer();
+            break; }
+        case EVID_FG_SVC: {
+            params.fgsvc_enabled = (params.fgsvc_enabled ? false : true);
+            util_set_int_param(".", "fgsvc_enabled", params.fgsvc_enabled);
+            if (params.fgsvc_enabled) {
+                util_start_fgsvc();
+            } else {
+                util_stop_fgsvc();
+            }
             break; }
 #endif
         case EVID_QUIT:

@@ -733,6 +733,17 @@ void Sdl_sensor_read_humidity (struct ParseState *Parser, struct Value *ReturnVa
 }
 
 //
+// misc
+//
+
+void Sdl_show_toast (struct ParseState *Parser, struct Value *ReturnValue,
+	struct Value **Param, int NumArgs)
+{
+    char *msg = Param[0]->Val->Pointer;
+    sdlx_show_toast(msg);
+}
+
+//
 // SDL REGISTRATION
 //
 
@@ -840,6 +851,9 @@ struct LibraryFunction SdlFunctions[] = {
     { Sdl_sensor_read_pressure,         "int sdlx_sensor_read_pressure(double *millibars);" },
     { Sdl_sensor_read_temperature,      "int sdlx_sensor_read_temperature(double *degrees_c);" },
     { Sdl_sensor_read_humidity,         "int sdlx_sensor_read_humidity(double *percent);" },
+
+    // misc
+    { Sdl_show_toast,                   "void sdlx_show_toast(char *msg);" },
 
     { NULL, NULL } };
 

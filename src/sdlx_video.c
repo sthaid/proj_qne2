@@ -1279,3 +1279,16 @@ void sdlx_plot_free(void *cx)
     free(cx);
 }
 
+// -----------------  MISC  --------------------------------------------- 
+
+void sdlx_show_toast(char *message)
+{ 
+    INFO("%s\n", message);
+
+#ifdef ANDROID
+    #define DURATION_SHORT  0
+    #define DURATION_LONG   1
+    #define GRAVITY_CENTER  17
+    SDL_ShowAndroidToast(message, DURATION_LONG, GRAVITY_CENTER, 0, 0);
+#endif
+}

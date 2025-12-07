@@ -100,6 +100,9 @@ int main(int argc, char **argv)
         printf("INFO %s: read file common.h okay, file_len = %d\n", data_dir, file_len);
     }
 
+    // toast test
+    sdlx_show_toast("TOAST TEST");
+
     // call handler routine for the current page
     while (true) {
         page_hndlr();

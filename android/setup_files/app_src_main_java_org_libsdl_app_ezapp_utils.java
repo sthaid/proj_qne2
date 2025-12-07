@@ -1,7 +1,3 @@
-//xxx Toast.makeText(MainActivity.this, "Language not supported", Toast.LENGTH_SHORT).show();
-
-// ====================================
-
 package org.libsdl.app;
 
 import android.content.Context;

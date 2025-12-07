@@ -102,7 +102,6 @@ int sdlx_set_color_alpha(int color, int alpha);
 int sdlx_wavelength_to_color(int wavelength);
 
 // render text
-// xxx print init for numchars
 void sdlx_print_init(double numchars, int fg_color, int bg_color);
 void sdlx_print_init_numchars(double numchars);
 void sdlx_print_init_color(int fg_color, int bg_color);
@@ -135,7 +134,7 @@ void sdlx_destroy_texture(sdlx_texture_t *texture);
 void sdlx_query_texture(sdlx_texture_t *texture, int *w, int *h);
 unsigned char *sdlx_read_display_pixels(int x, int y, int w, int h, int *w_pixels, int *h_pixels);
 
-// plotting
+// plotting  xxx rework or delete
 void *sdlx_plot_create(char *title,
                       int xleft, int xright, int ybottom, int ytop,
                       double xval_left, double xval_right, double yval_bottom, double yval_top,
@@ -146,6 +145,9 @@ void sdlx_plot_bars(void *cx,
                    sdlx_plot_point_t *pts_avg, sdlx_plot_point_t *pts_min, sdlx_plot_point_t *pts_max,
                    int num_pts, double bar_wval);
 void sdlx_plot_free(void *cx);
+
+// misc
+void sdlx_show_toast(char *message);
 
 // --------------------
 // audio

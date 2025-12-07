@@ -1,11 +1,10 @@
 xxxxxxxx NOTES ...
-//import org.sthaid.ezApp.R;   xxx what is this?
+//import org.sthaid.ezApp.R;   xxx what is this?  for drawable
 
-
-query fg svc status
-param for fg svc, and setting
-
-toast when starting fgsvc
+fg
+- query fg svc status
+- param for fg svc, and setting
+- toast when starting fgsvc   xxxxxxxxxxx
 
 toast from utils
 

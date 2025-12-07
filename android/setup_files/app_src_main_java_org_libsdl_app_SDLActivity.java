@@ -525,6 +525,8 @@ public class SDLActivity extends Activity implements View.OnSystemUiVisibilityCh
             Log.v(TAG, "EZAPP fgsvc already running");
             return;
         }
+
+        showToast("enabling foreground", 0, Gravity.CENTER, 0, 0);
             
         Log.v(TAG, "EZAPP starting fgsvc");
         ComponentName component_name;
@@ -537,6 +539,8 @@ public class SDLActivity extends Activity implements View.OnSystemUiVisibilityCh
             Log.v(TAG, "EZAPP fgsvc is not running");
             return;
         }
+
+        showToast("disabling foreground", 0, Gravity.CENTER, 0, 0);
 
         Log.v(TAG, "EZAPP stopping fgsvc");
         Intent serviceIntent = new Intent(this, ezapp_fgsvc.class);
