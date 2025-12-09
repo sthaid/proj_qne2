@@ -516,7 +516,9 @@ public class SDLActivity extends Activity implements View.OnSystemUiVisibilityCh
         }
 
         // EZAPP onCreate: Initialize TextToSpeech
-        mezapp_utils = new ezapp_utils(getApplicationContext());
+        //mezapp_utils = new ezapp_utils(getApplicationContext());
+        //xxx mezapp_utils = new ezapp_utils(getContext());
+        mezapp_utils = new ezapp_utils(mSingleton);
     }
 
     // EZAPP start/stop foreground
@@ -585,6 +587,23 @@ public class SDLActivity extends Activity implements View.OnSystemUiVisibilityCh
     // EZAPP text to speech
     public int text_to_speech(String message) {
         return mezapp_utils.text_to_speech(message);
+    }
+
+    // EZAPP flashlight
+    public void turn_flashlight_on() {
+        mezapp_utils.turn_flashlight_on();
+    }
+
+    public void turn_flashlight_off() {
+        mezapp_utils.turn_flashlight_off();
+    }
+
+    public boolean is_flashlight_on() { 
+        return mezapp_utils.is_flashlight_on();
+    }       
+                
+    public void toggle_flashlight() {
+        mezapp_utils.toggle_flashlight();
     }
 
     // ---- EZAPP END ----

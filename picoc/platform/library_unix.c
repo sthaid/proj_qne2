@@ -1345,10 +1345,37 @@ void Util_stop_foreground(struct ParseState *Parser, struct Value *ReturnValue,
 void Util_is_foreground_enabled(struct ParseState *Parser, struct Value *ReturnValue,
         struct Value **Param, int NumArgs)
 {
-    bool rc_flag;
+    bool is_enabled;
 
-    rc_flag = util_is_foreground_enabled();
-    ReturnValue->Val->Integer = rc_flag;
+    is_enabled = util_is_foreground_enabled();
+    ReturnValue->Val->Integer = is_enabled;
+}
+
+void Util_turn_flashlight_on(struct ParseState *Parser, struct Value *ReturnValue,
+        struct Value **Param, int NumArgs)
+{
+    util_turn_flashlight_on();
+}
+
+void Util_turn_flashlight_off(struct ParseState *Parser, struct Value *ReturnValue,
+        struct Value **Param, int NumArgs)
+{
+    util_turn_flashlight_off();
+}
+
+void Util_toggle_flashlight(struct ParseState *Parser, struct Value *ReturnValue,
+        struct Value **Param, int NumArgs)
+{
+    util_toggle_flashlight();
+}
+
+void Util_is_flashlight_on(struct ParseState *Parser, struct Value *ReturnValue,
+        struct Value **Param, int NumArgs)
+{
+    bool is_on;
+
+    is_on = util_is_flashlight_on();
+    ReturnValue->Val->Integer = is_on;
 }
 
 //
@@ -1401,6 +1428,11 @@ struct LibraryFunction UtilsFunctions[] = {
     { Util_start_foreground,      "void util_start_foreground(void);" },
     { Util_stop_foreground,       "void util_stop_foreground(void);" },
     { Util_is_foreground_enabled, "bool util_is_foreground_enabled(void);" },
+    // flashlight
+    { Util_turn_flashlight_on,  "void util_turn_flashlight_on(void);" },
+    { Util_turn_flashlight_off, "void util_turn_flashlight_off(void);" },
+    { Util_toggle_flashlight,   "void util_toggle_flashlight(void);" },
+    { Util_is_flashlight_on,    "bool util_is_flashlight_on(void);" },
 
     { NULL, NULL } };
 

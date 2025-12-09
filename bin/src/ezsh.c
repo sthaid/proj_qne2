@@ -118,7 +118,7 @@ int main(int argc, char **argv)
         char prompt[200], local_cwd[200], android_cwd[200];
         getcwd(local_cwd, sizeof(local_cwd));
         strcpy(android_cwd, cwd);
-        snprintf(prompt, sizeof(prompt), "ezsh %s %s> ", basename(local_cwd), basename(android_cwd));
+        snprintf(prompt, sizeof(prompt), "ezsh lcl:%s android:%s> ", basename(local_cwd), basename(android_cwd));
 
         // read cmdline
         // - if NULL then end program

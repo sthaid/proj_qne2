@@ -1,14 +1,15 @@
-android makefile improvements
-
 control the flashlight
+- toggle and status apis
+- toast problem
 
 update ezsh.c with periodic connection status test
 
 regarding foreground - 
-// xxx maybe - if its param is enabled, then dont allow it to be stopped
-// by an application call
-
-document foreground 
+- // xxx maybe - if its param is enabled, then dont allow it to be stopped
+  // by an application call
+  //       OR
+  // dont let applications control it
+- document foreground 
 
 document type sig
 https://docs.oracle.com/javase/7/docs/technotes/guides/jni/spec/types.html#wp276
@@ -43,8 +44,6 @@ Picoc
 
 tools
 - ezgetall   - print error if files dir exits locally
-- cleanup bin dir
-   - maybe move more android dir scripts to bin dir
 - cleanup with ezsh
   - review main interaction with ezsh
 - how to run vi with tags from a subdir

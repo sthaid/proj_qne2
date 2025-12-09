@@ -158,7 +158,6 @@ void util_text_to_speech_stop(void)
 void util_start_foreground(void)
 {
     jmethodID method_id;
-    int rc;
 
     // retrieve the JNI environment.,
     // retrieve the Java instance of the SDLActivity,
@@ -186,7 +185,6 @@ void util_start_foreground(void)
 void util_stop_foreground(void)
 {
     jmethodID method_id;
-    int rc;
 
     // retrieve the JNI environment;
     // retrieve the Java instance of the SDLActivity;
@@ -214,7 +212,6 @@ void util_stop_foreground(void)
 bool util_is_foreground_enabled(void)
 {
     jmethodID method_id;
-    int rc;
     bool is_fg_enabled = false;
 
     // retrieve the JNI environment;
@@ -243,6 +240,122 @@ bool util_is_foreground_enabled(void)
     return is_fg_enabled;
 }
 
+// -----------------  ANDROID - FLASHLIGHT  --------------------------
+
+// xxx show toast when flashlight is turned on/off
+
+void util_turn_flashlight_on(void)
+{
+    jmethodID method_id;
+
+    // retrieve the JNI environment;
+    // retrieve the Java instance of the SDLActivity;
+    // find the Java class of the activity. It should be SDLActivity or a subclass of it
+    JNIEnv* env = (JNIEnv*)SDL_GetAndroidJNIEnv();
+    jobject activity = (jobject)SDL_GetAndroidActivity();
+    jclass clazz(env->GetObjectClass(activity));
+
+    // get the method_id, print message if failed
+    method_id = env->GetMethodID(clazz, "turn_flashlight_on", "()V");
+    if (method_id == 0) {
+        ERROR("failed to get method_id for turn_flashlight_on\n");
+    }
+
+    // if got the method_id then call the turn_flashlight_on method
+    if (method_id != 0) {
+        env->CallVoidMethod(activity, method_id);
+    }
+
+    // clean up the localreferences.
+    env->DeleteLocalRef(activity);
+    env->DeleteLocalRef(clazz);
+}
+
+void util_turn_flashlight_off(void)
+{
+    jmethodID method_id;
+
+    // retrieve the JNI environment;
+    // retrieve the Java instance of the SDLActivity;
+    // find the Java class of the activity. It should be SDLActivity or a subclass of it
+    JNIEnv* env = (JNIEnv*)SDL_GetAndroidJNIEnv();
+    jobject activity = (jobject)SDL_GetAndroidActivity();
+    jclass clazz(env->GetObjectClass(activity));
+
+    // get the method_id, print message if failed
+    method_id = env->GetMethodID(clazz, "turn_flashlight_off", "()V");
+    if (method_id == 0) {
+        ERROR("failed to get method_id for turn_flashlight_off\n");
+    }
+
+    // if got the method_id then call the turn_flashlight_off method
+    if (method_id != 0) {
+        env->CallVoidMethod(activity, method_id);
+    }
+
+    // clean up the localreferences.
+    env->DeleteLocalRef(activity);
+    env->DeleteLocalRef(clazz);
+}
+
+void util_toggle_flashlight(void)
+{
+    jmethodID method_id;
+
+    // retrieve the JNI environment;
+    // retrieve the Java instance of the SDLActivity;
+    // find the Java class of the activity. It should be SDLActivity or a subclass of it
+    JNIEnv* env = (JNIEnv*)SDL_GetAndroidJNIEnv();
+    jobject activity = (jobject)SDL_GetAndroidActivity();
+    jclass clazz(env->GetObjectClass(activity));
+
+    // get the method_id, print message if failed
+    method_id = env->GetMethodID(clazz, "toggle_flashlight", "()V");
+    if (method_id == 0) {
+        ERROR("failed to get method_id for toggle_flashlight\n");
+    }
+
+    // if got the method_id then call the toggle_flashlight method
+    if (method_id != 0) {
+        env->CallVoidMethod(activity, method_id);
+    }
+
+    // clean up the localreferences.
+    env->DeleteLocalRef(activity);
+    env->DeleteLocalRef(clazz);
+}
+
+bool util_is_flashlight_on(void)
+{
+    jmethodID method_id;
+    bool is_on;
+
+    // retrieve the JNI environment;
+    // retrieve the Java instance of the SDLActivity;
+    // find the Java class of the activity. It should be SDLActivity or a subclass of it
+    JNIEnv* env = (JNIEnv*)SDL_GetAndroidJNIEnv();
+    jobject activity = (jobject)SDL_GetAndroidActivity();
+    jclass clazz(env->GetObjectClass(activity));
+
+    // get the method_id, print message if failed
+    method_id = env->GetMethodID(clazz, "is_flashlight_on", "()Z");
+    if (method_id == 0) {
+        ERROR("failed to get method_id for is_flashlight_on\n");
+    }
+
+    // if got the method_id then call the is_flashlight_on method
+    if (method_id != 0) {
+        is_on = env->CallBooleanMethod(activity, method_id);
+    }
+
+    // clean up the localreferences.
+    env->DeleteLocalRef(activity);
+    env->DeleteLocalRef(clazz);
+
+    // return flashlight state
+    return is_on;
+}
+
 #else
 
 // -----------------  NOT ANDROID - TEST CODE  ---------------------------
@@ -269,5 +382,10 @@ void util_text_to_speech_stop(void) { }
 void util_start_foreground(void) { }
 void util_stop_foreground(void) { }
 bool util_is_foreground_enabled(void) { return false; }
+void util_turn_flashlight_on(void) {}
+void util_turn_flashlight_off(void) {}
+void util_toggle_flashlight(void) {}
+bool util_is_flashlight_on(void) { return false; }
+
 
 #endif

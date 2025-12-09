@@ -1,5 +1,6 @@
 package org.libsdl.app;
 
+import android.os.Build;
 import android.content.Context;
 import android.util.Log;
 import android.os.Binder;
@@ -16,16 +17,29 @@ import com.google.android.gms.location.LocationResult;
 import android.location.Location;
 import android.os.Looper;
 
-public class ezapp_utils {
-    private static final   String TAG = "SDL";
-    private static         TextToSpeech mTts;
-    private static boolean isTtsInitialized = false;
+import android.hardware.camera2.CameraAccessException;
+import android.hardware.camera2.CameraManager;
+import android.view.Gravity;
 
-    private FusedLocationProviderClient fusedLocationClient;
-    private LocationCallback            locationCallback;
-    private double                      latitude = 999999999;
-    private double                      longitude = 999999999;
-    private double                      altitude = 999999999;
+public class ezapp_utils {
+    private static final String TAG = "SDL";
+
+    private static TextToSpeech mTts;
+    private static boolean      isTtsInitialized = false;
+
+    private static FusedLocationProviderClient fusedLocationClient;
+    private static LocationCallback            locationCallback;
+    private static double                      latitude  = 999999999;
+    private static double                      longitude = 999999999;
+    private static double                      altitude  = 999999999;
+
+    private static CameraManager cameraManager;
+    private static String        cameraId;
+    private static boolean       flashlight_is_on = false;
+
+    //
+    // constructor
+    //
 
     public ezapp_utils(Context cx) {
         Log.v(TAG, "EZAPP utils init");
@@ -62,13 +76,27 @@ public class ezapp_utils {
                 }
             }
         };
-
-        // start location updates using 60 second interval
+        // - start location updates using 180 second interval
         LocationRequest locationRequest = LocationRequest.create();
-        locationRequest.setInterval(60*1000);
+        locationRequest.setInterval(180*1000);
         locationRequest.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
         fusedLocationClient.requestLocationUpdates(locationRequest, locationCallback, Looper.getMainLooper());
+
+        // Initialize flashlight support
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            cameraManager = (CameraManager) cx.getSystemService(Context.CAMERA_SERVICE);
+            try {
+                // get the first camera ID
+                cameraId = cameraManager.getCameraIdList()[0];
+            } catch (CameraAccessException e) {
+                Log.v(TAG, "EZAPP CameraAccessException");
+            }
+        }
     }
+
+    //
+    // cleanup
+    //
 
     public void destroy() {
         Log.v(TAG, "EZAPP utils destroy");
@@ -78,6 +106,10 @@ public class ezapp_utils {
             mTts = null;
         }
     }
+
+    //
+    // text to speech
+    //
 
     public int text_to_speech(String message) {
         int status;
@@ -95,6 +127,10 @@ public class ezapp_utils {
         }
     }
 
+    //
+    // location
+    //
+
     public double get_latitude() {
         return latitude;
     }
@@ -105,5 +141,53 @@ public class ezapp_utils {
 
     public double get_altitude() {
         return altitude;
+    }
+
+    //
+    // flashlight
+    //
+
+    public void turn_flashlight_on() {
+        if (cameraManager == null || cameraId == null) {
+            Log.v(TAG, "EZAPP flashlight not supported");
+            return;
+        }
+
+        try {
+            Log.v(TAG, "turning flashlight on");
+            cameraManager.setTorchMode(cameraId, true);
+            flashlight_is_on = true;
+            SDLActivity.showToast("Flashlight On", 0, Gravity.CENTER, 0, 0);
+        } catch (CameraAccessException e) {
+            Log.v(TAG, "EZAPP CameraAccessException");
+        }
+    }
+
+    public void turn_flashlight_off() {
+        if (cameraManager == null || cameraId == null) {
+            Log.v(TAG, "EZAPP flashlight not supported");
+            return;
+        }
+
+        try {
+            Log.v(TAG, "turning flashlight off");
+            cameraManager.setTorchMode(cameraId, false);
+            flashlight_is_on = false;
+            SDLActivity.showToast("Flashlight Off", 0, Gravity.CENTER, 0, 0);
+        } catch (CameraAccessException e) {
+            Log.v(TAG, "EZAPP CameraAccessException");
+        }
+    }
+
+    public boolean is_flashlight_on() {
+        return flashlight_is_on;
+    }
+
+    public void toggle_flashlight() {
+        if (flashlight_is_on) {
+            turn_flashlight_off();
+        } else {
+            turn_flashlight_on();
+        }
     }
 }

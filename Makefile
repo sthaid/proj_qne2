@@ -8,6 +8,7 @@ SUBDIRS = \
 APPS = \
     files/apps/Clock \
     files/apps/Compass \
+    files/apps/FlshLite \
     files/apps/HexCalc \
     files/apps/Light \
     files/apps/Location \

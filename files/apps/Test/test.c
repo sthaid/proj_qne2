@@ -254,6 +254,8 @@ static void page_hndlr()
 // -----------------  PAGE 0: CLOCK  --------------------------
 
 #define EVID_TOGGLE_FOREGROUND  10
+#define EVID_FLASH_OFF          11
+#define EVID_FLASH_ON           12
 
 static void page_0_draw(void)
 {
@@ -261,7 +263,6 @@ static void page_0_draw(void)
     struct tm *tm;
     char str[100];
     long usecs, delta_ms;
-    sdlx_loc_t *loc;
     static long usecs_last, usecs_first;
     
     // print the time, hh:mm:ss
@@ -286,6 +287,12 @@ static void page_0_draw(void)
     sdlx_render_printf_xyctr(sdlx_win_width/2, ROW2Y(9), "%0.3f delta=%ld ms", 
         (usecs-usecs_first)/1000000., delta_ms);
 
+    // print ipaddr
+    sdlx_render_printf_xyctr(sdlx_win_width/2, ROW2Y(11), "%s", util_get_ipaddr());
+
+#ifdef NOTDEF
+    sdlx_loc_t *loc;
+
     // register toggle foreground event
     sdlx_print_init_color(COLOR_LIGHT_BLUE, COLOR_BLACK);
     loc = sdlx_render_text(
@@ -295,8 +302,20 @@ static void page_0_draw(void)
     sdlx_register_event(loc, EVID_TOGGLE_FOREGROUND);
     sdlx_print_init_color(COLOR_WHITE, COLOR_BLACK);
 
-    // print ipaddr
-    sdlx_render_printf_xyctr(sdlx_win_width/2, ROW2Y(11), "%s", util_get_ipaddr());
+    // register flashlight on/off events
+    sdlx_print_init_color(COLOR_LIGHT_BLUE, COLOR_BLACK);
+    loc = sdlx_render_text(
+            0, 
+            sdlx_win_height-10*sdlx_char_height, 
+            "FlashOff");
+    sdlx_register_event(loc, EVID_FLASH_OFF);
+    loc = sdlx_render_text(
+            sdlx_win_width/2,
+            sdlx_win_height-10*sdlx_char_height, 
+            "FlashOn");
+    sdlx_register_event(loc, EVID_FLASH_ON);
+    sdlx_print_init_color(COLOR_WHITE, COLOR_BLACK);
+#endif
 }
 
 static void page_0_process_event(sdlx_event_t *ev)
@@ -308,6 +327,12 @@ static void page_0_process_event(sdlx_event_t *ev)
         } else {
             util_start_foreground();
         }
+        break;
+    case EVID_FLASH_OFF:
+        util_turn_flashlight_off();
+        break;
+    case EVID_FLASH_ON:
+        util_turn_flashlight_on();
         break;
     }
 }
