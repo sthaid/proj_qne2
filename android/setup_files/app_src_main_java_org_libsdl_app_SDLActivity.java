@@ -515,10 +515,8 @@ public class SDLActivity extends Activity implements View.OnSystemUiVisibilityCh
             }
         }
 
-        // EZAPP onCreate: Initialize TextToSpeech
-        //mezapp_utils = new ezapp_utils(getApplicationContext());
-        //xxx mezapp_utils = new ezapp_utils(getContext());
-        mezapp_utils = new ezapp_utils(mSingleton);
+        // EZAPP onCreate: Initialize Utils: Location, TextToSpeech, Flashlight
+        mezapp_utils = new ezapp_utils(getContext());
     }
 
     // EZAPP start/stop foreground
