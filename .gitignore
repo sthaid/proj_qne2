@@ -23,3 +23,7 @@ src/version.h
 # under files dir
 params
 files/svcs/Location/loc_hist
+files/apps/Weather/daily.json
+files/apps/Weather/hourly.json
+files/apps/Weather/info.json
+files/apps/Weather/icon
