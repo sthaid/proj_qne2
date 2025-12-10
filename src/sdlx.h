@@ -250,7 +250,7 @@ int sdlx_sensor_read_humidity(double *percent);
 // events   
 // --------------------
 
-#define EVID_SWIPE_RIGHT       9990
+#define EVID_SWIPE_RIGHT       9990  // xxx are these 2 used
 #define EVID_SWIPE_LEFT        9991
 #define EVID_MOTION            9992
 #define EVID_KEYBD             9993  // xxx move define

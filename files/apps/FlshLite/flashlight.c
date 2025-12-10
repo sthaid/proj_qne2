@@ -1,4 +1,4 @@
-#include <stdbool.h> // xxx elim this
+#include <stdbool.h>
 #include <utils.h>
 
 // -----------------  MAIN  ------------------------------------------

@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdbool.h>
 #include <math.h>
+#include <unistd.h>  //xxx needed?
 
 #include <sdlx.h>
 #include <utils.h>
@@ -27,6 +28,7 @@ int computer_score, human_score;
     
 void paddle(void);
 void computer_paddle(void);
+void play_tone(int freq, int intvl_ms);
 
 // -----------------  MAIN  ------------------------------------------
     
@@ -48,7 +50,7 @@ int main(int argc, char **argv)
     printf("INFO %s: starting, data_dir=%s\n", progname, data_dir);
 
     // init sdl video subsystem
-    rc = sdlx_init(SUBSYS_VIDEO);
+    rc = sdlx_init(SUBSYS_VIDEO|SUBSYS_AUDIO);
     if (rc != 0) {
         printf("ERROR %s: sdlx_init failed\n", progname);
         return 1;
@@ -67,6 +69,11 @@ int main(int argc, char **argv)
     computer_paddle_y = 200;
 
     sdlx_print_init_numchars(LARGE_FONT);
+
+    play_tone(500,250);
+    sleep(1);
+    play_tone(1000,100);
+    sleep(1);
 
     // runtime loop
     while (!done) {
@@ -89,6 +96,7 @@ int main(int argc, char **argv)
             x_last = x;
             y_last = y;
             computer_score++;
+            play_tone(500,250);
         } else if (y < 0) {
             printf("human scored, y=%f\n", y);
             x = sdlx_win_width/2;
@@ -98,6 +106,7 @@ int main(int argc, char **argv)
             x_last = x;
             y_last = y;
             human_score++;
+            play_tone(500,250);
         } else {
             if (x < 0 || x > sdlx_win_width) vx = -vx;
             //if (y < 0 || y > sdlx_win_height) vy = -vy;
@@ -114,6 +123,7 @@ int main(int argc, char **argv)
             x >= paddle_x-PADDLE_W/2 && 
             x <= paddle_x+PADDLE_W/2)
         {
+            play_tone(1000,100);
             paddle();
         }
 
@@ -125,6 +135,7 @@ int main(int argc, char **argv)
             x >= computer_paddle_x-PADDLE_W/2 && 
             x <= computer_paddle_x+PADDLE_W/2)
         {
+            play_tone(1000,100);
             computer_paddle();
         }
 
@@ -187,7 +198,7 @@ make ball and paddle different colors
 
     // cleanup and end program
     sdlx_destroy_texture(ball);
-    sdlx_quit(SUBSYS_VIDEO);
+    sdlx_quit(SUBSYS_VIDEO|SUBSYS_AUDIO);
     printf("INFO %s: terminating\n", progname);
     return 0;
 }
@@ -221,4 +232,14 @@ void paddle(void)
 void computer_paddle(void)
 {
     vy = -vy;
+}
+
+void play_tone(int freq, int intvl_ms)
+{
+    static sdlx_tone_t t[2];
+
+    t[0].freq = freq;
+    t[0].intvl_ms = intvl_ms;
+    
+    sdlx_audio_play_tones(t);
 }
