@@ -242,8 +242,8 @@ void computer_paddle_control(void)
     //computer_paddle_x = x;
 
     if (vy < 0) {
-        //computer_paddle_x += (x - computer_paddle_x) * .015;  //xxx make this a computer skill from 1 to 10
-        computer_paddle_x += (x - computer_paddle_x) * .03;
+        //computer_paddle_x += (x - computer_paddle_x) * 0.015;  //xxx make this a computer skill from 1 to 10
+        computer_paddle_x += (x - computer_paddle_x) * 0.03;
     }
 }
 
