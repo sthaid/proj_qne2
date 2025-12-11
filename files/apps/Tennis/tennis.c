@@ -8,28 +8,33 @@ speeds up when motion is active
 
 limit paddle motion to x span
 
+
+speed up ball gradually
+
+delay before serve,  fixed 0.5 sec
+
 */
 
 
 /* TODO
-speed up ball gradually
 
 computer simulation improvement
 
 params, such as 
 - disable sound
-- initial speed control
+- initial speed
 - max speed
+- computer skill
 
-delay before serve
 
 indicate which score is computer vs human
 */
 
 #include <stdio.h>
 #include <stdbool.h>
+#include <stdlib.h>
 #include <math.h>
-#include <unistd.h>  //xxx needed?
+//#include <unistd.h>  //xxx needed?
 
 #include <sdlx.h>
 #include <utils.h>
@@ -116,14 +121,17 @@ int main(int argc, char **argv)
         // xxx vary the serve
         // xxx define for serve velocity
         if (serve_needed) {
-            //x = sdlx_win_width/2;
-            //y = 0;
-            // xxx vary direction
+            x = computer_paddle_x;
             y = computer_paddle_y + PADDLE_H/2 + BALL_RADIUS;
-            vx = 0;
-            vy = 10;
             x_last = x;
             y_last = y;
+
+            double tgtx = (random() % sdlx_win_width);
+            double k = (tgtx - x) / (y_bottom - y);
+            vy = 10.0 / sqrt(1 + k*k);
+            vx = k * vy;
+            printf("tgtx = %0.3f vx = %0.3f vy = %0.3f\n", tgtx, vx, vy);
+            
             serve_needed = false;
         }
 
@@ -231,7 +239,12 @@ int main(int argc, char **argv)
 void computer_paddle_control(void)
 {
     // xxx this may be too simple
-    computer_paddle_x = x;
+    //computer_paddle_x = x;
+
+    if (vy < 0) {
+        //computer_paddle_x += (x - computer_paddle_x) * .015;  //xxx make this a computer skill from 1 to 10
+        computer_paddle_x += (x - computer_paddle_x) * .03;
+    }
 }
 
 // xxx comments
