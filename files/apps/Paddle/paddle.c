@@ -66,6 +66,12 @@ DONE?
 // variables
 //
 
+char           *progname;
+char           *data_dir;
+
+bool            param_autonomous = false;
+bool            param_sound = false;
+
 int             state;
 double          y_top, y_bottom;
 double          x, y, x_last, y_last;
@@ -77,9 +83,6 @@ double          ball_speed_court_per_sec;
 double          court_pixels;
 sdlx_texture_t *ball;
 
-// xxx params
-bool autonomous = false;
-
 //
 // prototypes    
 //
@@ -89,12 +92,13 @@ void paddle_control(int which_paddle);
 void bounce_ball_off_paddle(int which_paddle);
 void play_tone(int freq, int duration_ms);
 
+void init_settings(void);
+void settings(void);
+
 // -----------------  MAIN  -----------------------
     
 int main(int argc, char **argv)
 {
-    char        *progname;
-    char        *data_dir;
     int          rc;
     int          serving_delay = 0;
     sdlx_event_t event;
@@ -141,6 +145,8 @@ int main(int argc, char **argv)
     y = computer_paddle_y + PADDLE_H/2 + BALL_RADIUS;
     // - seed random number generation
     srandom(time(NULL));
+    // - settings
+    init_settings();
 
     // runtime loop
     while (!end_program) {
@@ -189,6 +195,7 @@ int main(int argc, char **argv)
         sdlx_print_init_numchars(LARGE_FONT);
         sdlx_render_printf(0, 0, "%2d", computer_score);
         sdlx_render_printf(sdlx_win_width-2*sdlx_char_width, 0, "%d", human_score);
+        sdlx_print_init_numchars(DEFAULT_FONT);
 
         // display the ball and paddles
         sdlx_render_texture(x-BALL_RADIUS, y-BALL_RADIUS, 2*BALL_RADIUS, 2*BALL_RADIUS, ball);
@@ -251,7 +258,7 @@ int main(int argc, char **argv)
                 state             = STATE_READY;
                 break;
             case EVID_SETTINGS:
-                printf("SETTING TBD\n");
+                settings();
                 break;
             case EVID_MOTION:
                 human_paddle_x += event.u.motion.xrel;
@@ -266,6 +273,8 @@ int main(int argc, char **argv)
     printf("INFO %s: terminating\n", progname);
     return 0;
 }
+
+// -----------------  RUN -------------------------
 
 void run(void)
 {
@@ -292,7 +301,7 @@ void run(void)
     paddle_control(COMPUTER_PADDLE);
 
     // if autonomous mode then the computer will play the human paddle too
-    if (autonomous) {
+    if (param_autonomous) {
         paddle_control(HUMAN_PADDLE);
     }
 
@@ -341,8 +350,6 @@ void run(void)
         state = STATE_SERVING;
     }
 }
-
-// -----------------  SUPPORT  --------------------
 
 void paddle_control(int which_paddle)
 {
@@ -405,3 +412,63 @@ void play_tone(int freq, int duration_ms)
     sdlx_audio_play_tones(t);
 }
 
+// -----------------  SETTINGS  -------------------
+
+#define EVID_AUTONOMOUS 1
+#define EVID_SOUND      2
+
+void init_settings(void)
+{
+    param_autonomous = util_get_int_param(data_dir, "autonomous", 0);
+    param_sound = util_get_int_param(data_dir, "sound", 1);
+}
+
+void settings(void)
+{
+    bool done = false;
+    sdlx_event_t event;
+    sdlx_loc_t *loc;
+
+    printf("SETTINGS START\n");
+
+    while (!done) {
+        // init the backbuffer
+        sdlx_display_init(COLOR_BLACK);
+
+        // register events
+        sdlx_print_init_color(COLOR_LIGHT_BLUE, COLOR_BLACK);
+
+        loc = sdlx_render_printf(0, ROW2Y(2), "Autonomous = %s", param_autonomous ? "ON" : "OFF");
+        sdlx_register_event(loc, EVID_AUTONOMOUS);
+
+        loc = sdlx_render_printf(0, ROW2Y(4), "Sound = %s", param_sound ? "ON" : "OFF");
+        sdlx_register_event(loc, EVID_SOUND);
+
+        sdlx_print_init_color(COLOR_WHITE, COLOR_BLACK);
+
+        sdlx_register_control_events(NULL, NULL, "X", COLOR_WHITE, COLOR_BLACK, 0, 0, EVID_QUIT);
+
+        // present the display
+        sdlx_display_present();
+
+        // wait for an event, with infinite timeout
+        sdlx_get_event(-1, &event);
+
+        // process event
+        switch (event.event_id) {
+        case EVID_AUTONOMOUS:
+            param_autonomous = !param_autonomous;
+            util_set_int_param(data_dir, "autonomous", param_autonomous);
+            break;
+        case EVID_SOUND:
+            param_sound = !param_sound;
+            util_set_int_param(data_dir, "sound", param_sound);
+            break;
+        case EVID_QUIT:
+            done = true;
+            break;
+        }
+    }
+
+    printf("SETTINGS DONE\n");
+}
