@@ -13,6 +13,7 @@ APPS = \
     files/apps/Light \
     files/apps/Location \
     files/apps/Morse \
+    files/apps/Paddle \
     files/apps/Reversi \
     files/apps/Template \
     files/apps/Test \
