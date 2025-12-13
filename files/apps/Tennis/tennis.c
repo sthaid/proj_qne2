@@ -5,6 +5,10 @@ delay before serve,  fixed 0.5 sec
 rename to paddle
 indicate which score is computer vs human
 
+comments
+
+maybe display some stats along the top, for debug
+
 params
 - min and max speed
 - computer skill
@@ -22,16 +26,29 @@ params
 #include <sdlx.h>
 #include <utils.h>
 
+//
 // defines
+//
+
 #define DEG2RAD              (M_PI/180.0)
 #define RAD2DEG              (180.0/M_PI)
-#define UPDATE_INTERVAL_USEC 10000  // 10 ms  xxx del one of these
+
 #define UPDATE_INTERVAL_SEC  0.01   // 10 ms
+
 #define BALL_RADIUS          50
 #define PADDLE_W             300
 #define PADDLE_H             50
 
+#define MIN_BALL_SPEED       0.75
+#define MAX_BALL_SPEED       2.75
+
+#define HUMAN_PADDLE         0
+#define COMPUTER_PADDLE      1
+
+//
 // variables
+//
+
 char  *progname;
 char  *data_dir;
 
@@ -42,6 +59,7 @@ double human_paddle_x, human_paddle_y;
 double computer_paddle_x, computer_paddle_y;
 int    human_score, computer_score;
 bool   serve_needed;
+int    serve_delay;
 
 double ball_speed_court_per_sec;
 
@@ -49,31 +67,26 @@ bool autonomous = false;
 
 double court_pixels;
 
+//
 // prototypes    
-void computer_paddle_control(void);
-void human_paddle_control(void);
+//
+
+void paddle_control(int which_paddle);
 void bounce_ball_off_paddle(int which_paddle);
 void play_tone(int freq, int duration_ms);
 
 double randy(void);
 double symmetric_triangular_rand(double min, double max);
 
-#define MIN_BALL_SPEED 0.75
-#define MAX_BALL_SPEED 2.75
-
-#define HUMAN_PADDLE    0   
-#define COMPUTER_PADDLE 1   
 // -----------------  MAIN  -----------------------
     
 int main(int argc, char **argv)
 {
     int             rc;
     sdlx_event_t    event;
+    long            start_us, timeout_us;
     bool            end_program = false;
     sdlx_texture_t *ball = NULL;
-
-    // xxx
-    srandom(time(NULL));
 
     // save args
     if (argc != 2) {
@@ -92,30 +105,29 @@ int main(int argc, char **argv)
     }
 
     // initialization:
-    // - create ball texture
-    // - set scores to 0
-    // - set the top and bottom of the display region used by the game
-    // - set initial paddle locations
-    // - set serve_needed flag
     ball = sdlx_create_filled_circle_texture(BALL_RADIUS, COLOR_GREEN);
+    // - scores
     computer_score    = 0;
     human_score       = 0;
+    // - y range of display for the full court,
+    //   including area above and below the paddles
     y_top             = 0;
     y_bottom          = sdlx_win_height - 200;
+    // - location of the centers of the paddles
     human_paddle_x    = sdlx_win_width/2;
     human_paddle_y    = y_bottom - 200;
     computer_paddle_x = sdlx_win_width/2;
     computer_paddle_y = y_top + 200;
-    serve_needed      = true;
-
+    // - size of the court, between the paddles
     court_pixels = (human_paddle_y - computer_paddle_y);
-
-    // xxx
-    x = sdlx_win_width/2;
+    // - variables to control the serve
+    serve_needed = true;
+    serve_delay  = 0;
+    // - seed random number generation
+    srandom(time(NULL));
 
     // init large font;
     // LARGE_FONT is defined as '10' which means 10 chars across the display
-    sdlx_print_init_numchars(LARGE_FONT);
 
     // runtime loop
     while (!end_program) {
@@ -123,12 +135,8 @@ int main(int argc, char **argv)
         sdlx_display_init(COLOR_BLACK);
 
         // if serve needed then reset variables
-        // xxx vary the serve
-        // xxx define for serve velocity
         if (serve_needed) {
             double ball_speed_pixels_per_intvl, tgtx, k;
-
-            // usleep(500000);  xxx delay with the ball on the computer paddle
 
             x = computer_paddle_x;
             y = computer_paddle_y + PADDLE_H/2 + BALL_RADIUS;
@@ -144,6 +152,13 @@ int main(int argc, char **argv)
             vx = k * vy;
             
             serve_needed = false;
+            serve_delay = 100;
+        }
+
+        // xxx comment
+        if (serve_delay) {
+            serve_delay--;
+            goto skip;
         }
 
         // update the ball velocity
@@ -166,11 +181,11 @@ int main(int argc, char **argv)
         }
 
         // computer paddle control
-        computer_paddle_control();
+        paddle_control(COMPUTER_PADDLE);
 
         // xxx
         if (autonomous) {
-            human_paddle_control();
+            paddle_control(HUMAN_PADDLE);
         }
 
         // if ball has impacted human paddle then
@@ -218,14 +233,16 @@ int main(int argc, char **argv)
             serve_needed = true;
         }
 
+skip:
+        // display scores
+        sdlx_print_init_numchars(LARGE_FONT);
+        sdlx_render_printf(0, 0, "%2d", computer_score);
+        sdlx_render_printf(sdlx_win_width-2*sdlx_char_width, 0, "%d", human_score);
+
         // display the ball and paddles
         sdlx_render_texture(x-BALL_RADIUS, y-BALL_RADIUS, 2*BALL_RADIUS, 2*BALL_RADIUS, ball);
         sdlx_render_fill_rect(human_paddle_x-PADDLE_W/2, human_paddle_y-PADDLE_H/2, PADDLE_W, PADDLE_H, COLOR_WHITE);
         sdlx_render_fill_rect(computer_paddle_x-PADDLE_W/2, computer_paddle_y-PADDLE_H/2, PADDLE_W, PADDLE_H, COLOR_WHITE);
-
-        // display scores
-        sdlx_render_printf(0, 0, "%2d", computer_score);
-        sdlx_render_printf(sdlx_win_width-2*sdlx_char_width, 0, "%d", human_score);
 
         // register events
         sdlx_register_event(NULL, EVID_MOTION);
@@ -235,19 +252,26 @@ int main(int argc, char **argv)
         sdlx_display_present();
 
         // wait for event with timeout
-        // xxx motion affects interval
-        sdlx_get_event(UPDATE_INTERVAL_USEC, &event);
+        start_us = util_microsec_timer();
+        while (true) {
+            // xxx comment
+            timeout_us = (long)(UPDATE_INTERVAL_SEC * 1000000) - (util_microsec_timer() - start_us);
+            if (timeout_us <= 0) {
+                //printf("INTVL %ld ms\n", (util_microsec_timer() - start_us) / 1000);
+                break;
+            }
+            sdlx_get_event(timeout_us, &event);
 
-        // process events
-        switch (event.event_id) {
-        case EVID_QUIT:
-            end_program = true;
-            break;
-        case EVID_MOTION:
-            human_paddle_x += event.u.motion.xrel;
-            break;
+            // process events
+            switch (event.event_id) {
+            case EVID_QUIT:
+                end_program = true;
+                break;
+            case EVID_MOTION:
+                human_paddle_x += event.u.motion.xrel;
+                break;
+            }
         }
-
     }
 
     // cleanup and end program
@@ -259,8 +283,7 @@ int main(int argc, char **argv)
 
 // -----------------  SUPPORT  --------------------
 
-// xxx combine
-void computer_paddle_control(void)
+void paddle_control(int which_paddle)
 {
     double paddle_offset, k;
 
@@ -271,24 +294,15 @@ void computer_paddle_control(void)
     }
 
     k = (0.10 + (ball_speed_court_per_sec - 0.75) / 10.0);
-    computer_paddle_x += ((x + paddle_offset) - computer_paddle_x) * k;
-}
-
-void human_paddle_control(void)
-{
-    double paddle_offset, k;
-
-    if (vx < 0) {
-        paddle_offset = -PADDLE_W * (fabs(vx/vy) > 0.75 ? 0.5 : 0.25);
+    if (which_paddle == COMPUTER_PADDLE) {
+        computer_paddle_x += ((x + paddle_offset) - computer_paddle_x) * k;
     } else {
-        paddle_offset =  PADDLE_W * (fabs(vx/vy) > 0.75 ? 0.5 : 0.25);
+        human_paddle_x += ((x + paddle_offset) - human_paddle_x) * k;
     }
-
-    k = (0.10 + (ball_speed_court_per_sec - 0.75) / 10.0);
-    human_paddle_x += ((x + paddle_offset) - human_paddle_x) * k;
 }
 
-#define MAX_RAD (30.0 * DEG2RAD) //xxx name
+// angle of the paddle at both of its ends
+#define MAX_RAD (30.0 * DEG2RAD)
 
 void bounce_ball_off_paddle(int which_paddle)
 {
@@ -330,48 +344,3 @@ void play_tone(int freq, int duration_ms)
     sdlx_audio_play_tones(t);
 }
 
-// xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx del xxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-#if 0
-    static int a,b,c,d;
-    for (int i = 0;i < 10000; i++) {
-        //randy();
-        //double x =  symmetric_triangular_rand(-PADDLE_W/2, PADDLE_W/2);
-        double x =  symmetric_triangular_rand(-1000, 1000);
-        if (x < -500) a++;
-        else if (x < 0) b++;
-        else if (x < 500) c++;
-        else d++;
-        //printf("%0.3f\n", x);
-    }
-    printf("%d %d %d %d\n", a,b,c,d);
-    return 0;
-
-double randy(void)
-{
-    double x = (double)random() / 0x7fffffff;
-    //printf("RANDY %0.3f\n", x);
-    return x;
-}
-
-double symmetric_triangular_rand(double min, double max)
-{
-    // Generate two uniform random numbers between 0.0 and 1.0
-    double U1 = (double)rand() / (double)RAND_MAX;
-    double U2 = (double)rand() / (double)RAND_MAX;
-    
-    // Sum them to get a triangular distribution between 0.0 and 2.0 (mode 1.0)
-    double T = U1 + U2;
-    
-    // Scale and shift to the desired [min, max] range with mode at (min+max)/2
-    return min + (max - min) * (T / 2.0);
-}
-
-double rand_uniform(double min, double max)
-{
-    // Generate two uniform random numbers between 0.0 and 1.0
-    double T = (double)rand() / (double)RAND_MAX;
-    
-    // Scale and shift to the desired [min, max] range with mode at (min+max)/2
-    return min + (max - min) * (T / 2.0);
-}
-#endif
