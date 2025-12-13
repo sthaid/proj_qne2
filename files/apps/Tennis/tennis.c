@@ -57,8 +57,10 @@ DONE?
 #define EVID_SETTINGS        5
 
 #define STATE_READY          0
-#define STATE_RUNNING        1
-#define STATE_PAUSED         2
+#define STATE_SERVING        1
+#define STATE_SERVING_DELAY  2
+#define STATE_RUNNING        3
+#define STATE_PAUSED         4
 
 //
 // variables
@@ -71,19 +73,18 @@ double          vx, vy;
 double          human_paddle_x, human_paddle_y;
 double          computer_paddle_x, computer_paddle_y;
 int             human_score, computer_score;
-bool            serve_needed;
-int             serve_delay;
 double          ball_speed_court_per_sec;
 double          court_pixels;
 sdlx_texture_t *ball;
 
 // xxx params
-bool autonomous = true;
+bool autonomous = false;
 
 //
 // prototypes    
 //
 
+void run(void);
 void paddle_control(int which_paddle);
 void bounce_ball_off_paddle(int which_paddle);
 void play_tone(int freq, int duration_ms);
@@ -95,6 +96,7 @@ int main(int argc, char **argv)
     char        *progname;
     char        *data_dir;
     int          rc;
+    int          serving_delay = 0;
     sdlx_event_t event;
     long         start_us, timeout_us;
     bool         end_program = false;
@@ -134,9 +136,9 @@ int main(int argc, char **argv)
     computer_paddle_y = y_top + 200;
     // - size of the court, between the paddles
     court_pixels = (human_paddle_y - computer_paddle_y);
-    // - variables to control the serve
-    serve_needed = true;
-    serve_delay  = 0;
+    // - ball location
+    x = computer_paddle_x;
+    y = computer_paddle_y + PADDLE_H/2 + BALL_RADIUS;
     // - seed random number generation
     srandom(time(NULL));
 
@@ -146,7 +148,7 @@ int main(int argc, char **argv)
         sdlx_display_init(COLOR_BLACK);
 
         // if serve needed then reset variables
-        if (serve_needed) {
+        if (state == STATE_SERVING) {
             double ball_speed_pixels_per_intvl, tgtx, k;
 
             // init ball location underneath the center of computer paddle
@@ -165,100 +167,24 @@ int main(int argc, char **argv)
             k = (tgtx - x) / court_pixels;
             vy = ball_speed_pixels_per_intvl / sqrt(1 + k*k);
             vx = k * vy;
-            
-            // clear serve_needed flag, and set serve_delay counter
-            if (state == STATE_RUNNING) {
-                serve_needed = false;
-                serve_delay = 50;
+
+            // xxx
+            state = STATE_SERVING_DELAY;
+            serving_delay = 50;
+        }
+
+        if (state == STATE_SERVING_DELAY) {
+            serving_delay--;
+            if (serving_delay == 0) {
+                state = STATE_RUNNING;
             }
         }
 
-        // if state is not STATE_RUNING then freeze game
-        if (state != STATE_RUNNING) {
-            goto skip;
+        // xxx 
+        if (state == STATE_RUNNING) {
+            run();
         }
 
-        // freeze the game for a short interval prior to serving
-        if (serve_delay) {
-            serve_delay--;
-            goto skip;
-        }
-
-        // xxx make this a routine
-
-        // update the ball velocity
-        ball_speed_court_per_sec = sqrt(vx*vx + vy*vy) / (court_pixels * UPDATE_INTERVAL_SEC);
-        if (ball_speed_court_per_sec < MAX_BALL_SPEED) {
-            vx *= 1.0001;
-            vy *= 1.0001;
-        }
-
-        // update ball position, using the ball x,y velocity (vx, vy)
-        x_last = x;
-        y_last = y;
-        x += vx;
-        y += vy;
-
-        // bounce ball off of side walls
-        if (x < 0 || x > sdlx_win_width) {
-            vx = -vx;
-            x += vx;
-        }
-
-        // computer paddle control
-        paddle_control(COMPUTER_PADDLE);
-
-        // if autonomous mode then the computer will play the human paddle too
-        if (autonomous) {
-            paddle_control(HUMAN_PADDLE);
-        }
-
-        // if ball has impacted human paddle then
-        // bounce ball off of human paddle
-        double ball_bottom        = y + BALL_RADIUS;
-        double ball_bottom_last   = y_last + BALL_RADIUS;
-        double human_paddle_top   = human_paddle_y - (PADDLE_H/2);
-        double human_paddle_left  = human_paddle_x - PADDLE_W/2 - BALL_RADIUS;
-        double human_paddle_right = human_paddle_x + PADDLE_W/2 + BALL_RADIUS;
-        if (ball_bottom >= human_paddle_top && 
-            ball_bottom_last < human_paddle_top &&
-            x >= human_paddle_left &&
-            x <= human_paddle_right)
-        {
-            bounce_ball_off_paddle(HUMAN_PADDLE);
-        }
-
-        // if ball has impacted computer paddle then
-        // bounce ball off of computer paddle
-        double ball_top               = y - BALL_RADIUS;
-        double ball_top_last          = y_last - BALL_RADIUS;
-        double computer_paddle_bottom = computer_paddle_y + (PADDLE_H/2);
-        double computer_paddle_left   = computer_paddle_x - PADDLE_W/2 - BALL_RADIUS;
-        double computer_paddle_right  = computer_paddle_x + PADDLE_W/2 + BALL_RADIUS;
-        if (ball_top <= computer_paddle_bottom && 
-            ball_top_last > computer_paddle_bottom &&
-            x >= computer_paddle_left &&
-            x <= computer_paddle_right)
-        {
-            bounce_ball_off_paddle(COMPUTER_PADDLE);
-        }
-
-        // if ball is above or below the display area then 
-        //   update score
-        //   play tone
-        //   set serve_needed flag
-        // endif
-        if (y < y_top || y > y_bottom) {
-            if (y < y_top) {
-                human_score++; 
-            } else {
-                computer_score++;
-            }
-            play_tone(500,250);
-            serve_needed = true;
-        }
-
-skip:
         // display scores
         sdlx_print_init_numchars(LARGE_FONT);
         sdlx_render_printf(0, 0, "%2d", computer_score);
@@ -273,7 +199,7 @@ skip:
         sdlx_register_event(NULL, EVID_MOTION);
         if (state == STATE_READY) {
             sdlx_register_control_events("START", "STG",   "X", COLOR_WHITE, COLOR_BLACK, EVID_START, EVID_SETTINGS, EVID_QUIT);
-        } else if (state == STATE_RUNNING) {
+        } else if (state == STATE_SERVING || state == STATE_SERVING_DELAY || state == STATE_RUNNING) {
             sdlx_register_control_events("PAUSE", "RESET", "X", COLOR_WHITE, COLOR_BLACK, EVID_PAUSE, EVID_RESET, EVID_QUIT);
         } else if (state == STATE_PAUSED) {
             sdlx_register_control_events("CONT",  "RESET", "X", COLOR_WHITE, COLOR_BLACK, EVID_CONT, EVID_RESET, EVID_QUIT);
@@ -294,7 +220,7 @@ skip:
 
             // if timeout is 0 then break out of the loop
             if (timeout_us <= 0) {
-                printf("INTVL %ld ms\n", (util_microsec_timer() - start_us) / 1000);
+                //printf("INTVL %ld ms\n", (util_microsec_timer() - start_us) / 1000);
                 break;
             }
 
@@ -307,7 +233,7 @@ skip:
                 end_program = true;
                 break;
             case EVID_START:
-                state = STATE_RUNNING;
+                state = STATE_SERVING;
                 break;
             case EVID_PAUSE:
                 state = STATE_PAUSED;
@@ -318,9 +244,10 @@ skip:
             case EVID_RESET:
                 computer_paddle_x = sdlx_win_width/2;
                 human_paddle_x    = sdlx_win_width/2;
+                x                 = computer_paddle_x;
+                y                 = computer_paddle_y + PADDLE_H/2 + BALL_RADIUS;
                 human_score       = 0;
                 computer_score    = 0;
-                serve_needed      = true;
                 state             = STATE_READY;
                 break;
             case EVID_SETTINGS:
@@ -338,6 +265,81 @@ skip:
     sdlx_quit(SUBSYS_VIDEO|SUBSYS_AUDIO);
     printf("INFO %s: terminating\n", progname);
     return 0;
+}
+
+void run(void)
+{
+    // update the ball velocity
+    ball_speed_court_per_sec = sqrt(vx*vx + vy*vy) / (court_pixels * UPDATE_INTERVAL_SEC);
+    if (ball_speed_court_per_sec < MAX_BALL_SPEED) {
+        vx *= 1.0001;
+        vy *= 1.0001;
+    }
+
+    // update ball position, using the ball x,y velocity (vx, vy)
+    x_last = x;
+    y_last = y;
+    x += vx;
+    y += vy;
+
+    // bounce ball off of side walls
+    if (x < 0 || x > sdlx_win_width) {
+        vx = -vx;
+        x += vx;
+    }
+
+    // computer paddle control
+    paddle_control(COMPUTER_PADDLE);
+
+    // if autonomous mode then the computer will play the human paddle too
+    if (autonomous) {
+        paddle_control(HUMAN_PADDLE);
+    }
+
+    // if ball has impacted human paddle then
+    // bounce ball off of human paddle
+    double ball_bottom        = y + BALL_RADIUS;
+    double ball_bottom_last   = y_last + BALL_RADIUS;
+    double human_paddle_top   = human_paddle_y - (PADDLE_H/2);
+    double human_paddle_left  = human_paddle_x - PADDLE_W/2 - BALL_RADIUS;
+    double human_paddle_right = human_paddle_x + PADDLE_W/2 + BALL_RADIUS;
+    if (ball_bottom >= human_paddle_top && 
+        ball_bottom_last < human_paddle_top &&
+        x >= human_paddle_left &&
+        x <= human_paddle_right)
+    {
+        bounce_ball_off_paddle(HUMAN_PADDLE);
+    }
+
+    // if ball has impacted computer paddle then
+    // bounce ball off of computer paddle
+    double ball_top               = y - BALL_RADIUS;
+    double ball_top_last          = y_last - BALL_RADIUS;
+    double computer_paddle_bottom = computer_paddle_y + (PADDLE_H/2);
+    double computer_paddle_left   = computer_paddle_x - PADDLE_W/2 - BALL_RADIUS;
+    double computer_paddle_right  = computer_paddle_x + PADDLE_W/2 + BALL_RADIUS;
+    if (ball_top <= computer_paddle_bottom && 
+        ball_top_last > computer_paddle_bottom &&
+        x >= computer_paddle_left &&
+        x <= computer_paddle_right)
+    {
+        bounce_ball_off_paddle(COMPUTER_PADDLE);
+    }
+
+    // if ball is above or below the display area then 
+    //   update score
+    //   play tone
+    //   set state to STATE_SERVING
+    // endif
+    if (y < y_top || y > y_bottom) {
+        if (y < y_top) {
+            human_score++; 
+        } else {
+            computer_score++;
+        }
+        play_tone(500,250);
+        state = STATE_SERVING;
+    }
 }
 
 // -----------------  SUPPORT  --------------------
