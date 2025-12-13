@@ -1,11 +1,10 @@
 /* xxx TODO 
-speeds up when motion is active 
 limit paddle motion to x span
 delay before serve,  fixed 0.5 sec
 rename to paddle
 indicate which score is computer vs human
 
-comments
+fix printf stmts
 
 maybe display some stats along the top, for debug
 
@@ -14,6 +13,12 @@ params
 - computer skill
 - auoto play
 - disable sound
+
+bugs
+- ball pegged to left or right
+
+DONE?
+- code comments
 */
 
 #include <stdio.h>
@@ -39,16 +44,27 @@ params
 #define PADDLE_W             300
 #define PADDLE_H             50
 
-#define MIN_BALL_SPEED       0.75
+#define MIN_BALL_SPEED       0.75   // courts/sec
 #define MAX_BALL_SPEED       2.75
 
 #define HUMAN_PADDLE         0
 #define COMPUTER_PADDLE      1
 
+#define EVID_START           1
+#define EVID_PAUSE           2
+#define EVID_CONT            3
+#define EVID_RESET           4
+#define EVID_SETTINGS        5
+
+#define STATE_READY          0
+#define STATE_RUNNING        1
+#define STATE_PAUSED         2
+
 //
 // variables
 //
 
+int             state;
 double          y_top, y_bottom;
 double          x, y, x_last, y_last;
 double          vx, vy;
@@ -62,7 +78,7 @@ double          court_pixels;
 sdlx_texture_t *ball;
 
 // xxx params
-bool autonomous = false;
+bool autonomous = true;
 
 //
 // prototypes    
@@ -100,6 +116,9 @@ int main(int argc, char **argv)
     }
 
     // initialization:
+    // - state
+    state = STATE_READY;
+    // - ball texture
     ball = sdlx_create_filled_circle_texture(BALL_RADIUS, COLOR_GREEN);
     // - scores
     computer_score    = 0;
@@ -148,8 +167,15 @@ int main(int argc, char **argv)
             vx = k * vy;
             
             // clear serve_needed flag, and set serve_delay counter
-            serve_needed = false;
-            serve_delay = 100;
+            if (state == STATE_RUNNING) {
+                serve_needed = false;
+                serve_delay = 50;
+            }
+        }
+
+        // if state is not STATE_RUNING then freeze game
+        if (state != STATE_RUNNING) {
+            goto skip;
         }
 
         // freeze the game for a short interval prior to serving
@@ -158,6 +184,8 @@ int main(int argc, char **argv)
             goto skip;
         }
 
+        // xxx make this a routine
+
         // update the ball velocity
         ball_speed_court_per_sec = sqrt(vx*vx + vy*vy) / (court_pixels * UPDATE_INTERVAL_SEC);
         if (ball_speed_court_per_sec < MAX_BALL_SPEED) {
@@ -165,7 +193,7 @@ int main(int argc, char **argv)
             vy *= 1.0001;
         }
 
-        // update ball position, using the ball x,y velocity
+        // update ball position, using the ball x,y velocity (vx, vy)
         x_last = x;
         y_last = y;
         x += vx;
@@ -243,7 +271,15 @@ skip:
 
         // register events
         sdlx_register_event(NULL, EVID_MOTION);
-        sdlx_register_control_events(NULL, NULL, "X", COLOR_WHITE, COLOR_BLACK, 0, 0, EVID_QUIT);
+        if (state == STATE_READY) {
+            sdlx_register_control_events("START", "STG",   "X", COLOR_WHITE, COLOR_BLACK, EVID_START, EVID_SETTINGS, EVID_QUIT);
+        } else if (state == STATE_RUNNING) {
+            sdlx_register_control_events("PAUSE", "RESET", "X", COLOR_WHITE, COLOR_BLACK, EVID_PAUSE, EVID_RESET, EVID_QUIT);
+        } else if (state == STATE_PAUSED) {
+            sdlx_register_control_events("CONT",  "RESET", "X", COLOR_WHITE, COLOR_BLACK, EVID_CONT, EVID_RESET, EVID_QUIT);
+        } else {
+            printf("ERROR %s: invalid state %d\n", progname, state);
+        }
 
         // present the display
         sdlx_display_present();
@@ -269,6 +305,26 @@ skip:
             switch (event.event_id) {
             case EVID_QUIT:
                 end_program = true;
+                break;
+            case EVID_START:
+                state = STATE_RUNNING;
+                break;
+            case EVID_PAUSE:
+                state = STATE_PAUSED;
+                break;
+            case EVID_CONT:
+                state = STATE_RUNNING;
+                break;
+            case EVID_RESET:
+                computer_paddle_x = sdlx_win_width/2;
+                human_paddle_x    = sdlx_win_width/2;
+                human_score       = 0;
+                computer_score    = 0;
+                serve_needed      = true;
+                state             = STATE_READY;
+                break;
+            case EVID_SETTINGS:
+                printf("SETTING TBD\n");
                 break;
             case EVID_MOTION:
                 human_paddle_x += event.u.motion.xrel;
