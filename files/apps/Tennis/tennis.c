@@ -1,4 +1,4 @@
-/* TODO 
+/* xxx TODO 
 speeds up when motion is active 
 limit paddle motion to x span
 delay before serve,  fixed 0.5 sec
@@ -30,8 +30,8 @@ params
 // defines
 //
 
-#define DEG2RAD              (M_PI/180.0)
-#define RAD2DEG              (180.0/M_PI)
+#define DEG2RAD              (M_PI / 180.0)
+#define RAD2DEG              (180.0 / M_PI)
 
 #define UPDATE_INTERVAL_SEC  0.01   // 10 ms
 
@@ -49,23 +49,20 @@ params
 // variables
 //
 
-char  *progname;
-char  *data_dir;
+double          y_top, y_bottom;
+double          x, y, x_last, y_last;
+double          vx, vy;
+double          human_paddle_x, human_paddle_y;
+double          computer_paddle_x, computer_paddle_y;
+int             human_score, computer_score;
+bool            serve_needed;
+int             serve_delay;
+double          ball_speed_court_per_sec;
+double          court_pixels;
+sdlx_texture_t *ball;
 
-double y_top, y_bottom;
-double x, y, x_last, y_last;
-double vx, vy;
-double human_paddle_x, human_paddle_y;
-double computer_paddle_x, computer_paddle_y;
-int    human_score, computer_score;
-bool   serve_needed;
-int    serve_delay;
-
-double ball_speed_court_per_sec;
-
+// xxx params
 bool autonomous = false;
-
-double court_pixels;
 
 //
 // prototypes    
@@ -75,18 +72,16 @@ void paddle_control(int which_paddle);
 void bounce_ball_off_paddle(int which_paddle);
 void play_tone(int freq, int duration_ms);
 
-double randy(void);
-double symmetric_triangular_rand(double min, double max);
-
 // -----------------  MAIN  -----------------------
     
 int main(int argc, char **argv)
 {
-    int             rc;
-    sdlx_event_t    event;
-    long            start_us, timeout_us;
-    bool            end_program = false;
-    sdlx_texture_t *ball = NULL;
+    char        *progname;
+    char        *data_dir;
+    int          rc;
+    sdlx_event_t event;
+    long         start_us, timeout_us;
+    bool         end_program = false;
 
     // save args
     if (argc != 2) {
@@ -126,9 +121,6 @@ int main(int argc, char **argv)
     // - seed random number generation
     srandom(time(NULL));
 
-    // init large font;
-    // LARGE_FONT is defined as '10' which means 10 chars across the display
-
     // runtime loop
     while (!end_program) {
         // init the backbuffer
@@ -138,24 +130,29 @@ int main(int argc, char **argv)
         if (serve_needed) {
             double ball_speed_pixels_per_intvl, tgtx, k;
 
+            // init ball location underneath the center of computer paddle
             x = computer_paddle_x;
             y = computer_paddle_y + PADDLE_H/2 + BALL_RADIUS;
             x_last = x;
             y_last = y;
 
+            // determine ball speed in units of court/sec and pixels/interval
             ball_speed_court_per_sec = MIN_BALL_SPEED;
             ball_speed_pixels_per_intvl = (court_pixels * UPDATE_INTERVAL_SEC) * ball_speed_court_per_sec;
 
+            // choose a random direction to serve towards;
+            // and cacluclate the required x and y velocities (vx,vy units are pixels/interval)
             tgtx = (random() % sdlx_win_width);
             k = (tgtx - x) / court_pixels;
             vy = ball_speed_pixels_per_intvl / sqrt(1 + k*k);
             vx = k * vy;
             
+            // clear serve_needed flag, and set serve_delay counter
             serve_needed = false;
             serve_delay = 100;
         }
 
-        // xxx comment
+        // freeze the game for a short interval prior to serving
         if (serve_delay) {
             serve_delay--;
             goto skip;
@@ -183,7 +180,7 @@ int main(int argc, char **argv)
         // computer paddle control
         paddle_control(COMPUTER_PADDLE);
 
-        // xxx
+        // if autonomous mode then the computer will play the human paddle too
         if (autonomous) {
             paddle_control(HUMAN_PADDLE);
         }
@@ -251,18 +248,24 @@ skip:
         // present the display
         sdlx_display_present();
 
-        // wait for event with timeout
+        // process events for duration UPDATE_INTERVAL_SEC
         start_us = util_microsec_timer();
         while (true) {
-            // xxx comment
-            timeout_us = (long)(UPDATE_INTERVAL_SEC * 1000000) - (util_microsec_timer() - start_us);
+            // calculate the timeout of wait for an event
+            // xxx picoc problem:
+            //     timeout_us = (long)(UPDATE_INTERVAL_SEC * 1000000) - (util_microsec_timer() - start_us);
+            timeout_us = (UPDATE_INTERVAL_SEC * 1000000) - (util_microsec_timer() - start_us);
+
+            // if timeout is 0 then break out of the loop
             if (timeout_us <= 0) {
-                //printf("INTVL %ld ms\n", (util_microsec_timer() - start_us) / 1000);
+                printf("INTVL %ld ms\n", (util_microsec_timer() - start_us) / 1000);
                 break;
             }
+
+            // wait for an event, or timeout
             sdlx_get_event(timeout_us, &event);
 
-            // process events
+            // process event, if received
             switch (event.event_id) {
             case EVID_QUIT:
                 end_program = true;
