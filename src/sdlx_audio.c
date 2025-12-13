@@ -620,7 +620,7 @@ static int tones_thread(void *cx_arg)
     static char     *buff;
     static int       buff_len;
 
-    INFO("starting\n");
+    //INFO("starting\n");
 
     // allocate buff to handle a tone or gap of up to 30 secs
     buff_len = 30 * FRAMES_PER_SEC * sizeof(short);
@@ -707,7 +707,7 @@ static int tones_thread(void *cx_arg)
 
 done:
     // cleanup and return
-    INFO("completed\n");
+    //INFO("completed\n");
     SDL_PauseAudioDevice(SDL_GetAudioStreamDevice(playback_stream));  // thread safe
     SDL_ClearAudioStream(playback_stream);  // thread safe
     free(cx);
