@@ -61,7 +61,7 @@ int main(int argc, char **argv)
     srandom(time(NULL));
 
     // get words-per-minute (wpm) from param store; set to default 5 if not in params
-    wpm = util_get_int_param(data_dir, "wpm", 5);
+    wpm = util_get_numeric_param(data_dir, "wpm", 5);
 
     // read word list, sets global variables word_list and max_word_list
     rc = read_word_list();
@@ -156,13 +156,13 @@ int main(int argc, char **argv)
         case EVID_WPM_INC:
             if (wpm < 20) {
                 wpm++;
-                util_set_int_param(data_dir, "wpm", wpm);
+                util_set_numeric_param(data_dir, "wpm", wpm);
             }
             break;
         case EVID_WPM_DEC:
             if (wpm > 5) {
                 wpm--;
-                util_set_int_param(data_dir, "wpm", wpm);
+                util_set_numeric_param(data_dir, "wpm", wpm);
             }
             break;
         case EVID_QUIT:

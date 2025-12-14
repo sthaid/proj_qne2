@@ -144,7 +144,7 @@ void horizontal(double ax, double ay, double az)
 
     // if max_bulls_eye param has not been read, then do so
     if (max_bulls_eye == -1) {
-        max_bulls_eye = util_get_int_param(data_dir, "max_bulls_eye", MAX_BULLS_EYE_DEFAULT);
+        max_bulls_eye = util_get_numeric_param(data_dir, "max_bulls_eye", MAX_BULLS_EYE_DEFAULT);
     }
 
     // init the backbuffer
@@ -227,13 +227,13 @@ void horizontal(double ax, double ay, double az)
     case EVID_INCR_MAX_BULLS_EYE:
         if (max_bulls_eye < 20) {
             max_bulls_eye++;
-            util_set_int_param(data_dir, "max_bulls_eye", max_bulls_eye);
+            util_set_numeric_param(data_dir, "max_bulls_eye", max_bulls_eye);
         }
         break;
     case EVID_DECR_MAX_BULLS_EYE:
         if (max_bulls_eye > 1) {
             max_bulls_eye--;
-            util_set_int_param(data_dir, "max_bulls_eye", max_bulls_eye);
+            util_set_numeric_param(data_dir, "max_bulls_eye", max_bulls_eye);
         }
         break;
     case EVID_QUIT:
