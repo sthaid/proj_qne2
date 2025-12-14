@@ -1169,26 +1169,26 @@ void Util_set_str_param(struct ParseState *Parser, struct Value *ReturnValue,
     util_set_str_param(dir, name, value);
 }
 
-void Util_get_int_param(struct ParseState *Parser, struct Value *ReturnValue,
+void Util_get_numeric_param(struct ParseState *Parser, struct Value *ReturnValue,
         struct Value **Param, int NumArgs)
 {
-    char *dir           = Param[0]->Val->Pointer;
-    char *name          = Param[1]->Val->Pointer;
-    int   default_value = Param[2]->Val->Integer;
-    int   value;
+    char  *dir           = Param[0]->Val->Pointer;
+    char  *name          = Param[1]->Val->Pointer;
+    double default_value = Param[2]->Val->FP;
+    double value;
 
-    value = util_get_int_param(dir, name, default_value);
-    ReturnValue->Val->Integer = value;
+    value = util_get_numeric_param(dir, name, default_value);
+    ReturnValue->Val->FP = value;
 }
 
-void Util_set_int_param(struct ParseState *Parser, struct Value *ReturnValue,
+void Util_set_numeric_param(struct ParseState *Parser, struct Value *ReturnValue,
         struct Value **Param, int NumArgs)
 {
-    char *dir   = Param[0]->Val->Pointer;
-    char *name  = Param[1]->Val->Pointer;
-    int   value = Param[2]->Val->Integer;
+    char  *dir   = Param[0]->Val->Pointer;
+    char  *name  = Param[1]->Val->Pointer;
+    double value = Param[2]->Val->FP;
 
-    util_set_int_param(dir, name, value);
+    util_set_numeric_param(dir, name, value);
 }
 
 void Util_print_params(struct ParseState *Parser, struct Value *ReturnValue,
@@ -1407,8 +1407,8 @@ struct LibraryFunction UtilsFunctions[] = {
     // params get/set
     { Util_get_str_param,    "char *util_get_str_param(char *dir, char *name, char *default_value);" },
     { Util_set_str_param,    "void util_set_str_param(char *dir, char *name, char *value);" },
-    { Util_get_int_param,    "int util_get_int_param(char *dir, char *name, int default_value);" },
-    { Util_set_int_param,    "void util_set_int_param(char *dir, char *name, int value);" },
+    { Util_get_numeric_param,"double util_get_numeric_param(char *dir, char *name, double default_value);" },
+    { Util_set_numeric_param,"void util_set_numeric_param(char *dir, char *name, double value);" },
     { Util_print_params,     "void util_print_params(char *dir);" },
     // network
     { Util_get_ipaddr,       "char *util_get_ipaddr(void);" },

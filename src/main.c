@@ -125,10 +125,10 @@ static int init(void)
     INFO("storage_path = %s\n", storage_path);
 
     // get params, if they don't exist, set to default value
-    params.devel_mode = util_get_int_param(".", "devel_mode", 0);
-    params.devel_port = util_get_int_param(".", "devel_port", DEFAULT_DEVEL_PORT);
+    params.devel_mode = util_get_numeric_param(".", "devel_mode", 0);
+    params.devel_port = util_get_numeric_param(".", "devel_port", DEFAULT_DEVEL_PORT);
     strcpy(params.devel_password, util_get_str_param(".", "devel_password", DEFAULT_DEVEL_PASSWORD));
-    params.foreground_enabled = util_get_int_param(".", "foreground_enabled", 0);
+    params.foreground_enabled = util_get_numeric_param(".", "foreground_enabled", 0);
 
 #ifdef ANDROID
     // copy asset files to the working directory
@@ -671,7 +671,7 @@ static void settings(void)
         // xxx add case for credits
         case EVID_DEVEL_MODE:
             params.devel_mode = (params.devel_mode ? 0 : 1);
-            util_set_int_param(".", "devel_mode", params.devel_mode);
+            util_set_numeric_param(".", "devel_mode", params.devel_mode);
             if (!params.devel_mode) {
                 INFO("sending SIGUSR2 to devel_mode_server_thread\n");
                 pthread_kill(server_tid, SIGUSR2);
@@ -684,7 +684,7 @@ static void settings(void)
             cnt = sscanf(str, "%d", &port);
             if (cnt == 1 && (port >= 1024 && port <= 49151)) {
                 params.devel_port = port;
-                util_set_int_param(".", "devel_port", port);
+                util_set_numeric_param(".", "devel_port", port);
                 if (params.devel_mode) {
                     INFO("sending SIGUSR2 to devel_mode_server_thread\n");
                     pthread_kill(server_tid, SIGUSR2);
@@ -721,7 +721,7 @@ static void settings(void)
             break; }
         case EVID_FOREGROUND: {
             params.foreground_enabled = (params.foreground_enabled ? false : true);
-            util_set_int_param(".", "foreground_enabled", params.foreground_enabled);
+            util_set_numeric_param(".", "foreground_enabled", params.foreground_enabled);
             if (params.foreground_enabled) {
                 util_start_foreground();
             } else {
