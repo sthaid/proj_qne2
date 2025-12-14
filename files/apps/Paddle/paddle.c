@@ -1,8 +1,9 @@
 /* xxx TODO 
-limit paddle motion to x span
-indicate which score is computer vs human
-maybe display some stats along the top, for debug
-- code comments
+
+maybe 
+- indicate which score is computer vs human
+- limit paddle motion to x span
+- maybe display some stats along the top, for debug
 
 params
 - computer skill
@@ -85,6 +86,7 @@ void run(void);
 void paddle_control(int which_paddle);
 void bounce_ball_off_paddle(int which_paddle);
 void play_tone(int freq, int duration_ms);
+double linear_interp(double v, double x1, double x2, double y1, double y2);
 
 void init_settings(void);
 void settings(void);
@@ -366,8 +368,8 @@ void paddle_control(int which_paddle)
         paddle_offset =  PADDLE_W * (fabs(vx/vy) > 0.75 ? 0.5 : 0.25);
     }
 
-    //k = (0.10 + (ball_speed_court_per_sec - 0.75) / 10.0);
-    k = (0.10 + (ball_speed_court_per_sec - 0.50) / 10.0);  // xxx linear interp func
+    k = linear_interp(ball_speed_court_per_sec, MIN_BALL_SPEED, MAX_BALL_SPEED, 0.10, 0.35);
+
     if (which_paddle == COMPUTER_PADDLE) {
         computer_paddle_x += ((x + paddle_offset) - computer_paddle_x) * k;
     } else {
@@ -403,9 +405,12 @@ void bounce_ball_off_paddle(int which_paddle)
 
     if (fabs(vx) > fabs(vy)) {
         double new_vxy = sqrt((vx*vx + vy*vy) / 2);
+
         vx = (vx > 0 ? new_vxy : -new_vxy);
         vy = (vy > 0 ? new_vxy : -new_vxy);
-        // xxx sanity vy
+
+        if (which_paddle == HUMAN_PADDLE && vy > 0) vy = -vy;
+        if (which_paddle == COMPUTER_PADDLE && vy < 0) vy = -vy;
     }
 
     play_tone(1000,100);
@@ -422,6 +427,11 @@ void play_tone(int freq, int duration_ms)
     t[0].freq = freq;
     t[0].intvl_ms = duration_ms;
     sdlx_audio_play_tones(t);
+}
+
+double linear_interp(double v, double x1, double x2, double y1, double y2)
+{
+    return y1 + (v - x1) * (y2 - y1) / (x2 - x1);
 }
 
 // -----------------  SETTINGS  -------------------
