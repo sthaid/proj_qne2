@@ -1,15 +1,5 @@
-/* xxx TODO 
-
-maybe 
-- indicate which score is computer vs human
-- limit paddle motion to x span
-- maybe display some stats along the top, for debug
-
-params
-- computer skill
-
-bugs
-- ball pegged to left or right
+/* xxx
+- introduce random errors in autonomous mode
 */
 
 #include <stdio.h>
@@ -40,6 +30,10 @@ bugs
 #define DEFAULT_MIN_BALL_SPEED 1.0 
 #define DEFAULT_MAX_BALL_SPEED 2.0
 
+#define SKILL_EASY           0
+#define SKILL_MEDIUM         1
+#define SKILL_HARD           2
+
 #define HUMAN_PADDLE         0
 #define COMPUTER_PADDLE      1
 
@@ -62,10 +56,11 @@ bugs
 char           *progname;
 char           *data_dir;
 
-bool            param_autonomous = false;
-bool            param_sound = false;
+bool            param_autonomous;
+bool            param_sound;
 double          param_min_ball_speed;
 double          param_max_ball_speed;
+int             param_skill;
 
 int             state;
 double          y_top, y_bottom;
@@ -77,6 +72,9 @@ int             human_score, computer_score;
 double          ball_speed_court_per_sec;
 double          court_pixels;
 sdlx_texture_t *ball;
+
+char           *skill_str[3]       = { "easy", "medium", "hard" };
+char           *short_skill_str[3] = { "E", "M", "H" };
 
 //
 // prototypes    
@@ -196,8 +194,10 @@ int main(int argc, char **argv)
         sdlx_render_printf(sdlx_win_width-2*sdlx_char_width, 0, "%d", human_score);
         sdlx_print_init_numchars(DEFAULT_FONT);
 
-        // display ball speed
-        sdlx_render_printf_xyctr(sdlx_win_width/2, ROW2Y(1), "%0.2f", ball_speed_court_per_sec);
+        // display ball speed, and skill setting
+        sdlx_render_printf_xyctr(sdlx_win_width/2, ROW2Y(1), "%0.2f %s",
+                                 ball_speed_court_per_sec, 
+                                 short_skill_str[param_skill]);
 
         // display the ball and paddles
         sdlx_render_texture(x-BALL_RADIUS, y-BALL_RADIUS, 2*BALL_RADIUS, 2*BALL_RADIUS, ball);
@@ -358,6 +358,8 @@ void run(void)
     }
 }
 
+static double skill_factor[3] = { 0.10, 0.14, 1.0 };
+
 void paddle_control(int which_paddle)
 {
     double paddle_offset, k;
@@ -369,6 +371,7 @@ void paddle_control(int which_paddle)
     }
 
     k = linear_interp(ball_speed_court_per_sec, MIN_BALL_SPEED, MAX_BALL_SPEED, 0.10, 0.35);
+    k *= skill_factor[param_skill];
 
     if (which_paddle == COMPUTER_PADDLE) {
         computer_paddle_x += ((x + paddle_offset) - computer_paddle_x) * k;
@@ -377,15 +380,20 @@ void paddle_control(int which_paddle)
     }
 }
 
-// angle of the paddle at the ends, in radians
+// angle of the paddle at its ends, in radians
 #define MAX_PADDLE_ANGLE (30.0 * DEG2RAD)
 
-// xxx comments
 void bounce_ball_off_paddle(int which_paddle)
 {
     double vx1, vy1, theta;
     double paddle_x;
 
+    // The paddles are implemented curved. The center of the paddle is
+    // oriented as the paddle is displayed. The far left and right ends of the paddles
+    // are oriented with angle (theta) of 30 degrees. The orientation angle varies
+    // smoothly between the center and the left/right ends.
+
+    // determine the paddle orientation angle at the location where the ball has hit
     if (which_paddle == HUMAN_PADDLE) {
         paddle_x = human_paddle_x;
         theta = (paddle_x - x) / (PADDLE_W/2) * MAX_PADDLE_ANGLE;
@@ -394,15 +402,22 @@ void bounce_ball_off_paddle(int which_paddle)
         theta = -(paddle_x - x) / (PADDLE_W/2) * MAX_PADDLE_ANGLE;
     }
 
+    // rotate the ball velocity vector by angle theta
     vx1 = vx*cos(theta) - vy*sin(theta);
     vy1 = vx*sin(theta) + vy*cos(theta);
 
+    // bounce the ball in the rotated reference frame
     vy1 = -vy1;
 
+    // rotate the ball velocity back to the original reference frame
     theta = -theta;
     vx = vx1*cos(theta) - vy1*sin(theta);
     vy = vx1*sin(theta) + vy1*cos(theta);
 
+    // if the ball x velocity is larger than the ball y velocity then
+    // the ball will be bouncing off the walls too much; 
+    // in this case the x and y velocities are set equal which sets the
+    // ball direction to 45 degrees
     if (fabs(vx) > fabs(vy)) {
         double new_vxy = sqrt((vx*vx + vy*vy) / 2);
 
@@ -413,6 +428,7 @@ void bounce_ball_off_paddle(int which_paddle)
         if (which_paddle == COMPUTER_PADDLE && vy < 0) vy = -vy;
     }
 
+    // play short (100ms) tone indicating the ball has bounced off the paddle
     play_tone(1000,100);
 }
 
@@ -436,10 +452,11 @@ double linear_interp(double v, double x1, double x2, double y1, double y2)
 
 // -----------------  SETTINGS  -------------------
 
-#define EVID_AUTONOMOUS 1
-#define EVID_SOUND      2
+#define EVID_AUTONOMOUS     1
+#define EVID_SOUND          2
 #define EVID_MIN_BALL_SPEED 3
 #define EVID_MAX_BALL_SPEED 4
+#define EVID_SKILL          5
 
 void init_settings(void)
 {
@@ -447,6 +464,7 @@ void init_settings(void)
     param_sound          = util_get_numeric_param(data_dir, "sound", 1);
     param_min_ball_speed = util_get_numeric_param(data_dir, "min_ball_speed", DEFAULT_MIN_BALL_SPEED);
     param_max_ball_speed = util_get_numeric_param(data_dir, "max_ball_speed", DEFAULT_MAX_BALL_SPEED);
+    param_skill          = util_get_numeric_param(data_dir, "skill", SKILL_HARD);
 }
 
 void settings(void)
@@ -471,6 +489,8 @@ void settings(void)
         sdlx_register_event(loc, EVID_MIN_BALL_SPEED);
         loc = sdlx_render_printf(0, ROW2Y(8), "max_speed = %G", param_max_ball_speed);
         sdlx_register_event(loc, EVID_MAX_BALL_SPEED);
+        loc = sdlx_render_printf(0, ROW2Y(10), "%s", skill_str[param_skill]);
+        sdlx_register_event(loc, EVID_SKILL);
 
         sdlx_print_init_color(COLOR_WHITE, COLOR_BLACK);
 
@@ -494,16 +514,22 @@ void settings(void)
             util_set_numeric_param(data_dir, "sound", param_sound);
             break;
         case EVID_MIN_BALL_SPEED:
-            str = sdlx_get_input_str("min_ball_speed?", true, COLOR_BLACK);
+            str = sdlx_get_input_str("min_ball_speed ?", true, COLOR_BLACK);
             sscanf(str, "%lf", &param_min_ball_speed);
             clip(&param_min_ball_speed, MIN_BALL_SPEED, MAX_BALL_SPEED); // xxx sanitize
             util_set_numeric_param(data_dir, "min_ball_speed", param_min_ball_speed);
             break;
         case EVID_MAX_BALL_SPEED:
-            str = sdlx_get_input_str("max_ball_speed?", true, COLOR_BLACK);
+            str = sdlx_get_input_str("max_ball_speed ?", true, COLOR_BLACK);
             sscanf(str, "%lf", &param_max_ball_speed);
             clip(&param_max_ball_speed, MIN_BALL_SPEED, MAX_BALL_SPEED);
             util_set_numeric_param(data_dir, "max_ball_speed", param_max_ball_speed);
+            break;
+        case EVID_SKILL:
+            if (++param_skill > SKILL_HARD) {
+                param_skill = SKILL_EASY;
+            }
+            util_set_numeric_param(data_dir, "skill", param_skill);
             break;
         case EVID_QUIT:
             done = true;
