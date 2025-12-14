@@ -517,6 +517,7 @@ void settings(void)
             str = sdlx_get_input_str("min_ball_speed ?", true, COLOR_BLACK);
             sscanf(str, "%lf", &param_min_ball_speed);
             clip(&param_min_ball_speed, MIN_BALL_SPEED, MAX_BALL_SPEED); // xxx sanitize
+            ball_speed_court_per_sec = param_min_ball_speed;
             util_set_numeric_param(data_dir, "min_ball_speed", param_min_ball_speed);
             break;
         case EVID_MAX_BALL_SPEED:
