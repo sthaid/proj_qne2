@@ -36,8 +36,8 @@ void util_sync_file(void *addr, int len);
 
 char *util_get_str_param(char *dir, char *name, char *default_value);
 void util_set_str_param(char *dir, char *name, char *value);
-int util_get_int_param(char *dir, char *name, int default_value);
-void util_set_int_param(char *dir, char *name, int value);
+double util_get_numeric_param(char *dir, char *name, double default_value);
+void util_set_numeric_param(char *dir, char *name, double value);
 void util_print_params(char *dir);
 
 // -----------------  NETWORK  -------------------------------

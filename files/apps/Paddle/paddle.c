@@ -1,24 +1,14 @@
 /* xxx TODO 
 limit paddle motion to x span
-delay before serve,  fixed 0.5 sec
-rename to paddle
 indicate which score is computer vs human
-
-fix printf stmts
-
 maybe display some stats along the top, for debug
+- code comments
 
 params
-- min and max speed
 - computer skill
-- auoto play
-- disable sound
 
 bugs
 - ball pegged to left or right
-
-DONE?
-- code comments
 */
 
 #include <stdio.h>
@@ -44,8 +34,10 @@ DONE?
 #define PADDLE_W             300
 #define PADDLE_H             50
 
-#define MIN_BALL_SPEED       0.75   // courts/sec
-#define MAX_BALL_SPEED       2.75
+#define MIN_BALL_SPEED         0.5   // courts/sec
+#define MAX_BALL_SPEED         3.0
+#define DEFAULT_MIN_BALL_SPEED 1.0 
+#define DEFAULT_MAX_BALL_SPEED 2.0
 
 #define HUMAN_PADDLE         0
 #define COMPUTER_PADDLE      1
@@ -71,6 +63,8 @@ char           *data_dir;
 
 bool            param_autonomous = false;
 bool            param_sound = false;
+double          param_min_ball_speed;
+double          param_max_ball_speed;
 
 int             state;
 double          y_top, y_bottom;
@@ -94,6 +88,7 @@ void play_tone(int freq, int duration_ms);
 
 void init_settings(void);
 void settings(void);
+void clip(double *val, double min, double max);
 
 // -----------------  MAIN  -----------------------
     
@@ -107,7 +102,7 @@ int main(int argc, char **argv)
 
     // save args
     if (argc != 2) {
-        printf("ERROR: data_dir arg expected\n");
+        printf("ERROR %s: data_dir arg expected\n", progname);
         return 1;
     }
     progname = argv[0];
@@ -122,6 +117,8 @@ int main(int argc, char **argv)
     }
 
     // initialization:
+    // - settings
+    init_settings();
     // - state
     state = STATE_READY;
     // - ball texture
@@ -130,7 +127,7 @@ int main(int argc, char **argv)
     computer_score    = 0;
     human_score       = 0;
     // - y range of display for the full court,
-    //   including area above and below the paddles
+    //   includes court area above and below the paddles
     y_top             = 0;
     y_bottom          = sdlx_win_height - 200;
     // - location of the centers of the paddles
@@ -140,13 +137,12 @@ int main(int argc, char **argv)
     computer_paddle_y = y_top + 200;
     // - size of the court, between the paddles
     court_pixels = (human_paddle_y - computer_paddle_y);
-    // - ball location
+    // - ball location and speed
     x = computer_paddle_x;
     y = computer_paddle_y + PADDLE_H/2 + BALL_RADIUS;
+    ball_speed_court_per_sec = param_min_ball_speed;
     // - seed random number generation
     srandom(time(NULL));
-    // - settings
-    init_settings();
 
     // runtime loop
     while (!end_program) {
@@ -164,7 +160,7 @@ int main(int argc, char **argv)
             y_last = y;
 
             // determine ball speed in units of court/sec and pixels/interval
-            ball_speed_court_per_sec = MIN_BALL_SPEED;
+            ball_speed_court_per_sec = param_min_ball_speed;
             ball_speed_pixels_per_intvl = (court_pixels * UPDATE_INTERVAL_SEC) * ball_speed_court_per_sec;
 
             // choose a random direction to serve towards;
@@ -174,11 +170,12 @@ int main(int argc, char **argv)
             vy = ball_speed_pixels_per_intvl / sqrt(1 + k*k);
             vx = k * vy;
 
-            // xxx
+            // set state to cause a short delay prior to serving
             state = STATE_SERVING_DELAY;
             serving_delay = 50;
         }
 
+        // casue short delay prior to serving
         if (state == STATE_SERVING_DELAY) {
             serving_delay--;
             if (serving_delay == 0) {
@@ -186,7 +183,7 @@ int main(int argc, char **argv)
             }
         }
 
-        // xxx 
+        // process ball and paddle motion
         if (state == STATE_RUNNING) {
             run();
         }
@@ -197,12 +194,15 @@ int main(int argc, char **argv)
         sdlx_render_printf(sdlx_win_width-2*sdlx_char_width, 0, "%d", human_score);
         sdlx_print_init_numchars(DEFAULT_FONT);
 
+        // display ball speed
+        sdlx_render_printf_xyctr(sdlx_win_width/2, ROW2Y(1), "%0.2f", ball_speed_court_per_sec);
+
         // display the ball and paddles
         sdlx_render_texture(x-BALL_RADIUS, y-BALL_RADIUS, 2*BALL_RADIUS, 2*BALL_RADIUS, ball);
         sdlx_render_fill_rect(human_paddle_x-PADDLE_W/2, human_paddle_y-PADDLE_H/2, PADDLE_W, PADDLE_H, COLOR_WHITE);
         sdlx_render_fill_rect(computer_paddle_x-PADDLE_W/2, computer_paddle_y-PADDLE_H/2, PADDLE_W, PADDLE_H, COLOR_WHITE);
 
-        // register events
+        // register game control events
         sdlx_register_event(NULL, EVID_MOTION);
         if (state == STATE_READY) {
             sdlx_register_control_events("START", "STG",   "X", COLOR_WHITE, COLOR_BLACK, EVID_START, EVID_SETTINGS, EVID_QUIT);
@@ -225,9 +225,9 @@ int main(int argc, char **argv)
             //     timeout_us = (long)(UPDATE_INTERVAL_SEC * 1000000) - (util_microsec_timer() - start_us);
             timeout_us = (UPDATE_INTERVAL_SEC * 1000000) - (util_microsec_timer() - start_us);
 
-            // if timeout is 0 then break out of the loop
+            // if calculated timeout is <= 0 then break out of the loop
             if (timeout_us <= 0) {
-                //printf("INTVL %ld ms\n", (util_microsec_timer() - start_us) / 1000);
+                //printf("INFO %s: INTVL %ld ms\n", progname, (util_microsec_timer() - start_us) / 1000);
                 break;
             }
 
@@ -249,13 +249,14 @@ int main(int argc, char **argv)
                 state = STATE_RUNNING;
                 break;
             case EVID_RESET:
-                computer_paddle_x = sdlx_win_width/2;
-                human_paddle_x    = sdlx_win_width/2;
-                x                 = computer_paddle_x;
-                y                 = computer_paddle_y + PADDLE_H/2 + BALL_RADIUS;
-                human_score       = 0;
-                computer_score    = 0;
-                state             = STATE_READY;
+                computer_paddle_x        = sdlx_win_width/2;
+                human_paddle_x           = sdlx_win_width/2;
+                x                        = computer_paddle_x;
+                y                        = computer_paddle_y + PADDLE_H/2 + BALL_RADIUS;
+                ball_speed_court_per_sec = param_min_ball_speed;
+                human_score              = 0;
+                computer_score           = 0;
+                state                    = STATE_READY;
                 break;
             case EVID_SETTINGS:
                 settings();
@@ -280,9 +281,9 @@ void run(void)
 {
     // update the ball velocity
     ball_speed_court_per_sec = sqrt(vx*vx + vy*vy) / (court_pixels * UPDATE_INTERVAL_SEC);
-    if (ball_speed_court_per_sec < MAX_BALL_SPEED) {
-        vx *= 1.0001;
-        vy *= 1.0001;
+    if (ball_speed_court_per_sec < param_max_ball_speed) {
+        vx *= 1.0002;
+        vy *= 1.0002;
     }
 
     // update ball position, using the ball x,y velocity (vx, vy)
@@ -292,9 +293,13 @@ void run(void)
     y += vy;
 
     // bounce ball off of side walls
-    if (x < 0 || x > sdlx_win_width) {
-        vx = -vx;
-        x += vx;
+    if (x < 0) {
+        x = 0;
+        if (vx < 0) vx = -vx;
+    }
+    if (x >= sdlx_win_width) {
+        x = sdlx_win_width-1;
+        if (vx > 0) vx = -vx;
     }
 
     // computer paddle control
@@ -361,7 +366,8 @@ void paddle_control(int which_paddle)
         paddle_offset =  PADDLE_W * (fabs(vx/vy) > 0.75 ? 0.5 : 0.25);
     }
 
-    k = (0.10 + (ball_speed_court_per_sec - 0.75) / 10.0);
+    //k = (0.10 + (ball_speed_court_per_sec - 0.75) / 10.0);
+    k = (0.10 + (ball_speed_court_per_sec - 0.50) / 10.0);  // xxx linear interp func
     if (which_paddle == COMPUTER_PADDLE) {
         computer_paddle_x += ((x + paddle_offset) - computer_paddle_x) * k;
     } else {
@@ -369,9 +375,10 @@ void paddle_control(int which_paddle)
     }
 }
 
-// angle of the paddle at both of its ends
-#define MAX_RAD (30.0 * DEG2RAD)
+// angle of the paddle at the ends, in radians
+#define MAX_PADDLE_ANGLE (30.0 * DEG2RAD)
 
+// xxx comments
 void bounce_ball_off_paddle(int which_paddle)
 {
     double vx1, vy1, theta;
@@ -379,10 +386,10 @@ void bounce_ball_off_paddle(int which_paddle)
 
     if (which_paddle == HUMAN_PADDLE) {
         paddle_x = human_paddle_x;
-        theta = (paddle_x - x) / (PADDLE_W/2) * MAX_RAD;
+        theta = (paddle_x - x) / (PADDLE_W/2) * MAX_PADDLE_ANGLE;
     } else {
         paddle_x = computer_paddle_x;
-        theta = -(paddle_x - x) / (PADDLE_W/2) * MAX_RAD;
+        theta = -(paddle_x - x) / (PADDLE_W/2) * MAX_PADDLE_ANGLE;
     }
 
     vx1 = vx*cos(theta) - vy*sin(theta);
@@ -395,9 +402,10 @@ void bounce_ball_off_paddle(int which_paddle)
     vy = vx1*sin(theta) + vy1*cos(theta);
 
     if (fabs(vx) > fabs(vy)) {
-        double new_v = sqrt((vx*vx + vy*vy) / 2);
-        vx = (vx > 0 ? new_v : -new_v);
-        vy = (vy > 0 ? new_v : -new_v);
+        double new_vxy = sqrt((vx*vx + vy*vy) / 2);
+        vx = (vx > 0 ? new_vxy : -new_vxy);
+        vy = (vy > 0 ? new_vxy : -new_vxy);
+        // xxx sanity vy
     }
 
     play_tone(1000,100);
@@ -406,6 +414,10 @@ void bounce_ball_off_paddle(int which_paddle)
 void play_tone(int freq, int duration_ms)
 {
     static sdlx_tone_t t[2];
+
+    if (!param_sound) {
+        return;
+    }
 
     t[0].freq = freq;
     t[0].intvl_ms = duration_ms;
@@ -416,11 +428,15 @@ void play_tone(int freq, int duration_ms)
 
 #define EVID_AUTONOMOUS 1
 #define EVID_SOUND      2
+#define EVID_MIN_BALL_SPEED 3
+#define EVID_MAX_BALL_SPEED 4
 
 void init_settings(void)
 {
-    param_autonomous = util_get_int_param(data_dir, "autonomous", 0);
-    param_sound = util_get_int_param(data_dir, "sound", 1);
+    param_autonomous     = util_get_numeric_param(data_dir, "autonomous", 0);
+    param_sound          = util_get_numeric_param(data_dir, "sound", 1);
+    param_min_ball_speed = util_get_numeric_param(data_dir, "min_ball_speed", DEFAULT_MIN_BALL_SPEED);
+    param_max_ball_speed = util_get_numeric_param(data_dir, "max_ball_speed", DEFAULT_MAX_BALL_SPEED);
 }
 
 void settings(void)
@@ -428,24 +444,27 @@ void settings(void)
     bool done = false;
     sdlx_event_t event;
     sdlx_loc_t *loc;
-
-    printf("SETTINGS START\n");
+    char *str;
 
     while (!done) {
         // init the backbuffer
         sdlx_display_init(COLOR_BLACK);
 
-        // register events
+        // display values, and register events to change the values
         sdlx_print_init_color(COLOR_LIGHT_BLUE, COLOR_BLACK);
 
-        loc = sdlx_render_printf(0, ROW2Y(2), "Autonomous = %s", param_autonomous ? "ON" : "OFF");
+        loc = sdlx_render_printf(0, ROW2Y(2), "autonomous = %s", param_autonomous ? "ON" : "OFF");
         sdlx_register_event(loc, EVID_AUTONOMOUS);
-
-        loc = sdlx_render_printf(0, ROW2Y(4), "Sound = %s", param_sound ? "ON" : "OFF");
+        loc = sdlx_render_printf(0, ROW2Y(4), "sound = %s", param_sound ? "ON" : "OFF");
         sdlx_register_event(loc, EVID_SOUND);
+        loc = sdlx_render_printf(0, ROW2Y(6), "min_speed = %G", param_min_ball_speed);
+        sdlx_register_event(loc, EVID_MIN_BALL_SPEED);
+        loc = sdlx_render_printf(0, ROW2Y(8), "max_speed = %G", param_max_ball_speed);
+        sdlx_register_event(loc, EVID_MAX_BALL_SPEED);
 
         sdlx_print_init_color(COLOR_WHITE, COLOR_BLACK);
 
+        // register control event to exit the settings screen
         sdlx_register_control_events(NULL, NULL, "X", COLOR_WHITE, COLOR_BLACK, 0, 0, EVID_QUIT);
 
         // present the display
@@ -458,17 +477,36 @@ void settings(void)
         switch (event.event_id) {
         case EVID_AUTONOMOUS:
             param_autonomous = !param_autonomous;
-            util_set_int_param(data_dir, "autonomous", param_autonomous);
+            util_set_numeric_param(data_dir, "autonomous", param_autonomous);
             break;
         case EVID_SOUND:
             param_sound = !param_sound;
-            util_set_int_param(data_dir, "sound", param_sound);
+            util_set_numeric_param(data_dir, "sound", param_sound);
+            break;
+        case EVID_MIN_BALL_SPEED:
+            str = sdlx_get_input_str("min_ball_speed?", true, COLOR_BLACK);
+            sscanf(str, "%lf", &param_min_ball_speed);
+            clip(&param_min_ball_speed, MIN_BALL_SPEED, MAX_BALL_SPEED); // xxx sanitize
+            util_set_numeric_param(data_dir, "min_ball_speed", param_min_ball_speed);
+            break;
+        case EVID_MAX_BALL_SPEED:
+            str = sdlx_get_input_str("max_ball_speed?", true, COLOR_BLACK);
+            sscanf(str, "%lf", &param_max_ball_speed);
+            clip(&param_max_ball_speed, MIN_BALL_SPEED, MAX_BALL_SPEED);
+            util_set_numeric_param(data_dir, "max_ball_speed", param_max_ball_speed);
             break;
         case EVID_QUIT:
             done = true;
             break;
         }
     }
+}
 
-    printf("SETTINGS DONE\n");
+void clip(double *val, double min, double max)
+{
+    if (*val < min) {
+        *val = min;
+    } else if (*val > max) {
+        *val = max;
+    }
 }

@@ -348,15 +348,9 @@ void util_sync_file(void *addr, int len)
 
 // -----------------  GET / SET PARAMS  ----------------------
 
-// xxx needed?
-char *util_get_str_param(char *dir, char *name, char *default_value);
-void util_set_str_param(char *dir, char *name, char *value);
-int util_get_int_param(char *dir, char *name, int default_value);
-void util_set_int_param(char *dir, char *name, int value);
-void util_print_params(char *dir);
-
 #define MAX_PARAMS 32
 
+// xxx keep multiple copies for each data_dir
 static struct {
     char *name;
     char *value;
@@ -406,6 +400,7 @@ static void read_params_file(char *dir)
             return;
         }
 
+        // xxx is this a mem leak
         params[max_params].name = strdup(name);
         params[max_params].value = strdup(s+n);
         max_params++;
@@ -527,40 +522,40 @@ void util_set_str_param(char *dir, char *name, char *value)
     write_params_file(dir);
 }
 
-int util_get_int_param(char *dir, char *name, int dflt_val)
+double util_get_numeric_param(char *dir, char *name, double dflt_val)
 {
-    char  dflt_val_str[20];
-    char *value_str;
-    int   value_int;
-    int   cnt;
+    char   dflt_val_str[100];
+    char  *value_str;
+    double value;
+    int    cnt;
 
     // create the default value string, and
     // call util_get_str_param to get the value_str
-    sprintf(dflt_val_str, "%d", dflt_val);
+    sprintf(dflt_val_str, "%G", dflt_val);
     value_str = util_get_str_param(dir, name, dflt_val_str);
 
-    // convert value_str, returned by util_get_str_param, to value_int
-    cnt = sscanf(value_str, "%d", &value_int);
+    // convert value_str, returned by util_get_str_param, to 'value'
+    cnt = sscanf(value_str, "%lf", &value);
 
-    // the conversion can fail if value_str is not an integer,
-    // if the conversion fails then call util_set_int_param, and 
+    // the conversion can fail if value_str is not a number,
+    // if the conversion fails then call util_set_numeric_param, and 
     // return the default value
     if (cnt != 1) {
-        util_set_int_param(dir, name, dflt_val);
+        util_set_numeric_param(dir, name, dflt_val);
         return dflt_val;
     }
 
-    // return the integer param value
-    return value_int;
+    // return the param value
+    return value;
 }
 
-void util_set_int_param(char *dir, char *name, int value)
+void util_set_numeric_param(char *dir, char *name, double value)
 {
-    char value_str[20];
+    char value_str[100];
 
     // create value string, and
     // call util_set_str_param to set it
-    sprintf(value_str, "%d", value);
+    sprintf(value_str, "%G", value);
     util_set_str_param(dir, name, value_str);
 }    
 
