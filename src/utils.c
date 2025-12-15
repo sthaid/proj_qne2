@@ -362,7 +362,7 @@ static void remove_trailing_newline(char *s)
 {
     int len = strlen(s);
 
-    if (len > 0) {
+    if (len > 0 && s[len-1] == '\n') {
         s[len-1] = '\0';
     }
 }
