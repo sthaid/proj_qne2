@@ -13,7 +13,8 @@
 
 #define EVID_NEW      1
 #define EVID_STOP     2
-#define EVID_PLAY 100
+#define EVID_GOTO_TOP 3
+#define EVID_PLAY     100
 #define EVID_APPEND   300
 #define EVID_DELETE   400
 
@@ -62,6 +63,10 @@ int main(int argc, char **argv)
         return 1;
     }
 
+    int y_display_begin = 100;
+    int y_display_end = sdlx_win_height - 500;
+    int y_top = y_display_begin;
+
     // runtime loop
     while (!end_program) {
         // init the backbuffer
@@ -71,10 +76,10 @@ int main(int argc, char **argv)
         get_list_of_files();
 
         // xxx 
-        // - display file duration
-        // - display volume bar
         // - vertical scrolling
         // - playback duration bar
+        //    xxx make this in msec units
+        // - adjust record volume
 
         // xxx comment
         sdlx_audio_state(&audio_state);
@@ -101,7 +106,9 @@ int main(int argc, char **argv)
             static char display_name[40];
             strncpy(display_name, filename[idx]+4, 8);  // xxx sanity check filename length
 
-            int y = 100 + ROW2Y(2*idx);
+            int y = y_top + ROW2Y(2*idx);
+            if (y < y_display_begin) continue;
+            if (y > y_display_end) break;
 
             int file_duration_secs = sdlx_audio_file_duration(data_dir, filename[idx]);
 
@@ -131,15 +138,21 @@ int main(int argc, char **argv)
         int y = sdlx_win_height-300;
         int bar_height = 75;
         if (audio_state.state == AUDIO_STATE_PLAY_FILE) {
-            sdlx_render_fill_rect(0, y, sdlx_win_width * audio_state.volume / 100, bar_height, COLOR_GREEN);
+            //sdlx_render_fill_rect(0, y, sdlx_win_width * audio_state.volume / 100, bar_height, COLOR_GREEN);
+            int bar_value_w = sdlx_win_width * audio_state.processed_secs / audio_state.total_secs;
+            sdlx_render_fill_rect(0, y, bar_value_w, bar_height, COLOR_GREEN);
             sdlx_render_rect(0, y, sdlx_win_width, bar_height, 2, COLOR_WHITE);
         } else if (audio_state.state == AUDIO_STATE_RECORD || audio_state.state == AUDIO_STATE_RECORD_APPEND) {
-            sdlx_render_fill_rect(0, y, sdlx_win_width * audio_state.volume / 100, bar_height, COLOR_RED);
+            int bar_value_w =  sdlx_win_width * audio_state.volume / 100;
+            sdlx_render_fill_rect(0, y, bar_value_w, bar_height, COLOR_RED);
             sdlx_render_rect(0, y, sdlx_win_width, bar_height, 2, COLOR_WHITE);
         }
 
+        //xxx
+        sdlx_register_event(NULL, EVID_MOTION);
+
         // register control events
-        sdlx_register_control_events("+", NULL, "X", COLOR_WHITE, COLOR_BLACK, EVID_NEW, 0, EVID_QUIT);
+        sdlx_register_control_events("+", "TOP", "X", COLOR_WHITE, COLOR_BLACK, EVID_NEW, EVID_GOTO_TOP, EVID_QUIT);
 
         // present the display
         sdlx_display_present();
@@ -148,7 +161,14 @@ int main(int argc, char **argv)
         sdlx_get_event(100000, &event);
 
         // process events
-        if (event.event_id == EVID_NEW) {
+        if (event.event_id == EVID_MOTION) {
+            y_top += event.u.motion.yrel;
+            if (y_top >= y_display_begin) {
+                y_top = y_display_begin;
+            }
+        } else if (event.event_id == EVID_GOTO_TOP) {
+            y_top = y_display_begin;
+        } else if (event.event_id == EVID_NEW) {
             time_t t = time(NULL);
             struct tm tm;
             char new_filename[100];
@@ -156,7 +176,7 @@ int main(int argc, char **argv)
             localtime_r(&t, &tm);
             sprintf(new_filename, "%04d%02d%02d%02d%02d%02d.raw",
                     tm.tm_year+1900, tm.tm_mon+1, tm.tm_mday, tm.tm_hour, tm.tm_min, tm.tm_sec);
-            //strftime(new_filename, sizeof(new_filename), "%b%d-%T.raw", &tm);
+            // xxx del strftime(new_filename, sizeof(new_filename), "%b%d-%T.raw", &tm);
             printf("INFO %s: EVID_NEW recording to '%s'\n", progname, new_filename);
             sdlx_audio_record(data_dir, new_filename, 30, 2, false);
         } else if (event.event_id == EVID_STOP) {
@@ -231,23 +251,3 @@ void remove_trailing_newline(char *s)
     }
 }
 
-#if 0
-xxxxxxxxxxxxxxxxxxxx
-Dec08-08:45  App Del
-
-12-08 08:45
-Dec08_08:45
-Dec08-08:45
-YYYY-MM-DDTHH:MM:SS
-YYYY-MM-DDTHH:MM:SS
-2025-12-14T14:30:15
-
-    memset(&tm_gmt,0,sizeof(tm_gmt));
-    tm_gmt.tm_sec   = seconds;
-    tm_gmt.tm_min   = minute;
-    tm_gmt.tm_hour  = hour;
-    tm_gmt.tm_mday  = day;
-    tm_gmt.tm_mon   = month - 1;     // 0 to 11
-    tm_gmt.tm_year  = year - 1900;   // based 1900
-    t = timegm(&tm_gmt);
-#endif
