@@ -312,6 +312,18 @@ done:
     return 0;
 }
 
+int sdlx_audio_file_duration(char *dir, char *filename)
+{
+    long size;
+
+    size = util_file_size(dir, filename);
+    if (size < 0) {
+        return 0;
+    }
+
+    return size / (FRAMES_PER_SEC * 2);
+}
+
 static void play_buff(char *buff, int buff_len, bool *stop_req, int *queued_bytes)
 {
     char  *buff_ptr = buff;
