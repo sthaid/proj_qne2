@@ -15,8 +15,8 @@
 #define EVID_STOP     2
 #define EVID_GOTO_TOP 3
 #define EVID_PLAY     100
-#define EVID_APPEND   300
-#define EVID_DELETE   400
+#define EVID_APPEND   200
+#define EVID_DELETE   300
 
 #define MAX_FILENAME 100
 
@@ -46,6 +46,10 @@ int main(int argc, char **argv)
     sdlx_event_t event;
     bool         end_program = false;
     sdlx_audio_state_t audio_state;
+
+    int y;
+
+    static char display_name[40];
 
     // save args
     if (argc != 2) {
@@ -96,17 +100,16 @@ int main(int argc, char **argv)
         // display the audio filename, followed by events to append, or delete
         for (int idx = 0; idx < max_filename; idx++) {
             sdlx_loc_t *loc;
-            int color;
+            unsigned int color;  // xxx make pixel_t
 
             color = (state[idx] == AUDIO_STATE_PLAY_FILE     ? COLOR_GREEN : 
                      state[idx] == AUDIO_STATE_RECORD        ? COLOR_RED :
                      state[idx] == AUDIO_STATE_RECORD_APPEND ? COLOR_RED :
                                                                COLOR_LIGHT_BLUE);
 
-            static char display_name[40];
             strncpy(display_name, filename[idx]+4, 8);  // xxx sanity check filename length
 
-            int y = y_top + ROW2Y(2*idx);
+            y = y_top + ROW2Y(2*idx);
             if (y < y_display_begin) continue;
             if (y > y_display_end) break;
 
@@ -135,7 +138,7 @@ int main(int argc, char **argv)
         sdlx_print_init_color(COLOR_WHITE, COLOR_BLACK);
 
         // display volume bar
-        int y = sdlx_win_height-300;
+        y = sdlx_win_height-300;
         int bar_height = 75;
         if (audio_state.state == AUDIO_STATE_PLAY_FILE) {
             //sdlx_render_fill_rect(0, y, sdlx_win_width * audio_state.volume / 100, bar_height, COLOR_GREEN);
@@ -161,6 +164,8 @@ int main(int argc, char **argv)
         sdlx_get_event(100000, &event);
 
         // process events
+        if (event.event_id != -1) 
+            printf("GOT event %d\n", event.event_id);
         if (event.event_id == EVID_MOTION) {
             y_top += event.u.motion.yrel;
             if (y_top >= y_display_begin) {
