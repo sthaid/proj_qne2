@@ -7,6 +7,10 @@
 #include <sdlx.h>
 #include <utils.h>
 
+// xxx todo
+// - adjust record volume
+// - make pixel_t
+
 //
 // defines
 //
@@ -28,7 +32,6 @@ char *progname;
 char *data_dir;
 
 char *filename[MAX_FILENAME];
-int   state[MAX_FILENAME];
 int   max_filename;
 
 //
@@ -36,20 +39,20 @@ int   max_filename;
 //
 
 void get_list_of_files(void);
+void cleanup_filename_allocations(void);
 void remove_trailing_newline(char *s);
 
 // -----------------  MAIN  ------------------------------------------
     
 int main(int argc, char **argv)
 {
-    int          rc;
-    sdlx_event_t event;
-    bool         end_program = false;
-    sdlx_audio_state_t audio_state;
-
-    int y;
-
-    static char display_name[40];
+    int                rc;
+    sdlx_event_t       event;
+    bool               end_program = false;
+    int                y_display_begin;
+    int                y_display_end;
+    int                y_top;
+    int                y;
 
     // save args
     if (argc != 2) {
@@ -60,6 +63,14 @@ int main(int argc, char **argv)
     data_dir = argv[1];
     printf("INFO %s: starting, data_dir=%s\n", progname, data_dir);
 
+    // xxx picoc test
+    rc = COLOR_RED;
+    if (rc == COLOR_RED) {
+        printf("INFO %s: picoc test okay\n", progname);
+    } else {
+        printf("ERROR %s: picoc test failed, rc=0x%x\n", progname, rc);
+    }
+
     // init sdl video and audio subsystems
     rc = sdlx_init(SUBSYS_VIDEO|SUBSYS_AUDIO);
     if (rc != 0) {
@@ -67,9 +78,11 @@ int main(int argc, char **argv)
         return 1;
     }
 
-    int y_display_begin = 100;
-    int y_display_end = sdlx_win_height - 500;
-    int y_top = y_display_begin;
+    // init variables which define the vertical region of the display
+    // being used for the filename list
+    y_display_begin = 100;
+    y_display_end   = sdlx_win_height - 500;
+    y_top           = y_display_begin;
 
     // runtime loop
     while (!end_program) {
@@ -79,70 +92,70 @@ int main(int argc, char **argv)
         // get list of audio files
         get_list_of_files();
 
-        // xxx 
-        // - vertical scrolling
-        // - playback duration bar
-        //    xxx make this in msec units
-        // - adjust record volume
-
-        // xxx comment
+        // get current audio state
+        sdlx_audio_state_t audio_state;
         sdlx_audio_state(&audio_state);
-        memset(&state, 0, sizeof(state));
-        if (audio_state.state != AUDIO_STATE_IDLE) {
-            for (int idx = 0; idx < max_filename; idx++) {
-                if (strstr(audio_state.filename, filename[idx]) != NULL) {
-                    state[idx] = audio_state.state;
-                    break;
-                }
-            }
-        }
 
         // display the audio filename, followed by events to append, or delete
         for (int idx = 0; idx < max_filename; idx++) {
-            sdlx_loc_t *loc;
-            unsigned int color;  // xxx make pixel_t
+            char         display_filename[9];
+            sdlx_loc_t  *loc;
+            unsigned int color;
+            int          file_duration_secs;
 
-            color = (state[idx] == AUDIO_STATE_PLAY_FILE     ? COLOR_GREEN : 
-                     state[idx] == AUDIO_STATE_RECORD        ? COLOR_RED :
-                     state[idx] == AUDIO_STATE_RECORD_APPEND ? COLOR_RED :
-                                                               COLOR_LIGHT_BLUE);
-
-            strncpy(display_name, filename[idx]+4, 8);  // xxx sanity check filename length
-
+            // if y display location is above the top of the display region,
+            // or below the bottom of the display region, then either continue or break
             y = y_top + ROW2Y(2*idx);
-            if (y < y_display_begin) continue;
+            if (y < y_display_begin-30) continue;
             if (y > y_display_end) break;
 
-            int file_duration_secs = sdlx_audio_file_duration(data_dir, filename[idx]);
+            // determine the color in which the filename[idx] will be displayed
+            if (strstr(audio_state.filename, filename[idx]) != NULL) {
+                color = (audio_state.state == AUDIO_STATE_PLAY_FILE     ? COLOR_GREEN :   // xxx picoc problem
+                         (audio_state.state == AUDIO_STATE_RECORD        ? COLOR_RED :
+                         (audio_state.state == AUDIO_STATE_RECORD_APPEND ? COLOR_RED :
+                                                                         COLOR_LIGHT_BLUE)));
+            } else {
+                color = COLOR_LIGHT_BLUE;
+            }
 
+            // init shortened filename string, which will be displayed
+            strncpy(display_filename, filename[idx]+4, sizeof(display_filename));
+            display_filename[sizeof(display_filename)-1] = '\0';
+
+            // get the duration of the audio file, which will be displayed
+            file_duration_secs = sdlx_audio_file_duration(data_dir, filename[idx]);
+
+            // display the filename and duration in the color determined above
             sdlx_print_init_color(color, COLOR_BLACK);
-            loc = sdlx_render_printf(0, y, "%s:%d", display_name, file_duration_secs);
+            loc = sdlx_render_printf(0, y, "%s:%d", display_filename, file_duration_secs);
             if (color == COLOR_LIGHT_BLUE || color == COLOR_GREEN) {
                 sdlx_register_event(loc, EVID_PLAY+idx);
             }
 
+            // if color is light blue then
+            //   register append and delete events
+            // else
+            //   register stop event, to stop the inprogress playback or record
+            // endif
             if (color == COLOR_LIGHT_BLUE) {
-                // register append and delete events
                 sdlx_print_init_color(COLOR_LIGHT_BLUE, COLOR_BLACK);
                 loc = sdlx_render_printf(COL2X(13.5), y, "%s", "+");
                 sdlx_register_event(loc, EVID_APPEND+idx);
                 loc = sdlx_render_printf(COL2X(18), y, "%s", "X");
                 sdlx_register_event(loc, EVID_DELETE+idx);
             } else {
-                // register stop event
                 sdlx_print_init_color(COLOR_LIGHT_BLUE, COLOR_BLACK);
                 loc = sdlx_render_printf(COL2X(13.5), y, "%s", "STOP");
                 sdlx_register_event(loc, EVID_STOP);
             }
         }
-        sdlx_print_init_color(COLOR_WHITE, COLOR_BLACK);
 
         // display volume bar
         y = sdlx_win_height-300;
         int bar_height = 75;
         if (audio_state.state == AUDIO_STATE_PLAY_FILE) {
-            //sdlx_render_fill_rect(0, y, sdlx_win_width * audio_state.volume / 100, bar_height, COLOR_GREEN);
-            int bar_value_w = sdlx_win_width * audio_state.processed_secs / audio_state.total_secs;
+            int bar_value_w = sdlx_win_width * audio_state.processed_ms / audio_state.total_ms;
             sdlx_render_fill_rect(0, y, bar_value_w, bar_height, COLOR_GREEN);
             sdlx_render_rect(0, y, sdlx_win_width, bar_height, 2, COLOR_WHITE);
         } else if (audio_state.state == AUDIO_STATE_RECORD || audio_state.state == AUDIO_STATE_RECORD_APPEND) {
@@ -151,10 +164,8 @@ int main(int argc, char **argv)
             sdlx_render_rect(0, y, sdlx_win_width, bar_height, 2, COLOR_WHITE);
         }
 
-        //xxx
+        // register motion and control events
         sdlx_register_event(NULL, EVID_MOTION);
-
-        // register control events
         sdlx_register_control_events("+", "TOP", "X", COLOR_WHITE, COLOR_BLACK, EVID_NEW, EVID_GOTO_TOP, EVID_QUIT);
 
         // present the display
@@ -164,9 +175,9 @@ int main(int argc, char **argv)
         sdlx_get_event(100000, &event);
 
         // process events
-        if (event.event_id != -1) 
-            printf("GOT event %d\n", event.event_id);
-        if (event.event_id == EVID_MOTION) {
+        if (event.event_id == -1) {
+            // no event received, must be timeout
+        } else if (event.event_id == EVID_MOTION) {
             y_top += event.u.motion.yrel;
             if (y_top >= y_display_begin) {
                 y_top = y_display_begin;
@@ -181,7 +192,6 @@ int main(int argc, char **argv)
             localtime_r(&t, &tm);
             sprintf(new_filename, "%04d%02d%02d%02d%02d%02d.raw",
                     tm.tm_year+1900, tm.tm_mon+1, tm.tm_mday, tm.tm_hour, tm.tm_min, tm.tm_sec);
-            // xxx del strftime(new_filename, sizeof(new_filename), "%b%d-%T.raw", &tm);
             printf("INFO %s: EVID_NEW recording to '%s'\n", progname, new_filename);
             sdlx_audio_record(data_dir, new_filename, 30, 2, false);
         } else if (event.event_id == EVID_STOP) {
@@ -205,6 +215,7 @@ int main(int argc, char **argv)
     }
 
     // cleanup and end program
+    cleanup_filename_allocations();
     sdlx_quit(SUBSYS_VIDEO|SUBSYS_AUDIO);
     printf("INFO %s: terminating\n", progname);
     return 0;
@@ -228,11 +239,7 @@ void get_list_of_files(void)
 
     printf("INFO %s: updating filenames\n", progname);
 
-    for (i = 0; i < max_filename; i++) {
-        free(filename[i]); // xxx free at term
-        filename[i] = NULL;
-    }
-    max_filename = 0;
+    cleanup_filename_allocations();
 
     sprintf(cmd, "cd %s; /bin/ls -1 *.raw", data_dir);
     fp = popen(cmd, "r");
@@ -245,6 +252,17 @@ void get_list_of_files(void)
     for (i = 0; i < max_filename; i++) {
         printf("INFO %s:   %d '%s'\n", progname, i, filename[i]);
     }
+}
+
+void cleanup_filename_allocations(void)
+{
+    int i;
+
+    for (i = 0; i < max_filename; i++) {
+        free(filename[i]);
+        filename[i] = NULL;
+    }
+    max_filename = 0;
 }
 
 void remove_trailing_newline(char *s)
