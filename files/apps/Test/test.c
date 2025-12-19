@@ -704,7 +704,7 @@ static void page_7_draw(void)
 
         // state, processed/total time, and paused
         sdlx_render_printf(0, y, "%s %d/%d", 
-                          audio_state_str(state.state), state.processed_secs, state.total_secs);
+                          audio_state_str(state.state), state.processed_ms/1000, state.total_ms/1000);
         if (state.paused) {
             sdlx_render_printf(sdlx_win_width-sdlx_char_width, y, "%s", "P");
         }

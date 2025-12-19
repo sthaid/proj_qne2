@@ -10,6 +10,13 @@
 // xxx todo
 // - adjust record volume
 // - make pixel_t
+// - record auto stop prblem
+// - settings:
+//   - setting for record volume scaling
+//   - setting for minimum volume
+// - record speed ?
+
+// - xxx maybe not
 
 //
 // defines
@@ -32,6 +39,7 @@ char *progname;
 char *data_dir;
 
 char *filename[MAX_FILENAME];
+char *friendlyname[MAX_FILENAME];
 int   max_filename;
 
 //
@@ -41,6 +49,7 @@ int   max_filename;
 void get_list_of_files(void);
 void cleanup_filename_allocations(void);
 void remove_trailing_newline(char *s);
+void substring(char *s, int start, int len, char *substring);
 
 // -----------------  MAIN  ------------------------------------------
     
@@ -84,6 +93,9 @@ int main(int argc, char **argv)
     y_display_end   = sdlx_win_height - 500;
     y_top           = y_display_begin;
 
+    // init char size, in numchars across the screen
+    sdlx_print_init_numchars(23);
+
     // runtime loop
     while (!end_program) {
         // init the backbuffer
@@ -98,7 +110,6 @@ int main(int argc, char **argv)
 
         // display the audio filename, followed by events to append, or delete
         for (int idx = 0; idx < max_filename; idx++) {
-            char         display_filename[9];
             sdlx_loc_t  *loc;
             unsigned int color;
             int          file_duration_secs;
@@ -112,23 +123,17 @@ int main(int argc, char **argv)
             // determine the color in which the filename[idx] will be displayed
             if (strstr(audio_state.filename, filename[idx]) != NULL) {
                 color = (audio_state.state == AUDIO_STATE_PLAY_FILE     ? COLOR_GREEN :   // xxx picoc problem
-                         (audio_state.state == AUDIO_STATE_RECORD        ? COLOR_RED :
-                         (audio_state.state == AUDIO_STATE_RECORD_APPEND ? COLOR_RED :
-                                                                         COLOR_LIGHT_BLUE)));
+                        (audio_state.state == AUDIO_STATE_RECORD        ? COLOR_RED :
+                        (audio_state.state == AUDIO_STATE_RECORD_APPEND ? COLOR_RED :
+                                                                          COLOR_LIGHT_BLUE)));
             } else {
                 color = COLOR_LIGHT_BLUE;
             }
 
-            // init shortened filename string, which will be displayed
-            strncpy(display_filename, filename[idx]+4, sizeof(display_filename));
-            display_filename[sizeof(display_filename)-1] = '\0';
-
-            // get the duration of the audio file, which will be displayed
-            file_duration_secs = sdlx_audio_file_duration(data_dir, filename[idx]);
-
-            // display the filename and duration in the color determined above
+            // display the friendly filename and duration in the color determined above
             sdlx_print_init_color(color, COLOR_BLACK);
-            loc = sdlx_render_printf(0, y, "%s:%d", display_filename, file_duration_secs);
+            file_duration_secs = sdlx_audio_file_duration(data_dir, filename[idx]);
+            loc = sdlx_render_printf(0, y, "%s-%02d", friendlyname[idx], file_duration_secs);
             if (color == COLOR_LIGHT_BLUE || color == COLOR_GREEN) {
                 sdlx_register_event(loc, EVID_PLAY+idx);
             }
@@ -140,18 +145,20 @@ int main(int argc, char **argv)
             // endif
             if (color == COLOR_LIGHT_BLUE) {
                 sdlx_print_init_color(COLOR_LIGHT_BLUE, COLOR_BLACK);
-                loc = sdlx_render_printf(COL2X(13.5), y, "%s", "+");
+                loc = sdlx_render_printf(COL2X(16.5), y, "%s", "+");
                 sdlx_register_event(loc, EVID_APPEND+idx);
-                loc = sdlx_render_printf(COL2X(18), y, "%s", "X");
+                loc = sdlx_render_printf(COL2X(21), y, "%s", "X");
                 sdlx_register_event(loc, EVID_DELETE+idx);
             } else {
                 sdlx_print_init_color(COLOR_LIGHT_BLUE, COLOR_BLACK);
-                loc = sdlx_render_printf(COL2X(13.5), y, "%s", "STOP");
+                loc = sdlx_render_printf(COL2X(15.5), y, "%s", "STOP");
                 sdlx_register_event(loc, EVID_STOP);
             }
         }
 
-        // display volume bar
+        // display bar which indicates:
+        // - playback: the amount of the file that has played
+        // - record: the record volume
         y = sdlx_win_height-300;
         int bar_height = 75;
         if (audio_state.state == AUDIO_STATE_PLAY_FILE) {
@@ -160,6 +167,7 @@ int main(int argc, char **argv)
             sdlx_render_rect(0, y, sdlx_win_width, bar_height, 2, COLOR_WHITE);
         } else if (audio_state.state == AUDIO_STATE_RECORD || audio_state.state == AUDIO_STATE_RECORD_APPEND) {
             int bar_value_w =  sdlx_win_width * audio_state.volume / 100;
+            sdlx_render_printf(sdlx_win_width-COL2X(2), y, "%2d", audio_state.volume);
             sdlx_render_fill_rect(0, y, bar_value_w, bar_height, COLOR_RED);
             sdlx_render_rect(0, y, sdlx_win_width, bar_height, 2, COLOR_WHITE);
         }
@@ -192,22 +200,22 @@ int main(int argc, char **argv)
             localtime_r(&t, &tm);
             sprintf(new_filename, "%04d%02d%02d%02d%02d%02d.raw",
                     tm.tm_year+1900, tm.tm_mon+1, tm.tm_mday, tm.tm_hour, tm.tm_min, tm.tm_sec);
-            printf("INFO %s: EVID_NEW recording to '%s'\n", progname, new_filename);
+            //printf("INFO %s: EVID_NEW recording to '%s'\n", progname, new_filename);
             sdlx_audio_record(data_dir, new_filename, 30, 2, false);
         } else if (event.event_id == EVID_STOP) {
-            printf("INFO %s: EVID_STOP\n", progname);
+            //printf("INFO %s: EVID_STOP\n", progname);
             sdlx_audio_ctl(AUDIO_REQ_STOP);
         } else if (event.event_id >= EVID_PLAY && event.event_id < EVID_PLAY + max_filename) {
             int idx = event.event_id - EVID_PLAY;
-            printf("INFO %s: EVID_PLAY %d\n", progname, idx);
+            //printf("INFO %s: EVID_PLAY %d\n", progname, idx);
             sdlx_audio_play(data_dir, filename[idx]);
         } else if (event.event_id >= EVID_APPEND && event.event_id < EVID_APPEND + max_filename) {
             int idx = event.event_id - EVID_APPEND;
-            printf("INFO %s: EVID_APPEND %d\n", progname, idx);
+            //printf("INFO %s: EVID_APPEND %d\n", progname, idx);
             sdlx_audio_record(data_dir, filename[idx], 30, 2, true);
         } else if (event.event_id >= EVID_DELETE && event.event_id < EVID_DELETE + max_filename) {
             int idx = event.event_id - EVID_DELETE;
-            printf("INFO %s: EVID_DELETE %d\n", progname, idx);
+            //printf("INFO %s: EVID_DELETE %d\n", progname, idx);
             util_delete_file(data_dir, filename[idx]);
         } else if (event.event_id == EVID_QUIT) {
             end_program = true;
@@ -237,11 +245,15 @@ void get_list_of_files(void)
     }
     mtime_last = mtime;
 
+    // debug print
     printf("INFO %s: updating filenames\n", progname);
 
+    // cleanup current filename string allocations
     cleanup_filename_allocations();
 
-    sprintf(cmd, "cd %s; /bin/ls -1 *.raw", data_dir);
+    // run 'ls -lr' to get reverse sorted list of filenames,
+    // starting with the most recent
+    sprintf(cmd, "cd %s; /bin/ls -1r *.raw", data_dir);
     fp = popen(cmd, "r");
     while (fgets(s, sizeof(s), fp)) {
         remove_trailing_newline(s);
@@ -249,8 +261,28 @@ void get_list_of_files(void)
     }
     pclose(fp);
 
+    // create friendly filenames, for example:
+    // - filename:    20251219071933.raw
+    // - friendlyname: Dec19-07:19
     for (i = 0; i < max_filename; i++) {
-        printf("INFO %s:   %d '%s'\n", progname, i, filename[i]);
+        char month[8], day[8], hour[8], minute[8], month_abbrev[16];
+        char friendly[50];
+        struct tm tm;
+
+        substring(filename[i], 4, 2, month);
+        substring(filename[i], 6, 2, day);
+        substring(filename[i], 8, 2, hour);
+        substring(filename[i], 10, 2, minute);
+        memset(&tm, 0, sizeof(tm));
+        tm.tm_mon = atoi(month)-1;
+        strftime(month_abbrev, sizeof(month_abbrev), "%b", &tm);
+        sprintf(friendly, "%s%s-%s%s", month_abbrev, day, hour, minute);
+        friendlyname[i] = strdup(friendly);
+    }
+
+    // print new list of filenames and friendlynames
+    for (i = 0; i < max_filename; i++) {
+        printf("INFO %s:   %d '%s' '%s'\n", progname, i, filename[i], friendlyname[i]);
     }
 }
 
@@ -261,6 +293,8 @@ void cleanup_filename_allocations(void)
     for (i = 0; i < max_filename; i++) {
         free(filename[i]);
         filename[i] = NULL;
+        free(friendlyname[i]);
+        friendlyname[i] = NULL;
     }
     max_filename = 0;
 }
@@ -274,3 +308,8 @@ void remove_trailing_newline(char *s)
     }
 }
 
+void substring(char *s, int start, int len, char *substring)
+{
+    memcpy(substring, s+start, len);
+    substring[len] = '\0';
+}

@@ -171,6 +171,8 @@ bool util_file_exists(char *dir, char *fn)
     return rc == 0;
 }
 
+// return unix epoch time in microsecs
+// xxx where else is this called
 long util_file_mtime(char *dir, char *fn)
 {
     char path[200];
@@ -180,7 +182,11 @@ long util_file_mtime(char *dir, char *fn)
     concat(dir, fn, path);
 
     rc = stat(path, &statbuf);
-    return (rc == 0 ? statbuf.st_mtime : 0);
+    if (rc != 0) {
+        return 0;
+    }
+
+    return statbuf.st_mtim.tv_sec * 1000000L + statbuf.st_mtim.tv_nsec / 1000L;
 }
 
 long util_file_size(char *dir, char *fn)

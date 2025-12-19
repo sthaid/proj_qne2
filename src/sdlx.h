@@ -171,8 +171,8 @@ typedef struct {
 typedef struct {
     int  state;
     bool paused;
-    int  processed_secs;
-    int  total_secs;
+    int  processed_ms;
+    int  total_ms;
     int  volume;
     char filename[100];
 } sdlx_audio_state_t;

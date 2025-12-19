@@ -12,16 +12,17 @@
 
 #define TEN_MS 10000
 
-//
-// defines
-//
-
 #define FRAMES_PER_SEC 48000
+#define FRAMES_PER_MS  (FRAMES_PER_SEC/1000)
 
-#define BYTES_TO_SECS(b) nearbyint(((double)(b) / 2 / FRAMES_PER_SEC))
+#define BYTES_TO_SECS(b) ceil((double)(b) / 2 / FRAMES_PER_SEC)
+#define BYTES_TO_MS(b)   ceil((double)(b) / 2 / FRAMES_PER_MS)
 
-#define RECORD true
+#define RECORD   true
 #define PLAYBACK false
+
+#define VOLUME_SCALE    (300. / 32768.)
+#define SILENCE_VOLUME  5
 
 //
 // typedefs
@@ -169,19 +170,23 @@ static int calc_volume(void *buff, int bytes)
 {
     short *samples = (short*)buff;
     int    n = bytes/2;
-    int    sum = 0;
-    int    average;
+    long   sum_squares = 0;
+    int    volume;
 
-    // calculate average of the absolute value of the samples;
+    // calculate volume using RMS value of samples 
     for (int i = 0; i < n; i++) {
-        sum += abs(samples[i]);
+        sum_squares += samples[i] * samples[i];
     }
-    average = nearbyint((double)sum / n * (156. / 32768.));
-    if (average > 100) average = 100;
+    volume = sqrt(sum_squares / n) * VOLUME_SCALE;
 
-    // publish volume, and return
-    state.volume = average;
-    return average;
+    // limit volume to max value 100
+    if (volume > 100) volume = 100;
+
+    // debug print volume
+    //INFO("volume %d\n", volume);
+
+    // return volume
+    return volume;
 }
 
 // -----------------  CONTROL AND GET STATE  --------------
@@ -251,7 +256,7 @@ int sdlx_audio_play(char *dir, char *filename)
     memset(&state, 0, sizeof(state));
     state.state          = AUDIO_STATE_PLAY_FILE;
     state.paused         = true;
-    state.total_secs     = BYTES_TO_SECS(statbuf.st_size);
+    state.total_ms      = BYTES_TO_MS(statbuf.st_size);
     strcpy(state.filename, filename);
 
     // create thread to monitor and process completion
@@ -321,7 +326,7 @@ int sdlx_audio_file_duration(char *dir, char *filename)
         return 0;
     }
 
-    return size / (FRAMES_PER_SEC * 2);
+    return BYTES_TO_SECS(size);
 }
 
 static void play_buff(char *buff, int buff_len, bool *stop_req, int *queued_bytes)
@@ -342,7 +347,7 @@ static void play_buff(char *buff, int buff_len, bool *stop_req, int *queued_byte
         SDL_PutAudioStreamData(playback_stream, buff_ptr, xfer_len);  // thread safe
 
         // calculate volume for the samples just queued
-        calc_volume(buff_ptr, xfer_len);
+        state.volume = calc_volume(buff_ptr, xfer_len);
 
         // while there is more than 200 ms queued OR do_once
         // - process control requests
@@ -367,7 +372,7 @@ static void play_buff(char *buff, int buff_len, bool *stop_req, int *queued_byte
             }
 
             // publish duration played
-            state.processed_secs = BYTES_TO_SECS(*queued_bytes);
+            state.processed_ms = BYTES_TO_MS(*queued_bytes);
 
             // short sleep
             usleep(TEN_MS);
@@ -434,13 +439,13 @@ int sdlx_audio_record(char *dir, char *filename, int max_duration_secs, int auto
     memset(&state, 0, sizeof(state));
     state.state          = (!append ? AUDIO_STATE_RECORD : AUDIO_STATE_RECORD_APPEND);
     state.paused         = true;
-    state.total_secs     = max_duration_secs + BYTES_TO_SECS(existing_bytes);
+x    state.total_ms       = max_duration_secs * 1000 + BYTES_TO_MS(existing_bytes);
     strcpy(state.filename, filename);
 
     // create thread to xfer the record data to a file
     cx = malloc(sizeof(record_cx_t));
     cx->fd              = fd;
-    cx->total_secs      = state.total_secs; 
+    cx->total_secs      = ceil(state.total_ms / 1000.);
     cx->auto_stop_secs  = auto_stop_secs;
     cx->existing_bytes  = existing_bytes;
     sdlx_create_detached_thread(record_thread, cx);
@@ -464,10 +469,9 @@ static int record_thread(void *cx_arg)
 {
     record_cx_t *cx = (record_cx_t*)cx_arg;
     short        buff[4096];
-    int          rc, bytes, volume, silence_bytes = 0;
+    int          rc, bytes, silence_bytes = 0;
     int          processed_bytes = 0;
 
-    const int silence_volume = 5;
     const int auto_stop_bytes = cx->auto_stop_secs * FRAMES_PER_SEC * 2;
 
     INFO("starting\n");
@@ -497,15 +501,14 @@ static int record_thread(void *cx_arg)
 
         // keep track of how long the recording has been in progress
         processed_bytes += bytes;
-        state.processed_secs = BYTES_TO_SECS(processed_bytes + cx->existing_bytes);
+        state.processed_ms = BYTES_TO_MS(processed_bytes + cx->existing_bytes);
 
         // calculate volume of the samples just obtained
-        volume = calc_volume(buff, bytes);
-        printf("volume %d\n", volume);
+        state.volume = calc_volume(buff, bytes);
 
         // if auto_stop is enabled then if silent for n secs stop recording
         if (cx->auto_stop_secs > 0) {
-            if (volume < silence_volume) {
+            if (state.volume < SILENCE_VOLUME) {
                 silence_bytes += bytes;
             } else {
                 silence_bytes = 0;
@@ -516,7 +519,7 @@ static int record_thread(void *cx_arg)
         }
 
         // if have captured frames for the desired time interval then break
-        if (state.processed_secs >= cx->total_secs) {
+        if (state.processed_ms >= cx->total_secs * 1000) {
             break;
         }
 
@@ -610,7 +613,7 @@ int sdlx_audio_play_tones(sdlx_tone_t *tones)
     memset(&state, 0, sizeof(state));
     state.state          = AUDIO_STATE_PLAY_TONES; 
     state.paused         = true;
-    state.total_secs     = nearbyint(duration_ms / 1000.);
+    state.total_ms       = ceil(duration_ms / 1000.);
     strcpy(state.filename, "");
 
     // create thread to play the tones
