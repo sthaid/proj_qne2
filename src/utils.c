@@ -172,7 +172,6 @@ bool util_file_exists(char *dir, char *fn)
 }
 
 // return unix epoch time in microsecs
-// xxx where else is this called
 long util_file_mtime(char *dir, char *fn)
 {
     char path[200];

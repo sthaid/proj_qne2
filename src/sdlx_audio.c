@@ -439,7 +439,6 @@ int sdlx_audio_record(char *dir, char *filename, int max_duration_secs, int auto
     memset(&state, 0, sizeof(state));
     state.state          = (!append ? AUDIO_STATE_RECORD : AUDIO_STATE_RECORD_APPEND);
     state.paused         = true;
-x    state.total_ms       = max_duration_secs * 1000 + BYTES_TO_MS(existing_bytes);
     strcpy(state.filename, filename);
 
     // create thread to xfer the record data to a file
@@ -502,6 +501,7 @@ static int record_thread(void *cx_arg)
         // keep track of how long the recording has been in progress
         processed_bytes += bytes;
         state.processed_ms = BYTES_TO_MS(processed_bytes + cx->existing_bytes);
+        state.total_ms     = state.processed_ms;
 
         // calculate volume of the samples just obtained
         state.volume = calc_volume(buff, bytes);

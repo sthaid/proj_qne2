@@ -269,18 +269,22 @@ bool is_new_forecast_needed(void)
 
     tnow = time(NULL);
     mtime = util_file_mtime(data_dir, "info.json");
-    if (mtime == 0 || tnow - mtime > ONE_HOUR) {
+    if (mtime == 0 || tnow - mtime/1000000 > ONE_HOUR) {
+        printf("INFO %s: download forecast needed\n", progname);
         return true;
     }
     mtime = util_file_mtime(data_dir, "daily.json");
-    if (mtime == 0 || tnow - mtime > ONE_HOUR) {
+    if (mtime == 0 || tnow - mtime/1000000 > ONE_HOUR) {
+        printf("INFO %s: download forecast needed\n", progname);
         return true;
     }
     mtime = util_file_mtime(data_dir, "hourly.json");
-    if (mtime == 0 || tnow - mtime > ONE_HOUR) {
+    if (mtime == 0 || tnow - mtime/1000000 > ONE_HOUR) {
+        printf("INFO %s: download forecast needed\n", progname);
         return true;
     }
 
+    printf("INFO %s: download forecast not needed\n", progname);
     return false;
 }
 
