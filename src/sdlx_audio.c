@@ -166,6 +166,7 @@ void sdlx_audio_create_test_file(char *dir, char *filename, int duration_secs, i
     free(buff);
 }
 
+// xxx put in another section
 static int calc_volume(void *buff, int bytes)
 {
     short *samples = (short*)buff;
@@ -209,6 +210,26 @@ void sdlx_audio_state(sdlx_audio_state_t *x)
 {
     *x = state;
 }
+
+// xxx move this
+static sdlx_audio_params_t audio_params = { DEFAULT_RECORD_SCALE };
+
+void sdlx_audio_set_params(sdlx_audio_params_t *ap)
+{
+    audio_params = *ap;
+}
+
+void sdlx_audio_get_params(sdlx_audio_params_t *ap)
+{
+    *ap = audio_params;
+}
+
+// xxx use 1 for linux and 10 for android
+// - dynamic scaling of volume meter
+// - allow range from .5 to 20
+// - display recording and playback durint the RECORD_TEST
+// - param for silence
+
 
 // -----------------  PLAY FILE ---------------------------
 
@@ -391,7 +412,7 @@ static void play_buff(char *buff, int buff_len, bool *stop_req, int *queued_byte
 
 typedef struct {
     int  fd;
-    int  total_secs;
+    int  max_secs;
     int  auto_stop_secs;
     int  existing_bytes;
 } record_cx_t;
@@ -444,7 +465,7 @@ int sdlx_audio_record(char *dir, char *filename, int max_duration_secs, int auto
     // create thread to xfer the record data to a file
     cx = malloc(sizeof(record_cx_t));
     cx->fd              = fd;
-    cx->total_secs      = ceil(state.total_ms / 1000.);
+    cx->max_secs        = max_duration_secs;
     cx->auto_stop_secs  = auto_stop_secs;
     cx->existing_bytes  = existing_bytes;
     sdlx_create_detached_thread(record_thread, cx);
@@ -491,6 +512,11 @@ static int record_thread(void *cx_arg)
             continue;
         }
 
+        // scale record data
+        for (int i = 0; i < bytes/2; i++) {
+            buff[i] = buff[i] * audio_params.record_scale;
+        }
+
         // write the data to the file
         rc = write(cx->fd, buff, bytes);
         if (rc != bytes) {
@@ -519,7 +545,7 @@ static int record_thread(void *cx_arg)
         }
 
         // if have captured frames for the desired time interval then break
-        if (state.processed_ms >= cx->total_secs * 1000) {
+        if (state.processed_ms >= cx->max_secs * 1000) {
             break;
         }
 

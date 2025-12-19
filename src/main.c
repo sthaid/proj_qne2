@@ -52,10 +52,11 @@
 //
 
 typedef struct {
-    bool devel_mode;
-    int  devel_port;
-    char devel_password[50];
-    bool foreground_enabled;
+    bool   devel_mode;
+    int    devel_port;
+    char   devel_password[50];
+    bool   foreground_enabled;
+    double record_scale;  // xxx or call it audio_record_scale
 } params_t;
 
 //
@@ -129,6 +130,13 @@ static int init(void)
     params.devel_port = util_get_numeric_param(".", "devel_port", DEFAULT_DEVEL_PORT);
     strcpy(params.devel_password, util_get_str_param(".", "devel_password", DEFAULT_DEVEL_PASSWORD));
     params.foreground_enabled = util_get_numeric_param(".", "foreground_enabled", 0);
+
+    // xxx numeric keypad decimal point
+    // xxx keyboard can be dismaissed and then stuck
+    // xxx audio record scaling, and params
+    params.record_scale = util_get_numeric_param(".", "record_scale", DEFAULT_RECORD_SCALE);
+    sdlx_audio_params_t ap = { params.record_scale };
+    sdlx_audio_set_params(&ap);
 
 #ifdef ANDROID
     // copy asset files to the working directory
@@ -569,7 +577,10 @@ static void get_list_of_apps(void)
 
 // -----------------  SETTINGS  -----------------------------------
 
+// xxx y scrolling
+
 static void copyright(void);
+static double get_number(char *prompt, double min, double max); // xxx use in other places
 
 static void settings(void)
 {
@@ -579,6 +590,7 @@ static void settings(void)
     char       *msg = NULL;
     long        msg_time = 0;
     char       *ipaddr;
+    sdlx_audio_params_t ap;
 
     #define EVID_COPYRIGHT       1001
     #define EVID_DEVEL_MODE      1002
@@ -589,6 +601,8 @@ static void settings(void)
     #define EVID_RESET_APPS_AND_SVCS  1006
     #define EVID_FOREGROUND           1007
 #endif
+    #define EVID_RECORD_SCALE 1008
+    #define EVID_RECORD_TEST  1009
 
     // get this device ipaddr
     ipaddr = util_get_ipaddr();
@@ -628,13 +642,22 @@ static void settings(void)
         loc = sdlx_render_printf(0, ROW2Y(13), "Services");
         sdlx_register_event(loc, EVID_SERVICES);
 
+        // display Record_Scale
+        sdlx_audio_get_params(&ap);
+        loc = sdlx_render_printf(0, ROW2Y(15), "Record_Scale = %0.1f", ap.record_scale);
+        sdlx_register_event(loc, EVID_RECORD_SCALE);
+
+        // display Record_Test
+        loc = sdlx_render_printf(0, ROW2Y(17), "Record_Test");
+        sdlx_register_event(loc, EVID_RECORD_TEST);
+
 #ifdef ANDROID
         // display Reset_Apps_And_svcs
-        loc = sdlx_render_printf(0, ROW2Y(15), "Reset_Apps_And_Svcs");
+        loc = sdlx_render_printf(0, ROW2Y(19), "Reset_Apps_And_Svcs");
         sdlx_register_event(loc, EVID_RESET_APPS_AND_SVCS);
 
         // display Foreground
-        loc = sdlx_render_printf(0, ROW2Y(17), "Foreground = %s", params.foreground_enabled ? "ENABLED" : "DISABLED");
+        loc = sdlx_render_printf(0, ROW2Y(21), "Foreground = %s", params.foreground_enabled ? "ENABLED" : "DISABLED");
         sdlx_register_event(loc, EVID_FOREGROUND);
 #endif
 
@@ -707,6 +730,35 @@ static void settings(void)
         case EVID_SERVICES:
             svcs_display(BG_COLOR);
             break;
+        case EVID_RECORD_SCALE: {
+            double number = get_number("Record_Scale?", 1, 10);
+            if (number != INVALID_NUMBER) {
+                params.record_scale = number;
+                util_set_numeric_param(".", "record_scale", number);
+                sdlx_audio_get_params(&ap);
+                ap.record_scale = number;
+                sdlx_audio_set_params(&ap);
+            }
+            break; }
+        case EVID_RECORD_TEST: {
+            sdlx_audio_record(".", "record_test.raw", 10, 2, false);
+
+            // wait until recording is done
+            while (true) {
+                sdlx_audio_state_t as;
+                sleep(1);
+                sdlx_audio_state(&as);
+                if (as.state == AUDIO_STATE_IDLE) {
+                    break;
+                }
+            }
+
+            // playback
+            sdlx_audio_play(".", "record_test.raw");
+
+            // delete record_test.raw file
+            util_delete_file(".", "record_test.raw");
+            break; }
 #ifdef ANDROID
         case EVID_RESET_APPS_AND_SVCS: {
             char *str; 
@@ -738,6 +790,23 @@ static void settings(void)
             break;
         }
     }
+}
+
+static double get_number(char *prompt, double min, double max)
+{
+    char  *str; 
+    double number;
+
+    // xxx also display allowed range in second prompt line
+    str = sdlx_get_input_str(prompt, true, BG_COLOR);
+    if (sscanf(str, "%lf", &number) != 1) {
+        return INVALID_NUMBER;
+    }
+    if (min < max) {
+        if (number < min) number = min;
+        if (number > max) number = max;
+    }
+    return number;
 }
 
 static void copyright(void)

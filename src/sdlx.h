@@ -188,6 +188,14 @@ void sdlx_audio_state(sdlx_audio_state_t * state);
 void sdlx_audio_print_devices_info(void);
 void sdlx_audio_create_test_file(char *dir, char *filename, int duration_secs, int freq);
 
+// not available in picoc
+#define DEFAULT_RECORD_SCALE 5
+typedef struct {
+    double record_scale;
+} sdlx_audio_params_t;
+void sdlx_audio_set_params(sdlx_audio_params_t *ap);
+void sdlx_audio_get_params(sdlx_audio_params_t *ap);
+
 // --------------------
 // sensors
 // --------------------
