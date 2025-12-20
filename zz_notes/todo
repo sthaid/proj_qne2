@@ -1,3 +1,5 @@
+should sdlx_get_input_str have 2 prompts, and also fgcolor arg
+
 Location 
 - add option to disable and enable the svc from adding loc history <======
 - how often does the service run when the phone is snoozing

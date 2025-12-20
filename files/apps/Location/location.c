@@ -215,14 +215,14 @@ void settings(void)
         // get list of countries
         get_countries();
 
-        // register for Download Country event, and Clear History event
+        // print in LIGHT_BLUE
         sdlx_print_init_color(COLOR_LIGHT_BLUE, COLOR_BLACK);
 
+        // register for events:
+        // - CLEAR_HISTORY
         loc = sdlx_render_printf(0, ROW2Y(1), "%s", "Clear History");
         sdlx_register_event(loc, EVID_CLEAR_HISTORY);
-
-        // xxx cleanup
-
+        // - DISABLE/ENABLE_HISTORY
         if (query_enabled) {
             loc = sdlx_render_printf(0, ROW2Y(3), "%s", "History is Enabled");
             sdlx_register_event(loc, EVID_DISABLE_HISTORY);
@@ -230,13 +230,13 @@ void settings(void)
             loc = sdlx_render_printf(0, ROW2Y(3), "%s", "History is Disabled");
             sdlx_register_event(loc, EVID_ENABLE_HISTORY);
         }
-
-
+        // - ADD_COUNTRY
         if (max_countries < 5) {
             loc = sdlx_render_printf(0, ROW2Y(5), "%s", "Download Country");
             sdlx_register_event(loc, EVID_ADD_COUNTRY);
         }
 
+        // restore print color to WHITE
         sdlx_print_init_color(COLOR_WHITE, COLOR_BLACK);
 
         // display list of countries, with DEL event for each
@@ -271,9 +271,6 @@ void settings(void)
         case EVID_ADD_COUNTRY: {
             char *country_code;
 
-            // xxx fg color too?
-            // xxx also multi line prompt, with notice about time
-            // xxx force ctry code to lowercase
             country_code = sdlx_get_input_str("2 Char Country Code?", false, COLOR_BLACK);
             if (country_code == NULL) {
                 break;
@@ -360,7 +357,7 @@ void get_countries(void)
         }
 
         *p1 = '\0';
-        snprintf(countries[max_countries], sizeof(countries[max_countries]), "%s", p);  // xxx fix
+        snprintf(countries[max_countries], sizeof(countries[max_countries]), "%s", p);
         max_countries++;
         p = p1 + 1;
 

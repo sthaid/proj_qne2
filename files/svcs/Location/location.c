@@ -106,7 +106,7 @@ int main(int argc, char **argv)
         if (rc == SVC_REQ_WAIT_ERROR_TIMEDOUT) {
             if (param_enabled) {
                 // find location in database that is closest to current lat/long;
-                util_get_location(&latitude, &longitude, NULL);  // xxx check for no lat/long
+                util_get_location(&latitude, &longitude, NULL);
                 find_closest_loc_data(latitude, longitude, name, &miles);
 
                 // if name is different than most recent entry in loc_file
@@ -144,14 +144,26 @@ void add_entry_to_loc_hist(time_t t, double latitude, double longitude, char *na
     double miles = 0;       // not included in loc hist file
     double elevation = 0;   // not included in loc hist file
 
+    // if buffer is full then discard the first half (oldest data)
+    if (loc_hist->count == MAX_LOC_HIST) {
+        memmove(&loc_hist->loc[0], 
+                &loc_hist->loc[MAX_LOC_HIST-MAX_LOC_HIST/2], 
+                (MAX_LOC_HIST/2)*sizeof(loc_hist->loc[0]));
+
+        memset(&loc_hist->loc[MAX_LOC_HIST/2],
+               0,
+               (MAX_LOC_HIST-MAX_LOC_HIST/2)*sizeof(loc_hist->loc[0]));
+
+        loc_hist->count = MAX_LOC_HIST/2;
+    }
+
+    // add entry
     create_loc_data_str(t, latitude, longitude, elevation, name, miles,
                         false, loc_hist->loc[loc_hist->count].data_str);
-
     loc_hist->count++;
 
+    // sync memory mapped buffer to storage
     util_sync_file(loc_hist, sizeof(loc_hist_t));
-
-    // xxx handle file full
 }
 
 char *most_recent_loc_hist_name(void)
@@ -196,11 +208,16 @@ void create_loc_data_str(time_t t, double latitude, double longitude, double ele
 
     // create time string
     tm = localtime(&t);
-    strftime(time_str, sizeof(time_str), "%b %d %H:%M %Z", tm);
+    //xxx strftime(time_str, sizeof(time_str), "%b %d %H:%M %Z", tm);
+    strftime(time_str, sizeof(time_str), "%b %d %H:%M:%S %Z", tm);
 
     // sprint location info to str
     p = data_str;
-    p += sprintf(p, "%s\n%s\n%0.4f %0.4f\n", name, time_str, latitude, longitude);
+    if (latitude != INVALID_NUMBER && longitude != INVALID_NUMBER) {
+        p += sprintf(p, "%s\n%s\n%0.4f %0.4f\n", name, time_str, latitude, longitude);
+    } else {
+        p += sprintf(p, "%s\n%s\nLocation Unavailable\n", name, time_str);
+    }
     if (extra) {
         p += sprintf(p, "el %0.0f ft, %0.1f mi\n", elevation * METERS_TO_FEET, miles);
     }
@@ -264,7 +281,7 @@ void process_req(svc_req_t *req)
         util_get_location(&latitude, &longitude, &elevation);
         find_closest_loc_data(latitude, longitude, name, &miles);
         create_loc_data_str(time(NULL), latitude, longitude, elevation,
-                            name, miles, true, req->data); // xxx check req_data_len
+                            name, miles, true, req->data);
         svc_req_completed(req, SVC_REQ_OK);
         break; }
     case SVC_LOCATION_REQ_ADD_COUNTRY_INFO: {
