@@ -21,9 +21,6 @@
 #define RECORD   true
 #define PLAYBACK false
 
-#define VOLUME_SCALE    (300. / 32768.)
-#define SILENCE_VOLUME  5
-
 //
 // typedefs
 //
@@ -173,6 +170,8 @@ static int calc_volume(void *buff, int bytes)
     int    n = bytes/2;
     long   sum_squares = 0;
     int    volume;
+
+    #define VOLUME_SCALE    (300. / 32768.)
 
     // calculate volume using RMS value of samples 
     for (int i = 0; i < n; i++) {
@@ -534,7 +533,7 @@ static int record_thread(void *cx_arg)
 
         // if auto_stop is enabled then if silent for n secs stop recording
         if (cx->auto_stop_secs > 0) {
-            if (state.volume < SILENCE_VOLUME) {
+            if (state.volume < audio_params.record_silence) {
                 silence_bytes += bytes;
             } else {
                 silence_bytes = 0;

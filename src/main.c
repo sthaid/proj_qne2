@@ -56,7 +56,8 @@ typedef struct {
     int    devel_port;
     char   devel_password[50];
     bool   foreground_enabled;
-    double record_scale;  // xxx or call it audio_record_scale
+    double record_scale;
+    double record_silence;
 } params_t;
 
 //
@@ -135,7 +136,8 @@ static int init(void)
     // xxx keyboard can be dismaissed and then stuck
     // xxx audio record scaling, and params
     params.record_scale = util_get_numeric_param(".", "record_scale", DEFAULT_RECORD_SCALE);
-    sdlx_audio_params_t ap = { params.record_scale };
+    params.record_silence = util_get_numeric_param(".", "record_silence", DEFAULT_RECORD_SILENCE);
+    sdlx_audio_params_t ap = { params.record_scale, params.record_silence };
     sdlx_audio_set_params(&ap);
 
 #ifdef ANDROID
@@ -597,15 +599,16 @@ static void settings(void)
     #define EVID_DEVEL_PASSWORD       1004
     #define EVID_SERVICES             1005
     #define EVID_RECORD_SCALE         1006
-    #define EVID_RECORD_TEST          1007
+    #define EVID_RECORD_SILENCE       1007
+    #define EVID_RECORD_TEST          1008
 #ifdef ANDROID
-    #define EVID_RESET_APPS_AND_SVCS  1008
-    #define EVID_FOREGROUND           1009
+    #define EVID_RESET_APPS_AND_SVCS  1020
+    #define EVID_FOREGROUND           1021
 #endif
 
     #define GET_Y ({ y = y_next; \
                      y_next += 2*sdlx_char_height; \
-                     y >= y_display_begin && y <= y_display_end - sdlx_char_height; })
+                     y >= y_display_begin - 30 && y <= y_display_end - sdlx_char_height; })
 
     bool                done = false;
     sdlx_event_t        event;
@@ -688,6 +691,13 @@ static void settings(void)
             sdlx_audio_get_params(&ap);
             loc = sdlx_render_printf(0, y, "Record_Scale = %0.1f", ap.record_scale);
             sdlx_register_event(loc, EVID_RECORD_SCALE);
+        }
+
+        // display Record_Silence
+        if (GET_Y) {
+            sdlx_audio_get_params(&ap);
+            loc = sdlx_render_printf(0, y, "Record_Silence = %0.0f", ap.record_silence);
+            sdlx_register_event(loc, EVID_RECORD_SILENCE);
         }
 
         // display Record_Test
@@ -808,6 +818,16 @@ static void settings(void)
                 util_set_numeric_param(".", "record_scale", number);
                 sdlx_audio_get_params(&ap);
                 ap.record_scale = number;
+                sdlx_audio_set_params(&ap);
+            }
+            break; }
+        case EVID_RECORD_SILENCE: {
+            double number = get_number("Record_Silence?", 0, 20);
+            if (number != INVALID_NUMBER) {
+                params.record_silence = number;
+                util_set_numeric_param(".", "record_silence", number);
+                sdlx_audio_get_params(&ap);
+                ap.record_silence = number;
                 sdlx_audio_set_params(&ap);
             }
             break; }
