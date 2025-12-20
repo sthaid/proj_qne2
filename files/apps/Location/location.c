@@ -179,9 +179,11 @@ int main(int argc, char **argv)
 
 // -----------------  SETTINGS  ----------------------------------------
 
-#define EVID_DEL_COUNTRY   20  // through 24
-#define EVID_ADD_COUNTRY   30
-#define EVID_CLEAR_HISTORY 31
+#define EVID_DEL_COUNTRY      20  // through 24
+#define EVID_ADD_COUNTRY      30
+#define EVID_CLEAR_HISTORY    31
+#define EVID_ENABLE_HISTORY   32
+#define EVID_DISABLE_HISTORY  33
 
 #define MAX_COUNTRIES 5
 
@@ -196,6 +198,15 @@ void settings(void)
     sdlx_loc_t  *loc;
     sdlx_event_t event;
     int          rc;
+    char         query_enabled = false;
+
+    rc = svc_make_req("Location",      
+                      SVC_LOCATION_REQ_QUERY_ENABLED,
+                      &query_enabled, sizeof(query_enabled),
+                      2);  // 2 sec timeout
+    if (rc != SVC_REQ_OK) {
+        printf("ERROR: SVC_LOCATION_REQ_QUERY_ENABLED failed, rc=%d\n", rc);
+    }
 
     while (!done) {
         // init the backbuffer
@@ -210,8 +221,19 @@ void settings(void)
         loc = sdlx_render_printf(0, ROW2Y(1), "%s", "Clear History");
         sdlx_register_event(loc, EVID_CLEAR_HISTORY);
 
+        // xxx cleanup
+
+        if (query_enabled) {
+            loc = sdlx_render_printf(0, ROW2Y(3), "%s", "History is Enabled");
+            sdlx_register_event(loc, EVID_DISABLE_HISTORY);
+        } else {
+            loc = sdlx_render_printf(0, ROW2Y(3), "%s", "History is Disabled");
+            sdlx_register_event(loc, EVID_ENABLE_HISTORY);
+        }
+
+
         if (max_countries < 5) {
-            loc = sdlx_render_printf(0, ROW2Y(3), "%s", "Download Country");
+            loc = sdlx_render_printf(0, ROW2Y(5), "%s", "Download Country");
             sdlx_register_event(loc, EVID_ADD_COUNTRY);
         }
 
@@ -219,7 +241,7 @@ void settings(void)
 
         // display list of countries, with DEL event for each
         for (int i = 0; i < max_countries; i++) {
-            int y = ROW2Y(5+2*i);
+            int y = ROW2Y(7+2*i);
 
             sdlx_render_printf(0, y, "%s", countries[i]);
 
@@ -295,6 +317,19 @@ void settings(void)
             if (rc != 0) {
                 printf("ERROR %s: SVC_LOCATION_REQ_CLEAR_HISTORY failed, rc=%d\n", progname, rc);
             }
+            break; }
+        case EVID_ENABLE_HISTORY: 
+        case EVID_DISABLE_HISTORY: {
+            char set_enabled = (event.event_id == EVID_ENABLE_HISTORY);
+
+            svc_make_req("Location",      
+                         SVC_LOCATION_REQ_SET_ENABLED,
+                         &set_enabled, sizeof(set_enabled),
+                         2);  // 2 sec timeout
+            svc_make_req("Location",      
+                         SVC_LOCATION_REQ_QUERY_ENABLED,
+                         &query_enabled, sizeof(query_enabled),
+                         2);  // 2 sec timeout
             break; }
         }
     }

@@ -1,11 +1,10 @@
-volume scale
-silence volume
-settings Y
+Location 
+- add option to disable and enable the svc from adding loc history <======
+- how often does the service run when the phone is snoozing
 
-xxxxxxx
 
 Apps
-- Memo
+- steps
 
 update params code
 
@@ -36,8 +35,6 @@ APIs
 Apps:
 - Steps
 - Tilt app, allow different orientations
-- Memo app
-- Tennis app
 - Calculater
   - 64bit problem
      - >> and / ops on 64 bit with msb set

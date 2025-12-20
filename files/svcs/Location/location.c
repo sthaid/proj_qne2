@@ -14,8 +14,12 @@
 #include "svcs/Location/location.h"
 #include "svcs/Location/common.h"
 
+// defines
+#define INTERVAL 60  // xxx was 3600
+
 // variables
 loc_hist_t *loc_hist;
+bool        param_enabled = false;
 bool        end_program = false;
 bool        test_loc_hist = false;
 
@@ -72,10 +76,14 @@ int main(int argc, char **argv)
         add_simulated_entries_to_loc_hist();
     }
 
+    // read parameters
+    param_enabled = util_get_numeric_param(data_dir, "enabled", 1);
+    printf("INFO: hisotry collection is %s\n", param_enabled ? "enabled" : "disabled");
+
     // set absolute time at which svc_wait_for_req will timeout;
     // this time is rounded down to the prior hour so that the first
     // call to svc_wait_for_req will timeout immedeately
-    abstime = time(NULL) / 3600 * 3600;
+    abstime = time(NULL) / INTERVAL * INTERVAL;
 
     // service runtime loop
     while (!end_program) {
@@ -96,20 +104,23 @@ int main(int argc, char **argv)
         // - increment abstime
         // endif
         if (rc == SVC_REQ_WAIT_ERROR_TIMEDOUT) {
-            // find location in database that is closest to current lat/long;
-            util_get_location(&latitude, &longitude, NULL);  // xxx check for no lat/long
-            find_closest_loc_data(latitude, longitude, name, &miles);
+            if (param_enabled) {
+                // find location in database that is closest to current lat/long;
+                util_get_location(&latitude, &longitude, NULL);  // xxx check for no lat/long
+                find_closest_loc_data(latitude, longitude, name, &miles);
 
-            // if name is different than most recent entry in loc_file
-            // then add new entry to loc file, 
-            if (strcmp(name, "Not Found") != 0 &&
-                strcmp(most_recent_loc_hist_name(), name) != 0)
-            {
-                add_entry_to_loc_hist(time(NULL), latitude, longitude, name);
+                // if name is different than most recent entry in loc_file
+                // then add new entry to loc file, 
+                // xxx temp, always add
+                //if (strcmp(name, "Not Found") != 0 &&
+                //    strcmp(most_recent_loc_hist_name(), name) != 0)
+                {
+                    add_entry_to_loc_hist(time(NULL), latitude, longitude, name);
+                }
             }
 
             // update abstime to next hour
-            abstime += 3600;
+            abstime += INTERVAL;
             continue;
         }
 
@@ -178,14 +189,14 @@ void create_loc_data_str(time_t t, double latitude, double longitude, double ele
 
     // example:
     //   Bolton
-    //   Jun 5 25 23:00 EST
+    //   Dec 5 23:00 EST
     //   -42.1234 -130.1234
     // extra line:
     //   el 300 ft, 1.1 mi       elevation, and distance to published lat/long
 
     // create time string
     tm = localtime(&t);
-    strftime(time_str, sizeof(time_str), "%b %d %y %H:%M %Z", tm);
+    strftime(time_str, sizeof(time_str), "%b %d %H:%M %Z", tm);
 
     // sprint location info to str
     p = data_str;
@@ -305,6 +316,17 @@ void process_req(svc_req_t *req)
         break; }
     case SVC_LOCATION_REQ_CLEAR_HISTORY: {
         clear_loc_history();
+        svc_req_completed(req, SVC_REQ_OK);
+        break; }
+    case SVC_LOCATION_REQ_QUERY_ENABLED: {
+        req->data[0] = param_enabled;
+        svc_req_completed(req, SVC_REQ_OK);
+        break; }
+    case SVC_LOCATION_REQ_SET_ENABLED: {
+        param_enabled = req->data[0];
+        util_set_numeric_param("data_dir", "enabled", param_enabled);
+        printf("INFO: hisotry collection is now %s\n",
+               param_enabled ? "enabled" : "disabled");
         svc_req_completed(req, SVC_REQ_OK);
         break; }
     default:
