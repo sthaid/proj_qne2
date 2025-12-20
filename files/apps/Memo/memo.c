@@ -60,7 +60,7 @@ int main(int argc, char **argv)
     bool               end_program = false;
     int                y_display_begin;
     int                y_display_end;
-    int                y_top;
+    double             y_top;
     int                y;
 
     // save args

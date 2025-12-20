@@ -584,28 +584,50 @@ static double get_number(char *prompt, double min, double max); // xxx use in ot
 
 static void settings(void)
 {
-    sdlx_event_t event;
-    sdlx_loc_t  *loc;
-    bool        done = false;
-    char       *msg = NULL;
-    long        msg_time = 0;
-    char       *ipaddr;
-    sdlx_audio_params_t ap;
+    // record_test_state values
+    #define IDLE      0
+    #define RECORDING 1
+    #define PLAYBACK  2
 
-    #define EVID_COPYRIGHT       1001
-    #define EVID_DEVEL_MODE      1002
-    #define EVID_DEVEL_PORT      1003
-    #define EVID_DEVEL_PASSWORD  1004
-    #define EVID_SERVICES        1005
+    #define RECORD_TEST_FILENAME "record_test.raw"
+
+    #define EVID_COPYRIGHT            1001
+    #define EVID_DEVEL_MODE           1002
+    #define EVID_DEVEL_PORT           1003
+    #define EVID_DEVEL_PASSWORD       1004
+    #define EVID_SERVICES             1005
+    #define EVID_RECORD_SCALE         1006
+    #define EVID_RECORD_TEST          1007
 #ifdef ANDROID
-    #define EVID_RESET_APPS_AND_SVCS  1006
-    #define EVID_FOREGROUND           1007
+    #define EVID_RESET_APPS_AND_SVCS  1008
+    #define EVID_FOREGROUND           1009
 #endif
-    #define EVID_RECORD_SCALE 1008
-    #define EVID_RECORD_TEST  1009
+
+    #define GET_Y ({ y = y_next; \
+                     y_next += 2*sdlx_char_height; \
+                     y >= y_display_begin && y <= y_display_end - sdlx_char_height; })
+
+    bool                done = false;
+    sdlx_event_t        event;
+    sdlx_loc_t         *loc;
+    char               *msg = NULL;
+    long                msg_time = 0;
+    char               *ipaddr;
+    int                 record_test_state = IDLE;
+    sdlx_audio_params_t ap;
+    sdlx_audio_state_t  as;
+    int                 y_display_begin;
+    int                 y_display_end;
+    double              y_top, y_next, y;
 
     // get this device ipaddr
     ipaddr = util_get_ipaddr();
+
+    // init variables which define the vertical region of the display
+    // being used for the filename list
+    y_display_begin = ROW2Y(4.5);
+    y_display_end   = sdlx_win_height - 500;
+    y_top           = y_display_begin;
 
     // handle the setting display
     while (true) {
@@ -615,64 +637,114 @@ static void settings(void)
         sdlx_render_text_xyctr(sdlx_win_width/2, sdlx_char_height/2, "Settings");
 
         // display version
-        sdlx_render_printf(0, ROW2Y(2), "Version = %s", VERSION);
-        sdlx_render_printf(0, ROW2Y(3), "%s", BUILD_DATE);
+        sdlx_render_printf(0, ROW2Y(1), "Version = %s", VERSION);
+        sdlx_render_printf(0, ROW2Y(2), "%s", BUILD_DATE);
+
+        // when in developer mode display ipaddr
+        if (params.devel_mode) {
+            sdlx_render_printf(0, ROW2Y(3), "%s:%d", ipaddr, params.devel_port);
+        }
 
         // init print color to COLOR_LIGHT_BLUE for the following,
         // because these all are selectable
         sdlx_print_init_color(COLOR_LIGHT_BLUE, BG_COLOR);
 
+        // init y_next; used by GET_Y to obtain the y location;
+        // GET_Y will return true if the y value is in the display range
+        y_next = y_top;
+
         // display Copyright
-        loc = sdlx_render_printf(0, ROW2Y(5), "Copyright");
-        sdlx_register_event(loc, EVID_COPYRIGHT);
+        if (GET_Y) {
+            loc = sdlx_render_printf(0, y, "Copyright");
+            sdlx_register_event(loc, EVID_COPYRIGHT);
+        }
 
         // display Devel_Mode
-        loc = sdlx_render_printf(0, ROW2Y(7), "Devel_Mode = %s", params.devel_mode ? "ON" : "OFF");
-        sdlx_register_event(loc, EVID_DEVEL_MODE);
+        if (GET_Y) {
+            loc = sdlx_render_printf(0, y, "Devel_Mode = %s", params.devel_mode ? "ON" : "OFF");
+            sdlx_register_event(loc, EVID_DEVEL_MODE);
+        }
 
         // display Devel_Port
-        loc = sdlx_render_printf(0, ROW2Y(9), "Devel_Port = %d", params.devel_port);
-        sdlx_register_event(loc, EVID_DEVEL_PORT);
+        if (GET_Y) {
+            loc = sdlx_render_printf(0, y, "Devel_Port = %d", params.devel_port);
+            sdlx_register_event(loc, EVID_DEVEL_PORT);
+        }
 
         // display Devel_Password
-        loc = sdlx_render_printf(0, ROW2Y(11), "Devel_Password");
-        sdlx_register_event(loc, EVID_DEVEL_PASSWORD);
+        if (GET_Y) {
+            loc = sdlx_render_printf(0, y, "Devel_Password");
+            sdlx_register_event(loc, EVID_DEVEL_PASSWORD);
+        }
 
         // display Services
-        loc = sdlx_render_printf(0, ROW2Y(13), "Services");
-        sdlx_register_event(loc, EVID_SERVICES);
+        if (GET_Y) {
+            loc = sdlx_render_printf(0, y, "Services");
+            sdlx_register_event(loc, EVID_SERVICES);
+        }
 
         // display Record_Scale
-        sdlx_audio_get_params(&ap);
-        loc = sdlx_render_printf(0, ROW2Y(15), "Record_Scale = %0.1f", ap.record_scale);
-        sdlx_register_event(loc, EVID_RECORD_SCALE);
+        if (GET_Y) {
+            sdlx_audio_get_params(&ap);
+            loc = sdlx_render_printf(0, y, "Record_Scale = %0.1f", ap.record_scale);
+            sdlx_register_event(loc, EVID_RECORD_SCALE);
+        }
 
         // display Record_Test
-        loc = sdlx_render_printf(0, ROW2Y(17), "Record_Test");
-        sdlx_register_event(loc, EVID_RECORD_TEST);
+        if (GET_Y) {
+            sdlx_audio_state(&as);
+            if (record_test_state == IDLE) {
+                loc = sdlx_render_printf(0, y, "Record_Test");
+                sdlx_register_event(loc, EVID_RECORD_TEST);
+            } else if (record_test_state == RECORDING) {
+                int bar_value_w =  sdlx_win_width * as.volume / 100;
+                int bar_height = sdlx_char_height;
+                sdlx_render_printf(sdlx_win_width-COL2X(2), y, "%2d", as.volume);
+                sdlx_render_fill_rect(0, y, bar_value_w, bar_height, COLOR_RED);
+                sdlx_render_rect(0, y, sdlx_win_width, bar_height, 2, COLOR_WHITE);
+            } else if (record_test_state == PLAYBACK) {
+                int bar_value_w = (as.total_ms ? (sdlx_win_width * as.processed_ms / as.total_ms) : 0);
+                int bar_height = sdlx_char_height;
+                sdlx_render_fill_rect(0, y, bar_value_w, bar_height, COLOR_GREEN);
+                sdlx_render_rect(0, y, sdlx_win_width, bar_height, 2, COLOR_WHITE);
+            }
+        }
 
 #ifdef ANDROID
         // display Reset_Apps_And_svcs
-        loc = sdlx_render_printf(0, ROW2Y(19), "Reset_Apps_And_Svcs");
-        sdlx_register_event(loc, EVID_RESET_APPS_AND_SVCS);
+        if (GET_Y) {
+            loc = sdlx_render_printf(0, y, "Reset_Apps_And_Svcs");
+            sdlx_register_event(loc, EVID_RESET_APPS_AND_SVCS);
+        }
 
         // display Foreground
-        loc = sdlx_render_printf(0, ROW2Y(21), "Foreground = %s", params.foreground_enabled ? "ENABLED" : "DISABLED");
-        sdlx_register_event(loc, EVID_FOREGROUND);
+        if (GET_Y) {
+            loc = sdlx_render_printf(0, y, "Foreground = %s", params.foreground_enabled ? "ENABLED" : "DISABLED");
+            sdlx_register_event(loc, EVID_FOREGROUND);
+        }
 #endif
 
         // change print color back to white
         sdlx_print_init_color(COLOR_WHITE, BG_COLOR);
 
+        // Record_Test processing
+        sdlx_audio_state(&as);
+        if (record_test_state == RECORDING && as.state == AUDIO_STATE_IDLE) {
+            sdlx_audio_play(".", RECORD_TEST_FILENAME);
+            record_test_state = PLAYBACK;
+        } else if (record_test_state == PLAYBACK && as.state == AUDIO_STATE_IDLE) {
+            util_delete_file(".", RECORD_TEST_FILENAME);
+            record_test_state = IDLE;
+        }
+
         // if a message is requested for display then do so;
         // otherwise, when in developer mode, display ipaddr:port
         if (msg && (util_microsec_timer() - msg_time) < 3000000) {
-            sdlx_render_printf(0, sdlx_win_height-400, "%s", msg);
-        } else if (params.devel_mode) {
-            sdlx_render_printf(0, sdlx_win_height-400, "%s:%d", ipaddr, params.devel_port);
+            sdlx_render_printf(0, sdlx_win_height-300, "%s", msg);
         }
 
-        // display the control event 'X' to exit this screen
+        // register motion and control events
+        sdlx_register_event(NULL, EVID_MOTION);
         sdlx_register_control_events(NULL, NULL, "X", COLOR_WHITE, BG_COLOR, 0, 0, EVID_QUIT);
 
         // present the display
@@ -686,7 +758,6 @@ static void settings(void)
         }
 
         // process the event
-        INFO("proc event_id %d\n", event.event_id);
         switch (event.event_id) {
         case EVID_COPYRIGHT:
             copyright();
@@ -741,23 +812,8 @@ static void settings(void)
             }
             break; }
         case EVID_RECORD_TEST: {
-            sdlx_audio_record(".", "record_test.raw", 10, 2, false);
-
-            // wait until recording is done
-            while (true) {
-                sdlx_audio_state_t as;
-                sleep(1);
-                sdlx_audio_state(&as);
-                if (as.state == AUDIO_STATE_IDLE) {
-                    break;
-                }
-            }
-
-            // playback
-            sdlx_audio_play(".", "record_test.raw");
-
-            // delete record_test.raw file
-            util_delete_file(".", "record_test.raw");
+            sdlx_audio_record(".", RECORD_TEST_FILENAME, 5, 2, false);
+            record_test_state = RECORDING;
             break; }
 #ifdef ANDROID
         case EVID_RESET_APPS_AND_SVCS: {
@@ -781,7 +837,17 @@ static void settings(void)
             }
             break; }
 #endif
+        case EVID_MOTION:
+            y_top += event.u.motion.yrel;
+            if (y_top >= y_display_begin) {
+                y_top = y_display_begin;
+            }
+            break;
         case EVID_QUIT:
+            if (record_test_state != IDLE) {
+                sdlx_audio_ctl(AUDIO_REQ_STOP);
+                record_test_state = IDLE;
+            }
             done = true;
             break;
         }
