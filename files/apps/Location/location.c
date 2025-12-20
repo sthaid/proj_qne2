@@ -306,6 +306,7 @@ void settings(void)
             break; }
 
         case EVID_CLEAR_HISTORY: {
+            // xxx add ack display message
             printf("INFO %s: clearing history\n", progname);
             rc = svc_make_req("Location",      
                               SVC_LOCATION_REQ_CLEAR_HISTORY,
