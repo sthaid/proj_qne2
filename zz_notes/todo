@@ -1,46 +1,83 @@
-should sdlx_get_input_str have 2 prompts, and also fgcolor arg
+how to use android sdl library to capture aduio output
+sample code to decode a wav file using sdl mixer
 
-Location 
-- add option to disable and enable the svc from adding loc history <======
-- how often does the service run when the phone is snoozing
+./proj/proj_sdr/devel/wav_files/super_critical.wav
 
-
-Apps
-- steps
+------------------------
 
 update params code
 
-update ezsh.c with periodic connection status test
+check on sdl mixer capabilities
+- do I have mp3 files or aac files
+
+should sdlx_get_input_str have 2 prompts, and also fgcolor arg
+
+Location 
+- check how often does the service run when the phone is snoozing
+
+New Apps
+- steps
+- blackjack
+- prime number benchmark
+
+App fixes
+- Calculater
+  - 64bit problem
+     - >> and / ops on 64 bit with msb set
+  - display numeric buttons in different color
+- Tilt app, allow different orientations
 
 regarding foreground - 
-- // xxx maybe - if its param is enabled, then dont allow it to be stopped
-  // by an application call
-  //       OR
-  // dont let applications control it
+- dont let applications control it;  could let applications check it and fail if it is not set
 - document foreground 
+
+add logging function, access last N logs of log file from Settings submenu
 
 document type sig
 https://docs.oracle.com/javase/7/docs/technotes/guides/jni/spec/types.html#wp276
 
-xxxxxxxxxxxxxxxxxx
-xxxxxxxxxxxxxxxxxx
-xxxxxxxxxxxxxxxxxx
-xxxxxxxxxxxxxxxxxx
-
 run ezapp as a service when installed or device boots
+
+color organ ?
+- sdl mixer
+- butterworth filter
+
+delete the foreground notification
+
+=======================
+DONE  
+=======================
+
+- how to run vi with tags from a subdir
+
+Location 
+- add option to disable and enable the svc from adding loc history 
+
+recording
+- is volume control or adjustment needed
+
+=======================
+PROBABLY ALREADY FIXED
+=======================
+
+clock
+- fix clock program to handle case where location
+  is not immedeately avialable
+
+=======================
+WONT DO
+=======================
+
+=======================
+LATER
+=======================
+
+remove templates from layout and svcs
 
 APIs
 - print API to print text rotated
 - should textures have a bg color arg
 - make pixels unsigned int, add pixel_t
-
-Apps:
-- Steps
-- Tilt app, allow different orientations
-- Calculater
-  - 64bit problem
-     - >> and / ops on 64 bit with msb set
-  - display numeric buttons in different color
 
 Picoc
 - load vanilla picoc
@@ -49,38 +86,16 @@ Picoc
 - expression evaluator test
 
 tools
-- ezgetall   - print error if files dir exits locally
+- ezgetall - print error if files dir exits locally
 - cleanup with ezsh
   - review main interaction with ezsh
-- how to run vi with tags from a subdir
 
 misc
 - launcher icon
-- remove templates from layout and svcs
-
-----------------------
----- MAYBE LATER  ----
-----------------------
-
-Location 
-- add option to disable and enable the svc from adding loc history <======
-
-clock
-- fix clock program to handle case whre location
-  is not immedeately avialable
 
 reversi
 - add undo
 - edge heuristic
-
-new apps
-- play music, with color organ
-- prime number benchmark
-- tick tack toe
-
-probably not
-- quantum
-- blackjack
 
 ---------------
 ---- picoc ----
@@ -122,9 +137,6 @@ add mixer for mp3 file support     <=========
 - does this support wav and mp3
 - get test audio files, from robot project, or 
   from elsewhere
-
-recording
-- is volume control or adjustment needed
 
 --------------------
 ---- sdlx video ----
