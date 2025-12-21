@@ -271,7 +271,7 @@ void settings(void)
         case EVID_ADD_COUNTRY: {
             char *country_code;
 
-            country_code = sdlx_get_input_str("2 Char Country Code?", false, COLOR_BLACK);
+            country_code = sdlx_get_input_str("2 Char Country Code", "", false, COLOR_BLACK);
             if (country_code == NULL) {
                 break;
             }

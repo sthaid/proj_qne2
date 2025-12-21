@@ -291,7 +291,7 @@ void sdlx_register_control_events(char *evstr1, char *evstr2, char *evstr3,
 void sdlx_get_event(long timeout_us, sdlx_event_t *event);
 
 // get string, from virtual keyboard when on Android
-char *sdlx_get_input_str(char *prompt, bool numeric_keybd, int bg_color);
+char *sdlx_get_input_str(char *prompt1, char *prompt2, bool numeric_keybd, int bg_color);
 
 // --------------------
 // not made available in picoc

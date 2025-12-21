@@ -349,10 +349,10 @@ static void process_sdlx_event(SDL_Event *ev, sdlx_event_t *event)
     }
 }
 
-char *sdlx_get_input_str(char *prompt, bool numeric_keybd, int bg_color)
+char *sdlx_get_input_str(char *prompt1, char *prompt2, bool numeric_keybd, int bg_color)
 {
-    static char       input[100]; // xxx bounds check
-    int               max_input;
+    static char        input[100];
+    int                max_input, row;
     sdlx_loc_t        *loc;
     sdlx_event_t       event;
     sdlx_print_state_t print_state;
@@ -370,21 +370,43 @@ char *sdlx_get_input_str(char *prompt, bool numeric_keybd, int bg_color)
             numeric_keybd ?  SDL_TEXTINPUT_TYPE_NUMBER : SDL_TEXTINPUT_TYPE_TEXT);
     SDL_StartTextInputWithProperties(window, props);
 
+    // set print size and color
     sdlx_print_save(&print_state);
     sdlx_print_init(DEFAULT_FONT, COLOR_WHITE, bg_color);
 
     //  xxx comment
     while (true) {
-        // xxx comment
+        // clear backbuffer to bg_color
         sdlx_display_init(bg_color);
-        sdlx_register_event(NULL, EVID_KEYBD);
-        sdlx_render_printf(0, 200, "%s", prompt);
-        loc = sdlx_render_printf(0, 350, "%s", input);
+
+        // display prompt line(s)
+        row = 0;
+        if (prompt1 && prompt1[0] != '\0') {
+            row += 1;
+            sdlx_render_printf(0, ROW2Y(row), "%s", prompt1);
+        }
+        if (prompt2 && prompt2[0] != '\0') {
+            row += 1;
+            sdlx_render_printf(0, ROW2Y(row), "%s", prompt2);
+        }
+
+        // display input value string
+        row += 2;
+        loc = sdlx_render_printf(0, ROW2Y(row), "? %s", input);
         sdlx_render_printf(loc->x+loc->w, loc->y, "%s", "_");
 
-        // xxx or put event halfway point on display
-        sdlx_register_control_events(NULL, NULL, "X", COLOR_WHITE, COLOR_BLACK, 0, 0, EVID_QUIT);
+        // register cancel event;
+        // this event is needed to deal with the keybd being dismissed
+        row += 3;
+        sdlx_print_init(DEFAULT_FONT, COLOR_LIGHT_BLUE, bg_color);
+        loc = sdlx_render_printf(0, ROW2Y(row), "Cancel");
+        sdlx_register_event(loc, EVID_QUIT);
+        sdlx_print_init(DEFAULT_FONT, COLOR_WHITE, bg_color);
 
+        // register for keyboard events
+        sdlx_register_event(NULL, EVID_KEYBD);
+
+        // present display
         sdlx_display_present();
 
         // wait for event
@@ -396,9 +418,11 @@ char *sdlx_get_input_str(char *prompt, bool numeric_keybd, int bg_color)
 
             if (ch >= 0x20 && ch < 0x7f) {
                 if (max_input < sizeof(input)) {
+                    // sometimes the './-' key on numeric keybd 
+                    // does not work, so allow ',' to be used instead
+                    if (numeric_keybd && ch == ',') ch = '.';
                     input[max_input++] = ch;
                 }
-                continue; 
             } else if (ch == '\b') {
                 if (max_input > 0) {
                     input[--max_input] = '\0';

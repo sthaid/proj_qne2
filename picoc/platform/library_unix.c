@@ -95,12 +95,13 @@ void Sdl_get_event (struct ParseState *Parser, struct Value *ReturnValue,
 void Sdl_get_input_str (struct ParseState *Parser, struct Value *ReturnValue,
 	struct Value **Param, int NumArgs)
 {
-    char *prompt        = Param[0]->Val->Pointer;
-    bool  numeric_keybd = Param[1]->Val->Integer;
-    int   bg_color      = Param[2]->Val->Integer;
+    char *prompt1       = Param[0]->Val->Pointer;
+    char *prompt2       = Param[1]->Val->Pointer;
+    bool  numeric_keybd = Param[2]->Val->Integer;
+    int   bg_color      = Param[3]->Val->Integer;
     char *input_str;
 
-    input_str = sdlx_get_input_str(prompt, numeric_keybd, bg_color);
+    input_str = sdlx_get_input_str(prompt1, prompt2, numeric_keybd, bg_color);
     ReturnValue->Val->Pointer = input_str;
 }
 
@@ -786,7 +787,7 @@ struct LibraryFunction SdlFunctions[] = {
     { Sdl_register_control_events, 
                            "void sdlx_register_control_events(char *evstr1, char *evstr2, char *evstr3, int fg_color, int bg_color, int evid1, int evid2, int evid3); " },
     { Sdl_get_event,       "void sdlx_get_event(long timeout_us, sdlx_event_t *event);" },
-    { Sdl_get_input_str,   "char *sdlx_get_input_str(char *prompt, bool numeric_keybd, int bg_color);" },
+    { Sdl_get_input_str,   "char *sdlx_get_input_str(char *prompt1, char *prompt2, bool numeric_keybd, int bg_color);" },
 
     // create colors
     { Sdl_create_color,    "int sdlx_create_color(int r, int g, int b, int a);" },

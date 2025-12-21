@@ -784,7 +784,7 @@ static void settings(void)
         case EVID_DEVEL_PORT: {
             char *str; 
             int cnt, port;
-            str = sdlx_get_input_str("Port?", true, BG_COLOR);
+            str = sdlx_get_input_str("Port", "1024 - 49151", true, BG_COLOR);
             cnt = sscanf(str, "%d", &port);
             if (cnt == 1 && (port >= 1024 && port <= 49151)) {
                 params.devel_port = port;
@@ -797,7 +797,7 @@ static void settings(void)
             break; }
         case EVID_DEVEL_PASSWORD: {
             char *str; 
-            str = sdlx_get_input_str("Password?", false, BG_COLOR);
+            str = sdlx_get_input_str("Password", "Min Length 4", false, BG_COLOR);
             if (strlen(str) >= 4) {
                 strcpy(params.devel_password, str);
                 util_set_str_param(".", "devel_password", str);
@@ -812,7 +812,7 @@ static void settings(void)
             svcs_display(BG_COLOR);
             break;
         case EVID_RECORD_SCALE: {
-            double number = get_number("Record_Scale?", 1, 10);
+            double number = get_number("Record_Scale", 1, 10);
             if (number != INVALID_NUMBER) {
                 params.record_scale = number;
                 util_set_numeric_param(".", "record_scale", number);
@@ -822,7 +822,7 @@ static void settings(void)
             }
             break; }
         case EVID_RECORD_SILENCE: {
-            double number = get_number("Record_Silence?", 0, 20);
+            double number = get_number("Record_Silence", 0, 20);
             if (number != INVALID_NUMBER) {
                 params.record_silence = number;
                 util_set_numeric_param(".", "record_silence", number);
@@ -838,7 +838,7 @@ static void settings(void)
 #ifdef ANDROID
         case EVID_RESET_APPS_AND_SVCS: {
             char *str; 
-            str = sdlx_get_input_str("Reset y/n?", false, BG_COLOR);
+            str = sdlx_get_input_str("Reset y/n", "", false, BG_COLOR);
             if (strcasecmp(str, "y") != 0) {
                 break;
             }
@@ -878,14 +878,16 @@ static void settings(void)
     }
 }
 
-static double get_number(char *prompt, double min, double max)
+static double get_number(char *prompt1, double min, double max)
 {
-    char  *str; 
+    char  *input_str; 
     double number;
+    char   prompt2[100];
 
-    // xxx also display allowed range in second prompt line
-    str = sdlx_get_input_str(prompt, true, BG_COLOR);
-    if (sscanf(str, "%lf", &number) != 1) {
+    sprintf(prompt2, "%0.1f - %0.1f", min, max);
+
+    input_str = sdlx_get_input_str(prompt1, prompt2, true, BG_COLOR);
+    if (sscanf(input_str, "%lf", &number) != 1) {
         return INVALID_NUMBER;
     }
     if (min < max) {
