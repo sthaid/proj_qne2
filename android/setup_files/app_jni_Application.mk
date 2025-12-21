@@ -9,5 +9,6 @@ APP_ABI := armeabi-v7a arm64-v8a x86 x86_64
 # Min runtime API level
 APP_PLATFORM=android-29
 
+# EZAPP
 # https://developer.android.com/guide/practices/page-sizes#update-packaging
 APP_SUPPORT_FLEXIBLE_PAGE_SIZES := true
