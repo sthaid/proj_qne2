@@ -1,3 +1,20 @@
+document the MinSdkVersion in build.gradle
+"on android what is the difference between sdkversion and APP_PLATFORM"
+see file sdkversion
+
+use , instead of decimal
+
+keyboard dismiss event
+
+logging display
+
+cleanup setup-files
+
+--------
+
+
+
+
 update to latest SDL3
 move files to downloads dir
 bring in mixer code

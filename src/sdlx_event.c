@@ -381,6 +381,10 @@ char *sdlx_get_input_str(char *prompt, bool numeric_keybd, int bg_color)
         sdlx_render_printf(0, 200, "%s", prompt);
         loc = sdlx_render_printf(0, 350, "%s", input);
         sdlx_render_printf(loc->x+loc->w, loc->y, "%s", "_");
+
+        // xxx or put event halfway point on display
+        sdlx_register_control_events(NULL, NULL, "X", COLOR_WHITE, COLOR_BLACK, 0, 0, EVID_QUIT);
+
         sdlx_display_present();
 
         // wait for event
