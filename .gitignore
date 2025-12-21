@@ -27,3 +27,5 @@ files/apps/Weather/daily.json
 files/apps/Weather/hourly.json
 files/apps/Weather/info.json
 files/apps/Weather/icon
+files/apps/Memo/*.raw
+files/apps/Test/recording.raw

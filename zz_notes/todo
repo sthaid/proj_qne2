@@ -1,8 +1,16 @@
+update to latest SDL3
+move files to downloads dir
+bring in mixer code
+
+------------------
+
 how to use android sdl library to capture aduio output
+
 sample code to decode a wav file using sdl mixer
 
 ./proj/proj_sdr/devel/wav_files/super_critical.wav
 
+------------------------
 ------------------------
 
 update params code
