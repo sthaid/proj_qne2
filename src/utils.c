@@ -6,7 +6,7 @@
 #include "../cJSON/cJSON.h"
 #include "../lodepng/lodepng.h"
 
-#define PAGE_SIZE (getpagesize())
+#define PAGE_SIZE2 (getpagesize())
 
 // ----------------- TIME --------------------
 
@@ -235,7 +235,7 @@ void *util_map_file(char *dir, char *file, int len_arg, bool create_if_needed,
     }
 
     // round len up to multiple of pagesize
-    len = (len_arg + PAGE_SIZE - 1) & ~(PAGE_SIZE-1);
+    len = (len_arg + PAGE_SIZE2 - 1) & ~(PAGE_SIZE2-1);
 
     // preset 'created_flag' return to false
     if (created_flag != NULL) {
@@ -316,7 +316,7 @@ void util_unmap_file(void *addr, int len_arg)
     int len, rc;
 
     // round len up to multiple of pagesize
-    len = (len_arg + PAGE_SIZE - 1) & ~(PAGE_SIZE-1);
+    len = (len_arg + PAGE_SIZE2 - 1) & ~(PAGE_SIZE2-1);
 
     // print starting msg
     INFO("unmapping addr %p, len_arg=%x adjusted_len=%x\n", addr, len_arg, len);
@@ -337,10 +337,10 @@ void util_unmap_file(void *addr, int len_arg)
 void util_sync_file(void *addr, int len)
 {
     int           rc;
-    unsigned long first_page    = (unsigned long)addr & ~(PAGE_SIZE-1);
-    unsigned long last_page     = ((unsigned long)addr + len - 1) & ~(PAGE_SIZE-1);
+    unsigned long first_page    = (unsigned long)addr & ~(PAGE_SIZE2-1);
+    unsigned long last_page     = ((unsigned long)addr + len - 1) & ~(PAGE_SIZE2-1);
     void         *adjusted_addr = (void*)first_page;
-    int           adjusted_len  = last_page - first_page + PAGE_SIZE;
+    int           adjusted_len  = last_page - first_page + PAGE_SIZE2;
 
     // INFO("addr=%p len=0x%x 0x%x - adjusted addr=%p len=%d\n", 
     //      addr, len, adjusted_addr, adjusted_len);

@@ -1,3 +1,5 @@
+// xxx 'local' without args fails
+
 #include <stdio.h>
 #include <stdbool.h>
 #include <stdlib.h>

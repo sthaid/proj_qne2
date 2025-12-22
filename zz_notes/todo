@@ -1,8 +1,16 @@
+why did ip addr change to 141
+
+
 README in android dir
 - direct struct
 - android version nums
 - how setup works
 - additional methods for location, etc
+- android env vars
+- versions of android hardware, such as 15+
+- what are android versions and associated api levels
+    android 7  year 2016  api level 24
+   my phone is android 16 (latest)  Baklava, API level 36
 
 Branch for 336
 
