@@ -1,14 +1,30 @@
+README in android dir
+- direct struct
+- android version nums
+- how setup works
+- additional methods for location, etc
+
+Branch for 336
+
+demo 336 problem
+
+add EZAPP comments to the setup_files
+
+make the icon
+
+xxxxxxxxxxxxxx
+
 document the MinSdkVersion in build.gradle
 "on android what is the difference between sdkversion and APP_PLATFORM"
 see file sdkversion
 
-use , instead of decimal
-
-keyboard dismiss event
-
 logging display
 
 cleanup setup-files
+- organize xml
+- tag EZAPP changes
+
+message about 3.3.6
 
 --------
 

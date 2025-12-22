@@ -8,17 +8,18 @@ android {
     namespace = "org.sthaid.ezApp"
     compileSdkVersion 35
     defaultConfig {
-        minSdkVersion 29
+        minSdkVersion 29  // EZAPP
         targetSdkVersion 35
         versionCode 1
         versionName "1.0"
         externalNativeBuild {
             ndkBuild {
-                arguments "APP_PLATFORM=android-29"
+                arguments "APP_PLATFORM=android-29"  // EZAPP
                 // abiFilters 'armeabi-v7a', 'arm64-v8a', 'x86', 'x86_64'
                 abiFilters 'arm64-v8a'
             }
             cmake {
+                // EZAPP: 29 and -DAPP_SUPPORT_FLEXIBLE_PAGE_SIZES=true
                 arguments "-DANDROID_PLATFORM=android-29", "-DANDROID_STL=c++_static", "-DAPP_SUPPORT_FLEXIBLE_PAGE_SIZES=true"
                 // abiFilters 'armeabi-v7a', 'arm64-v8a', 'x86', 'x86_64'
                 abiFilters 'arm64-v8a'
@@ -59,5 +60,8 @@ android {
 
 dependencies {
     implementation fileTree(include: ['*.jar'], dir: 'libs')
+    // EZAPP
+    // - used by ezapp_utils.java
+    // - https://play.google.com/sdks/details/com-google-android-gms-play-services-location?hl=en-US
     implementation 'com.google.android.gms:play-services-location:21.0.1' // Or the latest version
 }
