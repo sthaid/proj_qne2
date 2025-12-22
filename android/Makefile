@@ -16,8 +16,9 @@ clean:
 clobber:
 	rm -f SDL
 	rm -rf 	SDL3-*
-	rm -rf 	setup_files/orig
 	rm -rf assets/*
+	rm -rf 	setup_files/orig
+	rm -rf 	setup_files/downloads
 
 # -----------------------------
 

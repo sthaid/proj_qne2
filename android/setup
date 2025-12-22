@@ -34,21 +34,24 @@ SDL_URL=https://github.com/libsdl-org/SDL/releases/download/release-$SDL_VER/$SD
 SDL_TTF_TAR_FILE=SDL3_ttf-$SDL_TTF_VER.tar.gz
 SDL_TTF_URL=https://www.libsdl.org/projects/SDL_ttf/release/$SDL_TTF_TAR_FILE
 
-# remove existing SDL directory tree, and setup_files/orig
-echo "Remove existing $SDL_DIR and setup_files/orig"
+# remove existing SDL directory tree, and setup_files/orig, and recreate dirs orig & downloads 
+echo "Remove existing $SDL_DIR, setup_files/orig, and setup_files/downloads"
 rm -rf $SDL_DIR
 rm -f SDL
 rm -rf setup_files/orig
+rm -rf setup_files/downloads
+mkdir setup_files/orig
+mkdir setup_files/downloads
+echo
 
-# if SDL src tar files are not in the setup_files dir, then download them
-if [ ! -f setup_files/downloads/$SDL_TAR_FILE -o ! -f setup_files/downloads/$SDL_TTF_TAR_FILE ]; then
-  echo "Downloading SDL3 source tar files"
-  cd setup_files/downloads
-  rm -f *.tar.gz
-  wget $SDL_URL
-  wget $SDL_TTF_URL
-  cd ..
-fi
+# download SDL3 and SDL_TTF source code, to the setup_files/downloads dir
+echo "Downloading SDL3 source tar files"
+cd setup_files/downloads
+rm -f *.tar.gz
+wget $SDL_URL
+wget $SDL_TTF_URL
+cd $TOP
+echo
 
 # extract the SDL3 src from tar file
 echo "Extracting $SDL_TAR_FILE"
@@ -67,17 +70,18 @@ echo
 echo "Extractng $SDL_TTF_TAR_FILE"
 cd $BUILD_DIR/app/jni
 tar -xf $TOP/setup_files/downloads/$SDL_TTF_TAR_FILE
+cd $TOP
 echo
 
 # download external SDL3_ttf packages
 echo "Downloading external SDL3_ttf required packages"
 cd $SDL_TTF_DIR/external
 ./download.sh
+cd $TOP
 echo
 
 # update files in $BUILD_DIR
 echo "Updating files in $BUILD_DIR"
-mkdir $TOP/setup_files/orig
 cd $BUILD_DIR
 update_build_file gradle.properties                gradle.properties
 update_build_file app_build.gradle                 app/build.gradle
@@ -93,6 +97,7 @@ update_build_file app_src_main_java_org_libsdl_app_ezapp_utils.java \
 echo "- updating app_src_main_res to app/src/main/res"
 mv app/src/main/res $TOP/setup_files/orig/app_src_main_res
 ln -s $TOP/setup_files/app_src_main_res app/src/main/res
+cd $TOP
 echo
 
 # add symbolic links to the source code
@@ -103,12 +108,14 @@ ln -s ../../../../../../../src/ .
 ln -s ../../../../../../../picoc/ .
 ln -s ../../../../../../../cJSON/ .
 ln -s ../../../../../../../lodepng/ .
+cd $TOP
 echo
 
 # add symbolic link to assets
 echo "Creating symbolic links to assets"
 cd $BUILD_DIR/app/src/main
 ln -s ../../../../../../assets/ .
+cd $TOP
 echo
 
 echo "SETUP COMPLETE"
