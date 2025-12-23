@@ -1,6 +1,10 @@
 ===============================
 DEVELOPMENT SYSTEM
 ===============================
+
+https://developer.android.com/studio
+https://developer.android.com/studio#command-line-tools-only
+
 25.04
 sudo apt install adb
 sudo apt install libsdl3-dev
