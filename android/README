@@ -1,0 +1,243 @@
+===============================
+DEVELOPMENT SYSTEM
+===============================
+25.04
+sudo apt install adb
+sudo apt install libsdl3-dev
+sudo apt install libsdl3-ttf-dev
+
+---------
+
+25.04
+xxx Ubuntu 25.04 setup
+- sdk
+- sdl3 packages
+- adb package
+- env vars
+
+- install android_sdk
+- create environment variables   xxx
+
+
+install android_sdk
+
+drwxrwxr-x 13 haid haid 4.0K Jun 27 07:43 21.3.6528147
+drwxrwxr-x 11 haid haid 4.0K Jun 27 11:03 25.1.8937393
+drwxrwxr-x 11 haid haid 4.0K Jul  1 09:30 26.3.11579264
+drwxrwxr-x 11 haid haid 4.0K Sep  4 08:10 27.0.12077973
+drwxrwxr-x 11 haid haid 4.0K Aug  7 07:10 28.2.13676358
+drwxrwxr-x 11 haid haid 4.0K Aug  7 06:59 29.0.13846066
+
+[HOME2 | android_sdk]$ sdkmanager --list_installed
+[=======================================] 100% Fetch remote repository...       
+Installed packages:
+  Path                 | Version           | Description                      | Location            
+  -------              | -------           | -------                          | -------             
+  build-tools;30.0.2   | 30.0.2            | Android SDK Build-Tools 30.0.2   | build-tools/30.0.2  
+  build-tools;33.0.1   | 33.0.1            | Android SDK Build-Tools 33.0.1   | build-tools/33.0.1  
+  build-tools;34.0.0   | 34.0.0            | Android SDK Build-Tools 34       | build-tools/34.0.0  
+  build-tools;36.0.0   | 36.0.0            | Android SDK Build-Tools 36       | build-tools/36.0.0  
+  ndk;21.3.6528147     | 21.3.6528147      | NDK (Side by side) 21.3.6528147  | ndk/21.3.6528147    
+  ndk;25.1.8937393     | 25.1.8937393      | NDK (Side by side) 25.1.8937393  | ndk/25.1.8937393    
+  ndk;26.3.11579264    | 26.3.11579264     | NDK (Side by side) 26.3.11579264 | ndk/26.3.11579264   
+  ndk;27.0.12077973    | 27.0.12077973     | NDK (Side by side) 27.0.12077973 | ndk/27.0.12077973   
+  ndk;28.2.13676358    | 28.2.13676358     | NDK (Side by side) 28.2.13676358 | ndk/28.2.13676358   
+  ndk;29.0.13846066    | 29.0.13846066 rc3 | NDK (Side by side) 29.0.13846066 | ndk/29.0.13846066   
+  platform-tools       | 36.0.0            | Android SDK Platform-Tools       | platform-tools      
+  platforms;android-30 | 3                 | Android SDK Platform 30          | platforms/android-30
+  platforms;android-34 | 3                 | Android SDK Platform 34          | platforms/android-34
+  platforms;android-35 | 2                 | Android SDK Platform 35          | platforms/android-35
+
+===============================
+BUILD AND INSTALL EZAPP ON ANDROID
+===============================
+
+Steps:
+- ./setup
+- make build_debug
+- make install_debug   (first connect adb)
+
+The ./setup script does the following:
+- downloads SDL3 and SDL3_ttf source code
+- extract SDL3 source code
+- creates template SDL3 build directory, using script 
+    /build-scripts/create-android-project.py 
+- extracts SDL3_ttf source to
+    SDL3-3.2.28/build/org.sthaid.ezApp/app/jni/SDL3_ttf-3.2.2/
+- downloads external SDL3_ttf packages by using the download.sh script 
+    SDL3-3.2.28/build/org.sthaid.ezApp/app/jni/SDL3_ttf-3.2.2/external/download.sh
+- update/add files; 
+  . the files in SDL3-3.2.28/build/org.sthaid.ezApp/app are replaced with 
+    symlinks to the files in setup_files
+  . the original files are saved to setup_files/orig
+  . the setup_files/diff_against_orig script is available to view the changes,
+    using meld
+- ezApp source code files are symlinked to app/jni/src
+- ezApp assets directory symlink is created in app/src/main
+
+===============================
+ADB SETUP
+===============================
+
+Install adb
+- sudo apt install adb
+
+Enable developer mode by tapping build number 8 times.
+  Settings -> About Phone -> Software Information -> Build Number
+
+Go to Developer Options , and enable
+- Stay Awake
+- USB Debugging
+
+Connect USB data cable. And select 'allow access' on the device.
+- verify connection: 'adb shell'
+
+To use adb over Wifi, without USB cable ...
+
+With USB cable plugged in, run cmd 
+- adb tcpip 5555
+- should see message "restarting in TCP mode port: 5555"
+
+Disconnect USB cable.
+
+Issue the adb connect cmd:
+- adb connect 192.168.1.243:5555
+- verify using 'adb shell'
+
+Suggestions:
+- plug phone in with power cable, to disable sleeping while charging.
+- configure router to assign a static IP address to your Android device
+- configure your Android device so it doesn't change its MAC address,
+  when using a trusted router:
+    Connections -> Wifi -> Gear -> View More -> MAC Address Type -> Pnone MAC
+
+===============================
+ADB COMMAND EXAMPLES
+===============================
+
+adb help
+
+adb logcat --help
+adb logcat -c -b all                      # clear Android log
+adb logcat -s SDL SDL/APP AndroidRuntime  # view logs from SDL SDL/APP AndroidRuntime components
+
+adb shell  # run remote shell
+adb shell getprop ro.product.cpu.abi  # get Application Binary Interface
+
+adb kill-server    # kill and start adb server
+adb start-server
+
+adb tcpip 5555    # restart Android Debug Bridge Daemon listening on TCP port 5555
+adb connect 192.168.1.205:5555  # connect to device
+adb devices       # list connected devices
+
+===============================
+ANDROID VERSION NUMBERS
+===============================
+
+References:
+- https://apilevels.com/
+- Google: "list of android architecture versions and API levels"
+
+                Android(*)
+Codename        Version     API Level   Year    (subset)
+--------        -------     ---------   ----
+Baklava         16          36          2025
+Nougat          7.0         24          2016
+Lollipop        5           21          2015
+
+(*) Android Version is here:: Setup -> About phone -> Software information
+
+From Google AI ...
+
+Android SDK Version (minSdkVersion, targetSdkVersion)
+- These are attributes used in your app's main build configuration 
+  (like a Gradle file in Android Studio) to declare compatibility
+  with specific API levels. 
+- minSdkVersion: The minimum API level your application can run on.
+  Devices running an Android version with an API level lower than your
+  minSdkVersion will not be able to install your app from Google Play.
+- targetSdkVersion: The API level your app was tested against and is 
+  fully compatible with.
+- compileSdkVersion: The API level of the Android platform version you
+  compile your app against. You should always use the latest stable 
+  version for this to access new features and improvements. 
+
+APP_PLATFORM 
+- a variable used specifically within the Android NDK (Native Development
+  Kit) build system (primarily in the Application.mk file for ndk-build). 
+- It declares the Android API level against which your native C/C++ code
+  is compiled. For native code, the APP_PLATFORM essentially acts as the
+  minimum required API level for your native libraries, similar to how
+  minSdkVersion works for the overall application.
+- If not specified in Application.mk, ndk-build typically defaults to a
+  minimum API level supported by the NDK itself or tries to infer it from
+  your minSdkVersion set in the app's manifest/Gradle file. 
+
+xxx try building with reverting minSdkVersion
+
+xxx what are the NDK versions, and how do they relate to above
+
+===============================
+SDL3 ANDROID BUILD DIRECTORY STRUCT
+===============================
+
+├── app
+│   ├── jni
+│   │   ├── SDL                   : SDL3 code
+│   │   ├── SDL3_ttf-3.2.2        : SDL3_ttf code
+│   │   └── src                   : app C-language code
+│   └── src
+│       └── main
+│           ├── assets            : files that can be accessed using SDL_LoadFile
+│           ├── java
+│           │   └── org
+│           │       ├── libsdl
+│           │       │   └── app   : main java code, SDLActivity.java ...
+│           │       └── sthaid
+│           │           └── ezApp : EzappActivity.java (stub file)
+│           └── res               : icons and values
+└── gradle
+    └── wrapper
+
+===============================
+EZAPP ADDITIONS TO LIBSDL JAVA CODE
+===============================
+
+todo
+
+===============================
+MISC
+===============================
+
+What is contained in APK:
+  ln -s ./SDL3-3.2.28/build/org.sthaid.ezApp/app/build/outputs/apk/debug/app-debug.apk app-debug.zip
+  unzip -l app-debug.zip | grep lib
+
+
+xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+
+README in android dir
+- additional methods for location, etc
+- android env vars
+
+        cd SDL/build/org.sthaid.ezApp; \
+        ./gradlew assembleDebug -PANDROID_ABIS=arm64-v8a
+        # adb shell getprop ro.product.cpu.abi
+        # ./gradlew assembleDebug
+
+xxxxxxxxxxxxxxxxxxxxxxx
+   DONE
+xxxxxxxxxxxxxxxxxxxxxxx
+
+- how to connect in developer mode
+- also doc adb commands
+- direct struct
+- versions of android hardware, such as 15+
+- android version nums
+- how setup works
+- what are android versions and associated api levels
+    android 7  year 2016  api level 24
+   my phone is android 16 (latest)  Baklava, API level 36

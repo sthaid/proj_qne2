@@ -4,4 +4,4 @@
 adb logcat -c -b all
 
 # view logs for SDL, SDL/APP and AndroidRuntim sources
-adb logcat -s SDL -s SDL/APP -s AndroidRuntime
+adb logcat -s SDL SDL/APP AndroidRuntime
