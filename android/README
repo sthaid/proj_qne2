@@ -224,7 +224,22 @@ SDL3 ANDROID BUILD DIRECTORY STRUCT
 EZAPP ADDITIONS TO LIBSDL JAVA CODE
 ===============================
 
-todo xxx
+SDL3 java code changes:
+- additions to SDLActivity.java
+- new files:
+  - ezapp_fgsvc.java 
+  - ezapp_utils.jave
+
+Capabilities added:
+- start/stop foreground mode: when foreground is enabled, ezApp continues
+  to run when the app is minimized or the android device is sleeping
+- get location: latitude, longitude, altitude
+- text to speech
+- flashlight control
+
+These added capabilities can be invoked from C language, by using NDK
+routines such as CallVoidMethod. File src/utils.cpp provides routines,
+such as "void util_text_to_speech(char *text)".
 
 ===============================
 MISC
