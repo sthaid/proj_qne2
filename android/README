@@ -1,56 +1,58 @@
+This document was prepared using Ubuntu 25.04.
+
 ===============================
-DEVELOPMENT SYSTEM
+DEVELOPMENT SYSTEM SETUP
 ===============================
 
-https://developer.android.com/studio
+---------------------------
+--- install android/sdk ---
+---------------------------
+
+# download android sdk command line tools from here:
 https://developer.android.com/studio#command-line-tools-only
 
-25.04
-sudo apt install adb
-sudo apt install libsdl3-dev
-sudo apt install libsdl3-ttf-dev
+# unzip the cmdlinetools
+mkdir -p ~/android/sdk
+cd ~/android/sdk
+unzip ~/Downloads/commandlinetools-linux-13114758_latest.zip
 
----------
+# move the cmdlinetools, using the required directory structure
+mv cmdline-tools latest
+mkdir cmdline-tools
+mv latest cmdline-tools/latest
 
-25.04
-xxx Ubuntu 25.04 setup
-- sdk
-- sdl3 packages
-- adb package
-- env vars
+# update bashrc exports
+export ANDROID_HOME=$HOME/android/sdk
+export PATH=$PATH:$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools
 
-- install android_sdk
-- create environment variables   xxx
+# install sdk packages
+# - note that the ndk package is installed automatically on first build of azApp
+sdkmanager "platform-tools" "platforms;android-35" "build-tools;35.0.0"
 
+# sdkmanager --help  (summary)
+    Usage:
+      sdkmanager [--uninstall] [<common args>] [--package_file=<file>] [<packages>...]
+      sdkmanager --update [<common args>]
+      sdkmanager --list [<common args>]
+      sdkmanager --list_installed [<common args>]
+      sdkmanager --licenses [<common args>]
+      sdkmanager --version
 
-install android_sdk
+    With --install (optional), installs or updates packages.
+        By default, the listed packages are installed or (if already installed)
+        updated to the latest version.
 
-drwxrwxr-x 13 haid haid 4.0K Jun 27 07:43 21.3.6528147
-drwxrwxr-x 11 haid haid 4.0K Jun 27 11:03 25.1.8937393
-drwxrwxr-x 11 haid haid 4.0K Jul  1 09:30 26.3.11579264
-drwxrwxr-x 11 haid haid 4.0K Sep  4 08:10 27.0.12077973
-drwxrwxr-x 11 haid haid 4.0K Aug  7 07:10 28.2.13676358
-drwxrwxr-x 11 haid haid 4.0K Aug  7 06:59 29.0.13846066
+-----------------------
+--- ubuntu packages ---
+-----------------------
 
-[HOME2 | android_sdk]$ sdkmanager --list_installed
-[=======================================] 100% Fetch remote repository...       
-Installed packages:
-  Path                 | Version           | Description                      | Location            
-  -------              | -------           | -------                          | -------             
-  build-tools;30.0.2   | 30.0.2            | Android SDK Build-Tools 30.0.2   | build-tools/30.0.2  
-  build-tools;33.0.1   | 33.0.1            | Android SDK Build-Tools 33.0.1   | build-tools/33.0.1  
-  build-tools;34.0.0   | 34.0.0            | Android SDK Build-Tools 34       | build-tools/34.0.0  
-  build-tools;36.0.0   | 36.0.0            | Android SDK Build-Tools 36       | build-tools/36.0.0  
-  ndk;21.3.6528147     | 21.3.6528147      | NDK (Side by side) 21.3.6528147  | ndk/21.3.6528147    
-  ndk;25.1.8937393     | 25.1.8937393      | NDK (Side by side) 25.1.8937393  | ndk/25.1.8937393    
-  ndk;26.3.11579264    | 26.3.11579264     | NDK (Side by side) 26.3.11579264 | ndk/26.3.11579264   
-  ndk;27.0.12077973    | 27.0.12077973     | NDK (Side by side) 27.0.12077973 | ndk/27.0.12077973   
-  ndk;28.2.13676358    | 28.2.13676358     | NDK (Side by side) 28.2.13676358 | ndk/28.2.13676358   
-  ndk;29.0.13846066    | 29.0.13846066 rc3 | NDK (Side by side) 29.0.13846066 | ndk/29.0.13846066   
-  platform-tools       | 36.0.0            | Android SDK Platform-Tools       | platform-tools      
-  platforms;android-30 | 3                 | Android SDK Platform 30          | platforms/android-30
-  platforms;android-34 | 3                 | Android SDK Platform 34          | platforms/android-34
-  platforms;android-35 | 2                 | Android SDK Platform 35          | platforms/android-35
+These packages are needed when building the linux version of ezApp.
+Linux ezApp is used for development and test.
+
+sudo apt update
+sudo apt install openjdk-17-jdk
+sudo apt install libsdl3-dev       # available on Ubuntu 25.04
+sudo apt install libsdl3-ttf-dev   # available on Ubuntu 25.04
 
 ===============================
 BUILD AND INSTALL EZAPP ON ANDROID
@@ -71,11 +73,10 @@ The ./setup script does the following:
 - downloads external SDL3_ttf packages by using the download.sh script 
     SDL3-3.2.28/build/org.sthaid.ezApp/app/jni/SDL3_ttf-3.2.2/external/download.sh
 - update/add files; 
-  . the files in SDL3-3.2.28/build/org.sthaid.ezApp/app are replaced with 
-    symlinks to the files in setup_files
-  . the original files are saved to setup_files/orig
-  . the setup_files/diff_against_orig script is available to view the changes,
-    using meld
+  . some files in SDL3-3.2.28/build/org.sthaid.ezApp/app are replaced with 
+    symlinks to the files in ./setup_files
+  . the original files are saved to ./setup_files/orig
+  . the setup_files/diff_against_orig script is available to view the changes
 - ezApp source code files are symlinked to app/jni/src
 - ezApp assets directory symlink is created in app/src/main
 
@@ -83,8 +84,16 @@ The ./setup script does the following:
 ADB SETUP
 ===============================
 
-Install adb
-- sudo apt install adb
+Google AI says:
+  "ADB (Android Debug Bridge) is a versatile command-line tool 
+   from the Android SDK that lets your computer communicate with an Android
+   device for debugging, app management, file transfer, and running shell commands"
+
+Adb executable is here: android/sdk/platform-tools/adb
+
+----------------------------------------
+--- device Setup to be used with adb ---
+----------------------------------------
 
 Enable developer mode by tapping build number 8 times.
   Settings -> About Phone -> Software Information -> Build Number
@@ -128,7 +137,7 @@ adb logcat -s SDL SDL/APP AndroidRuntime  # view logs from SDL SDL/APP AndroidRu
 adb shell  # run remote shell
 adb shell getprop ro.product.cpu.abi  # get Application Binary Interface
 
-adb kill-server    # kill and start adb server
+adb kill-server   # kill and start adb server
 adb start-server
 
 adb tcpip 5555    # restart Android Debug Bridge Daemon listening on TCP port 5555
@@ -150,7 +159,7 @@ Baklava         16          36          2025
 Nougat          7.0         24          2016
 Lollipop        5           21          2015
 
-(*) Android Version is here:: Setup -> About phone -> Software information
+(*) Android Version found here:: Setup -> About phone -> Software information
 
 From Google AI ...
 
@@ -178,9 +187,16 @@ APP_PLATFORM
   minimum API level supported by the NDK itself or tries to infer it from
   your minSdkVersion set in the app's manifest/Gradle file. 
 
-xxx try building with reverting minSdkVersion
-
-xxx what are the NDK versions, and how do they relate to above
+NDK Version:
+- explicit configuration, in build.gradle:
+        android {
+            ...
+            ndkVersion "23.1.7779620"
+        }
+- Automatic Selection:
+  If you do not specify an ndkVersion, the Android Gradle Plugin (AGP)
+  will automatically select a default version that it is known to be
+  compatible with
 
 ===============================
 SDL3 ANDROID BUILD DIRECTORY STRUCT
@@ -208,7 +224,7 @@ SDL3 ANDROID BUILD DIRECTORY STRUCT
 EZAPP ADDITIONS TO LIBSDL JAVA CODE
 ===============================
 
-todo
+todo xxx
 
 ===============================
 MISC
@@ -218,30 +234,5 @@ What is contained in APK:
   ln -s ./SDL3-3.2.28/build/org.sthaid.ezApp/app/build/outputs/apk/debug/app-debug.apk app-debug.zip
   unzip -l app-debug.zip | grep lib
 
-
-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-
-README in android dir
-- additional methods for location, etc
-- android env vars
-
-        cd SDL/build/org.sthaid.ezApp; \
-        ./gradlew assembleDebug -PANDROID_ABIS=arm64-v8a
-        # adb shell getprop ro.product.cpu.abi
-        # ./gradlew assembleDebug
-
-xxxxxxxxxxxxxxxxxxxxxxx
-   DONE
-xxxxxxxxxxxxxxxxxxxxxxx
-
-- how to connect in developer mode
-- also doc adb commands
-- direct struct
-- versions of android hardware, such as 15+
-- android version nums
-- how setup works
-- what are android versions and associated api levels
-    android 7  year 2016  api level 24
-   my phone is android 16 (latest)  Baklava, API level 36
+To specify ABIS to build for
+  ./gradlew assembleDebug -PANDROID_ABIS=arm64-v8a
