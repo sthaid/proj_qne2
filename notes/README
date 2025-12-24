@@ -1,0 +1,33 @@
+============================
+BUILD SDL3-3.3.6 FOR UBUNTU
+============================
+
+--- install prereqs ---
+
+sudo apt-get install build-essential git make pkg-config cmake ninja-build gnome-desktop-testing libasound2-dev libpulse-dev libaudio-dev libfribidi-dev libjack-dev libsndio-dev libx11-dev libxext-dev libxrandr-dev libxcursor-dev libxfixes-dev libxi-dev libxss-dev libxtst-dev libxkbcommon-dev libdrm-dev libgbm-dev libgl1-mesa-dev libgles2-mesa-dev libegl1-mesa-dev libdbus-1-dev libibus-1.0-dev libudev-dev libthai-dev
+sudo apt-get install libpipewire-0.3-dev libwayland-dev libdecor-0-dev liburing-dev
+
+--- create source tree ---
+
+cd $HOME
+mkdir sdl336
+cd sdl336
+tar -xvf SDL3-3.3.6.tar.gz
+
+--- setup cmake ---
+
+mkdir local
+mkdir SDL3-3.3.6/build
+cd SDL3-3.3.6/build
+cmake .. -DCMAKE_INSTALL_PREFIX=$HOME/sdl336/local
+
+--- run cmake build and install ---
+
+cmake --build .
+cmake --install .
+
+--- build and run test program ---
+
+gcc -o main main.c -Wall -I./local/include -lSDL3_ttf -L$HOME/sdl336/local/lib -lSDL3
+LD_LIBRARY_PATH=$HOME/sdl336/local/lib ./main
+
