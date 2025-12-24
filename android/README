@@ -92,7 +92,7 @@ Google AI says:
 Adb executable is here: android/sdk/platform-tools/adb
 
 ----------------------------------------
---- device Setup to be used with adb ---
+--- setup device to be used with adb ---
 ----------------------------------------
 
 Enable developer mode by tapping build number 8 times.
