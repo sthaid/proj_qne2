@@ -1,0 +1,120 @@
+#!/bin/bash
+
+update_build_file()
+{
+  src=$1
+  dest=$2
+
+  echo "- updating $src to $dest"
+  if [ -f "$BUILD_DIR/$dest" ]; then
+    cp $BUILD_DIR/$dest $TOP/setup_files/orig/${src}
+  fi
+  ln -sf $TOP/setup_files/${src} $BUILD_DIR/$dest 
+}
+
+# ######### MAIN ##########
+
+# init variables
+PACKAGE_NAME=org.sthaid.ezApp
+SDL_VER=3.3.6
+SDL_TTF_VER=3.2.2
+
+# directories
+TOP=`pwd`
+SDL_DIR=$TOP/SDL
+SDL_MIXER_DIR=$SDL_DIR/build/$PACKAGE_NAME/app/jni/SDL_mixer
+SDL_TTF_DIR=$SDL_DIR/build/$PACKAGE_NAME/app/jni/SDL_ttf
+BUILD_DIR=$SDL_DIR/build/$PACKAGE_NAME
+
+# sdl - https://github.com/libsdl-org/SDL/releases
+SDL_TAR_FILE=SDL3-$SDL_VER.tar.gz
+SDL_URL=https://github.com/libsdl-org/SDL/releases/download/prerelease-$SDL_VER/$SDL_TAR_FILE
+
+# sdl_ttf - https://www.libsdl.org/projects/SDL_ttf/release
+SDL_TTF_TAR_FILE=SDL3_ttf-$SDL_TTF_VER.tar.gz
+SDL_TTF_URL=https://www.libsdl.org/projects/SDL_ttf/release/$SDL_TTF_TAR_FILE
+
+# sdl_mixer - https://github.com/libsdl-org/SDL_mixer
+# NOTE; mixer release not available, using source code from github main branch
+SDL_MIXER_REPO=https://github.com/libsdl-org/SDL_mixer
+SDL_MIXER_TAR_FILE=SDL3_mixer.tar.gz
+
+echo "==== REMOVE EXISTING ===="
+rm -rf SDL
+rm -rf setup_files/orig
+rm -rf setup_files/downloads
+mkdir setup_files/orig
+mkdir setup_files/downloads
+echo
+
+echo "==== DOWNLOAD SDL CODE ===="
+cd setup_files/downloads
+wget $SDL_URL
+wget $SDL_TTF_URL
+git clone $SDL_MIXER_REPO
+tar -xf $SDL_TAR_FILE
+tar -xf $SDL_TTF_TAR_FILE
+cd $TOP
+echo
+
+echo "==== MAKE COPY OF SDL TREE ===="
+cp -r setup_files/downloads/SDL3-$SDL_VER SDL
+echo
+
+echo "==== CREATE TEMPLATE BUILD DIR ===="
+touch stub.c
+$SDL_DIR/build-scripts/create-android-project.py $PACKAGE_NAME stub.c
+rm stub.c
+echo
+
+echo "==== COPY TTF AND MIXER TO SDL TREE ===="
+cd $BUILD_DIR/app/jni
+cp -r $TOP/setup_files/downloads/SDL3_ttf-$SDL_TTF_VER $SDL_TTF_DIR
+cp -r $TOP/setup_files/downloads/SDL_mixer $SDL_MIXER_DIR
+cd $TOP
+echo
+
+echo "==== DOWNLOAD EXTERNAL PACKAGES ===="
+cd $SDL_TTF_DIR/external
+./download.sh
+cd $SDL_MIXER_DIR/external
+./download.sh
+cd $TOP
+echo
+
+echo "==== UPDATE FILES IN SDL TREE ===="
+cd $BUILD_DIR
+update_build_file gradle.properties                gradle.properties
+update_build_file app_build.gradle                 app/build.gradle
+update_build_file app_jni_Application.mk           app/jni/Application.mk
+update_build_file app_jni_src_Android.mk           app/jni/src/Android.mk
+update_build_file app_src_main_AndroidManifest.xml app/src/main/AndroidManifest.xml
+update_build_file app_src_main_java_org_libsdl_app_SDLActivity.java \
+                                                   app/src/main/java/org/libsdl/app/SDLActivity.java
+update_build_file app_src_main_java_org_libsdl_app_ezapp_fgsvc.java \
+                                                   app/src/main/java/org/libsdl/app/ezapp_fgsvc.java
+update_build_file app_src_main_java_org_libsdl_app_ezapp_utils.java \
+                                                   app/src/main/java/org/libsdl/app/ezapp_utils.java
+mv app/src/main/res $TOP/setup_files/orig/app_src_main_res
+ln -s $TOP/setup_files/app_src_main_res app/src/main/res
+cd $TOP
+echo
+
+echo "==== CREATE SYMLINKS TO SOURCE CODE ===="
+cd $BUILD_DIR/app/jni/src
+rm stub.c
+ln -s ../../../../../../../src/ .
+ln -s ../../../../../../../picoc/ .
+ln -s ../../../../../../../cJSON/ .
+ln -s ../../../../../../../lodepng/ .
+cd $TOP
+echo
+
+echo "==== CREATE SYMLINK TO ASSETS DIR ===="
+echo "Creating symbolic links to assets"
+cd $BUILD_DIR/app/src/main
+ln -s ../../../../../../assets/ .
+cd $TOP
+echo
+
+echo "==== SETUP COMPLETE ===="

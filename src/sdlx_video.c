@@ -443,11 +443,11 @@ static sdlx_loc_t *render_text(bool xy_is_ctr, int x, int y, char * str)
     }
 
     // render the string to a surface
-    surface = TTF_RenderText_Shaded(font[print_state.ptsize], str, 0, 
-                                         sdlx_color(print_state.fg_color), 
-                                         sdlx_color(print_state.bg_color));
+    surface = TTF_RenderText_Solid(font[print_state.ptsize], str, 0, 
+                                         sdlx_color(print_state.fg_color));
+                                         //sdlx_color(print_state.bg_color));
     if (surface == NULL) {
-        ERROR("TTF_RenderText_Shaded returned NULL\n");
+        ERROR("TTF_RenderText_Solid returned NULL\n");
         loc.x = x; loc.y = y; loc.w = 0; loc.h = 0;
         return &loc;
     }
@@ -954,9 +954,9 @@ sdlx_texture_t *sdlx_create_text_texture(char * str)
     // render the text to a surface,
     // create a texture from the surface
     // free the surface
-    surface = TTF_RenderText_Shaded(font[print_state.ptsize], str, 0, 
-                                    sdlx_color(print_state.fg_color), 
-                                    sdlx_color(print_state.bg_color));
+    surface = TTF_RenderText_Solid(font[print_state.ptsize], str, 0, 
+                                    sdlx_color(print_state.fg_color));
+                                    //sdlx_color(print_state.bg_color));
     if (surface == NULL) {
         ERROR("failed to allocate surface\n");
         return NULL;

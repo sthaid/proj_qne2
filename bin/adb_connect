@@ -24,4 +24,4 @@
 # 
 # Plug phone in with power cable, to disable sleeping while charging.
 
-adb connect 192.168.1.205:5555
+adb connect 192.168.1.243:5555

@@ -1,0 +1,16 @@
+#!/bin/bash
+
+CFLAGS="-Wall -Ilocal/include"
+
+echo "***** BUILDING ./sdl_test ********"
+set -x
+gcc -o sdl_test sdl_test.c -Wall -I./local/include -L./local/lib -lSDL3 -lSDL3_mixer -lSDL3_ttf
+set +x
+if [ $? -ne 0 ]; then
+  exit 1
+fi
+echo
+
+echo "***** RUNNING ./sdl_test ********"
+LD_LIBRARY_PATH=./local/lib ./sdl_test
+rm ./sdl_test

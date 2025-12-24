@@ -5,6 +5,7 @@
 #include <logging.h>
 
 #include <SDL3/SDL.h>
+#include <SDL3_mixer/SDL_mixer.h>
 
 //
 // defines
@@ -57,6 +58,13 @@ int sdlx_audio_init(void)
         ERROR("SDL_Init AUDIO failed, %s\n", SDL_GetError());
         return -1;
     }
+
+    // initializing SDL_mixer
+    if (!MIX_Init()) {
+        ERROR("MIX_Init failed, %s\n", SDL_GetError());
+        return -1;
+    }
+    INFO("XXXXXXXXXXXXXXX MIX_Init success,  version=%d\n", MIX_Version());
 
     // success
     INFO("success\n");

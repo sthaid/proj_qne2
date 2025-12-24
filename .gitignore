@@ -10,7 +10,10 @@ tags
 
 bin/ezsh
 linux/ezApp
+linux/sdl_build/SDL*
+linux/sdl_build/local
 android/SDL3-3.2.28
+android/SDL3-3.3.6
 android/SDL
 android/setup_files/orig
 
