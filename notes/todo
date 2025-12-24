@@ -1,72 +1,31 @@
-why is android build only building arm64-v8a
+Android -
+- why is android build only building arm64-v8a
+- SDL3.3.6 issue on Android
+  - https://github.com/libsdl-org/SDL/issues/14705
+  - update to latest SDL prerelease, when ready
+- make the ezapp icon
 
-README in android dir
-- direct struct
-- android version nums
-- how setup works
-- additional methods for location, etc
-- android env vars
-- versions of android hardware, such as 15+
-- what are android versions and associated api levels
-    android 7  year 2016  api level 24
-   my phone is android 16 (latest)  Baklava, API level 36
+logging display  <====
 
-Branch for 336
+update params code  <====
 
-demo 336 problem
+bring in mixer code  <====
 
-add EZAPP comments to the setup_files
+audio recording  <====
+- "how to use android sdl library to capture aduio output"
+- sdl save recording to a file, in the java code
+- find sample code to decode a wav file using sdl mixer
 
-make the icon
+color organ app
+- butterworth filter
+- download some of my music, 
+   ./proj/proj_sdr/devel/wav_files/super_critical.wav
 
-xxxxxxxxxxxxxx
-
-document the MinSdkVersion in build.gradle
-"on android what is the difference between sdkversion and APP_PLATFORM"
-see file sdkversion
-
-logging display
-
-cleanup setup-files
-- organize xml
-- tag EZAPP changes
-
-message about 3.3.6
-
---------
-
-
-
-
-update to latest SDL3
-move files to downloads dir
-bring in mixer code
-
-------------------
-
-how to use android sdl library to capture aduio output
-
-sample code to decode a wav file using sdl mixer
-
-./proj/proj_sdr/devel/wav_files/super_critical.wav
-
-------------------------
-------------------------
-
-update params code
-
-check on sdl mixer capabilities
-- do I have mp3 files or aac files
-
-should sdlx_get_input_str have 2 prompts, and also fgcolor arg
-
-Location 
-- check how often does the service run when the phone is snoozing
-
-New Apps
-- steps
-- blackjack
-- prime number benchmark
+running ezapp while phone is sleeping
+- how to implent this
+- Location - check how often does the service run when the phone is snoozing
+- auto dismiss the foreground notification?
+- run ezapp as a service when installed or device boots
 
 App fixes
 - Calculater
@@ -74,51 +33,42 @@ App fixes
      - >> and / ops on 64 bit with msb set
   - display numeric buttons in different color
 - Tilt app, allow different orientations
+- Location - ack the clearing of history
 
 regarding foreground - 
 - dont let applications control it;  could let applications check it and fail if it is not set
 - document foreground 
 
-add logging function, access last N logs of log file from Settings submenu
+Picoc
+- document picoc limitations 
+- load vanilla picoc
+- test programs for issues
+- compare these programs with improved picoc
+- expression evaluator test
+
+=================================================
+==================== MAYBE ======================
+=================================================
+
+New Apps
+- steps
+- blackjack
+- prime number benchmark
+
+=======================================================
+=============== NOTES  README UPDATES  ================
+=======================================================
 
 document type sig
 https://docs.oracle.com/javase/7/docs/technotes/guides/jni/spec/types.html#wp276
 
-run ezapp as a service when installed or device boots
+how to run vi with tags from a subdir
+- save my .vimrc
 
-color organ ?
-- sdl mixer
-- butterworth filter
 
-delete the foreground notification
-
-=======================
-DONE  
-=======================
-
-- how to run vi with tags from a subdir
-
-Location 
-- add option to disable and enable the svc from adding loc history 
-
-recording
-- is volume control or adjustment needed
-
-=======================
-PROBABLY ALREADY FIXED
-=======================
-
-clock
-- fix clock program to handle case where location
-  is not immedeately avialable
-
-=======================
-WONT DO
-=======================
-
-=======================
-LATER
-=======================
+=================================================
+==================== MAYBE ======================
+=================================================
 
 remove templates from layout and svcs
 
@@ -127,23 +77,20 @@ APIs
 - should textures have a bg color arg
 - make pixels unsigned int, add pixel_t
 
-Picoc
-- load vanilla picoc
-- test programs for issues
-- compare these programs with improved picoc
-- expression evaluator test
-
 tools
 - ezgetall - print error if files dir exits locally
 - cleanup with ezsh
-  - review main interaction with ezsh
-
-misc
-- launcher icon
+  - review main interaction with ezsh - What does this mean?
 
 reversi
 - add undo
 - edge heuristic
+
+=====================================================================
+=====================================================================
+====================  NOT YET ORGANIZED =============================
+=====================================================================
+=====================================================================
 
 ---------------
 ---- picoc ----
