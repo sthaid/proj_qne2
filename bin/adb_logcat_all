@@ -1,0 +1,5 @@
+#!/bin/bash
+
+# clear log buffers, and view all logs
+adb logcat -c -b all
+adb logcat
