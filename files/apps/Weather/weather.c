@@ -787,7 +787,7 @@ void display_forecast(void)
     }
 }
 
-#define MAX_DETAILED_FORECAST_LINES 15
+#define MAX_DETAILED_FORECAST_LINES 20
 #define EVID_PREVIOUS 1
 #define EVID_NEXT     2
 
@@ -904,7 +904,7 @@ void split_string(char *str, char **lines, int max_lines_in, int *max_lines_ret,
     int i, len;;
     char *p, *pspace;
 
-    static char str_copy[1000];
+    static char str_copy[2000];
 
     // if caller supplied NULL str then return
     if (str == NULL) {
