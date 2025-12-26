@@ -16,6 +16,9 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 
 import android.media.projection.MediaProjectionManager;
+import android.os.SystemClock;
+
+import android.media.AudioPlaybackCaptureConfiguration;
 
 // ... inside your Activity or Service ...
 
@@ -26,7 +29,6 @@ public class ezapp_playbackcapture {
     private AudioRecord audioRecord = null;
     private Thread recordingThread = null;
     private boolean isRecording = false;
-    private MediaProjection mediaProjection; // Assume this is initialized from a MediaProjectionManager request
 
     // Configuration for the audio format
     private static final int SAMPLE_RATE = 44100;
@@ -36,44 +38,103 @@ public class ezapp_playbackcapture {
 
     private Context cx;
 
-    private static final int PERMISSION_CODE = 1; //xxx what is this
+    private static final int PERMISSION_CODE = 1234; //xxx what is this
+    private MediaProjectionManager mProjectionManager;
+    private MediaProjection mediaProjection; // Assume this is initialized from a MediaProjectionManager request
 
-    public ezapp_playbackcapture(Context cxarg) {
-        Log.v(TAG, "EZAPP playbackcapture init");
-        cx = cxarg;
+    private Intent mdata;
 
-        MediaProjectionManager mProjectionManager = 
-            (MediaProjectionManager) cx.getSystemService(Context.MEDIA_PROJECTION_SERVICE);
+    public void on_result(int requestCode, int resultCode, Intent data) {
+        Log.v(TAG, "XXXXXXXXXX in onActivityResult requestCode " + requestCode);
+        Log.v(TAG, "XXXXXXXXXX in onActivityResult resultCode " + resultCode);
 
-        //startActivityForResult(mProjectionManager.createScreenCaptureIntent(), PERMISSION_CODE);
+        if (requestCode != PERMISSION_CODE) {
+            // Handle error or unknown request code
+            return;
+        }
+        if (resultCode != -1) {  // xxx RESULT_OK
+            // User denied permission
+            return;
+        }
+
+        mdata = data;
+
+        // User granted permission, get the MediaProjection instance
+        //mediaProjection = mProjectionManager.getMediaProjection(resultCode, data);
+        //Log.v(TAG, "XXXXXXXXXX mediaProjection = " + mediaProjection);
+
+        // Proceed to start a foreground service and create a VirtualDisplay
+        // (especially for Android 14+ or long-running tasks)
+        //startMediaProjectionSession(mediaProjection);
+
+        //startPlaybackCapture();
+    }
+
+//  public ezapp_playbackcapture(SDLActivity mSingleton, Context cxarg) {
+//      Log.v(TAG, "XXXXXXXXXX EZAPP playbackcapture init");
+//      cx = cxarg;
+
+//      mProjectionManager = 
+//          (MediaProjectionManager) cx.getSystemService(Context.MEDIA_PROJECTION_SERVICE);
+//      Log.v(TAG, "XXXXXXXXXX mProjectionManger = " + mProjectionManager);
+
+//      mSingleton.startActivityForResult(mProjectionManager.createScreenCaptureIntent(), PERMISSION_CODE);
+//      Log.v(TAG, "XXXXXXXXXX after  mSingleton.startActivityForResult");
+
         // xxx User granted permission, get the MediaProjection instance
  
-        Intent intent = mProjectionManager.createScreenCaptureIntent();
-        mediaProjection = mProjectionManager.getMediaProjection(-1, intent); //xxx ?? resultCode, data);
+        //Intent intent = mProjectionManager.createScreenCaptureIntent();
+        //mediaProjection = mProjectionManager.getMediaProjection(-1, intent); //xxx ?? resultCode, data);
 // add prints
 // update xml
 // set the permission manually, and/or from within SDL main.c
 // call the constructor at a later time, triggered by code in main.c
 // call startPlaybackCapture,  and view pritns
 // add prints to the thread
-    }
 
-    public void startPlaybackCapture() {
+    public void startPlaybackCapture(SDLActivity mSingleton, Context cxarg) {
+        Log.v(TAG, "XXXXXXXX startPlaybackCapture starting");
+        cx = cxarg;
+
+        mProjectionManager = 
+            (MediaProjectionManager) cx.getSystemService(Context.MEDIA_PROJECTION_SERVICE);
+        Log.v(TAG, "XXXXXXXXXX mProjectionManger = " + mProjectionManager);
+
+        mSingleton.startActivityForResult(mProjectionManager.createScreenCaptureIntent(), PERMISSION_CODE);
+        Log.v(TAG, "XXXXXXXXXX after  mSingleton.startActivityForResult");
+
+        while (mdata == null) {
+            SystemClock.sleep(2000);
+        }
+
+        mediaProjection = mProjectionManager.getMediaProjection(-1, mdata);
         if (mediaProjection == null) {
-            // Handle case where MediaProjection is not available (e.g., user denied permission)
+            Log.v(TAG, "XXXXXXXXXX getMediaProjection failed\n");
             return;
         }
 
+//      if (mediaProjection == null) {
+            // Handle case where MediaProjection is not available (e.g., user denied permission)
+            //mediaProjection = mProjectionManager.getMediaProjection(resultCode, data);
+//          Log.v(TAG, "XXXXXXXX startPlaybackCapture mediaProjection = " + mediaProjection);
+//          if (mediaProjection == null) {
+//              return;
+//          }
+//      }
+
+        Log.v(TAG, "XXXXXXXX 1");
         bufferSizeInBytes = AudioRecord.getMinBufferSize(SAMPLE_RATE, CHANNEL_CONFIG, AUDIO_FORMAT);
 
         // 1. Build the AudioPlaybackCaptureConfiguration
+        Log.v(TAG, "XXXXXXXX 2");
         AudioPlaybackCaptureConfiguration captureConfig =
             new AudioPlaybackCaptureConfiguration.Builder(mediaProjection)
                 .addMatchingUsage(AudioAttributes.USAGE_MEDIA) // Capture media playback audio
-                .addMatchingUsage(AudioAttributes.USAGE_GAME)  // Capture game audio
+                //.addMatchingUsage(AudioAttributes.USAGE_GAME)  // Capture game audio
                 .build();
 
         // 2. Configure the AudioFormat
+        Log.v(TAG, "XXXXXXXX 3");
         AudioFormat format = new AudioFormat.Builder()
             .setSampleRate(SAMPLE_RATE)
             .setChannelMask(CHANNEL_CONFIG)
@@ -81,18 +142,21 @@ public class ezapp_playbackcapture {
             .build();
 
         // 3. Initialize AudioRecord with the configuration
+        Log.v(TAG, "XXXXXXXX 4");
         audioRecord = new AudioRecord.Builder()
-            //xxx .setAudioSource(MediaRecorder.AudioSource.DEFAULT) // Default source is fine for playback capture
+            //.setAudioSource(MediaRecorder.AudioSource.DEFAULT) // Default source is fine for playback capture
             .setAudioFormat(format)
             .setBufferSizeInBytes(bufferSizeInBytes)
-            //xxx .setAudioPlaybackCaptureConfiguration(captureConfig) // **Key step**
+            .setAudioPlaybackCaptureConfig(captureConfig) // **Key step**
             .build();
 
         // Start recording
+        Log.v(TAG, "XXXXXXXX 5");
         audioRecord.startRecording();
         isRecording = true;
 
         // Start a thread to read the audio data
+        Log.v(TAG, "XXXXXXXX 6");
         recordingThread = new Thread(new Runnable() {
             @Override
             public void run() {
@@ -100,12 +164,14 @@ public class ezapp_playbackcapture {
             }
         }, "AudioRecorderThread");
         recordingThread.start();
+        Log.v(TAG, "XXXXXXXX 7");
     }
 
     private void writeAudioDataToFile() {
         // This is a simple example for saving raw PCM data.
         // Real-world apps might use an encoder or a library to create a proper audio file (e.g., WAV).
-        File file = new File(cx.getExternalFilesDir(null), "captured_audio.pcm");
+        Log.v(TAG, "XXXX EXT FILE DIR " + cx.getExternalFilesDir(null));
+        File file = new File(cx.getFilesDir(), "captured_audio.pcm");
         FileOutputStream fos = null;
         try {
             fos = new FileOutputStream(file);
@@ -114,6 +180,7 @@ public class ezapp_playbackcapture {
 
             while (isRecording) {
                 bytesRead = audioRecord.read(buffer, 0, bufferSizeInBytes);
+                Log.v(TAG, "XXXX bytesRead " + bytesRead);
                 if (bytesRead > 0) {
                     fos.write(buffer, 0, bytesRead);
                 }
@@ -131,7 +198,7 @@ public class ezapp_playbackcapture {
         }
     }
 
-    private void stopPlaybackCapture() {
+    public void stopPlaybackCapture() {
         isRecording = false;
         if (recordingThread != null) {
             try {
@@ -150,5 +217,4 @@ public class ezapp_playbackcapture {
             mediaProjection = null;
         }
     }
-
 }
