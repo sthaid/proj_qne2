@@ -28,6 +28,6 @@ cmake --install .
 
 --- build and run test program ---
 
-gcc -o main main.c -Wall -I./local/include -lSDL3_ttf -L$HOME/sdl336/local/lib -lSDL3
-LD_LIBRARY_PATH=$HOME/sdl336/local/lib ./main
+gcc -o sdl336_test sdl336_test.c -Wall -I./local/include -lSDL3_ttf -L$HOME/sdl336/local/lib -lSDL3
+LD_LIBRARY_PATH=$HOME/sdl336/local/lib ./sdl336_test
 

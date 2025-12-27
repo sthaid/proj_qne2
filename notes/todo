@@ -1,9 +1,136 @@
+
+check on my issue
+-  https://github.com/libsdl-org/SDL/issues/14705
+
+document procedure for downloading SDL code to ubuntu
+
+logging
+
+audio capture to a shared file
+- app to monitor this file
+  - controls
+   - connect/disconnect
+   - start/stop
+  - display volume bar
+  - record to wav file, in stereo
+
+mp3 encoding
+- reference: "how to create an mp3 file using SDL on android"
+- lame recorder https://github.com/zlargon/lame/tree/master/debian
+    - https://github.com/zlargon/lame/tree/master    libmp3lame
+
+simplify, cleanup utils.cpp
+
+cleanup media projection - https://developer.android.com/media/grow/media-projection#java
+
+sdl_mixer
+- build test program on linux
+- incorporate sdl mixer,
+  - study api
+  - write program to play mp3
+
+---------------------------------------
+
+xxxxxxxxxx  audio capture xxxxxxxxx
+
+rename to audiocapture
+
+cleanup the code
+
+once capture is established then keep it unless
+
+where is the defualt source method
+
+new app to start and stop capture
+- start and stop  AND start with reestablish connection
+- specify filename, start with a default filename
+- list and rename and remove files
+- color organ
+
+save the files in mp3 format
+sdl mixer
+
+To capture audio output programmatically on Android, you must use the AudioRecord API with an AudioPlaybackCaptureConfiguration. This feature requires Android 10 (API level 29) or higher and user consent via a MediaProjection service. 
+
+Directly capturing another app's audio output is a privacy-sensitive operation, and standard apps can only capture audio produced by themselves or with explicit user permission via the screen capture dialog. 
+
+xxxxxxxxxxxxxxxxxxxxxx
+mp3 encoding 
+https://github.com/zlargon/lame/tree/master/debian
+
+xxxxxxxxxxxxxxxxxxxxxx
+
+playback capture, 
+- API level 29
+
+"how to initiate a MediaProjection session"
+
+"how to use android sdl library to capture aduio output java sample code"
+
+
+
+xxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+
+Logging
+12-24 14:23:13.694  9042  9077 I SDL/APP : EZAPP INFO Clock: starting, data_dir=apps/Clock
+12-24 14:23:13.695  9042  9077 I SDL/APP : EZAPP INFO Clock: calc RISE 12/24/2025 07:14:02
+                                                      123456789 123456789 123456789 123456789
+
+12-24 14:25:00.459  9042  9077 I SDL/APP : EZAPP INFO svc_wait_for_req: svc_name=Location timeout_abstime_secs=1766604360 time_until_timeout=60
+
+Clock: starting, data_dir=apps/Clock
+
+print to a texture,
+rotate and display
+
+filter for errors only, or info+errors
+controls
+- level  info+errors or errors
+- colorize the errors
+- motion for scrolling
+- top / bottom / follow
+- wrap enable
+
+wrapping
+
+shorten the lines
+12-24 14:23:13 I EZAPP: Clock: starting, data_dir=apps/Clock
+123456789 123456789 123456789 123456789 123456789 123456789 123456789 123456789 
+
+12-24 14:23:13 I EZAPP: Clock: starting, data_dir=apps/Clock 
+  more stuff here more more more
+
+how to tag using EZAPP
+
+demo app page that rotates
+
+use a service to save the last 1000 lines of log, in breif form
+- 2 files, one for errors and other for all
+- circular files eiwth head/tail
+- in format compatible with multi line print
+- does multiline print break at newlines
+
+make a split line util
+
+===================================
+============ PRIORITY =============
+===================================
+
+what API_PLATFORM level should be used 29 or 24
+
+app or test using SDL_Render_Target
+
 Android -
 - why is android build only building arm64-v8a
 - SDL3.3.6 issue on Android
   - https://github.com/libsdl-org/SDL/issues/14705
   - update to latest SDL prerelease, when ready
 - make the ezapp icon
+
+location, just use couars location
+
+location permission problem
+- java code may be failing if there is not permission
 
 logging display  <====
 
@@ -55,15 +182,18 @@ New Apps
 - blackjack
 - prime number benchmark
 
-=======================================================
-=============== NOTES  README UPDATES  ================
-=======================================================
+=================================================
+===============  README UPDATES  ================
+=================================================
 
 document type sig
 https://docs.oracle.com/javase/7/docs/technotes/guides/jni/spec/types.html#wp276
 
 how to run vi with tags from a subdir
 - save my .vimrc
+
+android reference
+https://developer.android.com/reference/android/util/Log
 
 
 =================================================
