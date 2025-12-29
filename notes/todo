@@ -1,3 +1,38 @@
+getifaddrs sdk and platform level
+
+When using the Android NDK for native code, your APP_PLATFORM should ideally be the same as, or lower than, your minSdkVersion. The Android Gradle Plugin (AGP), when using externalNativeBuild, automatically uses your minSdkVersion for the native build to ensure compatibility. 
+
+print versions at startup
+
+xxxxxxxxxxxxxxxxxx
+
+setup  captureplayback
+SDLAct.java
+xxxxxxxxxxxxxxx
+
+DIFF: .gitignore                        k
+DIFF: android/setup_files/app_jni_src_Android.mk   k
+DIFF: android/setup_files/app_src_main_AndroidManifest.xml   k
+DIFF: android/setup_files/app_src_main_java_org_libsdl_app_SDLActivity.java  k
+NEW FILE: android/setup_main              k
+DIFF: android/setup                       k
+DIFF: bin/.ezshrc                        xxx
+DIFF: bin/adb_connect                    xxx
+DIFF: linux/Makefile                   k
+NEW FILE: linux/sdl_build/README             k
+NEW FILE: linux/sdl_build/build             k
+NEW FILE: linux/sdl_build/clean             k
+NEW FILE: linux/sdl_build/run_test             k
+NEW FILE: linux/sdl_build/sdl_test.c             k
+DIFF: src/sdlx_audio.c                   k
+DIFF: src/sdlx_video.c                   k
+
+
+
+minsdk 29 ? getifaddrs
+API_PLATFORM  29 or 24?
+xxxxxxxxxxx
+
 memo app volume problem
 
 use one setup script

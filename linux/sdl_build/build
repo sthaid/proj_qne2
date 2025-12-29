@@ -1,0 +1,27 @@
+#!/bin/bash
+
+function run_cmake()
+{
+    pushd $1/build
+    cmake .. -DCMAKE_INSTALL_PREFIX=$LOCAL
+    cmake --build .
+    cmake --install .
+    popd
+}
+
+# get SDL3_mixer code, and save to tar file
+git clone https://github.com/libsdl-org/SDL
+git clone https://github.com/libsdl-org/SDL_ttf
+git clone https://github.com/libsdl-org/SDL_mixer
+
+# make directories needed to run cmake
+mkdir local
+mkdir SDL/build
+mkdir SDL_ttf/build
+mkdir SDL_mixer/build
+
+# run cmake
+LOCAL=$PWD/local
+run_cmake SDL
+run_cmake SDL_ttf
+run_cmake SDL_mixer

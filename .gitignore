@@ -10,9 +10,11 @@ tags
 
 bin/ezsh
 linux/ezApp
-android/SDL3-3.2.28
+linux/sdl_build/SDL*
+linux/sdl_build/local
 android/SDL
 android/setup_files/orig
+android/setup_files/downloads
 
 # picoc tests
 picoc/my_tests

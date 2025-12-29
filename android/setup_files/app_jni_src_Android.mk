@@ -36,7 +36,7 @@ LOCAL_SRC_FILES :=  \
   picoc/platform/platform_unix.c
 
 SDL_PATH := ../SDL
-SDL_TTF_PATH := ../SDL3_ttf
+SDL_TTF_PATH := ../SDL_ttf
 SDL_MIXER_PATH := ../SDL_mixer
 
 LOCAL_C_INCLUDES := $(LOCAL_PATH)/$(SDL_PATH)/include \

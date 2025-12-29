@@ -1,0 +1,5 @@
+#!/bin/bash
+
+rm -rf local
+rm -rf SDL SDL_ttf SDL_mixer
+

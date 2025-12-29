@@ -36,21 +36,22 @@ SRCS :=  \
   ../picoc/platform/library_unix.c \
   ../picoc/platform/platform_unix.c
 
-TARGET = ezApp
-
 # xxx add -O2
 
 CFLAGS = -Wall -Werror -Wno-unused-result -g -I../src $(shell pkg-config sdl3 --cflags)
+CFLAGS += -I./sdl_build/local/include
 
-$(TARGET):
+build_and_run: build run
+
+build:
 	../bin/build_tools//gen_version
-	gcc -o $@ $(CFLAGS) $(SRCS) -lSDL3 -lSDL3_ttf -lm
+	gcc -o ezApp $(CFLAGS) $(SRCS) -L./sdl_build/local/lib -lSDL3 -lSDL3_ttf -lSDL3_mixer -lm
 
-run: $(TARGET)
-	cd ../files; ../linux/$(TARGET)
+run:
+	cd ../files; LD_LIBRARY_PATH=../linux/sdl_build/local/lib ../linux/ezApp
 
 clean:
-	rm -f $(TARGET) ../src/version.h
+	rm -f ezApp ../src/version.h
 
-.PHONY: $(TARGET)
+.PHONY: build run build_and_run
 
