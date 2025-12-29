@@ -356,6 +356,59 @@ bool util_is_flashlight_on(void)
     return is_on;
 }
 
+void util_start_playback_capture(void)  //xxx wip
+{
+    jmethodID method_id;
+
+    // retrieve the JNI environment.,
+    // retrieve the Java instance of the SDLActivity,
+    // find the Java class of the activity. It should be SDLActivity or a subclass of it.
+    JNIEnv* env = (JNIEnv*)SDL_GetAndroidJNIEnv();
+    jobject activity = (jobject)SDL_GetAndroidActivity();
+    jclass clazz(env->GetObjectClass(activity));
+
+    // get the method_id, print message if failed
+    method_id = env->GetMethodID(clazz, "start_playback_capture", "()V");
+    if (method_id == 0) {
+        ERROR("failed to get method_id for start_playback_capture\n");
+    }
+
+    // if got the method_id then call the start_playback_capture method
+    if (method_id != 0) {
+        env->CallVoidMethod(activity, method_id);
+    }
+
+    // clean up the localreferences.
+    env->DeleteLocalRef(activity);
+    env->DeleteLocalRef(clazz);
+}
+
+void util_stop_playback_capture(void)
+{
+    jmethodID method_id;
+
+    // retrieve the JNI environment.,
+    // retrieve the Java instance of the SDLActivity,
+    // find the Java class of the activity. It should be SDLActivity or a subclass of it.
+    JNIEnv* env = (JNIEnv*)SDL_GetAndroidJNIEnv();
+    jobject activity = (jobject)SDL_GetAndroidActivity();
+    jclass clazz(env->GetObjectClass(activity));
+
+    // get the method_id, print message if failed
+    method_id = env->GetMethodID(clazz, "stop_playback_capture", "()V");
+    if (method_id == 0) {
+        ERROR("failed to get method_id for stop_playback_capture\n");
+    }
+
+    // if got the method_id then call the stop_playback_capture method
+    if (method_id != 0) {
+        env->CallVoidMethod(activity, method_id);
+    }
+
+    // clean up the localreferences.
+    env->DeleteLocalRef(activity);
+    env->DeleteLocalRef(clazz);
+}
 #else
 
 // -----------------  NOT ANDROID - TEST CODE  ---------------------------

@@ -36,13 +36,15 @@ LOCAL_SRC_FILES :=  \
   picoc/platform/platform_unix.c
 
 SDL_PATH := ../SDL
-SDL_TTF_PATH := ../SDL3_ttf-3.2.2 
+SDL_TTF_PATH := ../SDL3_ttf
+SDL_MIXER_PATH := ../SDL_mixer
 
 LOCAL_C_INCLUDES := $(LOCAL_PATH)/$(SDL_PATH)/include \
                     $(LOCAL_PATH)/$(SDL_TTF_PATH) \
+                    $(LOCAL_PATH)/$(SDL_MIXER_PATH) \
                     $(LOCAL_PATH)/src $(LOCAL_PATH)/picoc
 
-LOCAL_SHARED_LIBRARIES := SDL3 SDL3_ttf
+LOCAL_SHARED_LIBRARIES := SDL3 SDL3_ttf SDL3_mixer
 
 LOCAL_LDLIBS := -lGLESv1_CM -lGLESv2 -lOpenSLES -llog -landroid
 

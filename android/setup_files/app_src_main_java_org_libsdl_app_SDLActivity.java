@@ -58,9 +58,9 @@ import android.content.ServiceConnection;
 import android.os.Binder;
 import android.os.IBinder;
 import android.content.ComponentName;
-
 import org.libsdl.app.ezapp_fgsvc;
 import org.libsdl.app.ezapp_utils;
+import org.libsdl.app.ezapp_playbackcapture;
 
 /**
     SDL Activity
@@ -246,6 +246,7 @@ public class SDLActivity extends Activity implements View.OnSystemUiVisibilityCh
     private static ezapp_utils mezapp_utils;
     private static ezapp_fgsvc mezapp_fgsvc;
     private static boolean mezapp_fgsvc_isbound = false;
+    private static ezapp_playbackcapture mezapp_playbackcapture;
 
     protected static SDLGenericMotionListener_API14 getMotionListener() {
         if (mMotionListener == null) {
@@ -517,6 +518,15 @@ public class SDLActivity extends Activity implements View.OnSystemUiVisibilityCh
 
         // EZAPP onCreate: Initialize Utils: Location, TextToSpeech, Flashlight
         mezapp_utils = new ezapp_utils(getContext());
+        mezapp_playbackcapture = new ezapp_playbackcapture();
+    }
+
+    // EZAPP playback capture
+    public void start_playback_capture() { //xxx
+        mezapp_playbackcapture.startPlaybackCapture(mSingleton, getContext());
+    }
+    public void stop_playback_capture() { //xxx
+        mezapp_playbackcapture.stopPlaybackCapture();
     }
 
     // EZAPP start/stop foreground
@@ -845,9 +855,14 @@ public class SDLActivity extends Activity implements View.OnSystemUiVisibilityCh
         }
     }
 
-    @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
+
+        Log.e(TAG, "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX " + requestCode + " " + resultCode);
+        if (requestCode == 1234) {
+            mezapp_playbackcapture.on_result(requestCode, resultCode, data);
+            return;
+        }
 
         if (mFileDialogState != null && mFileDialogState.requestCode == requestCode) {
             /* This is our file dialog */

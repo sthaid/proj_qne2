@@ -107,6 +107,20 @@ int MAIN(int argc, char **argv)
     return 0;
 }
 
+static int playback_capture_thread(void *cx)  //xxx test code
+{
+    return 0; // xxx 
+
+    sleep(5);
+    INFO("CALLING util_start_playback_capture\n");
+    util_start_playback_capture();
+    sleep(30);
+
+    INFO("CALLING util_stop_playback_capture\n");
+    util_stop_playback_capture();
+    return 0;
+}
+
 static int init(void)
 {
     int rc;
@@ -175,11 +189,15 @@ static int init(void)
     if (sdlx_get_permission("android.permission.ACCESS_COARSE_LOCATION") != 0) {
         ERROR("failed to get permission ACCESS_COARSE_LOCATION\n");
     }
-    if (sdlx_get_permission("android.permission.ACCESS_FINE_LOCATION") != 0) {
-        ERROR("failed to get permission ACCESS_FINE_LOCATION\n");
-    }
+//  xxx needed?
+//  if (sdlx_get_permission("android.permission.ACCESS_FINE_LOCATION") != 0) {
+//      ERROR("failed to get permission ACCESS_FINE_LOCATION\n");
+//  }
     if (sdlx_get_permission("android.permission.ACTIVITY_RECOGNITION") != 0) {
         ERROR("failed to get permission ACTIVITY_RECOGNITION\n");
+    }
+    if (sdlx_get_permission("android.permission.RECORD_AUDIO") != 0) {
+        ERROR("failed to get permission RECORD_AUDIO\n");
     }
 #endif
 
@@ -195,6 +213,8 @@ static int init(void)
     } else {
         util_stop_foreground();
     }
+
+    sdlx_create_detached_thread(playback_capture_thread, NULL);  //xxx temp
 
     // success
     return 0;

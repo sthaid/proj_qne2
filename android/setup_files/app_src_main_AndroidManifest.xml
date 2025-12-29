@@ -65,6 +65,7 @@
     <!--Foreground Service Permissions-->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PROJECTION" />
 
     <!-- Flashlight support -->
     <uses-permission android:name="android.permission.CAMERA"/>
@@ -129,7 +130,7 @@
             android:name="org.libsdl.app.ezapp_fgsvc"
             android:enabled="true"
             android:exported="false" 
-            android:foregroundServiceType="location" />
+            android:foregroundServiceType="location|mediaProjection" />
  
     </application>
 

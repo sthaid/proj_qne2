@@ -1,10 +1,32 @@
+memo app volume problem
 
-check on my issue
--  https://github.com/libsdl-org/SDL/issues/14705
+use one setup script
+- either allow for checkout of a release on main, or 
+- wget of tar files
 
-document procedure for downloading SDL code to ubuntu
+use TTF_RenderText_Solid or Blended   NOT Shaded
 
-logging
+native png support
+
+combine setup_main and setup_release
+
+check on my issues    <===============
+- https://github.com/libsdl-org/SDL/issues/14705
+- https://github.com/libsdl-org/SDL_mixer/issues/795
+
+doc update in README
+- https://wiki.libsdl.org/SDL3_mixer/CategorySDLMixer
+- https://github.com/libsdl-org/SDL_mixer
+
+add mixer playfile to sdlx_audio.c <=========
+- write program to play mp3   DONE  ~/sdl_build
+
+logging   <============
+
+cleanup media projection  - https://developer.android.com/media/grow/media-projection#java    <==========
+- simplify, cleanup utils.cpp
+
+add SDL_SetRenderTarget    <===========
 
 audio capture to a shared file
 - app to monitor this file
@@ -12,24 +34,32 @@ audio capture to a shared file
    - connect/disconnect
    - start/stop
   - display volume bar
-  - record to wav file, in stereo
+  - record to wav file, in stereo  OR record to mp3
 
 mp3 encoding
 - reference: "how to create an mp3 file using SDL on android"
+             "how to include LAME MP3 encoder code in an android project using SDL"
 - lame recorder https://github.com/zlargon/lame/tree/master/debian
     - https://github.com/zlargon/lame/tree/master    libmp3lame
-
-simplify, cleanup utils.cpp
-
-cleanup media projection - https://developer.android.com/media/grow/media-projection#java
-
-sdl_mixer
-- build test program on linux
-- incorporate sdl mixer,
-  - study api
-  - write program to play mp3
+- build lame from ource code ource ;  can it support streaming
 
 ---------------------------------------
+-------------- DONE -------------------
+---------------------------------------
+
+document procedure for downloading SDL code to ubuntu
+
+try using lame
+- aplay -f S16 -r 44100 captured_audio.pcm
+- lame -r -s 44.1 --bitwidth 16 --signed -m m captured_audio.pcm captured_audio.mp3
+    -r raw
+    --little-endian
+    --big-endian
+    -m  mode - m=mone  s=stereo
+- mpg123 filename.mp3     # playing on linux
+======================================
+======================================
+======================================
 
 xxxxxxxxxx  audio capture xxxxxxxxx
 

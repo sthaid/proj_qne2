@@ -87,6 +87,9 @@ void util_turn_flashlight_off(void);
 bool util_is_flashlight_on(void);
 void util_toggle_flashlight(void);
 
+void util_start_playback_capture(void);  //xxx wip
+void util_stop_playback_capture(void);
+
 #ifdef __cplusplus
 }
 #endif

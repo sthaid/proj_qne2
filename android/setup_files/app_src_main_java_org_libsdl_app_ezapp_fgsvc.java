@@ -64,8 +64,11 @@ public class ezapp_fgsvc extends Service {
                 .setVisibility(Notification.VISIBILITY_PUBLIC)
                 .build();
 
-        // startForeground, '100' is the notification id
-        this.startForeground(100, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION);
+        // startForeground, '100' is the notification id  xxx review
+        this.startForeground(100, notification, 
+                  ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION |
+                  ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PROJECTION
+                                            );
 
         // Service will be restarted if killed by the system
         return START_STICKY;
