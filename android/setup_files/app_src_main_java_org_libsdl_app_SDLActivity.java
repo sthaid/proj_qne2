@@ -513,26 +513,30 @@ public class SDLActivity extends Activity implements View.OnSystemUiVisibilityCh
             }
         }
 
+// xxxxxxxxxxxxxxxxxxxxxx
         // EZAPP onCreate: Initialize Utils: Location, TextToSpeech, Flashlight
         mezapp_utils = new ezapp_utils(getContext());
         // xxx comment: Initialize playbackcapture
         mezapp_playbackcapture = new ezapp_playbackcapture();
     }
+// xxx rename these routines with ezapp prefix??
 
     // EZAPP playback capture
-    public void start_playback_capture() { //xxx
+    public double start_playback_capture() {
         mezapp_playbackcapture.startPlaybackCapture(mSingleton, getContext());
+        return 0;
     }
 
-    public void stop_playback_capture() { //xxx
+    public double stop_playback_capture() {
         mezapp_playbackcapture.stopPlaybackCapture();
+        return 0;
     }
 
     // EZAPP start/stop foreground
-    public void start_foreground() {
+    public double start_foreground() {
         if (mezapp_fgsvc_isbound) {
             Log.v(TAG, "EZAPP foreground already enabled");
-            return;
+            return 0;
         }
 
         showToast("enabling foreground", 0, Gravity.CENTER, 0, 0);
@@ -541,12 +545,13 @@ public class SDLActivity extends Activity implements View.OnSystemUiVisibilityCh
         ComponentName component_name;
         component_name = startForegroundService(new Intent(this, ezapp_fgsvc.class));
         bindService(new Intent(this, ezapp_fgsvc.class), ezapp_fgsvc_connection, Context.BIND_AUTO_CREATE);
+        return 0;
     }
 
-    public void stop_foreground() {
+    public double stop_foreground() {
         if (!mezapp_fgsvc_isbound) {
             Log.v(TAG, "EZAPP foreground already disabled");
-            return;
+            return 0;
         }
 
         showToast("disabling foreground", 0, Gravity.CENTER, 0, 0);
@@ -556,10 +561,11 @@ public class SDLActivity extends Activity implements View.OnSystemUiVisibilityCh
         stopService(serviceIntent);
         unbindService(ezapp_fgsvc_connection);
         mezapp_fgsvc_isbound = false;
+        return 0;
     }
 
-    public boolean is_foreground_enabled() {
-        return mezapp_fgsvc_isbound;
+    public double is_foreground_enabled() {
+        return mezapp_fgsvc_isbound ? 1 : 0;
     }
 
     private ServiceConnection ezapp_fgsvc_connection = new ServiceConnection() {
@@ -592,25 +598,28 @@ public class SDLActivity extends Activity implements View.OnSystemUiVisibilityCh
     }
 
     // EZAPP text to speech
-    public int text_to_speech(String message) {
+    public double text_to_speech(String message) {
         return mezapp_utils.text_to_speech(message);
     }
 
     // EZAPP flashlight
-    public void turn_flashlight_on() {
+    public double turn_flashlight_on() {
         mezapp_utils.turn_flashlight_on();
+        return 0;
     }
 
-    public void turn_flashlight_off() {
+    public double turn_flashlight_off() {
         mezapp_utils.turn_flashlight_off();
+        return 0;
     }
 
-    public boolean is_flashlight_on() { 
-        return mezapp_utils.is_flashlight_on();
+    public double is_flashlight_on() { 
+        return mezapp_utils.is_flashlight_on() ? 1 : 0;
     }       
                 
-    public void toggle_flashlight() {
+    public double toggle_flashlight() {
         mezapp_utils.toggle_flashlight();
+        return 0;
     }
 
     // ---- EZAPP END ----

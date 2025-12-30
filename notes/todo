@@ -1,3 +1,16 @@
+mixer play mp3 api
+- and app
+
+playbackcapture apis
+
+lame mp3 encoder
+
+why is volume low in memo
+- SDL_SetAudioDeviceGain(SDL_AudioDeviceID devid, float gain)
+- maybe set the gain from the app instead of from Settings
+
+xxxxxxxxxxxxxxxxxxxxx
+
 getifaddrs sdk and platform level
 
 When using the Android NDK for native code, your APP_PLATFORM should ideally be the same as, or lower than, your minSdkVersion. The Android Gradle Plugin (AGP), when using externalNativeBuild, automatically uses your minSdkVersion for the native build to ensure compatibility. 

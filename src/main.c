@@ -706,7 +706,7 @@ static void settings(void)
             sdlx_register_event(loc, EVID_SERVICES);
         }
 
-        // display Record_Scale
+        // display Record_Scale xxx change to Gain
         if (GET_Y) {
             sdlx_audio_get_params(&ap);
             loc = sdlx_render_printf(0, y, "Record_Scale = %0.1f", ap.record_scale);
@@ -832,7 +832,7 @@ static void settings(void)
             svcs_display(BG_COLOR);
             break;
         case EVID_RECORD_SCALE: {
-            double number = get_number("Record_Scale", 1, 10);
+            double number = get_number("Record_Scale", 1, 100);  // xxx was limitted to 10
             if (number != INVALID_NUMBER) {
                 params.record_scale = number;
                 util_set_numeric_param(".", "record_scale", number);

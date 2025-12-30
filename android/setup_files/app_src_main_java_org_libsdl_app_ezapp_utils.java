@@ -23,15 +23,16 @@ import android.view.Gravity;
 
 public class ezapp_utils {
     private static final String TAG = "SDL";
+    private static final double INVALID_NUMBER = 999999999;
 
     private static TextToSpeech mTts;
     private static boolean      isTtsInitialized = false;
 
     private static FusedLocationProviderClient fusedLocationClient;
     private static LocationCallback            locationCallback;
-    private static double                      latitude  = 999999999;
-    private static double                      longitude = 999999999;
-    private static double                      altitude  = 999999999;
+    private static double                      latitude  = INVALID_NUMBER;
+    private static double                      longitude = INVALID_NUMBER;
+    private static double                      altitude  = INVALID_NUMBER;
 
     private static CameraManager cameraManager;
     private static String        cameraId;
@@ -111,6 +112,7 @@ public class ezapp_utils {
     // text to speech
     //
 
+    // return 0 on success, INVALID_NUMBER on failure
     public int text_to_speech(String message) {
         int status;
         if (isTtsInitialized && mTts != null) {
@@ -121,9 +123,9 @@ public class ezapp_utils {
                 Log.v(TAG, "EZAPP tts stopping");
                 status = mTts.stop();
             }
-            return status;
+            return status == 0 ? 0 : INVALID_NUMBER;
         } else {
-            return -1;
+            return INVALID_NUMBER;
         }
     }
 

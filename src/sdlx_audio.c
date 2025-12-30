@@ -113,6 +113,13 @@ static int audio_open(bool record)
             ERROR("SDL_OpenAudioDeviceStream failed for record\n");
             return -1;
         }
+
+        //bool succ = SDL_SetAudioDeviceGain(SDL_AUDIO_DEVICE_DEFAULT_RECORDING, 100);
+        //INFO("XXXXXXXXXXXXXXXXXXXXXX SET RECORD DEVICE GAIN %d\n", succ);
+
+        //bool succ = SDL_SetAudioStreamGain(record_stream, 1);
+        //INFO("XXXXXXXXXXXXXXXXXXXXXX SET RECORD GAIN %d\n", succ);
+
         INFO("opened recording stream\n");
         return 0;
     }
