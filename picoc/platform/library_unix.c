@@ -634,6 +634,17 @@ void Sdl_audio_create_test_file (struct ParseState *Parser, struct Value *Return
     sdlx_audio_create_test_file(dir, filename, duration_secs, freq);
 }
 
+void Sdl_audio_play_new (struct ParseState *Parser, struct Value *ReturnValue,
+	struct Value **Param, int NumArgs)
+{
+    char *dir      = Param[0]->Val->Pointer;
+    char *filename = Param[1]->Val->Pointer;
+    int rc;
+
+    rc = sdlx_audio_play_new(dir, filename);  //xxx name
+    ReturnValue->Val->Integer = rc; 
+}
+
 //
 // sensors
 //
@@ -852,6 +863,7 @@ struct LibraryFunction SdlFunctions[] = {
     { Sdl_audio_state,                  "void sdlx_audio_state(sdlx_audio_state_t * state);" },
     { Sdl_audio_print_device_info,      "void sdlx_audio_print_devices_info(void);" },
     { Sdl_audio_create_test_file,       "void sdlx_audio_create_test_file(char *dir, char *filename, int duration_secs, int freq);" },
+    { Sdl_audio_play_new,               "int sdlx_audio_play_new(char *dir, char *filename);" },
 
     // sensors
     { Sdl_sensor_get_info_tbl,          "sdlx_sensor_info_t *sdlx_sensor_get_info_tbl(int *num_sensors);" },

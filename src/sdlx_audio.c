@@ -800,3 +800,103 @@ void smooth(short *buff, int len)
         buff[len-1-i] *= smoother[i];
     }
 }
+
+// -----------------  PLAY USING SDL MIXER  ---------------
+// xxx wip
+int sdlx_audio_play_new(char *dir, char *filename)
+{
+    char filepath[200];
+    bool succ;
+    MIX_Mixer *mixer = NULL;
+    MIX_Audio *audio = NULL;
+    MIX_Track *track = NULL;
+    SDL_AudioSpec mixer_spec;
+
+    // xxx 44100 of 48000
+    const SDL_AudioSpec spec = { SDL_AUDIO_S16, 1, 44100 };
+
+    sprintf(filepath, "%s/%s", dir, filename);
+
+    // xxx incorp in Settings
+    printf("SDL_Version %d\n", SDL_GetVersion());
+    printf("MIX_Version %d\n", MIX_Version());
+    //printf("TTF_Version %d\n", TTF_Version());
+
+    if (!util_file_exists(filepath, NULL)) {
+        printf("file %s doesnt exist\n", filepath);
+        goto error;
+    }
+
+    succ = MIX_Init();
+    printf("Init = %d\n", succ);
+    if (!succ) {
+        goto error;
+    }
+
+    mixer = MIX_CreateMixerDevice(SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK, NULL);
+    printf("mixer = %p\n", mixer);
+
+    MIX_GetMixerFormat(mixer, &mixer_spec);
+    printf("mixer_spec: format=0x%x channels=%d freq=%d\n", 
+        mixer_spec.format,
+        mixer_spec.channels,
+        mixer_spec.freq);
+
+    if (strstr(filepath, ".mp3")) {
+        audio = MIX_LoadAudio(mixer, filepath, false);
+    } else {
+        int datalenbytes;
+        void *data = util_read_file(filepath, NULL, &datalenbytes);
+        audio = MIX_LoadRawAudio(mixer, data, datalenbytes, &spec);
+    }
+    printf("audio = %p  %s\n", audio, SDL_GetError());
+
+    SDL_AudioSpec aspec;
+    long duration = MIX_GetAudioDuration(audio);
+    double secs = MIX_AudioFramesToMS(audio, duration) / 1000.;
+    succ = MIX_GetAudioFormat(audio, &aspec);
+    printf("GetAudioFormat succ=%d\n", succ);
+    printf("dur = %ld frames = %0.1f s\n", duration, secs);
+    printf("audio_spec: format=0x%x channels=%d freq=%d\n", 
+        aspec.format,
+        aspec.channels,
+        aspec.freq);
+
+    track = MIX_CreateTrack(mixer);
+    printf("track = %p\n", track);
+
+    succ = MIX_SetTrackAudio(track, audio);
+    printf("SetTrackAudio = %d\n", succ);
+
+    succ = MIX_PlayTrack(track, 0);
+    printf("PlayTrack = %d\n", succ);
+
+    //while (1) pause();
+    //printf("sleeping for 5 secs\n");
+    //sleep(5);
+    // , use MIX_TrackFramesToMS() to convert th
+
+    bool playing;
+    do {
+        playing = MIX_TrackPlaying(track);
+        long pos = MIX_GetTrackPlaybackPosition(track);
+        long remaining = MIX_GetTrackRemaining(track);
+        printf("Playing=%d  pos=%ld  remain=%ld  total=%ld %0.1f s\n",
+               playing, pos, remaining, pos+remaining, 
+               MIX_TrackFramesToMS(track,pos+remaining)/1000.);
+        sleep(1);
+    } while (playing);
+
+
+
+
+    // xxx how to wait for complete
+
+error:
+    //MIX_DestroyTrack(track);
+    //MIX_DestroyAudio(audio);
+    //MIX_DestroyMixer(mixer);
+
+    return 0;     // xxx return real status
+}
+

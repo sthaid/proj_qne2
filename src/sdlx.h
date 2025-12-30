@@ -182,6 +182,8 @@ int sdlx_audio_record(char *dir, char *filename, int max_duration_secs, int auto
 int sdlx_audio_play_tones(sdlx_tone_t *tones);
 int sdlx_audio_file_duration(char *dir, char *filename);
 
+int sdlx_audio_play_new(char *dir, char *filename);
+
 void sdlx_audio_ctl(int req);
 void sdlx_audio_state(sdlx_audio_state_t * state);
 

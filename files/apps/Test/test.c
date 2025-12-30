@@ -1059,8 +1059,12 @@ static char *num2str(double num, char *fmt, char *s)
 
 // -----------------  PAGE 11: PLAYBACK CAPTURE  --------------
 
+//xxx wip
 #define EVID_START_PLAYBACKCAPTURE  10
 #define EVID_STOP_PLAYBACKCAPTURE   11
+
+#define EVID_PLAY_PCM 12
+#define EVID_PLAY_MP3 13
 
 static void page_11_init(void)
 {
@@ -1082,6 +1086,12 @@ static void page_11_draw(void)
     loc = sdlx_render_text( 0, ROW2Y(6), "StopCapture");
     sdlx_register_event(loc, EVID_STOP_PLAYBACKCAPTURE);
 
+    loc = sdlx_render_text( 0, ROW2Y(10), "PlayPcm");
+    sdlx_register_event(loc, EVID_PLAY_PCM);
+
+    loc = sdlx_render_text( 0, ROW2Y(14), "PlayMp3");
+    sdlx_register_event(loc, EVID_PLAY_MP3);
+
     sdlx_print_init_color(COLOR_WHITE, COLOR_BLACK);
 }
 
@@ -1093,6 +1103,12 @@ static void page_11_process_event(sdlx_event_t *ev)
         break;
     case EVID_STOP_PLAYBACKCAPTURE:
         util_stop_playbackcapture();
+        break;
+    case EVID_PLAY_PCM:
+        sdlx_audio_play_new(data_dir, "captured_audio.pcm");
+        break;
+    case EVID_PLAY_MP3:
+        sdlx_audio_play_new(data_dir, "captured_audio.mp3");
         break;
     }
 }

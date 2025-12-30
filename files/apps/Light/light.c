@@ -39,6 +39,7 @@ int main(int argc, char **argv)
 
     // get color from param store; set to COLOR_WHITE if not in params
     color = util_get_numeric_param(data_dir, "color", COLOR_WHITE);
+    printf("XXX initial color 0x%x\n", color);  //xxx
 
     // runtime loop
     while (!done) {
