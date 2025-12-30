@@ -1308,9 +1308,10 @@ void Util_write_png_file(struct ParseState *Parser, struct Value *ReturnValue,
 }
 
 //
-// utils get location: latitude, longitude, and altitude
+// utils java methods
 //
 
+// get location: latitude, longitude, and altitude
 void Util_get_location(struct ParseState *Parser, struct Value *ReturnValue,
         struct Value **Param, int NumArgs)
 {
@@ -1321,10 +1322,7 @@ void Util_get_location(struct ParseState *Parser, struct Value *ReturnValue,
     util_get_location(lat, lng, alt);
 }
 
-//
-// utils text to speech
-//
-
+// text to speech
 void Util_text_to_speech(struct ParseState *Parser, struct Value *ReturnValue,
         struct Value **Param, int NumArgs)
 {
@@ -1339,10 +1337,7 @@ void Util_text_to_speech_stop(struct ParseState *Parser, struct Value *ReturnVal
     util_text_to_speech_stop();
 }
 
-//
-// utils foreground control 
-//
-
+// foreground control 
 void Util_start_foreground(struct ParseState *Parser, struct Value *ReturnValue,
         struct Value **Param, int NumArgs)
 {
@@ -1364,6 +1359,7 @@ void Util_is_foreground_enabled(struct ParseState *Parser, struct Value *ReturnV
     ReturnValue->Val->Integer = is_enabled;
 }
 
+// flashlight
 void Util_turn_flashlight_on(struct ParseState *Parser, struct Value *ReturnValue,
         struct Value **Param, int NumArgs)
 {
@@ -1389,6 +1385,19 @@ void Util_is_flashlight_on(struct ParseState *Parser, struct Value *ReturnValue,
 
     is_on = util_is_flashlight_on();
     ReturnValue->Val->Integer = is_on;
+}
+
+// playback capture   
+void Util_start_playbackcapture(struct ParseState *Parser, struct Value *ReturnValue,
+        struct Value **Param, int NumArgs)
+{
+    util_start_playbackcapture();
+}
+
+void Util_stop_playbackcapture(struct ParseState *Parser, struct Value *ReturnValue,
+        struct Value **Param, int NumArgs)
+{
+    util_stop_playbackcapture();
 }
 
 //
@@ -1432,20 +1441,23 @@ struct LibraryFunction UtilsFunctions[] = {
     // png file read/write
     { Util_read_png_file,    "int util_read_png_file(char *dir, char *filename, unsigned char **pixels, int *w, int *h);" },
     { Util_write_png_file,   "int util_write_png_file(char *dir, char *filename, unsigned char *pixels, int w, int h);" },
-    // location
+    // call java: location
     { Util_get_location,     "void util_get_location(double *latitude, double *longitude, double *altitude);" },
-    // text to speech
+    // call java: text to speech
     { Util_text_to_speech,      "void util_text_to_speech(char *text);" },
     { Util_text_to_speech_stop, "void util_text_to_speech_stop(void);" },
-    // start / stop foreground
+    // call java: start / stop foreground
     { Util_start_foreground,      "void util_start_foreground(void);" },
     { Util_stop_foreground,       "void util_stop_foreground(void);" },
     { Util_is_foreground_enabled, "bool util_is_foreground_enabled(void);" },
-    // flashlight
+    // call java: flashlight
     { Util_turn_flashlight_on,  "void util_turn_flashlight_on(void);" },
     { Util_turn_flashlight_off, "void util_turn_flashlight_off(void);" },
     { Util_toggle_flashlight,   "void util_toggle_flashlight(void);" },
     { Util_is_flashlight_on,    "bool util_is_flashlight_on(void);" },
+    // call java: playbackcapture
+    { Util_start_playbackcapture,    "bool util_start_playbackcapture(void);" },
+    { Util_stop_playbackcapture,    "bool util_stop_playbackcapture(void);" },
 
     { NULL, NULL } };
 

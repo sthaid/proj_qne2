@@ -61,6 +61,11 @@ static void page_9_draw(void);
 
 static void page_10_draw(void);
 
+static void page_11_init(void);
+static void page_11_draw(void);
+static void page_11_process_event(sdlx_event_t *ev);
+static void page_11_exit(void);
+
 // -----------------  MAIN  ------------------------------------------
 
 int main(int argc, char **argv)
@@ -123,22 +128,23 @@ int main(int argc, char **argv)
 
 // xxx check this about picoc
 // picoc: picoc does not support this being static, causes crash
-char *page_title[] = {   // Page
-        "Unit Test",     //   0
-        "Font",          //   1
-        "Sizeof",        //   2
-        "Multi Lines",   //   3
-        "Drawing",       //   4
-        "Textures",      //   5
-        "Colors",        //   6
-        "Audio",         //   7
-        "Sensor Info",   //   8
-        "Sensor Values", //   9
-        "Location",      //  10
+char *page_title[] = {     // Page
+        "Unit Test",       //   0
+        "Font",            //   1
+        "Sizeof",          //   2
+        "Multi Lines",     //   3
+        "Drawing",         //   4
+        "Textures",        //   5
+        "Colors",          //   6
+        "Audio",           //   7
+        "Sensor Info",     //   8
+        "Sensor Values",   //   9
+        "Location",        //  10
+        "Playback Capture" //  11
             };
-static int pagenum = 0;
+static int pagenum = 11;
 
-#define LAST_PAGE 10
+#define LAST_PAGE 11
 
 #define EVID_PREV_PAGE 1
 #define EVID_NEXT_PAGE 2
@@ -155,6 +161,7 @@ static void page_hndlr()
     case 7: page_7_init(); break;
     case 8: page_8_init(); break;
     case 9: page_9_init(); break;
+    case 11: page_11_init(); break;
     }
 
     while (true) {
@@ -189,6 +196,7 @@ static void page_hndlr()
         case 8: page_8_draw(); break;
         case 9: page_9_draw(); break;
         case 10: page_10_draw(); break;
+        case 11: page_11_draw(); break;
         default:
             printf("ERROR %s: invalid pagenum %d\n", progname, pagenum);
             end_program = true;
@@ -236,6 +244,7 @@ static void page_hndlr()
         case 0: page_0_process_event(&event); break;
         case 3: page_3_process_event(&event); break;
         case 7: page_7_process_event(&event); break;
+        case 11: page_11_process_event(&event); break;
         }
     }
 
@@ -245,6 +254,7 @@ static void page_hndlr()
     case 5: page_5_exit(); break;
     case 7: page_7_exit(); break;
     case 8: page_8_exit(); break;
+    case 11: page_11_exit(); break;
     }
 
     // update pagenum
@@ -1045,4 +1055,49 @@ static char *num2str(double num, char *fmt, char *s)
         sprintf(s, fmt, num);
     }
     return s;
+}
+
+// -----------------  PAGE 11: PLAYBACK CAPTURE  --------------
+
+#define EVID_START_PLAYBACKCAPTURE  10
+#define EVID_STOP_PLAYBACKCAPTURE   11
+
+static void page_11_init(void)
+{
+}
+
+static void page_11_draw(void)
+{
+    sdlx_loc_t *loc;
+
+    // xxx is it okay to call start or stop repeated
+    // xxx need method to check if it is running
+
+    // register start / stop playbackcapture events
+    sdlx_print_init_color(COLOR_LIGHT_BLUE, COLOR_BLACK);
+
+    loc = sdlx_render_text( 0, ROW2Y(2), "StartCapture");
+    sdlx_register_event(loc, EVID_START_PLAYBACKCAPTURE);
+
+    loc = sdlx_render_text( 0, ROW2Y(6), "StopCapture");
+    sdlx_register_event(loc, EVID_STOP_PLAYBACKCAPTURE);
+
+    sdlx_print_init_color(COLOR_WHITE, COLOR_BLACK);
+}
+
+static void page_11_process_event(sdlx_event_t *ev)
+{
+    switch (ev->event_id) {
+    case EVID_START_PLAYBACKCAPTURE:
+        util_start_playbackcapture();
+        break;
+    case EVID_STOP_PLAYBACKCAPTURE:
+        util_stop_playbackcapture();
+        break;
+    }
+}
+
+static void page_11_exit(void)
+{
+    util_stop_playbackcapture();
 }

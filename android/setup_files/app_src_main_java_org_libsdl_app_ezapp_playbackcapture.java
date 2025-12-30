@@ -92,9 +92,15 @@ public class ezapp_playbackcapture {
 // call startPlaybackCapture,  and view pritns
 // add prints to the thread
 
+    // xxx don't start twice
     public void startPlaybackCapture(SDLActivity mSingleton, Context cxarg) {
         Log.v(TAG, "XXXXXXXX startPlaybackCapture starting");
         cx = cxarg;
+
+        if (mdata != null) {
+            Log.v(TAG, "XXXXXXXX ERROR startPlaybackCapture already running");
+            return;
+        }
 
         mProjectionManager = 
             (MediaProjectionManager) cx.getSystemService(Context.MEDIA_PROJECTION_SERVICE);
@@ -103,7 +109,7 @@ public class ezapp_playbackcapture {
         mSingleton.startActivityForResult(mProjectionManager.createScreenCaptureIntent(), PERMISSION_CODE);
         Log.v(TAG, "XXXXXXXXXX after  mSingleton.startActivityForResult");
 
-        while (mdata == null) {
+        while (mdata == null) { //xxx needs timeout
             SystemClock.sleep(2000);
         }
 
@@ -216,5 +222,7 @@ public class ezapp_playbackcapture {
             mediaProjection.stop();
             mediaProjection = null;
         }
+
+        mdata = null;
     }
 }

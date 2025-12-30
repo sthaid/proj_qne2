@@ -77,18 +77,21 @@ int util_write_png_file(char *dir, char *filename, unsigned char *pixels, int w,
 // -----------------  CALL ANDROID JAVA  ---------------------
 
 void util_get_location(double *latitude, double *longitude, double *altitude);
+
 void util_text_to_speech(char *text);
 void util_text_to_speech_stop(void);
+
 void util_start_foreground(void);
 void util_stop_foreground(void);
 bool util_is_foreground_enabled(void);
+
 void util_turn_flashlight_on(void);
 void util_turn_flashlight_off(void);
 bool util_is_flashlight_on(void);
 void util_toggle_flashlight(void);
 
-void util_start_playback_capture(void);  //xxx wip
-void util_stop_playback_capture(void);
+void util_start_playbackcapture(void);
+void util_stop_playbackcapture(void);
 
 #ifdef __cplusplus
 }

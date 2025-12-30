@@ -522,12 +522,14 @@ public class SDLActivity extends Activity implements View.OnSystemUiVisibilityCh
 // xxx rename these routines with ezapp prefix??
 
     // EZAPP playback capture
-    public double start_playback_capture() {
+    public double start_playbackcapture() {
+        Log.v(TAG, "EZAPP calling startPlaybackCapture");
         mezapp_playbackcapture.startPlaybackCapture(mSingleton, getContext());
         return 0;
     }
 
-    public double stop_playback_capture() {
+    public double stop_playbackcapture() {
+        Log.v(TAG, "EZAPP calling stopPlaybackCapture");
         mezapp_playbackcapture.stopPlaybackCapture();
         return 0;
     }

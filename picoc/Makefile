@@ -1,6 +1,5 @@
 CC=gcc
 
-
 # Use $ xxd -i ./LICENSE > LICENSE.h
 # to create the license info file. Should be signed char, add a
 # null character to the end of the array.
@@ -9,8 +8,10 @@ CC=gcc
 
 CFLAGS=  -Wall -Wno-unused-result -Werror -O2 -g
 CFLAGS+= -DVER=\"a97d94fa\" -DTAG=\"v3.2.2\"
-CFLAGS+= -I../src -I../cJSON -I../lodepng $(shell pkg-config sdl3 --cflags)
-LIBS=    -lm -lreadline -lSDL3 -lSDL3_ttf
+CFLAGS+= -I../src -I../cJSON -I../lodepng 
+#CFLAGS+= $(shell pkg-config sdl3 --cflags)
+CFLAGS+= -I../linux/sdl_build/local/include
+LIBS=    -lm -lreadline -L../linux/sdl_build/local/lib -lSDL3 -lSDL3_ttf -lSDL3_mixer
 CXXFLAGS = $(CFLAGS)
 
 TARGET	= picoc
@@ -29,6 +30,9 @@ OBJS	:= $(SRCS:%.c=%.o)
 OBJS	:= $(OBJS:%.cpp=%.o)
 
 all: $(TARGET)
+
+run: $(TARGET)
+	LD_LIBRARY_PATH=../linux/sdl_build/local/lib ./picoc
 
 $(TARGET): $(OBJS)
 	$(CC) $(CFLAGS) -o $(TARGET) $(OBJS) $(LIBS)

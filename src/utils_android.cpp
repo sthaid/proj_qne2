@@ -36,7 +36,7 @@
 //   - (Ljava/lang/String;)I: A method that takes a String object as a parameter and returns an int.
 //   - (Ljava/lang/String;I)V: A method that takes a String and an int as parameters and returns void.
 
-// common routine to call java method
+// prototype of common routine to call java method
 static double call_java(const char *method_name, char *arg_str);
 
 // location
@@ -85,7 +85,15 @@ bool util_is_flashlight_on(void) {
     return call_java("is_flashlight_on", NULL) == 1;
 }
 
-// -----------------  CALL JAVA  ----------------------------------
+// playbackcapture
+void util_start_playbackcapture(void) {
+    call_java("start_playbackcapture", NULL);
+}
+void util_stop_playbackcapture(void) {
+    call_java("stop_playbackcapture", NULL);
+}
+
+// -----------------  COMMON ROUTINE TO CALL JAVA METHOD  -------------------------
 
 // returns:
 // - INVALID_NUMBER, when failed, or
@@ -173,13 +181,17 @@ void util_get_location(double *latitude, double *longitude, double *altitude)
 
 void util_text_to_speech(char *text) { }
 void util_text_to_speech_stop(void) { }
+
 void util_start_foreground(void) { }
 void util_stop_foreground(void) { }
 bool util_is_foreground_enabled(void) { return false; }
-void util_turn_flashlight_on(void) {}
-void util_turn_flashlight_off(void) {}
-void util_toggle_flashlight(void) {}
+
+void util_turn_flashlight_on(void) { }
+void util_turn_flashlight_off(void) { }
+void util_toggle_flashlight(void) { }
 bool util_is_flashlight_on(void) { return false; }
 
+void util_start_playbackcapture(void) { }
+void util_stop_playbackcapture(void) { }
 
 #endif

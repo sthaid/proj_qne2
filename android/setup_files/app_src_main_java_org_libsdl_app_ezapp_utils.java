@@ -23,7 +23,7 @@ import android.view.Gravity;
 
 public class ezapp_utils {
     private static final String TAG = "SDL";
-    private static final double INVALID_NUMBER = 999999999;
+    private static final int INVALID_NUMBER = 999999999;
 
     private static TextToSpeech mTts;
     private static boolean      isTtsInitialized = false;

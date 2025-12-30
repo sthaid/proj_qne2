@@ -107,20 +107,6 @@ int MAIN(int argc, char **argv)
     return 0;
 }
 
-static int playback_capture_thread(void *cx)  //xxx test code
-{
-    return 0; // xxx 
-
-    sleep(5);
-    INFO("CALLING util_start_playback_capture\n");
-    util_start_playback_capture();
-    sleep(30);
-
-    INFO("CALLING util_stop_playback_capture\n");
-    util_stop_playback_capture();
-    return 0;
-}
-
 static int init(void)
 {
     int rc;
@@ -213,8 +199,6 @@ static int init(void)
     } else {
         util_stop_foreground();
     }
-
-    sdlx_create_detached_thread(playback_capture_thread, NULL);  //xxx temp
 
     // success
     return 0;

@@ -38,7 +38,8 @@ SRCS :=  \
 
 # xxx add -O2
 
-CFLAGS = -Wall -Werror -Wno-unused-result -g -I../src $(shell pkg-config sdl3 --cflags)
+CFLAGS = -Wall -Werror -Wno-unused-result -g -I../src
+#CFLAGS+= $(shell pkg-config sdl3 --cflags)
 CFLAGS += -I./sdl_build/local/include
 
 build_and_run: build run

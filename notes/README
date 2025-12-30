@@ -47,6 +47,14 @@ way to do this is to:
 
 lbsdl2-mixer-dev/
 
+
+xxx TESTING
+capture some audio
+ezsh "get captured_audio.pcm"
+aplay -t raw -f S16 -r 44100 captured_audio.pcm
+lame -r -s 44.1 --bitwidth 16 --signed -m m captured_audio.pcm captured_audio.mp3
+mpg123 captured_audio.mp3
+
 ============================
 BUILD SDL3-3.3.6 FOR UBUNTU
 ============================
