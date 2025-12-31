@@ -34,13 +34,35 @@ SRCS :=  \
   ../picoc/cstdlib/time.c \
   ../picoc/cstdlib/unistd.c \
   ../picoc/platform/library_unix.c \
-  ../picoc/platform/platform_unix.c
+  ../picoc/platform/platform_unix.c \
+  ../lame/bitstream.c \
+  ../lame/encoder.c \
+  ../lame/fft.c \
+  ../lame/gain_analysis.c \
+  ../lame/id3tag.c \
+  ../lame/lame.c \
+  ../lame/mpglib_interface.c \
+  ../lame/newmdct.c \
+  ../lame/presets.c \
+  ../lame/psymodel.c \
+  ../lame/quantize.c \
+  ../lame/quantize_pvt.c \
+  ../lame/reservoir.c \
+  ../lame/set_get.c \
+  ../lame/tables.c \
+  ../lame/takehiro.c \
+  ../lame/util.c \
+  ../lame/vbrquantize.c \
+  ../lame/VbrTag.c \
+  ../lame/version.c
 
-# xxx add -O2
+CFLAGS = -Wall -Wno-unused-result -O2 -g -I../src
+CFLAGS += -I./sdl_build/local/include   # build with local SDL
+CFLAGS += -DHAVE_CONFIG_H -I../lame     # lame
 
-CFLAGS = -Wall -Werror -Wno-unused-result -g -I../src
+# xxx restore these, and how to run pkg-config for local build
+#CFLAGS += -Werror
 #CFLAGS+= $(shell pkg-config sdl3 --cflags)
-CFLAGS += -I./sdl_build/local/include
 
 build_and_run: build run
 

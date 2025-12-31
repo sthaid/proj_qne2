@@ -81,6 +81,95 @@ static int devel_mode_server_thread(void *cx);
 
 extern int picoc_ezapp(char *args);
 
+// -----------------  XXXXXXXXXXXXXX  --------------------------------
+
+#include "../lame/lame.h"
+lame_global_flags *gfp;
+
+int lame_test(void)
+{
+    int rc;
+    short *pcm;
+    int file_bytes;
+
+    //lame_set_errorf(gfp, my_debugf);
+    //lame_set_debugf(gfp, my_debugf);
+    //lame_set_msgf(gfp, my_debugf);
+
+    gfp = lame_init();
+    printf("lame_init ret %p\n", gfp);
+    if (gfp == NULL) {
+        printf("ERROR lame_init failed\n");
+        return 1;
+    }
+
+#define STEREO           0
+#define JOINT_STEREO     1
+#define DUAL_CHANNEL     2
+#define MONO             3
+
+    lame_set_num_channels(gfp,1);
+    //lame_set_in_samplerate(gfp,48000);
+    lame_set_in_samplerate(gfp,44100);
+    lame_set_brate(gfp,64);
+    lame_set_mode(gfp,MONO); 
+    lame_set_quality(gfp,2);   /* 2=high  5 = medium  7=low */
+
+    printf("NUM CHANNELS %d\n", lame_get_num_channels(gfp));
+
+    rc = lame_init_params(gfp);
+    printf("lame_init_params ret %d\n", rc);
+    if (rc < 0) {
+        printf("ERROR lame_init_params failed\n");
+        return 1;
+    }
+
+
+    pcm = util_read_file(".", "captured_audio.pcm", &file_bytes);
+    if (pcm == NULL) {
+        printf("ERROR failed to read test file\n");
+        return 1;
+    }
+    printf("file_bytes = %d\n", file_bytes);
+    
+    void *mp3buf = malloc(10000000);
+    void *mp3buf_orig = mp3buf;
+    int num_samples = file_bytes / 2;
+    memset(mp3buf, 0, 10000000);
+
+#if 0
+    rc = lame_encode_buffer_interleaved(gfp, pcm, num_samples, mp3buf, 0);
+#else
+    int remaining = num_samples;
+    while (remaining) {
+        int xfer = remaining > 44100 ? 44100 : remaining;
+        printf("xfer = %d\n", xfer);
+        rc = lame_encode_buffer(gfp, pcm, NULL, xfer, mp3buf, 0);
+        printf("lame_encode_buffer rc = %d\n", rc);
+        if (rc < 0) {
+            printf("ERROR\n");
+            return 1;
+        }
+        mp3buf += rc;
+        remaining -= xfer;
+        pcm += xfer;
+    }
+#endif
+
+    rc = lame_encode_flush(gfp, mp3buf, 0);
+    printf("lame_encode_flush rc = %d\n", rc);
+    if (rc < 0) {
+        printf("ERROR\n");
+        return 1;
+    }
+    mp3buf += rc;
+
+    util_write_file(".", "out.mp3", mp3buf_orig, mp3buf-mp3buf_orig);
+
+    return 0;
+}
+
+
 // -----------------  MAIN  ------------------------------------------
 
 static int init(void);
@@ -272,6 +361,8 @@ static void processing(void)
     sdlx_event_t event;
 
     // sdlx_show_toast("STARTING");
+
+    lame_test();
 
     while (true) {
         // clear the display, and set the font to default

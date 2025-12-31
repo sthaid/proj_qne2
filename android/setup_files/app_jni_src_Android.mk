@@ -33,7 +33,27 @@ LOCAL_SRC_FILES :=  \
   picoc/cstdlib/time.c \
   picoc/cstdlib/unistd.c \
   picoc/platform/library_unix.c \
-  picoc/platform/platform_unix.c
+  picoc/platform/platform_unix.c \
+  lame/bitstream.c \
+  lame/encoder.c \
+  lame/fft.c \
+  lame/gain_analysis.c \
+  lame/id3tag.c \
+  lame/lame.c \
+  lame/mpglib_interface.c \
+  lame/newmdct.c \
+  lame/presets.c \
+  lame/psymodel.c \
+  lame/quantize.c \
+  lame/quantize_pvt.c \
+  lame/reservoir.c \
+  lame/set_get.c \
+  lame/tables.c \
+  lame/takehiro.c \
+  lame/util.c \
+  lame/vbrquantize.c \
+  lame/VbrTag.c \
+  lame/version.c
 
 SDL_PATH := ../SDL
 SDL_TTF_PATH := ../SDL_ttf
@@ -42,7 +62,8 @@ SDL_MIXER_PATH := ../SDL_mixer
 LOCAL_C_INCLUDES := $(LOCAL_PATH)/$(SDL_PATH)/include \
                     $(LOCAL_PATH)/$(SDL_TTF_PATH) \
                     $(LOCAL_PATH)/$(SDL_MIXER_PATH) \
-                    $(LOCAL_PATH)/src $(LOCAL_PATH)/picoc
+                    $(LOCAL_PATH)/src $(LOCAL_PATH)/picoc $(LOCAL_PATH)/lame
+LOCAL_CFLAGS := -DHAVE_CONFIG_H -O2
 
 LOCAL_SHARED_LIBRARIES := SDL3 SDL3_ttf SDL3_mixer
 
