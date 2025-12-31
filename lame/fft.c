@@ -44,9 +44,9 @@
 #include "util.h"
 #include "fft.h"
 
+#ifdef HAVE_XMMINTRIN_H  // EZAPP added this line
 #include "vector/lame_intrin.h"
-
-
+#endif  // EZAPP added this line
 
 #define TRI_SIZE (5-1)  /* 1024 =  4**5 */
 

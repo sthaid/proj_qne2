@@ -22,7 +22,7 @@
 /* #undef DEBUG */
 
 /* allow to compute a more accurate replaygain value */
-#define DECODE_ON_THE_FLY 1
+//#define DECODE_ON_THE_FLY 1    // EZAPP commented this out
 
 /* double is faster than float on Alpha */
 /* #undef FLOAT */
@@ -120,7 +120,7 @@
 #define HAVE_MEMORY_H 1
 
 /* build with mpglib support */
-#define HAVE_MPGLIB 1
+//#define HAVE_MPGLIB 1   // EZAPP commented this out
 
 /* have nasm */
 /* #undef HAVE_NASM */
@@ -194,7 +194,7 @@
 #define HAVE_UNISTD_H 1
 
 /* Define to 1 if you have the <xmmintrin.h> header file. */
-#define HAVE_XMMINTRIN_H 1
+//#define HAVE_XMMINTRIN_H 1   // EZAPP commented this out
 
 /* Define as const if the declaration of iconv() needs const. */
 #define ICONV_CONST 
