@@ -1412,6 +1412,15 @@ void Util_stop_playbackcapture(struct ParseState *Parser, struct Value *ReturnVa
     util_stop_playbackcapture();
 }
 
+void Util_get_playbackcapture_audio(struct ParseState *Parser, struct Value *ReturnValue,
+        struct Value **Param, int NumArgs)
+{
+    short *array = Param[0]->Val->Pointer;
+    int    num_elements = Param[1]->Val->Integer;
+
+    util_get_playbackcapture_audio(array, num_elements);
+}
+
 //
 // UTILS REGISTRATION
 //
@@ -1468,8 +1477,9 @@ struct LibraryFunction UtilsFunctions[] = {
     { Util_toggle_flashlight,   "void util_toggle_flashlight(void);" },
     { Util_is_flashlight_on,    "bool util_is_flashlight_on(void);" },
     // call java: playbackcapture
-    { Util_start_playbackcapture,    "bool util_start_playbackcapture(void);" },
-    { Util_stop_playbackcapture,    "bool util_stop_playbackcapture(void);" },
+    { Util_start_playbackcapture,     "void util_start_playbackcapture(void);" },
+    { Util_stop_playbackcapture,      "void util_stop_playbackcapture(void);" },
+    { Util_get_playbackcapture_audio, "void util_get_playbackcapture_audio(short *array, int num_array_elements);" },
 
     { NULL, NULL } };
 

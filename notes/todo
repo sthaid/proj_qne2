@@ -1,3 +1,45 @@
+build each component, cJSON, etc using Android.mk
+
+is mpglib needed for lame
+
+use eihter Mixer or mpg123 mpglib ?
+
+how to return a buffer
+- shared file
+- jobject return
+- how to return a buffer in java method
+
+xxxxxxxxx
+
+review sdlx_audio.c, make list of changes
+- record and append to wave file
+- play an mp3 file, or wav file, or raw file
+- add wav file support
+- add support for sdl_mixer
+- SUMMARY
+  - use sdl_mixer to play files
+  - continue to support existing audio_ctl API
+- RECORD using microphone
+  - volume problem
+  - record to wav file
+  - append to wav file
+- RECORD playback capture
+  - java code wirte to mmap file,   
+  - record code copy from mmap file, using lame
+    - maintain the existing audioctl and audio status
+- PLAYBACK CAPUTE withour recording
+
+API
+---
+- record to wav file
+- record/append to wav file
+- play a file  (wav, mp3, raw)   all use 2 channels,   44100
+
+
+xxxxxxxxxxxxxxxxxxx =======================
+xxxxxxxxxxxxxxxxxxx =======================
+xxxxxxxxxxxxxxxxxxx =======================
+
 mixer play mp3 api
 - and app
 

@@ -56,9 +56,10 @@ SRCS :=  \
   ../lame/VbrTag.c \
   ../lame/version.c
 
-CFLAGS = -Wall -Wno-unused-result -O2 -g -I../src
+CFLAGS = -Wall -Wno-unused-result -g -I../src
 CFLAGS += -I./sdl_build/local/include   # build with local SDL
 CFLAGS += -DHAVE_CONFIG_H -I../lame     # lame
+#CFLAGS += -O2
 
 # xxx restore these, and how to run pkg-config for local build
 #CFLAGS += -Werror

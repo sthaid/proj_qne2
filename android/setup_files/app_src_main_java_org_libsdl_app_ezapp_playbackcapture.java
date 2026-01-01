@@ -20,6 +20,14 @@ import android.os.SystemClock;
 
 import android.media.AudioPlaybackCaptureConfiguration;
 
+import java.io.File;  // xxx del and cleanup this file
+import java.io.IOException;
+import java.io.RandomAccessFile;
+import java.nio.ByteBuffer;
+import java.nio.MappedByteBuffer;
+import java.nio.channels.FileChannel;
+import java.nio.charset.StandardCharsets;
+
 // ... inside your Activity or Service ...
 
 public class ezapp_playbackcapture {
@@ -32,7 +40,7 @@ public class ezapp_playbackcapture {
 
     // Configuration for the audio format
     private static final int SAMPLE_RATE = 44100;
-    private static final int CHANNEL_CONFIG = AudioFormat.CHANNEL_IN_MONO; // Mono is sufficient for mixed output
+    private static final int CHANNEL_CONFIG = AudioFormat.CHANNEL_IN_MONO;  // xxx stereo
     private static final int AUDIO_FORMAT = AudioFormat.ENCODING_PCM_16BIT;
     private int bufferSizeInBytes;
 
@@ -58,41 +66,8 @@ public class ezapp_playbackcapture {
         }
 
         mdata = data;
-
-        // User granted permission, get the MediaProjection instance
-        //mediaProjection = mProjectionManager.getMediaProjection(resultCode, data);
-        //Log.v(TAG, "XXXXXXXXXX mediaProjection = " + mediaProjection);
-
-        // Proceed to start a foreground service and create a VirtualDisplay
-        // (especially for Android 14+ or long-running tasks)
-        //startMediaProjectionSession(mediaProjection);
-
-        //startPlaybackCapture();
     }
 
-//  public ezapp_playbackcapture(SDLActivity mSingleton, Context cxarg) {
-//      Log.v(TAG, "XXXXXXXXXX EZAPP playbackcapture init");
-//      cx = cxarg;
-
-//      mProjectionManager = 
-//          (MediaProjectionManager) cx.getSystemService(Context.MEDIA_PROJECTION_SERVICE);
-//      Log.v(TAG, "XXXXXXXXXX mProjectionManger = " + mProjectionManager);
-
-//      mSingleton.startActivityForResult(mProjectionManager.createScreenCaptureIntent(), PERMISSION_CODE);
-//      Log.v(TAG, "XXXXXXXXXX after  mSingleton.startActivityForResult");
-
-        // xxx User granted permission, get the MediaProjection instance
- 
-        //Intent intent = mProjectionManager.createScreenCaptureIntent();
-        //mediaProjection = mProjectionManager.getMediaProjection(-1, intent); //xxx ?? resultCode, data);
-// add prints
-// update xml
-// set the permission manually, and/or from within SDL main.c
-// call the constructor at a later time, triggered by code in main.c
-// call startPlaybackCapture,  and view pritns
-// add prints to the thread
-
-    // xxx don't start twice
     public void startPlaybackCapture(SDLActivity mSingleton, Context cxarg) {
         Log.v(TAG, "XXXXXXXX startPlaybackCapture starting");
         cx = cxarg;
@@ -118,15 +93,6 @@ public class ezapp_playbackcapture {
             Log.v(TAG, "XXXXXXXXXX getMediaProjection failed\n");
             return;
         }
-
-//      if (mediaProjection == null) {
-            // Handle case where MediaProjection is not available (e.g., user denied permission)
-            //mediaProjection = mProjectionManager.getMediaProjection(resultCode, data);
-//          Log.v(TAG, "XXXXXXXX startPlaybackCapture mediaProjection = " + mediaProjection);
-//          if (mediaProjection == null) {
-//              return;
-//          }
-//      }
 
         Log.v(TAG, "XXXXXXXX 1");
         bufferSizeInBytes = AudioRecord.getMinBufferSize(SAMPLE_RATE, CHANNEL_CONFIG, AUDIO_FORMAT);
@@ -162,48 +128,57 @@ public class ezapp_playbackcapture {
         isRecording = true;
 
         // Start a thread to read the audio data
-        Log.v(TAG, "XXXXXXXX 6");
-        recordingThread = new Thread(new Runnable() {
-            @Override
-            public void run() {
-                writeAudioDataToFile();
-            }
-        }, "AudioRecorderThread");
-        recordingThread.start();
-        Log.v(TAG, "XXXXXXXX 7");
+        //Log.v(TAG, "XXXXXXXX 6");
+        //recordingThread = new Thread(new Runnable() {
+        //    @Override
+        //    public void run() {
+        //        writeAudioDataToFile();
+        //    }
+        //}, "AudioRecorderThread");
+        //recordingThread.start();
+        Log.v(TAG, "XXXXXXXX 7777");
     }
 
+//NEW
+//https://developer.android.com/reference/java/io/RandomAccessFile
+//https://developer.android.com/reference/java/nio/MappedByteBuffer
+
     private void writeAudioDataToFile() {
-        // This is a simple example for saving raw PCM data.
-        // Real-world apps might use an encoder or a library to create a proper audio file (e.g., WAV).
-        Log.v(TAG, "XXXX EXT FILE DIR " + cx.getExternalFilesDir(null));
         File file = new File(cx.getFilesDir(), "captured_audio.pcm");
-        FileOutputStream fos = null;
-        try {
-            fos = new FileOutputStream(file);
+        long fileSize = 0x100000;
+
+        try (RandomAccessFile randomAccessFile = new RandomAccessFile(file, "rw");
+             FileChannel fileChannel = randomAccessFile.getChannel()) {
+
+            // Map the file into memory in READ_WRITE mode
+            MappedByteBuffer mappedByteBuffer = fileChannel.map(
+                FileChannel.MapMode.READ_WRITE, 
+                0,      // Position in the file to start mapping
+                fileSize // Size of the region to map
+            );
+
+
+            int bufferSizeInBytes = 10000;
             byte[] buffer = new byte[bufferSizeInBytes];
             int bytesRead;
 
-            while (isRecording) {
-                bytesRead = audioRecord.read(buffer, 0, bufferSizeInBytes);
-                Log.v(TAG, "XXXX bytesRead " + bytesRead);
-                if (bytesRead > 0) {
-                    fos.write(buffer, 0, bytesRead);
-                }
-            }
+            bytesRead = audioRecord.read(buffer, 0, bufferSizeInBytes);
+            Log.v(TAG, "XXXX bytesRead " + bytesRead);
+            //if (bytesRead > 0) {
+                //fos.write(buffer, 0, bytesRead);
+            //}
+
+            // Write data to the memory-mapped buffer
+            mappedByteBuffer.put(buffer);
+            
+            // Force the changes to be written to the underlying file
+            mappedByteBuffer.force(); 
         } catch (IOException e) {
             e.printStackTrace();
         } finally {
-            try {
-                if (fos != null) {
-                    fos.close();
-                }
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
         }
     }
-
+            
     public void stopPlaybackCapture() {
         isRecording = false;
         if (recordingThread != null) {
@@ -224,5 +199,15 @@ public class ezapp_playbackcapture {
         }
 
         mdata = null;
+    }
+
+    public short[] get_playbackcapture_audio(int num_array_elements) {
+        short[] array = new short[num_array_elements];
+        int shorts_read;
+
+        shorts_read = audioRecord.read(array, 0, num_array_elements);
+        Log.v(TAG, "XXXX shorts_read " + shorts_read);
+
+        return array;
     }
 }

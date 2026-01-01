@@ -1062,9 +1062,9 @@ static char *num2str(double num, char *fmt, char *s)
 //xxx wip
 #define EVID_START_PLAYBACKCAPTURE  10
 #define EVID_STOP_PLAYBACKCAPTURE   11
-
-#define EVID_PLAY_PCM 12
-#define EVID_PLAY_MP3 13
+#define EVID_TEST_PLAYBACKCAPTURE   12
+#define EVID_PLAY_PCM               13
+#define EVID_PLAY_MP3               14
 
 static void page_11_init(void)
 {
@@ -1086,10 +1086,13 @@ static void page_11_draw(void)
     loc = sdlx_render_text( 0, ROW2Y(6), "StopCapture");
     sdlx_register_event(loc, EVID_STOP_PLAYBACKCAPTURE);
 
-    loc = sdlx_render_text( 0, ROW2Y(10), "PlayPcm");
+    loc = sdlx_render_text( 0, ROW2Y(10), "Test");
+    sdlx_register_event(loc, EVID_TEST_PLAYBACKCAPTURE);
+
+    loc = sdlx_render_text( 0, ROW2Y(14), "PlayPcm");
     sdlx_register_event(loc, EVID_PLAY_PCM);
 
-    loc = sdlx_render_text( 0, ROW2Y(14), "PlayMp3");
+    loc = sdlx_render_text( 0, ROW2Y(18), "PlayMp3");
     sdlx_register_event(loc, EVID_PLAY_MP3);
 
     sdlx_print_init_color(COLOR_WHITE, COLOR_BLACK);
@@ -1104,6 +1107,22 @@ static void page_11_process_event(sdlx_event_t *ev)
     case EVID_STOP_PLAYBACKCAPTURE:
         util_stop_playbackcapture();
         break;
+    case EVID_TEST_PLAYBACKCAPTURE: {  //xxx cleanup
+        short array[8000];
+        int i, j, sum;
+
+        util_start_playbackcapture();
+        for (i = 0; i < 100; i++) {
+            memset(array,0,sizeof(array));
+            util_get_playbackcapture_audio(array, sizeof(array)/2);
+            sum = 0;
+            for (j = 0; j < 8000; j++) {
+                sum += array[j];
+            }
+            printf("SUM = %d\n", sum);
+        }
+        util_stop_playbackcapture();
+        break; }
     case EVID_PLAY_PCM:
         sdlx_audio_play_new(data_dir, "captured_audio.pcm");
         break;

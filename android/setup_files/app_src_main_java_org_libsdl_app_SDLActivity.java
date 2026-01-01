@@ -513,13 +513,15 @@ public class SDLActivity extends Activity implements View.OnSystemUiVisibilityCh
             }
         }
 
-// xxxxxxxxxxxxxxxxxxxxxx
+        // xxxxxxxxxxxxxxxxxxxxxx
         // EZAPP onCreate: Initialize Utils: Location, TextToSpeech, Flashlight
         mezapp_utils = new ezapp_utils(getContext());
         // xxx comment: Initialize playbackcapture
         mezapp_playbackcapture = new ezapp_playbackcapture();
     }
-// xxx rename these routines with ezapp prefix??
+
+    // xxx rename these routines with ezapp prefix??
+    // xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 
     // EZAPP playback capture
     public double start_playbackcapture() {
@@ -532,6 +534,10 @@ public class SDLActivity extends Activity implements View.OnSystemUiVisibilityCh
         Log.v(TAG, "EZAPP calling stopPlaybackCapture");
         mezapp_playbackcapture.stopPlaybackCapture();
         return 0;
+    }
+
+    public short[] get_playbackcapture_audio(int num_array_elements) {
+        return mezapp_playbackcapture.get_playbackcapture_audio(num_array_elements);
     }
 
     // EZAPP start/stop foreground
