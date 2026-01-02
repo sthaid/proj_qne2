@@ -83,6 +83,7 @@ extern int picoc_ezapp(char *args);
 
 // -----------------  XXXXXXXXXXXXXX  --------------------------------
 
+#if 0
 #include "../lame/lame.h"
 lame_global_flags *gfp;
 
@@ -168,6 +169,7 @@ int lame_test(void)
 
     return 0;
 }
+#endif
 
 
 // -----------------  MAIN  ------------------------------------------
@@ -362,7 +364,7 @@ static void processing(void)
 
     // sdlx_show_toast("STARTING");
 
-    lame_test();
+    //lame_test();
 
     while (true) {
         // clear the display, and set the font to default

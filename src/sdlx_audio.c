@@ -900,3 +900,138 @@ error:
     return 0;     // xxx return real status
 }
 
+// ------------------------------------------------------------------
+
+// xxx don't allow to run concurrently
+// xxx add util_concat
+
+// includes
+#include "lame.h"
+
+// variables
+char               playbackcapture_mp3_filename[200];
+bool               playbackcapture_is_running;
+lame_global_flags *gfp;  // xxx extern ?
+
+// prototypes
+static int playbackcapture_thread(void *cx);
+
+// API
+void sdlx_start_playbackcapture(char *dir, char *filename)
+{
+    INFO("starting capture to %s/%s\n", dir, filename);
+
+    if (playbackcapture_is_running) {
+        ERROR("playbackcapture is currently running\n");
+        return;
+    }
+
+    sprintf(playbackcapture_mp3_filename, "%s/%s", dir, filename);
+    sdlx_create_detached_thread(playbackcapture_thread, NULL);
+}
+
+void sdlx_stop_playbackcapture(void)
+{
+    INFO("stopping capture\n");
+
+    playbackcapture_is_running = false;
+}
+
+// thread
+static int playbackcapture_thread(void *cx)
+{
+    #define STEREO           0
+    #define JOINT_STEREO     1
+    #define DUAL_CHANNEL     2
+    #define MONO             3
+
+    #define MAX_RAW 8192
+
+    int    len, fd_mp3=-1, ret=-1;;
+    short  raw[MAX_RAW];
+    unsigned char  *mp3 = malloc(100000); // xxx maybe this can be smaller
+
+    // set thread is active flag
+    playbackcapture_is_running = true;
+
+    // open create/trunc mp3 file
+    fd_mp3 = open(playbackcapture_mp3_filename, O_CREAT|O_TRUNC|O_WRONLY, 0666);
+    if (fd_mp3 < 0) {
+        ERROR("failed to open %s, %s\n", playbackcapture_mp3_filename, strerror(errno));
+        goto error;
+    }
+
+    // allocate mp3 work buffer for lame
+    mp3 = malloc(100000); // xxx maybe this can be smaller
+    if (mp3 == NULL) {
+        ERROR("failed to allocate mp3 buffer\n");
+        goto error;
+    }
+
+    // init lame mp3 encoder
+    gfp = lame_init();
+    if (gfp == NULL) {
+        ERROR("lame_init failed\n");
+        goto error;
+    }
+
+    lame_set_num_channels(gfp,1);  // xxx convert to jstereo
+    lame_set_in_samplerate(gfp,44100); // xxx use this instead of 48000
+    lame_set_brate(gfp,64);
+    lame_set_mode(gfp,MONO); 
+    lame_set_quality(gfp,2);   // 2=high  5 = medium  7=low
+
+    if (lame_init_params(gfp) == -1) {
+        ERROR("lame_init_params failed\n");
+        goto error;
+    }
+
+    // call java to start playback capture
+    // xxx rename these all to util_...java...
+    // xxx this should return a status
+    util_start_playbackcapture();
+
+    // while playbackcapture_is_running flag is set, do ...
+    while (playbackcapture_is_running) {
+        // get MAX_RAW samples of playback captured data
+        util_get_playbackcapture_audio(raw, MAX_RAW);
+
+        // encode raw samples to mp3
+        len = lame_encode_buffer(gfp, raw, NULL, MAX_RAW, mp3, 0);
+        INFO("xxxx lame_encode_buffer len = %d\n", len);
+        if (len < 0) {
+            ERROR("lame_encode_buffer failed, rc=%d\n", len);
+            goto error;
+        }
+
+        // write mp3 to file
+        write(fd_mp3, mp3, len);
+    }
+
+    // flush lame internal buffers, and write final mp3 data
+    len = lame_encode_flush(gfp, mp3, 0);
+    ERROR("xxxx lame_encode_flush len = %d\n", len);
+    if (len < 0) {
+        ERROR("lame_encode_flush failed, rc=%d\n", len);
+        goto error;
+    }
+    write(fd_mp3, mp3, len);
+
+    // success
+    ret = 0;
+    goto cleanup_and_return;
+
+error:
+    ret = -1;
+    unlink(playbackcapture_mp3_filename);
+
+cleanup_and_return:
+    close(fd_mp3);
+    lame_close(gfp);
+    gfp = NULL;
+    free(mp3);
+    util_stop_playbackcapture();
+    playbackcapture_mp3_filename[0] = '\0';
+    playbackcapture_is_running = false;
+    return ret;
+}

@@ -6,9 +6,10 @@ CC=gcc
 
 # EZAPP updates to CFLAGS, CXXFLAGS, LIBS, and SRCS
 
-CFLAGS=  -Wall -Wno-unused-result -Werror -O2 -g
+CFLAGS=  -Wall -Wno-unused-result -O2 -g
 CFLAGS+= -DVER=\"a97d94fa\" -DTAG=\"v3.2.2\"
-CFLAGS+= -I../src -I../cJSON -I../lodepng 
+CFLAGS+= -I../src -I../cJSON -I../lodepng  -I../lame
+CFLAGS+= -DHAVE_CONFIG_H
 #CFLAGS+= $(shell pkg-config sdl3 --cflags)
 CFLAGS+= -I../linux/sdl_build/local/include
 LIBS=    -lm -lreadline -L../linux/sdl_build/local/lib -lSDL3 -lSDL3_ttf -lSDL3_mixer
@@ -24,7 +25,9 @@ SRCS	= picoc.c table.c lex.c parse.c expression.c heap.c type.c \
 	sdlx_misc.c sdlx_video.c sdlx_audio.c sdlx_sensor.c sdlx_event.c logging.c utils.c utils_android.cpp \
 	svcs_stubs.c \
 	cJSON.c \
-	lodepng.c
+	lodepng.c \
+        bitstream.c encoder.c fft.c gain_analysis.c id3tag.c lame.c mpglib_interface.c newmdct.c presets.c psymodel.c quantize.c quantize_pvt.c reservoir.c set_get.c tables.c takehiro.c util.c vbrquantize.c VbrTag.c version.c
+
 
 OBJS	:= $(SRCS:%.c=%.o)
 OBJS	:= $(OBJS:%.cpp=%.o)

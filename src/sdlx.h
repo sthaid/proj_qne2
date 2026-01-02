@@ -190,6 +190,9 @@ void sdlx_audio_state(sdlx_audio_state_t * state);
 void sdlx_audio_print_devices_info(void);
 void sdlx_audio_create_test_file(char *dir, char *filename, int duration_secs, int freq);
 
+void sdlx_start_playbackcapture(char *dir, char *filename);
+void sdlx_stop_playbackcapture(void);
+
 // not available in picoc
 #ifdef ANDROID
     #define DEFAULT_RECORD_SCALE 5

@@ -1086,11 +1086,11 @@ static void page_11_draw(void)
     loc = sdlx_render_text( 0, ROW2Y(6), "StopCapture");
     sdlx_register_event(loc, EVID_STOP_PLAYBACKCAPTURE);
 
-    loc = sdlx_render_text( 0, ROW2Y(10), "Test");
-    sdlx_register_event(loc, EVID_TEST_PLAYBACKCAPTURE);
+    //loc = sdlx_render_text( 0, ROW2Y(10), "Test");
+    //sdlx_register_event(loc, EVID_TEST_PLAYBACKCAPTURE);
 
-    loc = sdlx_render_text( 0, ROW2Y(14), "PlayPcm");
-    sdlx_register_event(loc, EVID_PLAY_PCM);
+    //loc = sdlx_render_text( 0, ROW2Y(14), "PlayPcm");
+    //sdlx_register_event(loc, EVID_PLAY_PCM);
 
     loc = sdlx_render_text( 0, ROW2Y(18), "PlayMp3");
     sdlx_register_event(loc, EVID_PLAY_MP3);
@@ -1102,11 +1102,14 @@ static void page_11_process_event(sdlx_event_t *ev)
 {
     switch (ev->event_id) {
     case EVID_START_PLAYBACKCAPTURE:
-        util_start_playbackcapture();
+        //util_start_playbackcapture();
+        sdlx_start_playbackcapture(data_dir, "pbc.mp3");
         break;
     case EVID_STOP_PLAYBACKCAPTURE:
-        util_stop_playbackcapture();
+        //util_stop_playbackcapture();
+        sdlx_stop_playbackcapture();
         break;
+#if 0
     case EVID_TEST_PLAYBACKCAPTURE: {  //xxx cleanup
         short array[8000];
         int i, j, sum;
@@ -1123,11 +1126,12 @@ static void page_11_process_event(sdlx_event_t *ev)
         }
         util_stop_playbackcapture();
         break; }
-    case EVID_PLAY_PCM:
-        sdlx_audio_play_new(data_dir, "captured_audio.pcm");
-        break;
+#endif
+    //case EVID_PLAY_PCM:
+        //sdlx_audio_play_new(data_dir, "captured_audio.pcm");
+        //break;
     case EVID_PLAY_MP3:
-        sdlx_audio_play_new(data_dir, "captured_audio.mp3");
+        sdlx_audio_play_new(data_dir, "pbc.mp3");
         break;
     }
 }
